@@ -7,3 +7,5 @@ scipy
 openpyxl
 matplotlib
 seaborn
+plotly
+anthropic

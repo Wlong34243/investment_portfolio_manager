@@ -2,6 +2,30 @@
 
 Every entry must include a **Status** line describing what is currently safe to run.
 
+## [2026-04-02] — Structural Audit & Refinement
+
+### refactor: Data Pipeline & Sanitization
+**What changed:** 
+- Consolidated redundant `sanitize_*_for_sheets` functions into a single universal `sanitize_dataframe_for_sheets` in `pipeline.py`.
+- Improved type casting to include `np.bool_` and handle `pd.NaT` gracefully.
+- Re-ordered `normalize_positions` logic to ensure fingerprints are built before renaming.
+- Updated `write_holdings_current` to use an atomic "Header + Data" write pattern to prevent data loss.
+
+### fix: Schema & Config Alignment
+**What changed:**
+- Updated `config.py` `SNAPSHOT_COLUMNS` from 8 to 10 to match actual pipeline output (added 'Blended Yield' and 'Import Timestamp').
+- Synchronized `TRANSACTION_COLUMNS` in `config.py` with the authoritative `PORTFOLIO_SHEET_SCHEMA.md`.
+- Updated `PORTFOLIO_SHEET_SCHEMA.md` to reflect the 10-column snapshot structure.
+
+### fix: App Logic & Security
+**What changed:**
+- Fixed `cash_val` calculation in `app.py` to handle potential string booleans from Google Sheets.
+- Moved `calculate_income_metrics` import to top-level for performance.
+- Removed sensitive `traceback.format_exc()` display from the Risk tab UI to prevent data leaks.
+- Added missing `requests` and `numpy` dependencies to `requirements.txt`.
+
+**Status: Audit complete. Pipeline is now more robust and schemas are fully aligned.**
+
 ## [2026-04-01] — Final Delivery: Full Suite Operational
 
 ### feat: Phase 3 & 4 (Tax, Performance, and AI Research)

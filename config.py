@@ -122,6 +122,8 @@ SNAPSHOT_COLUMNS = [
     'Cash Value',
     'Invested Value',
     'Position Count',
+    'Blended Yield',
+    'Import Timestamp',
     'Fingerprint',
 ]
 
@@ -129,15 +131,17 @@ SNAPSHOT_COLUMNS = [
 # Transaction History Columns
 # ---------------------------------------------------------------------------
 TRANSACTION_COLUMNS = [
-    'Date',
-    'Action',
-    'Symbol',
+    'Trade Date',
+    'Settlement Date',
+    'Ticker',
     'Description',
+    'Action',
     'Quantity',
     'Price',
-    'Fees & Comm',
     'Amount',
-    'Import Date',
+    'Fees',
+    'Net Amount',
+    'Account',
     'Fingerprint',
 ]
 

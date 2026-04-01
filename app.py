@@ -13,7 +13,7 @@ from utils.risk import (
 )
 from pipeline import (
     normalize_positions, write_to_sheets, write_risk_snapshot, 
-    ingest_realized_gl, ingest_transactions
+    ingest_realized_gl, ingest_transactions, calculate_income_metrics
 )
 from utils.sheet_readers import get_holdings_current
 

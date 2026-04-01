@@ -7,24 +7,33 @@ import config
 
 # --- Position Pipeline Functions ---
 
-def sanitize_for_sheets(df: pd.DataFrame) -> list[list]:
+def sanitize_dataframe_for_sheets(df: pd.DataFrame, columns: list[str], col_map: dict = None) -> list[list]:
     """
-    GOTCHA #1: df.fillna("") first, then cast every value to native Python.
-    No numpy.float64, no NaN, no None passed to gspread. Ever.
-    Return list of lists (one inner list per row, values in column order).
+    Universal sanitizer for Google Sheets:
+    1. Apply col_map rename if provided.
+    2. Ensure all columns from the 'columns' list are present.
+    3. Reorder to match 'columns' list exactly.
+    4. Fill NA with empty string.
+    5. Cast every value to native Python types (no numpy, no NaT).
     """
-    # Ensure all columns from config.POSITION_COLUMNS are present
-    for col in config.POSITION_COLUMNS:
+    df = df.copy()
+    
+    # 1. Rename if map provided
+    if col_map:
+        df = df.rename(columns=col_map)
+        
+    # 2. Ensure all required columns are present
+    for col in columns:
         if col not in df.columns:
             df[col] = ""
 
-    # Reorder columns to match POSITION_COLUMNS exactly
-    df_ordered = df[config.POSITION_COLUMNS].copy()
+    # 3. Reorder and Select
+    df_ordered = df[columns].copy()
     
-    # Fill NA with empty string
+    # 4. Fill NA
     df_clean = df_ordered.fillna("")
     
-    # Cast every value to native Python types
+    # 5. Cast to native types
     data = []
     for _, row in df_clean.iterrows():
         clean_row = []
@@ -33,7 +42,9 @@ def sanitize_for_sheets(df: pd.DataFrame) -> list[list]:
                 clean_row.append(float(val))
             elif isinstance(val, (np.int64, np.int32)):
                 clean_row.append(int(val))
-            elif pd.isna(val) or val is None:
+            elif isinstance(val, (np.bool_, bool)):
+                clean_row.append(bool(val))
+            elif pd.isna(val) or val is None or str(val).lower() == 'nat':
                 clean_row.append("")
             else:
                 clean_row.append(val)
@@ -46,33 +57,12 @@ def normalize_positions(df: pd.DataFrame, import_date: str) -> pd.DataFrame:
     Add import_date column.
     Calculate weight = market_value / total_portfolio_value * 100.
     Build fingerprint = "{import_date}|{ticker}|{quantity}|{market_value}".
-    Ensure all POSITION_COLUMNS from config.py present (fill missing with "").
     Sort by market_value descending.
     """
     df = df.copy()
     
     # Mapping our internal snake_case to Sheet's Camel Case with spaces
-    col_map = {
-        'ticker': 'Ticker',
-        'description': 'Description',
-        'asset_class': 'Asset Class',
-        'asset_strategy': 'Asset Strategy',
-        'quantity': 'Quantity',
-        'price': 'Price',
-        'market_value': 'Market Value',
-        'cost_basis': 'Cost Basis',
-        'unit_cost': 'Unit Cost',
-        'unrealized_gl': 'Unrealized G/L',
-        'unrealized_gl_pct': 'Unrealized G/L %',
-        'est_annual_income': 'Est Annual Income',
-        'dividend_yield': 'Dividend Yield',
-        'acquisition_date': 'Acquisition Date',
-        'wash_sale': 'Wash Sale',
-        'is_cash': 'Is Cash',
-        'weight': 'Weight',
-        'import_date': 'Import Date',
-        'fingerprint': 'Fingerprint',
-    }
+    # NOTE: col_map is used inside sanitize_dataframe_for_sheets later
     
     # Add import_date if not present
     df['import_date'] = import_date
@@ -94,16 +84,8 @@ def normalize_positions(df: pd.DataFrame, import_date: str) -> pd.DataFrame:
         axis=1
     )
     
-    # Map columns to official names
-    df = df.rename(columns=col_map)
-    
-    # Ensure all POSITION_COLUMNS from config.py present
-    for col in config.POSITION_COLUMNS:
-        if col not in df.columns:
-            df[col] = ""
-            
-    # Sort by Market Value descending
-    df = df.sort_values(by='Market Value', ascending=False)
+    # Sort by market_value descending before mapping/renaming
+    df = df.sort_values(by='market_value', ascending=False)
     
     return df
 
@@ -403,7 +385,34 @@ def ingest_realized_gl(uploaded_file, dry_run=True):
         if not new_df.empty:
             # Sort by closed_date ascending for the ledger
             new_df = new_df.sort_values(by="closed_date")
-            data_to_write = sanitize_gl_for_sheets(new_df)
+            
+            # Mapping our internal snake_case to Sheet's headers
+            col_map = {
+                'ticker': 'Ticker',
+                'description': 'Description',
+                'closed_date': 'Closed Date',
+                'opened_date': 'Opened Date',
+                'holding_days': 'Holding Days',
+                'quantity': 'Quantity',
+                'proceeds_per_share': 'Proceeds Per Share',
+                'cost_per_share': 'Cost Per Share',
+                'proceeds': 'Proceeds',
+                'cost_basis': 'Cost Basis',
+                'unadjusted_cost': 'Unadjusted Cost',
+                'gain_loss_dollars': 'Gain Loss $',
+                'gain_loss_pct': 'Gain Loss %',
+                'lt_gain_loss': 'LT Gain Loss',
+                'st_gain_loss': 'ST Gain Loss',
+                'term': 'Term',
+                'wash_sale': 'Wash Sale',
+                'disallowed_loss': 'Disallowed Loss',
+                'account': 'Account',
+                'is_primary_acct': 'Is Primary Acct',
+                'import_date': 'Import Date',
+                'fingerprint': 'Fingerprint',
+            }
+            
+            data_to_write = sanitize_dataframe_for_sheets(new_df, config.GL_COLUMNS, col_map)
             
             # Batch append
             ws.append_rows(data_to_write, value_input_option='USER_ENTERED')
@@ -415,35 +424,6 @@ def ingest_realized_gl(uploaded_file, dry_run=True):
         print(f"Error ingesting Realized G/L: {e}")
         
     return results
-
-def sanitize_transactions_for_sheets(df: pd.DataFrame) -> list[list]:
-    """Ensure all TRANSACTION_COLUMNS are present and cast to native types."""
-    df = df.copy()
-    
-    # Mapping our internal columns to Sheet's headers if needed
-    # (parse_transaction_history already uses Date, Action, Symbol, Description, Quantity, Price, Fees & Comm, Amount)
-    
-    # Ensure all config.TRANSACTION_COLUMNS are present
-    for col in config.TRANSACTION_COLUMNS:
-        if col not in df.columns:
-            df[col] = ""
-
-    df_ordered = df[config.TRANSACTION_COLUMNS].copy()
-    df_clean = df_ordered.fillna("")
-    
-    data = []
-    for _, row in df_clean.iterrows():
-        clean_row = []
-        for val in row.values:
-            if isinstance(val, (np.float64, np.float32)):
-                clean_row.append(float(val))
-            elif isinstance(val, (np.int64, np.int32)):
-                clean_row.append(int(val))
-            else:
-                clean_row.append(str(val))
-        data.append(clean_row)
-    
-    return data
 
 def ingest_transactions(uploaded_file, dry_run=True):
     """Parse transaction CSV, dedup, and append."""
@@ -457,7 +437,7 @@ def ingest_transactions(uploaded_file, dry_run=True):
         if df.empty:
             return results
             
-        df["Import Date"] = datetime.now().strftime("%Y-%m-%d")
+        df["import_date"] = datetime.now().strftime("%Y-%m-%d")
         
         if dry_run:
             results["new"] = len(df)
@@ -477,7 +457,20 @@ def ingest_transactions(uploaded_file, dry_run=True):
         
         if not new_df.empty:
             new_df = new_df.sort_values(by="Date")
-            data_to_write = sanitize_transactions_for_sheets(new_df)
+            
+            # Map Schwab Transaction headers to our SCHEMA headers
+            col_map = {
+                'Date': 'Trade Date',
+                'Symbol': 'Ticker',
+                'Fees & Comm': 'Fees',
+                'Amount': 'Net Amount',
+                'import_date': 'Import Date',
+                'Fingerprint': 'Fingerprint'
+            }
+            # Note: Amount in Schwab CSV is already the net amount in most cases, 
+            # but we can refine this later if needed.
+            
+            data_to_write = sanitize_dataframe_for_sheets(new_df, config.TRANSACTION_COLUMNS, col_map)
             ws.append_rows(data_to_write, value_input_option='USER_ENTERED')
             time.sleep(1.0)
             
@@ -492,8 +485,31 @@ def write_to_sheets(df: pd.DataFrame, cash_amount: float, dry_run: bool = True) 
     """
     results = {"holdings_written": 0, "history_appended": 0, "snapshot": False, "income_snapshot": False}
     
+    # Mapping our internal snake_case to Sheet's Camel Case with spaces
+    col_map = {
+        'ticker': 'Ticker',
+        'description': 'Description',
+        'asset_class': 'Asset Class',
+        'asset_strategy': 'Asset Strategy',
+        'quantity': 'Quantity',
+        'price': 'Price',
+        'market_value': 'Market Value',
+        'cost_basis': 'Cost Basis',
+        'unit_cost': 'Unit Cost',
+        'unrealized_gl': 'Unrealized G/L',
+        'unrealized_gl_pct': 'Unrealized G/L %',
+        'est_annual_income': 'Est Annual Income',
+        'dividend_yield': 'Dividend Yield',
+        'acquisition_date': 'Acquisition Date',
+        'wash_sale': 'Wash Sale',
+        'is_cash': 'Is Cash',
+        'weight': 'Weight',
+        'import_date': 'Import Date',
+        'fingerprint': 'Fingerprint',
+    }
+    
     # Prepare data
-    data_list = sanitize_for_sheets(df)
+    data_list = sanitize_dataframe_for_sheets(df, config.POSITION_COLUMNS, col_map)
     income_metrics = calculate_income_metrics(df)
     
     if dry_run:
