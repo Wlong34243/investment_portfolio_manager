@@ -24,7 +24,16 @@ Every entry must include a **Status** line describing what is currently safe to 
 - Removed sensitive `traceback.format_exc()` display from the Risk tab UI to prevent data leaks.
 - Added missing `requests` and `numpy` dependencies to `requirements.txt`.
 
-**Status: Audit complete. Pipeline is now more robust and schemas are fully aligned.**
+### maintenance: Parser & Configuration Refinement
+**What changed:**
+- Fixed `csv_parser.py` bug where the parser stopped prematurely after the first account section; now correctly aggregates all 48+ positions.
+- Improved `csv_parser.py` to skip account label rows (e.g., "Individual ...119") that were being incorrectly parsed as tickers.
+- Added 'HSA' to `ACCOUNT_SECTION_PATTERNS` in `config.py` for full account coverage.
+- Implemented `TICKER_OVERRIDES` in `config.py` to centralize manual data corrections (e.g., ET dividend yield).
+- Created `.streamlit/secrets.toml` template and configured password gate for local/production consistency.
+- Fixed syntax error in `pages/research.py` and missing `anthropic`/`plotly` in `requirements.txt`.
+
+**Status: Audit complete. Pipeline is now more robust, schemas are fully aligned, and multi-account parsing is verified.**
 
 ## [2026-04-01] — Final Delivery: Full Suite Operational
 

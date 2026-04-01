@@ -106,7 +106,7 @@ if f"analysis_{selected_ticker}" in st.session_state:
             'steps': [
                 {'range': [-1, -0.3], 'color': "#E74C3C"},
                 {'range': [-0.3, 0.3], 'color': "#F1C40F"},
-                {'range': 0.3, 1], 'color': "#2ECC71"}
+                {'range': [0.3, 1], 'color': "#2ECC71"}
             ],
             'bar': {'color': "#2C3E50"}
         }
