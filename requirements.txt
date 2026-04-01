@@ -1,0 +1,9 @@
+streamlit
+gspread
+google-auth
+pandas
+yfinance
+scipy
+openpyxl
+matplotlib
+seaborn

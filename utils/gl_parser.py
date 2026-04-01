@@ -56,7 +56,7 @@ def _holding_days(opened: str, closed: str) -> int:
         open_dt = datetime.strptime(opened, "%Y-%m-%d")
         close_dt = datetime.strptime(closed, "%Y-%m-%d")
         return (close_dt - open_dt).days
-    except ValueError:
+    except (ValueError, TypeError):
         return -1
 
 def _make_fingerprint(row: dict) -> str:
@@ -77,18 +77,12 @@ def _make_fingerprint(row: dict) -> str:
 def _find_account_sections_gl(df_raw: pd.DataFrame) -> list[dict]:
     """
     Scan raw DataFrame for account section boundaries.
-    Returns list of dicts:
-    [
-        {"account": "Individual ...119", "header_row": 418, "data_start": 419, "data_end": 641},
-        ...
-    ]
     """
     sections = []
     current_account = None
     account_header_row = -1
     data_start_row = -1
 
-    # Define account patterns (lower-cased)
     ACCOUNT_PATTERNS = [
         "individual 401", "contributory", "joint tenant", "hsa brokerage",
         "individual", "roth", "custodial", "trust", "rollover", "beneficiary",
@@ -96,27 +90,32 @@ def _find_account_sections_gl(df_raw: pd.DataFrame) -> list[dict]:
 
     for i in range(len(df_raw)):
         row_values = df_raw.iloc[i].astype(str).str.strip()
-        first_cell_lower = row_values[0].lower() if row_values.iloc[0] else ""
+        first_cell = row_values.iloc[0]
+        first_cell_lower = first_cell.lower()
 
-        # Check for account section label
-        if any(first_cell_lower.startswith(p) for p in ACCOUNT_PATTERNS) and row_values.iloc[1:].apply(lambda x: x == "" or pd.isna(x)).all():
-            if current_account is not None: # End previous section
+        if "realized gain/loss - lot details" in first_cell_lower:
+            continue
+
+        is_account_row = any(first_cell_lower.startswith(p) for p in ACCOUNT_PATTERNS)
+        empty_trailing = (row_values.iloc[1:10] == "").all() or (row_values.iloc[1:10] == "nan").all()
+
+        if is_account_row and (empty_trailing or i < 5):
+            if current_account is not None:
                 sections.append({
                     "account": current_account,
                     "header_row": account_header_row,
                     "data_start": data_start_row,
-                    "data_end": i - 1  # Previous row was the end of data
+                    "data_end": i - 1
                 })
-            current_account = row_values[0]
-            account_header_row = -1 # Reset for next section
+            current_account = first_cell
+            account_header_row = -1
             data_start_row = -1
+            continue
         
-        # Check for column headers (appears after account label)
         if first_cell_lower == "symbol" and account_header_row == -1:
             account_header_row = i
             data_start_row = i + 1
 
-    # Add the last section if any
     if current_account is not None and data_start_row != -1:
         sections.append({
             "account": current_account,
@@ -125,15 +124,9 @@ def _find_account_sections_gl(df_raw: pd.DataFrame) -> list[dict]:
             "data_end": len(df_raw) - 1
         })
     
-    # Filter out sections with no actual data rows (e.g., "no transactions" msg takes one row)
-    # This also handles the case where the data_end might be before data_start due to "no transactions"
-    # or blank lines immediately following the header
     final_sections = []
     for section in sections:
-        # Check if the section contains actual data rows or "no transactions" message
         if section["data_start"] <= section["data_end"]:
-            # Check the content of the potential data rows
-            # A section is valid if it contains at least one row that isn't the "no transactions" message
             has_valid_data = False
             for i in range(section["data_start"], section["data_end"] + 1):
                 row_val_0 = str(df_raw.iloc[i, 0]).strip().lower()
@@ -145,12 +138,30 @@ def _find_account_sections_gl(df_raw: pd.DataFrame) -> list[dict]:
         
     return final_sections
 
+def parse_transaction_history(file_or_path) -> pd.DataFrame:
+    """
+    Parse standard Schwab Transaction History CSV.
+    Headers: Date, Action, Symbol, Description, Quantity, Price, Fees & Comm, Amount
+    """
+    df = pd.read_csv(file_or_path, encoding="utf-8-sig")
+    
+    # Standardize columns
+    df['Date'] = pd.to_datetime(df['Date']).dt.strftime('%Y-%m-%d')
+    
+    # Clean numeric
+    for col in ['Quantity', 'Price', 'Fees & Comm', 'Amount']:
+        if col in df.columns:
+            df[col] = df[col].apply(_clean_dollar)
+            
+    # Build fingerprint
+    df['Fingerprint'] = df.apply(lambda x: f"{x['Date']}|{x['Action']}|{x.get('Symbol', '')}|{x['Amount']}", axis=1)
+    
+    return df
 
 def parse_realized_gl(file_or_path) -> pd.DataFrame:
     """
     Parse Schwab Realized G/L Lot Details CSV.
     Returns clean DataFrame with one row per closed lot.
-    Preserves account label for cross-account wash sale detection.
     """
     # 1. Read raw with no assumed header
     df_raw = pd.read_csv(
@@ -168,23 +179,18 @@ def parse_realized_gl(file_or_path) -> pd.DataFrame:
     # 3. For each section, extract data rows
     all_rows = []
     for section in sections:
-        # data_end could be a blank row or "no transactions" message, so iterate up to it
         for idx in range(section["data_start"], section["data_end"] + 1):
             row = df_raw.iloc[idx]
             symbol = str(row[0]).strip().strip('"')
 
-            # Skip: empty rows, header repeats, "no transactions" messages
             if not symbol or symbol.lower() in ("symbol", ""):
                 continue
             if "no transactions" in symbol.lower():
                 continue
             
-            # Skip blank separator rows (all cells are empty strings)
             if row.iloc[:].apply(lambda x: str(x).strip() == "").all():
                 continue
 
-
-            # Parse each field
             lot = {
                 "ticker":              symbol,
                 "description":         str(row[1]).strip().strip('"'),
@@ -206,15 +212,15 @@ def parse_realized_gl(file_or_path) -> pd.DataFrame:
                 "account":             section["account"],
             }
 
-            # Derived fields
             lot["holding_days"]  = _holding_days(lot["opened_date"], lot["closed_date"])
-            lot["is_primary_acct"] = "individual" in section["account"].lower() 
-                                     and "401" not in section["account"].lower() 
-                                     and "contributory" not in section["account"].lower()
+            lot["is_primary_acct"] = (
+                "individual" in section["account"].lower() 
+                and "401" not in section["account"].lower() 
+                and "contributory" not in section["account"].lower()
+            )
             lot["fingerprint"]   = _make_fingerprint(lot)
-            lot["winner"] = lot["gain_loss_dollars"] > 0 # Add for behavioral analysis
+            lot["winner"] = lot["gain_loss_dollars"] > 0
 
             all_rows.append(lot)
 
     return pd.DataFrame(all_rows)
-
