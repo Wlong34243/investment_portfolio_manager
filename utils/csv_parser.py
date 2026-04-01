@@ -23,10 +23,13 @@ except ImportError:
 
 def clean_numeric(value) -> float | None:
     """
-    Robust number parsing for Schwab CSVs.
-    Handles: "3,535.86" (commas), "(694.72)" (parens=negative),
-    "nan", "--", "-", "", None -> return None or 0.0
-    Must handle numpy NaN and Python None.
+    Robust number parsing for Schwab CSVs (Positions and Realized G/L).
+    Handles: 
+    - "3,535.86" (commas)
+    - "(694.72)" (parens = negative in Positions CSV)
+    - "-$3.43" (minus sign = negative in Realized G/L CSV)
+    - "$1,200.00" (dollar signs)
+    - "nan", "--", "-", "", None -> return None
     """
     if pd.isna(value) or value is None:
         return None
@@ -39,13 +42,15 @@ def clean_numeric(value) -> float | None:
     if not s or s.lower() in ['nan', 'none', '-', '--', 'n/a']:
         return None
     
-    # Check for parentheses for negative numbers
-    is_negative = s.startswith('(') and s.endswith(')')
-    if is_negative:
+    # Check for parentheses for negative numbers (Positions CSV)
+    is_negative = (s.startswith('(') and s.endswith(')')) or s.startswith('-')
+    if s.startswith('(') and s.endswith(')'):
         s = s[1:-1]
+    elif s.startswith('-'):
+        s = s[1:]
     
     # Strip currency symbols and commas
-    s = re.sub(r'[^\d.-]', '', s)
+    s = re.sub(r'[^\d.]', '', s)
     
     if not s:
         return None
@@ -56,9 +61,11 @@ def clean_numeric(value) -> float | None:
     except ValueError:
         return None
 
-# Add assertions as requested in Prompt 4
+# Add assertions for robustness
 assert clean_numeric("3,535.86") == 3535.86
 assert clean_numeric("(694.72)") == -694.72
+assert clean_numeric("-$3.43") == -3.43
+assert clean_numeric("$1,200.00") == 1200.00
 assert clean_numeric("--") is None
 assert clean_numeric("") is None
 

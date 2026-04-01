@@ -109,25 +109,28 @@ def normalize_positions(df: pd.DataFrame, import_date: str) -> pd.DataFrame:
 
 def write_holdings_current(ws, data: list[list]) -> None:
     """
-    GOTCHA #2: Clear data rows (keep header row 1), then single API call:
-        ws.update("A2", data)
-    Add time.sleep(1.0) after. Log row count.
+    Update Holdings_Current worksheet atomically.
+    1. Prepare full data block (headers + data).
+    2. Clear worksheet.
+    3. Update in a single API call to ensure integrity.
     """
     if not data:
         print("Holdings_Current: No data to write.")
         return
 
-    # Clear from A2 down
-    num_cols = len(data[0])
+    # Prepare headers and data for a single update
+    full_data = [config.POSITION_COLUMNS] + data
+    
+    # Clear the entire sheet (up to a reasonable limit) to ensure no stale data remains
+    num_cols = len(config.POSITION_COLUMNS)
     col_letter = chr(ord('A') + num_cols - 1)
+    ws.batch_clear([f"A1:{col_letter}2000"])
     
-    # Clearing a large enough range to be safe
-    ws.batch_clear([f"A2:{col_letter}2000"])
-    
-    ws.update(range_name="A2", values=data, value_input_option='USER_ENTERED')
+    # Write everything in one go starting at A1
+    ws.update(range_name="A1", values=full_data, value_input_option='USER_ENTERED')
         
     time.sleep(1.0)
-    print(f"Holdings_Current: Updated {len(data)} rows.")
+    print(f"Holdings_Current: Updated {len(data)} rows (plus headers).")
 
 def append_holdings_history(ws, data: list[list], existing_fps: set) -> int:
     """

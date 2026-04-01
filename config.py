@@ -244,6 +244,14 @@ SHEETS_SLEEP_BETWEEN_TABS = 1.0   # seconds between Google Sheets tab operations
 SHEETS_RETRY_BACKOFF = 60         # seconds to wait on APIError before retry
 
 # ---------------------------------------------------------------------------
-# DRY_RUN mode — safety gate for all Sheet writes
+# Ticker-specific Data Overrides (Manual Corrections)
 # ---------------------------------------------------------------------------
+TICKER_OVERRIDES = {
+    'ET': {
+        'dividend_yield': 8.5,  # Schwab/YFinance often miss LP distribution yields
+    },
+    'BABA': {
+        'asset_class': 'International', # Ensure BABA isn't just 'Other' or 'Equity'
+    }
+}
 DRY_RUN = False  # Set to False only when ready to write to live Sheet

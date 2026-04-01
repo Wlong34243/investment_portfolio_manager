@@ -5,22 +5,16 @@ Parses Schwab "Realized Gain/Loss – Lot Details" export CSV.
 
 import pandas as pd
 from datetime import datetime
+from utils.csv_parser import clean_numeric
 
 # --- Helper Functions ---
 def _clean_dollar(value) -> float:
     """
-    Parse Schwab G/L dollar values.
-    Handles: "$1,552.85", "-$3.43", "$0.00", "", None
-    NOTE: G/L CSV uses -$ prefix for negatives (NOT parentheses).
-    Different from positions CSV clean_numeric() — do not reuse.
+    Wrapper for centralized clean_numeric.
+    Returns 0.0 on failure to preserve existing G/L logic flow.
     """
-    if pd.isna(value) or str(value).strip() in ("", "-", "N/A"):
-        return 0.0
-    s = str(value).strip().replace(",", "").replace("$", "")
-    try:
-        return float(s)
-    except ValueError:
-        return 0.0
+    val = clean_numeric(value)
+    return val if val is not None else 0.0
 
 def _clean_pct(value) -> float:
     """

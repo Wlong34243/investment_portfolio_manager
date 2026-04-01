@@ -84,6 +84,7 @@ def enrich_positions(df: pd.DataFrame) -> pd.DataFrame:
     # 3. Bulk download metadata
     enriched_data = {}
     try:
+        # Use a comma-separated list of tickers for one large fetch
         tickers_obj = yf.Tickers(" ".join(top_tickers))
         for ticker in top_tickers:
             try:
@@ -94,20 +95,24 @@ def enrich_positions(df: pd.DataFrame) -> pd.DataFrame:
                 price = t.fast_info.get("last_price")
                 if price is None: price = info.get("regularMarketPrice")
                 
+                # Fetch basic beta from info, fallback to 1.0
+                beta = info.get("beta", 1.0)
+                
                 enriched_data[ticker] = {
                     'price': price,
                     'dividend_yield': info.get("dividendYield", 0.0) if info.get("dividendYield") else 0.0,
                     'sector': info.get("sector"),
-                    'beta': info.get("beta", 1.0)
+                    'beta': beta
                 }
                 
-                # Edge case: ET LP yield
-                if ticker == 'ET' and (enriched_data[ticker]['dividend_yield'] == 0 or enriched_data[ticker]['dividend_yield'] is None):
-                    enriched_data[ticker]['dividend_yield'] = 8.5
-                    
-                # Edge case: BABA ADR
-                if ticker == 'BABA' and (enriched_data[ticker]['sector'] is None or enriched_data[ticker]['sector'] == 'Other'):
-                    enriched_data[ticker]['sector'] = 'International'
+                # Apply Ticker Overrides from config
+                if ticker in config.TICKER_OVERRIDES:
+                    overrides = config.TICKER_OVERRIDES[ticker]
+                    for key, val in overrides.items():
+                        if key in enriched_data[ticker] or key == 'asset_class':
+                            # Map asset_class override to 'sector' in this loop
+                            target_key = 'sector' if key == 'asset_class' else key
+                            enriched_data[ticker][target_key] = val
 
             except Exception as e:
                 print(f"Failed to fetch metadata for {ticker}: {e}")
