@@ -1,5 +1,6 @@
 import logging
 import pandas as pd
+import numpy as np
 
 try:
     import pandas_ta as ta
@@ -11,11 +12,18 @@ try:
 except ImportError:
     yf = None
 
+def calculate_rsi_manual(series, period=14):
+    delta = series.diff()
+    gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
+    loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
+    rs = gain / loss
+    return 100 - (100 / (1 + rs))
+
 def calculate_technical_indicators(ticker: str, price_history: pd.DataFrame = None) -> dict:
-    if not ta:
-        logging.warning("pandas_ta is not installed.")
-        return {"error": "pandas_ta not installed", "installed": False}
-        
+    """
+    Calculate RSI, SMA50, SMA200, MACD.
+    Uses pandas_ta if available, otherwise falls back to manual pandas calculations.
+    """
     if price_history is None:
         if not yf:
             return {"error": "yfinance not installed"}
@@ -33,18 +41,30 @@ def calculate_technical_indicators(ticker: str, price_history: pd.DataFrame = No
     close = price_history['Close']
     
     try:
-        rsi = ta.rsi(close, length=14)
-        sma_50 = ta.sma(close, length=50)
-        sma_200 = ta.sma(close, length=200)
-        macd = ta.macd(close)
+        if ta:
+            rsi = ta.rsi(close, length=14)
+            sma_50 = ta.sma(close, length=50)
+            sma_200 = ta.sma(close, length=200)
+            macd_df = ta.macd(close)
+            macd_line = macd_df.iloc[-1, 0] if macd_df is not None else None
+            signal_line = macd_df.iloc[-1, 2] if macd_df is not None else None
+        else:
+            # Manual fallback
+            rsi = calculate_rsi_manual(close, 14)
+            sma_50 = close.rolling(window=50).mean()
+            sma_200 = close.rolling(window=200).mean()
+            # Simple MACD fallback
+            exp1 = close.ewm(span=12, adjust=False).mean()
+            exp2 = close.ewm(span=26, adjust=False).mean()
+            macd_line_series = exp1 - exp2
+            signal_line_series = macd_line_series.ewm(span=9, adjust=False).mean()
+            macd_line = macd_line_series.iloc[-1]
+            signal_line = signal_line_series.iloc[-1]
         
         latest_close = close.iloc[-1]
         latest_rsi = rsi.iloc[-1] if not rsi.empty else None
         latest_sma50 = sma_50.iloc[-1] if not sma_50.empty else None
         latest_sma200 = sma_200.iloc[-1] if not sma_200.empty else None
-        
-        macd_line = macd.iloc[-1, 0] if macd is not None and not macd.empty else None
-        signal_line = macd.iloc[-1, 2] if macd is not None and not macd.empty else None
         
         rsi_signal = "Neutral"
         if latest_rsi:

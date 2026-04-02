@@ -9,7 +9,6 @@ matplotlib
 seaborn
 plotly
 google-genai
-pandas-ta
 finnhub-python
 fredapi
 requests
