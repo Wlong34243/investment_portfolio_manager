@@ -150,6 +150,44 @@ def get_company_profile(ticker: str) -> dict:
         logging.warning(f"FMP profile error for {ticker}: {e}")
         return {}
 
+@CACHE(ttl=86400)
+def screen_by_metrics(criteria: dict) -> pd.DataFrame:
+    """
+    Screen stocks by metric thresholds.
+    Accept criteria like: marketCapMoreThan, peRatioLowerThan, dividendYieldMoreThan, sector
+    """
+    api_key = get_fmp_api_key()
+    if not api_key:
+        return pd.DataFrame()
+        
+    url = f"{BASE_URL}/stock-screener?apikey={api_key}"
+    for key, val in criteria.items():
+        if val is not None:
+            url += f"&{key}={val}"
+            
+    try:
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        if not data:
+            return pd.DataFrame()
+            
+        df = pd.DataFrame(data)
+        # Standardize columns
+        cols = ['symbol', 'companyName', 'marketCap', 'pe', 'dividendYield', 'sector']
+        # Use only existing columns
+        existing_cols = [c for t in cols for c in df.columns if t == c]
+        
+        return df[existing_cols].rename(columns={
+            'symbol': 'ticker',
+            'companyName': 'company_name',
+            'marketCap': 'market_cap',
+            'dividendYield': 'dividend_yield'
+        })
+    except Exception as e:
+        logging.warning(f"FMP screener error: {e}")
+        return pd.DataFrame()
+
 if __name__ == "__main__":
     print("Testing FMP Client...")
     print(get_key_metrics("AMZN"))

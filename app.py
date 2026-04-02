@@ -138,6 +138,46 @@ with tabs[0]:
     else:
         df = st.session_state["holdings_df"]
         
+        # --- Daily Movers (Agent 11) ---
+        from utils.agents.price_narrator import detect_significant_moves, batch_analyze_daily_moves
+        movers = detect_significant_moves(df)
+        if movers:
+            with st.expander(f"🚀 Daily Movers ({len(movers)} active)", expanded=False):
+                if st.button("🎙️ Explain Movements with AI"):
+                    with st.spinner("AI is checking news catalysts..."):
+                        narratives = batch_analyze_daily_moves(df)
+                        for n in narratives:
+                            st.info(f"**{n['ticker']} ({n['change_pct']:+.2f}%)**: {n['explanation']} (Catalyst: {n['catalyst']})")
+                else:
+                    move_summary = ", ".join([f"{m['Ticker']} ({m['Daily Change %']:+.1f}%)" for m in movers[:5]])
+                    st.write(f"Significant moves detected: {move_summary}")
+            st.divider()
+
+        # --- Macro Dashboard (Agent 10) ---
+        from utils.agents.macro_monitor import get_macro_snapshot, detect_macro_triggers, generate_macro_strategy
+        with st.expander("🌍 Macro Event Monitor", expanded=False):
+            macro_data = get_macro_snapshot()
+            m1, m2, m3, m4 = st.columns(4)
+            m1.metric("CPI (Inflation)", f"{macro_data['cpi']:.1f}", macro_data['cpi_trend'])
+            m2.metric("Fed Funds Rate", f"{macro_data['fed_rate']:.2f}%")
+            m3.metric("10Y Treasury", f"{macro_data['treasury_10y']:.2f}%")
+            m4.metric("VIX (Volatility)", f"{macro_data['vix']:.1f}", macro_data['vix_signal'], delta_color="inverse")
+            
+            triggers = detect_macro_triggers(macro_data, df)
+            for t in triggers:
+                st.warning(f"**{t['trigger']}:** {t['description']}")
+                
+            if st.button("🗺️ Generate Macro Strategy", use_container_width=True):
+                with st.spinner("AI is analyzing macro positioning..."):
+                    strat = generate_macro_strategy(triggers, macro_data, df)
+                    if "error" not in strat:
+                        st.success(f"**Outlook:** {strat['macro_outlook']}")
+                        st.write(f"**Risk Level:** {strat['risk_level']}")
+                        for rot in strat.get('sector_rotations', []):
+                            st.write(f"🔄 **Rotate:** {rot['from_sector']} → {rot['to_sector']}")
+                            st.caption(f"Rationale: {rot['rationale']}")
+            st.divider()
+
         # --- Earnings Sentinel (Agent 4) ---
         from utils.agents.earnings_sentinel import scan_upcoming_earnings, generate_earnings_alerts
         upcoming = scan_upcoming_earnings(df)
@@ -289,6 +329,16 @@ with tabs[1]:
                         st.info(f"**Risk Note:** {suggestion['risk_note']}")
             st.divider()
 
+        # --- Options Income (Agent 6) ---
+        from utils.agents.options_agent import estimate_monthly_premium_potential, OPTIONS_DISCLAIMER
+        opt_potential = estimate_monthly_premium_potential(df)
+        if opt_potential['candidate_count'] > 0:
+            with st.expander(f"💡 Options Income Potential ({opt_potential['candidate_count']} positions)"):
+                st.write(f"Estimated Monthly Premium: `${opt_potential['est_monthly_premium']:,.2f}`")
+                st.caption(OPTIONS_DISCLAIMER)
+                st.info("Visit the Research Hub to scan specific strikes for these positions.")
+            st.divider()
+
         # Calculate metrics
         from pipeline import calculate_income_metrics
         income_metrics = calculate_income_metrics(df)
@@ -336,7 +386,29 @@ with tabs[2]:
     else:
         df = st.session_state["holdings_df"]
         
-        # Calculate Alerts
+        # --- Correlation Optimizer (Agent 7) ---
+        from utils.agents.correlation_optimizer import run_background_risk_scan, detect_correlation_spikes, generate_optimization_suggestions
+        risk_alerts = run_background_risk_scan(df)
+        for ra in risk_alerts:
+            st.warning(ra)
+            
+        if "price_histories" in st.session_state:
+            hist = st.session_state["price_histories"]
+            spikes = detect_correlation_spikes(df, hist)
+            if spikes:
+                st.info(f"Detected {len(spikes)} high-correlation pairs (>0.80).")
+                if st.button("🧩 Optimize Diversification"):
+                    with st.spinner("AI is evaluating redundant risks..."):
+                        opt = generate_optimization_suggestions(spikes, df)
+                        if "error" not in opt:
+                            st.success(opt['overall_assessment'])
+                            for a in opt['alerts']:
+                                with st.expander(f"Redundancy: {a['pair']} ({a['correlation']:.2f})"):
+                                    st.write(f"**Suggestion:** {a['suggestion']}")
+                                    st.write(f"**Impact:** {a['impact']}")
+            st.divider()
+
+        # Calculate Alerts (Native)
         alerts = concentration_alerts(df)
         for alert in alerts:
             st.warning(alert)
