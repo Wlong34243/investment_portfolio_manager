@@ -485,31 +485,8 @@ def write_to_sheets(df: pd.DataFrame, cash_amount: float, dry_run: bool = True) 
     """
     results = {"holdings_written": 0, "history_appended": 0, "snapshot": False, "income_snapshot": False}
     
-    # Mapping our internal snake_case to Sheet's Camel Case with spaces
-    col_map = {
-        'ticker': 'Ticker',
-        'description': 'Description',
-        'asset_class': 'Asset Class',
-        'asset_strategy': 'Asset Strategy',
-        'quantity': 'Quantity',
-        'price': 'Price',
-        'market_value': 'Market Value',
-        'cost_basis': 'Cost Basis',
-        'unit_cost': 'Unit Cost',
-        'unrealized_gl': 'Unrealized G/L',
-        'unrealized_gl_pct': 'Unrealized G/L %',
-        'est_annual_income': 'Est Annual Income',
-        'dividend_yield': 'Dividend Yield',
-        'acquisition_date': 'Acquisition Date',
-        'wash_sale': 'Wash Sale',
-        'is_cash': 'Is Cash',
-        'weight': 'Weight',
-        'import_date': 'Import Date',
-        'fingerprint': 'Fingerprint',
-    }
-    
-    # Prepare data
-    data_list = sanitize_dataframe_for_sheets(df, config.POSITION_COLUMNS, col_map)
+    # Prepare data using centralized mapping
+    data_list = sanitize_dataframe_for_sheets(df, config.POSITION_COLUMNS, config.POSITION_COL_MAP)
     income_metrics = calculate_income_metrics(df)
     
     if dry_run:

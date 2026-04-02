@@ -1,125 +1,155 @@
-import requests
-import time
 import os
-import sys
+import requests
+import logging
+import pandas as pd
+from typing import List
+from datetime import datetime, timedelta
 
-# Add project root to path
-_HERE = os.path.dirname(os.path.abspath(__file__))
-_ROOT = os.path.dirname(_HERE)
-if _ROOT not in sys.path:
-    sys.path.insert(0, _ROOT)
+try:
+    import streamlit as st
+    CACHE = st.cache_data
+except ImportError:
+    # Dummy decorator for CLI testing
+    def CACHE(**kwargs):
+        def decorator(func):
+            return func
+        return decorator
 
 try:
     import config
 except ImportError:
-    pass
+    config = None
 
-try:
-    import streamlit as st
-except ImportError:
-    st = None
+BASE_URL = "[https://financialmodelingprep.com/api/v3](https://financialmodelingprep.com/api/v3)"
 
-FMP_BASE_URL = "https://financialmodelingprep.com/api/v3"
+def get_fmp_api_key() -> str:
+    return getattr(config, 'FMP_API_KEY', os.environ.get('FMP_API_KEY', ''))
 
-def _get_fmp_data(endpoint: str, params: dict = None) -> list | dict:
-    """Helper for FMP API calls with API key injection."""
-    if not config.FMP_API_KEY:
-        print("Warning: FMP_API_KEY not set in config.py")
-        return []
+@CACHE(ttl=86400)
+def get_earnings_calendar(tickers: List[str], days_ahead: int = 14) -> pd.DataFrame:
+    api_key = get_fmp_api_key()
+    if not api_key:
+        return pd.DataFrame()
         
-    url = f"{FMP_BASE_URL}/{endpoint}"
-    query_params = {"apikey": config.FMP_API_KEY}
-    if params:
-        query_params.update(params)
-        
+    start_date = datetime.now().strftime("%Y-%m-%d")
+    end_date = (datetime.now() + timedelta(days=days_ahead)).strftime("%Y-%m-%d")
+    
+    url = f"{BASE_URL}/earning_calendar?from={start_date}&to={end_date}&apikey={api_key}"
     try:
-        response = requests.get(url, params=query_params, timeout=10)
+        response = requests.get(url, timeout=10)
         response.raise_for_status()
-        return response.json()
+        data = response.json()
+        if not data:
+            return pd.DataFrame()
+            
+        df = pd.DataFrame(data)
+        df = df[df['symbol'].isin(tickers)]
+        
+        if df.empty:
+            return pd.DataFrame()
+            
+        return df[['symbol', 'date', 'epsEstimated', 'revenueEstimated']].rename(
+            columns={'symbol': 'ticker', 'epsEstimated': 'eps_estimated', 'revenueEstimated': 'revenue_estimated'}
+        )
     except Exception as e:
-        print(f"FMP API Error ({endpoint}): {e}")
-        return []
+        logging.warning(f"FMP earnings calendar error: {e}")
+        return pd.DataFrame()
 
-def get_earnings_transcripts(ticker: str) -> list[dict]:
-    """
-    Fetch last 2 earnings transcripts for ticker.
-    Returns: [{"date": str, "content": str, "quarter": int, "year": int}]
-    """
-    # 1. Check cache
-    if st and "fmp_cache" in st.session_state:
-        cache_key = f"transcripts_{ticker}"
-        if cache_key in st.session_state["fmp_cache"]:
-            entry = st.session_state["fmp_cache"][cache_key]
-            if time.time() - entry["ts"] < config.CACHE_TTL_SECONDS:
-                return entry["data"]
-
-    # 2. Call API
-    # First get available transcript dates/quarters
-    metadata = _get_fmp_data(f"earning_call_transcript/{ticker}")
+@CACHE(ttl=86400)
+def get_earnings_transcript(ticker: str, year: int = None, quarter: int = None) -> str:
+    api_key = get_fmp_api_key()
+    if not api_key:
+        return ""
+        
+    url = f"{BASE_URL}/earning_call_transcript/{ticker}?"
+    if year and quarter:
+        url += f"year={year}&quarter={quarter}&"
+    url += f"apikey={api_key}"
     
-    transcripts = []
-    # FMP returns a list of [year, quarter, date, content]
-    # We take top 2
-    for item in metadata[:2]:
-        transcripts.append({
-            "date": item.get("date"),
-            "content": item.get("content"),
-            "quarter": item.get("quarter"),
-            "year": item.get("year")
-        })
-        
-    # 3. Update cache
-    if st:
-        if "fmp_cache" not in st.session_state: st.session_state["fmp_cache"] = {}
-        st.session_state["fmp_cache"][f"transcripts_{ticker}"] = {"ts": time.time(), "data": transcripts}
-        
-    return transcripts
+    try:
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        if data and isinstance(data, list) and len(data) > 0:
+            transcript = data[0].get('content', '')
+            return transcript[:4000]  # Truncate to save context window
+        return ""
+    except Exception as e:
+        logging.warning(f"FMP transcript error for {ticker}: {e}")
+        return ""
 
-def get_company_news(ticker: str) -> list[dict]:
-    """
-    Fetch last 5 news items for ticker.
-    Returns: [{"date": str, "title": str, "text": str, "url": str, "site": str}]
-    """
-    # 1. Check cache
-    if st and "fmp_cache" in st.session_state:
-        cache_key = f"news_{ticker}"
-        if cache_key in st.session_state["fmp_cache"]:
-            entry = st.session_state["fmp_cache"][cache_key]
-            if time.time() - entry["ts"] < config.CACHE_TTL_SECONDS:
-                return entry["data"]
+@CACHE(ttl=86400)
+def get_key_metrics(ticker: str) -> dict:
+    api_key = get_fmp_api_key()
+    if not api_key:
+        return {}
+        
+    url = f"{BASE_URL}/key-metrics-ttm/{ticker}?apikey={api_key}"
+    try:
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        if data and isinstance(data, list) and len(data) > 0:
+            m = data[0]
+            return {
+                'pe_ratio': m.get('peRatioTTM'),
+                'pb_ratio': m.get('pbRatioTTM'),
+                'dividend_yield': m.get('dividendYieldPercentageTTM'),
+                'roe': m.get('roeTTM'),
+                'debt_to_equity': m.get('debtToEquityTTM'),
+                'revenue_per_share': m.get('revenuePerShareTTM'),
+                'free_cash_flow_per_share': m.get('freeCashFlowPerShareTTM')
+            }
+        return {}
+    except Exception as e:
+        logging.warning(f"FMP key metrics error for {ticker}: {e}")
+        return {}
 
-    # 2. Call API
-    news_raw = _get_fmp_data("stock_news", params={"tickers": ticker, "limit": 5})
-    
-    news = []
-    for item in news_raw:
-        news.append({
-            "date": item.get("publishedDate"),
-            "title": item.get("title"),
-            "text": item.get("text"),
-            "url": item.get("url"),
-            "site": item.get("site")
-        })
+@CACHE(ttl=86400)
+def get_historical_pe(ticker: str, years: int = 5) -> pd.DataFrame:
+    api_key = get_fmp_api_key()
+    if not api_key:
+        return pd.DataFrame()
         
-    # 3. Update cache
-    if st:
-        if "fmp_cache" not in st.session_state: st.session_state["fmp_cache"] = {}
-        st.session_state["fmp_cache"][f"news_{ticker}"] = {"ts": time.time(), "data": news}
+    url = f"{BASE_URL}/ratios/{ticker}?period=annual&limit={years}&apikey={api_key}"
+    try:
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        if data:
+            df = pd.DataFrame(data)
+            if 'priceEarningsRatio' in df.columns:
+                return df[['date', 'priceEarningsRatio']].rename(columns={'priceEarningsRatio': 'pe_ratio'})
+        return pd.DataFrame()
+    except Exception as e:
+        logging.warning(f"FMP historical PE error for {ticker}: {e}")
+        return pd.DataFrame()
+
+@CACHE(ttl=86400)
+def get_company_profile(ticker: str) -> dict:
+    api_key = get_fmp_api_key()
+    if not api_key:
+        return {}
         
-    return news
+    url = f"{BASE_URL}/profile/{ticker}?apikey={api_key}"
+    try:
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        if data and isinstance(data, list) and len(data) > 0:
+            p = data[0]
+            return {
+                'sector': p.get('sector'),
+                'industry': p.get('industry'),
+                'description': p.get('description'),
+                'market_cap': p.get('mktCap'),
+                'beta': p.get('beta')
+            }
+        return {}
+    except Exception as e:
+        logging.warning(f"FMP profile error for {ticker}: {e}")
+        return {}
 
 if __name__ == "__main__":
-    # Simple test (requires API key)
-    if config.FMP_API_KEY:
-        ticker = "AAPL"
-        print(f"Testing FMP news for {ticker}...")
-        news = get_company_news(ticker)
-        for n in news:
-            print(f"- {n['title']} ({n['date']})")
-            
-        print(f"\nTesting FMP transcripts for {ticker}...")
-        trans = get_earnings_transcripts(ticker)
-        for t in trans:
-            print(f"- Q{t['quarter']} {t['year']} ({t['date']}) | Length: {len(t['content'])}")
-    else:
-        print("FMP_API_KEY not set.")
+    print("Testing FMP Client...")
+    print(get_key_metrics("AMZN"))

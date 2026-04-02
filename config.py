@@ -110,6 +110,28 @@ POSITION_COLUMNS = [
     'Fingerprint',
 ]
 
+POSITION_COL_MAP = {
+    'ticker': 'Ticker',
+    'description': 'Description',
+    'asset_class': 'Asset Class',
+    'asset_strategy': 'Asset Strategy',
+    'quantity': 'Quantity',
+    'price': 'Price',
+    'market_value': 'Market Value',
+    'cost_basis': 'Cost Basis',
+    'unit_cost': 'Unit Cost',
+    'unrealized_gl': 'Unrealized G/L',
+    'unrealized_gl_pct': 'Unrealized G/L %',
+    'est_annual_income': 'Est Annual Income',
+    'dividend_yield': 'Dividend Yield',
+    'acquisition_date': 'Acquisition Date',
+    'wash_sale': 'Wash Sale',
+    'is_cash': 'Is Cash',
+    'weight': 'Weight',
+    'import_date': 'Import Date',
+    'fingerprint': 'Fingerprint',
+}
+
 # ---------------------------------------------------------------------------
 # Daily Snapshot Columns
 # ---------------------------------------------------------------------------

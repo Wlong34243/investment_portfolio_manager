@@ -84,7 +84,9 @@ with st.sidebar:
                     today_str = str(date.today())
                     df_norm = normalize_positions(df_enriched, today_str)
                     write_to_sheets(df_norm, cash_amount, dry_run=config.DRY_RUN)
-                    st.session_state["holdings_df"] = df_norm
+                    
+                    # Rename for UI consistency (Camel Case headers)
+                    st.session_state["holdings_df"] = df_norm.rename(columns=config.POSITION_COL_MAP)
                     status.update(label="Positions Complete", state="complete")
                 except Exception as e:
                     processing_errors.append(f"Positions Error: {e}")
