@@ -1,5 +1,5 @@
 
-[     UTC     ] Logs for investmentportfoliomanager.streamlit.app/
+[     UTC     ] Logs for investmentportfoliomanager.streamlit.app/Research
 ────────────────────────────────────────────────────────────────────────────────────────
 [15:46:37] 🚀 Starting up repository: 'investment_portfolio_manager', branch: 'main', main module: 'app.py'
 [15:46:37] 🐙 Cloning repository...
@@ -1479,3 +1479,639 @@ ImportError: cannot import name 'genai' from 'google' (unknown location)
       8 try:                                                                    
 ────────────────────────────────────────────────────────────────────────────────
 ImportError: cannot import name 'genai' from 'google' (unknown location)
+[16:33:35] 🐙 Pulling code changes from Github...
+[16:33:36] 📦 Processing dependencies...
+
+──────────────────────────────────────── uv ───────────────────────────────────────────
+
+Using uv pip install.
+Using Python 3.14.3 environment at /home/adminuser/venv
+Resolved 79 packages in 229ms
+Prepared 3 packages in 0.37ms
+Installed 3 packages in 15ms
+ + finnhub-python==2.4.27
+ + fredapi==0.5.2
+ + google-genai==[2026-04-02 16:33:37.264175] 1.70.0
+Checking if Streamlit is installed
+Found Streamlit version 1.56.0 in the environment
+Installing rich for an improved exception logging
+Using uv pip install.
+Using Python 3.14.3 environment at /home/adminuser/venv
+Audited 1 package in 3ms
+
+────────────────────────────────────────────────────────────────────────────────────────
+
+[16:33:39] 🐍 Python dependencies were installed from /mount/src/investment_portfolio_manager/requirements.txt using uv.
+[16:33:39] 📦 Processed dependencies!
+  Stopping...
+
+
+
+[16:33:42] 🔄 Updated app!
+2026-04-02 16:37:58.511 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-02 16:37:58.535 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-02 16:37:58.583 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-02 16:37:58.854 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-02 16:37:58.870 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-02 16:37:58.901 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-02 16:37:59.195 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-02 16:38:00.102 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-02 16:38:00.130 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-02 16:38:00.170 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-02 16:38:00.222 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-02 16:38:00.645 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-02 16:38:00.665 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-02 16:38:00.699 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-02 16:38:00.770 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-02 16:38:01.567 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-02 16:38:01.585 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-02 16:38:01.617 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-02 16:38:01.690 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-02 16:38:02.522 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-02 16:38:02.543 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-02 16:38:02.583 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-02 16:38:02.668 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+[17:54:10] 🐙 Pulling code changes from Github...
+[17:54:11] 📦 Processing dependencies...
+[17:54:11] 📦 Processed dependencies!
+2026-04-02 17:54:12.267 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-02 17:54:12.296 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-02 17:54:12.331 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-02 17:54:12.393 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+[17:54:13] 🔄 Updated app!
+────────────────────── Traceback (most recent call last) ───────────────────────
+  /home/adminuser/venv/lib/python3.14/site-packages/streamlit/runtime/scriptru  
+  nner/exec_code.py:129 in exec_func_with_error_handling                        
+                                                                                
+  /home/adminuser/venv/lib/python3.14/site-packages/streamlit/runtime/scriptru  
+  nner/script_runner.py:687 in code_to_exec                                     
+                                                                                
+  /home/adminuser/venv/lib/python3.14/site-packages/streamlit/runtime/scriptru  
+  nner/script_runner.py:166 in _mpa_v1                                          
+                                                                                
+  /home/adminuser/venv/lib/python3.14/site-packages/streamlit/navigation/page.  
+  py:490 in run                                                                 
+                                                                                
+  /mount/src/investment_portfolio_manager/pages/2_Research.py:148 in <module>   
+                                                                                
+    145 # --- Thesis Screener (Agent 9) ---                                     
+    146 st.divider()                                                            
+    147 st.subheader("🔭 AI Thesis Screener")                                   
+  ❱ 148 from utils.agents.thesis_screener import parse_thesis_to_criteria, scr  
+    149                                                                         
+    150 thesis_input = st.text_area("Describe your investment thesis (e.g. 'In  
+    151 examples = [                                                            
+                                                                                
+  /mount/src/investment_portfolio_manager/utils/agents/thesis_screener.py:4 in  
+  <module>                                                                      
+                                                                                
+     1 import pandas as pd                                                      
+     2 import logging                                                           
+     3 from utils.gemini_client import ask_gemini_json, SAFETY_PREAMBLE         
+  ❱  4 from utils.fmp_client import screen_by_metrics                           
+     5                                                                          
+     6 def parse_thesis_to_criteria(thesis: str) -> dict:                       
+     7 │   """                                                                  
+────────────────────────────────────────────────────────────────────────────────
+ImportError: cannot import name 'screen_by_metrics' from 'utils.fmp_client' 
+(/mount/src/investment_portfolio_manager/utils/fmp_client.py)
+────────────────────── Traceback (most recent call last) ───────────────────────
+  /home/adminuser/venv/lib/python3.14/site-packages/streamlit/runtime/scriptru  
+  nner/exec_code.py:129 in exec_func_with_error_handling                        
+                                                                                
+  /home/adminuser/venv/lib/python3.14/site-packages/streamlit/runtime/scriptru  
+  nner/script_runner.py:687 in code_to_exec                                     
+                                                                                
+  /home/adminuser/venv/lib/python3.14/site-packages/streamlit/runtime/scriptru  
+  nner/script_runner.py:166 in _mpa_v1                                          
+                                                                                
+  /home/adminuser/venv/lib/python3.14/site-packages/streamlit/navigation/page.  
+  py:490 in run                                                                 
+                                                                                
+  /mount/src/investment_portfolio_manager/pages/2_Research.py:148 in <module>   
+                                                                                
+    145 # --- Thesis Screener (Agent 9) ---                                     
+    146 st.divider()                                                            
+    147 st.subheader("🔭 AI Thesis Screener")                                   
+  ❱ 148 from utils.agents.thesis_screener import parse_thesis_to_criteria, scr  
+    149                                                                         
+    150 thesis_input = st.text_area("Describe your investment thesis (e.g. 'In  
+    151 examples = [                                                            
+                                                                                
+  /mount/src/investment_portfolio_manager/utils/agents/thesis_screener.py:4 in  
+  <module>                                                                      
+                                                                                
+     1 import pandas as pd                                                      
+     2 import logging                                                           
+     3 from utils.gemini_client import ask_gemini_json, SAFETY_PREAMBLE         
+  ❱  4 from utils.fmp_client import screen_by_metrics                           
+     5                                                                          
+     6 def parse_thesis_to_criteria(thesis: str) -> dict:                       
+     7 │   """                                                                  
+────────────────────────────────────────────────────────────────────────────────
+ImportError: cannot import name 'screen_by_metrics' from 'utils.fmp_client' 
+(/mount/src/investment_portfolio_manager/utils/fmp_client.py)
+────────────────────── Traceback (most recent call last) ───────────────────────
+  /home/adminuser/venv/lib/python3.14/site-packages/streamlit/runtime/scriptru  
+  nner/exec_code.py:129 in exec_func_with_error_handling                        
+                                                                                
+  /home/adminuser/venv/lib/python3.14/site-packages/streamlit/runtime/scriptru  
+  nner/script_runner.py:687 in code_to_exec                                     
+                                                                                
+  /home/adminuser/venv/lib/python3.14/site-packages/streamlit/runtime/scriptru  
+  nner/script_runner.py:166 in _mpa_v1                                          
+                                                                                
+  /home/adminuser/venv/lib/python3.14/site-packages/streamlit/navigation/page.  
+  py:490 in run                                                                 
+                                                                                
+  /mount/src/investment_portfolio_manager/pages/2_Research.py:148 in <module>   
+                                                                                
+    145 # --- Thesis Screener (Agent 9) ---                                     
+    146 st.divider()                                                            
+    147 st.subheader("🔭 AI Thesis Screener")                                   
+  ❱ 148 from utils.agents.thesis_screener import parse_thesis_to_criteria, scr  
+    149                                                                         
+    150 thesis_input = st.text_area("Describe your investment thesis (e.g. 'In  
+    151 examples = [                                                            
+                                                                                
+  /mount/src/investment_portfolio_manager/utils/agents/thesis_screener.py:4 in  
+  <module>                                                                      
+                                                                                
+     1 import pandas as pd                                                      
+     2 import logging                                                           
+     3 from utils.gemini_client import ask_gemini_json, SAFETY_PREAMBLE         
+  ❱  4 from utils.fmp_client import screen_by_metrics                           
+     5                                                                          
+     6 def parse_thesis_to_criteria(thesis: str) -> dict:                       
+     7 │   """                                                                  
+────────────────────────────────────────────────────────────────────────────────
+ImportError: cannot import name 'screen_by_metrics' from 'utils.fmp_client' 
+(/mount/src/investment_portfolio_manager/utils/fmp_client.py)
+────────────────────── Traceback (most recent call last) ───────────────────────
+  /home/adminuser/venv/lib/python3.14/site-packages/streamlit/runtime/scriptru  
+  nner/exec_code.py:129 in exec_func_with_error_handling                        
+                                                                                
+  /home/adminuser/venv/lib/python3.14/site-packages/streamlit/runtime/scriptru  
+  nner/script_runner.py:687 in code_to_exec                                     
+                                                                                
+  /home/adminuser/venv/lib/python3.14/site-packages/streamlit/runtime/scriptru  
+  nner/script_runner.py:166 in _mpa_v1                                          
+                                                                                
+  /home/adminuser/venv/lib/python3.14/site-packages/streamlit/navigation/page.  
+  py:490 in run                                                                 
+                                                                                
+  /mount/src/investment_portfolio_manager/pages/2_Research.py:148 in <module>   
+                                                                                
+    145 # --- Thesis Screener (Agent 9) ---                                     
+    146 st.divider()                                                            
+    147 st.subheader("🔭 AI Thesis Screener")                                   
+  ❱ 148 from utils.agents.thesis_screener import parse_thesis_to_criteria, scr  
+    149                                                                         
+    150 thesis_input = st.text_area("Describe your investment thesis (e.g. 'In  
+    151 examples = [                                                            
+                                                                                
+  /mount/src/investment_portfolio_manager/utils/agents/thesis_screener.py:4 in  
+  <module>                                                                      
+                                                                                
+     1 import pandas as pd                                                      
+     2 import logging                                                           
+     3 from utils.gemini_client import ask_gemini_json, SAFETY_PREAMBLE         
+  ❱  4 from utils.fmp_client import screen_by_metrics                           
+     5                                                                          
+     6 def parse_thesis_to_criteria(thesis: str) -> dict:                       
+     7 │   """                                                                  
+────────────────────────────────────────────────────────────────────────────────
+ImportError: cannot import name 'screen_by_metrics' from 'utils.fmp_client' 
+(/mount/src/investment_portfolio_manager/utils/fmp_client.py)
+────────────────────── Traceback (most recent call last) ───────────────────────
+  /home/adminuser/venv/lib/python3.14/site-packages/streamlit/runtime/scriptru  
+  nner/exec_code.py:129 in exec_func_with_error_handling                        
+                                                                                
+  /home/adminuser/venv/lib/python3.14/site-packages/streamlit/runtime/scriptru  
+  nner/script_runner.py:687 in code_to_exec                                     
+                                                                                
+  /home/adminuser/venv/lib/python3.14/site-packages/streamlit/runtime/scriptru  
+  nner/script_runner.py:166 in _mpa_v1                                          
+                                                                                
+  /home/adminuser/venv/lib/python3.14/site-packages/streamlit/navigation/page.  
+  py:490 in run                                                                 
+                                                                                
+  /mount/src/investment_portfolio_manager/pages/2_Research.py:148 in <module>   
+                                                                                
+    145 # --- Thesis Screener (Agent 9) ---                                     
+    146 st.divider()                                                            
+    147 st.subheader("🔭 AI Thesis Screener")                                   
+  ❱ 148 from utils.agents.thesis_screener import parse_thesis_to_criteria, scr  
+    149                                                                         
+    150 thesis_input = st.text_area("Describe your investment thesis (e.g. 'In  
+    151 examples = [                                                            
+                                                                                
+  /mount/src/investment_portfolio_manager/utils/agents/thesis_screener.py:4 in  
+  <module>                                                                      
+                                                                                
+     1 import pandas as pd                                                      
+     2 import logging                                                           
+     3 from utils.gemini_client import ask_gemini_json, SAFETY_PREAMBLE         
+  ❱  4 from utils.fmp_client import screen_by_metrics                           
+     5                                                                          
+     6 def parse_thesis_to_criteria(thesis: str) -> dict:                       
+     7 │   """                                                                  
+────────────────────────────────────────────────────────────────────────────────
+ImportError: cannot import name 'screen_by_metrics' from 'utils.fmp_client' 
+(/mount/src/investment_portfolio_manager/utils/fmp_client.py)
+────────────────────── Traceback (most recent call last) ───────────────────────
+  /home/adminuser/venv/lib/python3.14/site-packages/streamlit/runtime/scriptru  
+  nner/exec_code.py:129 in exec_func_with_error_handling                        
+                                                                                
+  /home/adminuser/venv/lib/python3.14/site-packages/streamlit/runtime/scriptru  
+  nner/script_runner.py:687 in code_to_exec                                     
+                                                                                
+  /home/adminuser/venv/lib/python3.14/site-packages/streamlit/runtime/scriptru  
+  nner/script_runner.py:166 in _mpa_v1                                          
+                                                                                
+  /home/adminuser/venv/lib/python3.14/site-packages/streamlit/navigation/page.  
+  py:490 in run                                                                 
+                                                                                
+  /mount/src/investment_portfolio_manager/pages/2_Research.py:148 in <module>   
+                                                                                
+    145 # --- Thesis Screener (Agent 9) ---                                     
+    146 st.divider()                                                            
+    147 st.subheader("🔭 AI Thesis Screener")                                   
+  ❱ 148 from utils.agents.thesis_screener import parse_thesis_to_criteria, scr  
+    149                                                                         
+    150 thesis_input = st.text_area("Describe your investment thesis (e.g. 'In  
+    151 examples = [                                                            
+                                                                                
+  /mount/src/investment_portfolio_manager/utils/agents/thesis_screener.py:4 in  
+  <module>                                                                      
+                                                                                
+     1 import pandas as pd                                                      
+     2 import logging                                                           
+     3 from utils.gemini_client import ask_gemini_json, SAFETY_PREAMBLE         
+  ❱  4 from utils.fmp_client import screen_by_metrics                           
+     5                                                                          
+     6 def parse_thesis_to_criteria(thesis: str) -> dict:                       
+     7 │   """                                                                  
+────────────────────────────────────────────────────────────────────────────────
+ImportError: cannot import name 'screen_by_metrics' from 'utils.fmp_client' 
+(/mount/src/investment_portfolio_manager/utils/fmp_client.py)
+2026-04-02 18:10:03.281 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-02 18:10:03.313 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-02 18:10:03.348 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-02 18:10:03.400 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+────────────────────── Traceback (most recent call last) ───────────────────────
+  /home/adminuser/venv/lib/python3.14/site-packages/streamlit/runtime/scriptru  
+  nner/exec_code.py:129 in exec_func_with_error_handling                        
+                                                                                
+  /home/adminuser/venv/lib/python3.14/site-packages/streamlit/runtime/scriptru  
+  nner/script_runner.py:687 in code_to_exec                                     
+                                                                                
+  /home/adminuser/venv/lib/python3.14/site-packages/streamlit/runtime/scriptru  
+  nner/script_runner.py:166 in _mpa_v1                                          
+                                                                                
+  /home/adminuser/venv/lib/python3.14/site-packages/streamlit/navigation/page.  
+  py:490 in run                                                                 
+                                                                                
+  /mount/src/investment_portfolio_manager/pages/2_Research.py:148 in <module>   
+                                                                                
+    145 # --- Thesis Screener (Agent 9) ---                                     
+    146 st.divider()                                                            
+    147 st.subheader("🔭 AI Thesis Screener")                                   
+  ❱ 148 from utils.agents.thesis_screener import parse_thesis_to_criteria, scr  
+    149                                                                         
+    150 thesis_input = st.text_area("Describe your investment thesis (e.g. 'In  
+    151 examples = [                                                            
+                                                                                
+  /mount/src/investment_portfolio_manager/utils/agents/thesis_screener.py:4 in  
+  <module>                                                                      
+                                                                                
+     1 import pandas as pd                                                      
+     2 import logging                                                           
+     3 from utils.gemini_client import ask_gemini_json, SAFETY_PREAMBLE         
+  ❱  4 from utils.fmp_client import screen_by_metrics                           
+     5                                                                          
+     6 def parse_thesis_to_criteria(thesis: str) -> dict:                       
+     7 │   """                                                                  
+────────────────────────────────────────────────────────────────────────────────
+ImportError: cannot import name 'screen_by_metrics' from 'utils.fmp_client' 
+(/mount/src/investment_portfolio_manager/utils/fmp_client.py)
+────────────────────── Traceback (most recent call last) ───────────────────────
+  /home/adminuser/venv/lib/python3.14/site-packages/streamlit/runtime/scriptru  
+  nner/exec_code.py:129 in exec_func_with_error_handling                        
+                                                                                
+  /home/adminuser/venv/lib/python3.14/site-packages/streamlit/runtime/scriptru  
+  nner/script_runner.py:687 in code_to_exec                                     
+                                                                                
+  /home/adminuser/venv/lib/python3.14/site-packages/streamlit/runtime/scriptru  
+  nner/script_runner.py:166 in _mpa_v1                                          
+                                                                                
+  /home/adminuser/venv/lib/python3.14/site-packages/streamlit/navigation/page.  
+  py:490 in run                                                                 
+                                                                                
+  /mount/src/investment_portfolio_manager/pages/2_Research.py:148 in <module>   
+                                                                                
+    145 # --- Thesis Screener (Agent 9) ---                                     
+    146 st.divider()                                                            
+    147 st.subheader("🔭 AI Thesis Screener")                                   
+  ❱ 148 from utils.agents.thesis_screener import parse_thesis_to_criteria, scr  
+    149                                                                         
+    150 thesis_input = st.text_area("Describe your investment thesis (e.g. 'In  
+    151 examples = [                                                            
+                                                                                
+  /mount/src/investment_portfolio_manager/utils/agents/thesis_screener.py:4 in  
+  <module>                                                                      
+                                                                                
+     1 import pandas as pd                                                      
+     2 import logging                                                           
+     3 from utils.gemini_client import ask_gemini_json, SAFETY_PREAMBLE         
+  ❱  4 from utils.fmp_client import screen_by_metrics                           
+     5                                                                          
+     6 def parse_thesis_to_criteria(thesis: str) -> dict:                       
+     7 │   """                                                                  
+────────────────────────────────────────────────────────────────────────────────
+ImportError: cannot import name 'screen_by_metrics' from 'utils.fmp_client' 
+(/mount/src/investment_portfolio_manager/utils/fmp_client.py)
+2026-04-02 18:16:44.851 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-02 18:16:44.879 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-02 18:16:44.909 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-02 18:16:44.968 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+────────────────────── Traceback (most recent call last) ───────────────────────
+  /home/adminuser/venv/lib/python3.14/site-packages/streamlit/runtime/scriptru  
+  nner/exec_code.py:129 in exec_func_with_error_handling                        
+                                                                                
+  /home/adminuser/venv/lib/python3.14/site-packages/streamlit/runtime/scriptru  
+  nner/script_runner.py:687 in code_to_exec                                     
+                                                                                
+  /home/adminuser/venv/lib/python3.14/site-packages/streamlit/runtime/scriptru  
+  nner/script_runner.py:166 in _mpa_v1                                          
+                                                                                
+  /home/adminuser/venv/lib/python3.14/site-packages/streamlit/navigation/page.  
+  py:490 in run                                                                 
+                                                                                
+  /mount/src/investment_portfolio_manager/pages/2_Research.py:148 in <module>   
+                                                                                
+    145 # --- Thesis Screener (Agent 9) ---                                     
+    146 st.divider()                                                            
+    147 st.subheader("🔭 AI Thesis Screener")                                   
+  ❱ 148 from utils.agents.thesis_screener import parse_thesis_to_criteria, scr  
+    149                                                                         
+    150 thesis_input = st.text_area("Describe your investment thesis (e.g. 'In  
+    151 examples = [                                                            
+                                                                                
+  /mount/src/investment_portfolio_manager/utils/agents/thesis_screener.py:4 in  
+  <module>                                                                      
+                                                                                
+     1 import pandas as pd                                                      
+     2 import logging                                                           
+     3 from utils.gemini_client import ask_gemini_json, SAFETY_PREAMBLE         
+  ❱  4 from utils.fmp_client import screen_by_metrics                           
+     5                                                                          
+     6 def parse_thesis_to_criteria(thesis: str) -> dict:                       
+     7 │   """                                                                  
+────────────────────────────────────────────────────────────────────────────────
+ImportError: cannot import name 'screen_by_metrics' from 'utils.fmp_client' 
+(/mount/src/investment_portfolio_manager/utils/fmp_client.py)
+────────────────────── Traceback (most recent call last) ───────────────────────
+  /home/adminuser/venv/lib/python3.14/site-packages/streamlit/runtime/scriptru  
+  nner/exec_code.py:129 in exec_func_with_error_handling                        
+                                                                                
+  /home/adminuser/venv/lib/python3.14/site-packages/streamlit/runtime/scriptru  
+  nner/script_runner.py:687 in code_to_exec                                     
+                                                                                
+  /home/adminuser/venv/lib/python3.14/site-packages/streamlit/runtime/scriptru  
+  nner/script_runner.py:166 in _mpa_v1                                          
+                                                                                
+  /home/adminuser/venv/lib/python3.14/site-packages/streamlit/navigation/page.  
+  py:490 in run                                                                 
+                                                                                
+  /mount/src/investment_portfolio_manager/pages/2_Research.py:148 in <module>   
+                                                                                
+    145 # --- Thesis Screener (Agent 9) ---                                     
+    146 st.divider()                                                            
+    147 st.subheader("🔭 AI Thesis Screener")                                   
+  ❱ 148 from utils.agents.thesis_screener import parse_thesis_to_criteria, scr  
+    149                                                                         
+    150 thesis_input = st.text_area("Describe your investment thesis (e.g. 'In  
+    151 examples = [                                                            
+                                                                                
+  /mount/src/investment_portfolio_manager/utils/agents/thesis_screener.py:4 in  
+  <module>                                                                      
+                                                                                
+     1 import pandas as pd                                                      
+     2 import logging                                                           
+     3 from utils.gemini_client import ask_gemini_json, SAFETY_PREAMBLE         
+  ❱  4 from utils.fmp_client import screen_by_metrics                           
+     5                                                                          
+     6 def parse_thesis_to_criteria(thesis: str) -> dict:                       
+     7 │   """                                                                  
+────────────────────────────────────────────────────────────────────────────────
+ImportError: cannot import name 'screen_by_metrics' from 'utils.fmp_client' 
+(/mount/src/investment_portfolio_manager/utils/fmp_client.py)
+2026-04-02 18:17:14.929 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-02 18:18:01.673 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-02 18:18:10.106 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-02 18:20:01.325 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-02 18:20:01.354 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-02 18:20:01.396 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-02 18:20:01.475 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-02 18:20:23.110 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-02 18:20:23.141 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-02 18:20:23.185 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-02 18:20:23.269 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+
+1 Failed download:
+['CASH & CASH INVESTMENTS']: YFRateLimitError('Too Many Requests. Rate limited. Try after a while.')
+2026-04-02 18:20:26.600 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-02 18:20:26.658 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
