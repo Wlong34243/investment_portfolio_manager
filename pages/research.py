@@ -1,7 +1,8 @@
 import streamlit as st
 import pandas as pd
 from utils.sheet_readers import get_holdings_current
-from utils.fmp_client import get_earnings_transcripts, get_company_news
+from utils.fmp_client import get_earnings_transcript, get_company_profile
+from utils.finnhub_client import get_company_news
 from utils.ai_research import analyze_ticker
 import plotly.graph_objects as go
 import os
@@ -54,35 +55,46 @@ k4.metric("Portfolio Weight", f"{info['Weight']:.2f}%")
 col1, col2 = st.columns(2)
 
 with col1:
-    st.subheader("Recent News")
+    st.subheader("Company Profile & News")
+    
+    with st.spinner("Fetching profile..."):
+        profile = get_company_profile(selected_ticker)
+        if profile:
+            st.write(f"**Industry:** {profile.get('industry')}")
+            st.write(f"**Market Cap:** ${profile.get('market_cap', 0):,.0f}")
+            with st.expander("Business Description"):
+                st.write(profile.get('description'))
+        else:
+            st.write("No profile found.")
+            
+    st.divider()
+    
     with st.spinner("Fetching news..."):
         news = get_company_news(selected_ticker)
         if news:
             for item in news:
-                with st.expander(f"{item['title']} ({item['date']})"):
-                    st.write(item['text'])
+                with st.expander(f"{item['headline']} ({item['datetime']})"):
+                    st.write(item['summary'])
                     st.write(f"[Read more]({item['url']})")
         else:
             st.write("No recent news found.")
 
 with col2:
-    st.subheader("Earnings Transcripts")
-    with st.spinner("Fetching transcripts..."):
-        transcripts = get_earnings_transcripts(selected_ticker)
-        if transcripts:
-            for item in transcripts:
-                with st.expander(f"Q{item['quarter']} {item['year']} ({item['date']})"):
-                    st.write(f"Length: {len(item['content'])} characters")
-                    st.text_area("Snippet", item['content'][:2000] + "...", height=200)
+    st.subheader("Latest Earnings Transcript")
+    with st.spinner("Fetching transcript..."):
+        transcript = get_earnings_transcript(selected_ticker)
+        if transcript:
+            st.write(f"Length: {len(transcript)} characters")
+            st.text_area("Transcript Snippet", transcript, height=500)
         else:
-            st.write("No transcripts found.")
+            st.write("No transcript found.")
 
 # --- AI Analysis ---
 st.divider()
-if st.button(f"Analyze {selected_ticker} with Claude 3.5 Sonnet", use_container_width=True):
-    with st.spinner("Claude is reviewing transcripts and news..."):
+if st.button(f"Analyze {selected_ticker} with Gemini 2.5 Pro", use_container_width=True):
+    with st.spinner("Gemini is reviewing transcripts and news..."):
         # Combine data for analysis
-        analysis = analyze_ticker(selected_ticker, transcripts, news)
+        analysis = analyze_ticker(selected_ticker, transcript, news)
         
         if "error" in analysis:
             st.error(f"AI Analysis failed: {analysis['error']}")

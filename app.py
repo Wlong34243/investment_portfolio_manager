@@ -138,6 +138,38 @@ with tabs[0]:
     else:
         df = st.session_state["holdings_df"]
         
+        # --- Earnings Sentinel (Agent 4) ---
+        from utils.agents.earnings_sentinel import scan_upcoming_earnings, generate_earnings_alerts
+        upcoming = scan_upcoming_earnings(df)
+        if not upcoming.empty:
+            with st.expander(f"📅 Upcoming Earnings ({len(upcoming)} in next 14 days)", expanded=True):
+                st.table(upcoming)
+                if st.button("🔔 Generate AI Earnings Insights", use_container_width=True):
+                    with st.spinner("Analyzing upcoming catalysts..."):
+                        earnings_alerts = generate_earnings_alerts(upcoming, df)
+                        for alert in earnings_alerts:
+                            st.info(f"{alert['badge']} **{alert['ticker']} ({alert['date']})**: {alert['alert']}")
+            st.divider()
+
+        # --- Concentration Alerts (Agent 1) ---
+        from utils.agents.concentration_hedger import check_on_page_load, scan_concentration_risks, generate_hedge_suggestions
+        alerts = check_on_page_load(df)
+        if alerts:
+            for alert in alerts:
+                st.warning(alert)
+            
+            if st.button("🛡️ Get AI Hedging Ideas", use_container_width=True):
+                with st.spinner("AI is analyzing your exposure and technical trends..."):
+                    risks = scan_concentration_risks(df)
+                    suggestions = generate_hedge_suggestions(risks, df)
+                    for res in suggestions:
+                        with st.expander(f"Hedge Strategies for {res['ticker']}"):
+                            for s in res['suggestions']:
+                                st.write(f"**{s['strategy']}**")
+                                st.write(s['description'])
+                                st.info(f"Impact: {s['impact_estimate']}")
+            st.divider()
+
         # KPI row
         total_val = df['Market Value'].sum()
         total_cost = df['Cost Basis'].sum()
@@ -241,6 +273,22 @@ with tabs[1]:
     else:
         df = st.session_state["holdings_df"]
         
+        # --- Cash Sweep Alerts (Agent 3) ---
+        from utils.agents.cash_sweeper import get_cash_sweep_alert, analyze_cash_position, generate_cash_deployment_suggestion
+        sweep_alert = get_cash_sweep_alert(df)
+        if sweep_alert:
+            st.info(sweep_alert)
+            if st.button("💵 Optimize Cash Yield", use_container_width=True):
+                with st.spinner("Analyzing higher-yielding alternatives..."):
+                    cash_analysis = analyze_cash_position(df)
+                    suggestion = generate_cash_deployment_suggestion(cash_analysis, df)
+                    if "error" not in suggestion:
+                        st.success(f"**Recommendation:** {suggestion['recommendation']}")
+                        st.write(f"**Action:** {suggestion['proposed_action']}")
+                        st.write(f"**Est. Improvement:** {suggestion['yield_improvement']}")
+                        st.info(f"**Risk Note:** {suggestion['risk_note']}")
+            st.divider()
+
         # Calculate metrics
         from pipeline import calculate_income_metrics
         income_metrics = calculate_income_metrics(df)

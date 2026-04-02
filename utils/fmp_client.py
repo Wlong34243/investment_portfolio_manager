@@ -20,7 +20,7 @@ try:
 except ImportError:
     config = None
 
-BASE_URL = "[https://financialmodelingprep.com/api/v3](https://financialmodelingprep.com/api/v3)"
+BASE_URL = "https://financialmodelingprep.com/api/v3"
 
 def get_fmp_api_key() -> str:
     return getattr(config, 'FMP_API_KEY', os.environ.get('FMP_API_KEY', ''))

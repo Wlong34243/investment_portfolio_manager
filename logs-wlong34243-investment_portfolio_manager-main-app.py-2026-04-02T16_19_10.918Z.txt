@@ -1,0 +1,348 @@
+
+[     UTC     ] Logs for investmentportfoliomanager.streamlit.app/
+────────────────────────────────────────────────────────────────────────────────────────
+[15:45:59] 🖥 Provisioning machine...
+[15:45:59] 🎛 Preparing system...
+[15:45:59] ⛓ Spinning up manager process...
+[15:46:37] 🚀 Starting up repository: 'investment_portfolio_manager', branch: 'main', main module: 'app.py'
+[15:46:37] 🐙 Cloning repository...
+[15:46:38] 🐙 Cloning into '/mount/src/investment_portfolio_manager'...
+
+[15:46:38] 🐙 Cloned repository!
+[15:46:38] 🐙 Pulling code changes from Github...
+[15:46:39] 📦 Processing dependencies...
+
+──────────────────────────────────────── uv ───────────────────────────────────────────
+
+Using uv pip install.
+Using Python 3.14.3 environment at /home/adminuser/venv
+Resolved 79 packages in 881ms
+Prepared 79 packages in 2.87s
+Installed 79 packages in 227ms
+ + altair==6.0.0
+ + annotated-types==0.7.0
+ + anthropic==0.88.0
+ +[2026-04-02 15:46:43.956696]  anyio==4.13.0
+ + attrs==26.1.0
+ + beautifulsoup4==4.14.3
+ + blinker==1.9.0
+ + cachetools==7.0.5
+ + certifi==2026.2.25
+ + cffi==2.0.0
+ + charset-normalizer==3.4.7
+ + click==8.3.1
+ +[2026-04-02 15:46:43.957119]  contourpy==1.3.3
+ + cryptography==46.0.6
+ + curl-cffi==0.13.0
+ + cycler==0.12.1
+ + distro==1.9.0
+ + docstring-parser==0.17.0[2026-04-02 15:46:43.957391] 
+ + et-xmlfile==2.0.0
+ + fonttools==4.62.1
+ + frozendict==2.4.7
+ + gitdb==4.0.12
+ + gitpython[2026-04-02 15:46:43.957588] ==3.1.46
+ + google-auth==2.49.1
+ + google-auth-oauthlib==1.3.1
+ + gspread==6.2.1
+ + h11[2026-04-02 15:46:43.957783] ==0.16.0
+ + httpcore==1.0.9
+ + httpx==0.28.1
+ + idna==3.11
+ + jinja2==3.1.6
+ +[2026-04-02 15:46:43.957962]  jiter==0.13.0
+ + jsonschema==4.26.0
+ + jsonschema-specifications==2025.9.1
+ + kiwisolver==1.5.0
+ +[2026-04-02 15:46:43.958226]  markupsafe==3.0.3
+ + matplotlib==3.10.8
+ + multitasking==0.0.12
+ + narwhals==2.18.1
+ + [2026-04-02 15:46:43.958447] numpy==2.4.4
+ + oauthlib==3.3.1
+ + openpyxl==3.1.5
+ + packaging==26.0
+ + pandas==3.0.2[2026-04-02 15:46:43.958733] 
+ + peewee==4.0.4
+ + pillow==12.2.0
+ + platformdirs==4.9.4
+ + plotly==6.6.0
+ + protobuf==7.34.1
+ [2026-04-02 15:46:43.959047] + pyarrow==23.0.1
+ + pyasn1==0.6.3
+ + pyasn1-modules==0.4.2
+ + pycparser==3.0
+ + pydantic==2.12.5
+ + pydantic-core==[2026-04-02 15:46:43.959277] 2.41.5
+ + pydeck==0.9.1
+ + pyparsing==3.3.2
+ + python-dateutil==2.9.0.post0
+ + pytz==2026.1.post1
+ + referencing==0.37.0
+ + requests==2.33.1
+ [2026-04-02 15:46:43.959444] + requests-oauthlib==2.0.0
+ + rpds-py==0.30.0
+ + scipy==1.17.1
+ + seaborn==0.13.2
+ + six==1.17.0
+ + smmap[2026-04-02 15:46:43.959604] ==5.0.3
+ + sniffio==1.3.1
+ + soupsieve==2.8.3
+ + streamlit==1.56.0
+ + tenacity==9.1.4
+ + toml==0.10.2
+ + tornado==6.5.5[2026-04-02 15:46:43.959745] 
+ + typing-extensions==4.15.0
+ + typing-inspection==0.4.2
+ + urllib3==2.6.3
+ + watchdog==6.0.0
+ + websockets==16.0[2026-04-02 15:46:43.959895] 
+ + yfinance==1.2.0
+Checking if Streamlit is installed
+Found Streamlit version 1.56.0 in the environment
+Installing rich for an improved exception logging
+Using uv pip install.
+Using Python 3.14.3 environment at /home/adminuser/venv
+Resolved 4 packages in 138ms
+Prepared 4 packages in 121ms
+Installed 4 packages in 14ms
+ + markdown-it-py==4.0.0[2026-04-02 15:46:46.311505] 
+ + mdurl==0.1.2
+ + pygments==2.20.0
+ + rich==14.3.3
+
+────────────────────────────────────────────────────────────────────────────────────────
+
+[15:46:46] 🐍 Python dependencies were installed from /mount/src/investment_portfolio_manager/requirements.txt using uv.
+Check if streamlit is installed
+Streamlit is already installed
+[15:46:48] 📦 Processed dependencies!
+
+
+
+2026-04-02 15:52:53.276 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-02 15:52:53.309 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-02 15:52:53.359 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-02 15:52:53.600 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+[15:46:37] 🚀 Starting up repository: 'investment_portfolio_manager', branch: 'main', main module: 'app.py'
+[15:46:37] 🐙 Cloning repository...
+[15:46:38] 🐙 Cloning into '/mount/src/investment_portfolio_manager'...
+
+[15:46:38] 🐙 Cloned repository!
+[15:46:38] 🐙 Pulling code changes from Github...
+[15:46:39] 📦 Processing dependencies...
+
+──────────────────────────────────────── uv ───────────────────────────────────────────
+
+Using uv pip install.
+Using Python 3.14.3 environment at /home/adminuser/venv
+Resolved 79 packages in 881ms
+Prepared 79 packages in 2.87s
+Installed 79 packages in 227ms
+ + altair==6.0.0
+ + annotated-types==0.7.0
+ + anthropic==0.88.0
+ +[2026-04-02 15:46:43.956696]  anyio==4.13.0
+ + attrs==26.1.0
+ + beautifulsoup4==4.14.3
+ + blinker==1.9.0
+ + cachetools==7.0.5
+ + certifi==2026.2.25
+ + cffi==2.0.0
+ + charset-normalizer==3.4.7
+ + click==8.3.1
+ +[2026-04-02 15:46:43.957119]  contourpy==1.3.3
+ + cryptography==46.0.6
+ + curl-cffi==0.13.0
+ + cycler==0.12.1
+ + distro==1.9.0
+ + docstring-parser==0.17.0[2026-04-02 15:46:43.957391] 
+ + et-xmlfile==2.0.0
+ + fonttools==4.62.1
+ + frozendict==2.4.7
+ + gitdb==4.0.12
+ + gitpython[2026-04-02 15:46:43.957588] ==3.1.46
+ + google-auth==2.49.1
+ + google-auth-oauthlib==1.3.1
+ + gspread==6.2.1
+ + h11[2026-04-02 15:46:43.957783] ==0.16.0
+ + httpcore==1.0.9
+ + httpx==0.28.1
+ + idna==3.11
+ + jinja2==3.1.6
+ +[2026-04-02 15:46:43.957962]  jiter==0.13.0
+ + jsonschema==4.26.0
+ + jsonschema-specifications==2025.9.1
+ + kiwisolver==1.5.0
+ +[2026-04-02 15:46:43.958226]  markupsafe==3.0.3
+ + matplotlib==3.10.8
+ + multitasking==0.0.12
+ + narwhals==2.18.1
+ + [2026-04-02 15:46:43.958447] numpy==2.4.4
+ + oauthlib==3.3.1
+ + openpyxl==3.1.5
+ + packaging==26.0
+ + pandas==3.0.2[2026-04-02 15:46:43.958733] 
+ + peewee==4.0.4
+ + pillow==12.2.0
+ + platformdirs==4.9.4
+ + plotly==6.6.0
+ + protobuf==7.34.1
+ [2026-04-02 15:46:43.959047] + pyarrow==23.0.1
+ + pyasn1==0.6.3
+ + pyasn1-modules==0.4.2
+ + pycparser==3.0
+ + pydantic==2.12.5
+ + pydantic-core==[2026-04-02 15:46:43.959277] 2.41.5
+ + pydeck==0.9.1
+ + pyparsing==3.3.2
+ + python-dateutil==2.9.0.post0
+ + pytz==2026.1.post1
+ + referencing==0.37.0
+ + requests==2.33.1
+ [2026-04-02 15:46:43.959444] + requests-oauthlib==2.0.0
+ + rpds-py==0.30.0
+ + scipy==1.17.1
+ + seaborn==0.13.2
+ + six==1.17.0
+ + smmap[2026-04-02 15:46:43.959604] ==5.0.3
+ + sniffio==1.3.1
+ + soupsieve==2.8.3
+ + streamlit==1.56.0
+ + tenacity==9.1.4
+ + toml==0.10.2
+ + tornado==6.5.5[2026-04-02 15:46:43.959745] 
+ + typing-extensions==4.15.0
+ + typing-inspection==0.4.2
+ + urllib3==2.6.3
+ + watchdog==6.0.0
+ + websockets==16.0[2026-04-02 15:46:43.959895] 
+ + yfinance==1.2.0
+Checking if Streamlit is installed
+Found Streamlit version 1.56.0 in the environment
+Installing rich for an improved exception logging
+Using uv pip install.
+Using Python 3.14.3 environment at /home/adminuser/venv
+Resolved 4 packages in 138ms
+Prepared 4 packages in 121ms
+Installed 4 packages in 14ms
+ + markdown-it-py==4.0.0[2026-04-02 15:46:46.311505] 
+ + mdurl==0.1.2
+ + pygments==2.20.0
+ + rich==14.3.3
+
+────────────────────────────────────────────────────────────────────────────────────────
+
+[15:46:46] 🐍 Python dependencies were installed from /mount/src/investment_portfolio_manager/requirements.txt using uv.
+Check if streamlit is installed
+Streamlit is already installed
+[15:46:48] 📦 Processed dependencies!
+
+
+
+2026-04-02 15:52:53.276 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-02 15:52:53.309 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-02 15:52:53.359 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-02 15:52:53.600 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-02 16:19:13.278 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-02 16:19:13.305 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-02 16:19:13.344 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-04-02 16:19:13.408 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+────────────────────── Traceback (most recent call last) ───────────────────────
+  /home/adminuser/venv/lib/python3.14/site-packages/streamlit/runtime/scriptru  
+  nner/exec_code.py:129 in exec_func_with_error_handling                        
+                                                                                
+  /home/adminuser/venv/lib/python3.14/site-packages/streamlit/runtime/scriptru  
+  nner/script_runner.py:687 in code_to_exec                                     
+                                                                                
+  /home/adminuser/venv/lib/python3.14/site-packages/streamlit/runtime/scriptru  
+  nner/script_runner.py:166 in _mpa_v1                                          
+                                                                                
+  /home/adminuser/venv/lib/python3.14/site-packages/streamlit/navigation/page.  
+  py:490 in run                                                                 
+                                                                                
+  /mount/src/investment_portfolio_manager/pages/research.py:4 in <module>       
+                                                                                
+      1 import streamlit as st                                                  
+      2 import pandas as pd                                                     
+      3 from utils.sheet_readers import get_holdings_current                    
+  ❱   4 from utils.fmp_client import get_earnings_transcripts, get_company_new  
+      5 from utils.ai_research import analyze_ticker                            
+      6 import plotly.graph_objects as go                                       
+      7 import os                                                               
+────────────────────────────────────────────────────────────────────────────────
+ImportError: cannot import name 'get_earnings_transcripts' from 
+'utils.fmp_client' (/mount/src/investment_portfolio_manager/utils/fmp_client.py)
+────────────────────── Traceback (most recent call last) ───────────────────────
+  /home/adminuser/venv/lib/python3.14/site-packages/streamlit/runtime/scriptru  
+  nner/exec_code.py:129 in exec_func_with_error_handling                        
+                                                                                
+  /home/adminuser/venv/lib/python3.14/site-packages/streamlit/runtime/scriptru  
+  nner/script_runner.py:687 in code_to_exec                                     
+                                                                                
+  /home/adminuser/venv/lib/python3.14/site-packages/streamlit/runtime/scriptru  
+  nner/script_runner.py:166 in _mpa_v1                                          
+                                                                                
+  /home/adminuser/venv/lib/python3.14/site-packages/streamlit/navigation/page.  
+  py:490 in run                                                                 
+                                                                                
+  /mount/src/investment_portfolio_manager/pages/research.py:4 in <module>       
+                                                                                
+      1 import streamlit as st                                                  
+      2 import pandas as pd                                                     
+      3 from utils.sheet_readers import get_holdings_current                    
+  ❱   4 from utils.fmp_client import get_earnings_transcripts, get_company_new  
+      5 from utils.ai_research import analyze_ticker                            
+      6 import plotly.graph_objects as go                                       
+      7 import os                                                               
+────────────────────────────────────────────────────────────────────────────────
+ImportError: cannot import name 'get_earnings_transcripts' from 
+'utils.fmp_client' (/mount/src/investment_portfolio_manager/utils/fmp_client.py)

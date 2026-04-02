@@ -160,6 +160,18 @@ if st:
         except Exception:
             return pd.DataFrame()
 
+    @st.cache_data(ttl=300)
+    def get_realized_gl() -> pd.DataFrame:
+        """Reads Realized_GL tab and returns DataFrame."""
+        try:
+            client = get_gspread_client()
+            spreadsheet = client.open_by_key(config.PORTFOLIO_SHEET_ID)
+            ws = spreadsheet.worksheet(config.TAB_REALIZED_GL)
+            data = ws.get_all_records()
+            return pd.DataFrame(data)
+        except Exception:
+            return pd.DataFrame()
+
 
 if __name__ == "__main__":
     smoke_test()

@@ -46,6 +46,13 @@ RE_DASHBOARD_SHEET_ID = "1DXuY1iBo2GqZCCSZ7OrUa4iaunb5s8Kf1Rms8Z237rQ"
 FINNHUB_API_KEY = _secret("finnhub_api_key", "")
 FMP_API_KEY = _secret("fmp_api_key", "")        # Financial Modeling Prep (Phase 4)
 ANTHROPIC_API_KEY = _secret("anthropic_api_key", "")  # AI research (Phase 4)
+GEMINI_API_KEY = _secret("gemini_api_key", "")      # Google Gemini (Core AI)
+
+# ---------------------------------------------------------------------------
+# AI Model Configuration
+# ---------------------------------------------------------------------------
+GEMINI_MODEL = _secret("gemini_model", "gemini-2.5-pro")
+GEMINI_MAX_TOKENS = _secret("gemini_max_tokens", 2000)
 
 # ---------------------------------------------------------------------------
 # Cash / Non-Investment Tickers

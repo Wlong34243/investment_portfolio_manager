@@ -1,5 +1,5 @@
 import json
-import anthropic
+import logging
 import os
 import sys
 
@@ -9,30 +9,22 @@ _ROOT = os.path.dirname(_HERE)
 if _ROOT not in sys.path:
     sys.path.insert(0, _ROOT)
 
-try:
-    import config
-except ImportError:
-    pass
+from utils.gemini_client import ask_gemini_json
 
-def analyze_ticker(ticker: str, transcripts: list[dict], news: list[dict]) -> dict:
+def analyze_ticker(ticker: str, transcript: str, news: list[dict]) -> dict:
     """
-    Orchestrate Claude 3.5 Sonnet analysis.
+    Orchestrate Gemini 2.5 Pro analysis.
     Returns: {"bull_cases": [str], "bear_risks": [str], "sentiment_score": float, "summary": str}
     """
-    if not config.ANTHROPIC_API_KEY:
-        return {"error": "Anthropic API key not set."}
-        
-    client = anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY)
     
     # Prepare context
-    transcript_text = "\n\n".join([f"Date: {t['date']}\nContent: {t['content'][:5000]}..." for t in transcripts])
-    news_text = "\n\n".join([f"Title: {n['title']}\nSummary: {n['text']}" for n in news])
+    news_text = "\n\n".join([f"Headline: {n['headline']}\nSummary: {n['summary']}" for n in news[:5]])
     
     prompt = f"""
-    You are a senior equity research analyst. Analyze the following data for {ticker}.
+    Analyze the following data for {ticker}.
     
-    TRANSCRIPTS:
-    {transcript_text}
+    EARNINGS TRANSCRIPT SNIPPET:
+    {transcript[:10000]}
     
     RECENT NEWS:
     {news_text}
@@ -42,39 +34,18 @@ def analyze_ticker(ticker: str, transcripts: list[dict], news: list[dict]) -> di
     - "bear_risks": A list of exactly 2 bullet points.
     - "sentiment_score": A float from -1.0 (very bearish) to 1.0 (very bullish).
     - "summary": A 2-sentence executive summary.
-    
-    Output ONLY valid JSON. No conversational filler.
     """
     
+    system_instruction = "You are a senior equity research analyst. Be objective, concise, and focus on fundamental catalysts."
+    
     try:
-        response = client.messages.create(
-            model="claude-3-5-sonnet-20240620",
-            max_tokens=1000,
-            temperature=0,
-            messages=[
-                {"role": "user", "content": prompt}
-            ]
-        )
-        
-        # Extract content
-        text = response.content[0].text
-        # Strip potential markdown code blocks
-        if text.startswith("```json"):
-            text = text[7:]
-        if text.endswith("```"):
-            text = text[:-3]
-        
-        data = json.loads(text.strip())
+        data = ask_gemini_json(prompt, system_instruction=system_instruction)
         return data
-        
     except Exception as e:
-        print(f"AI Research Error for {ticker}: {e}")
+        logging.error(f"AI Research Error for {ticker}: {e}")
         return {"error": str(e)}
 
 if __name__ == "__main__":
     # Stub test
-    if config.ANTHROPIC_API_KEY:
-        res = analyze_ticker("AAPL", [], [])
-        print(json.dumps(res, indent=2))
-    else:
-        print("ANTHROPIC_API_KEY not set.")
+    res = analyze_ticker("AAPL", "Earnings were good.", [{"headline": "Apple does well", "summary": "Sales are up."}])
+    print(json.dumps(res, indent=2))

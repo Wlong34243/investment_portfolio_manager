@@ -8,4 +8,8 @@ openpyxl
 matplotlib
 seaborn
 plotly
-anthropic
+google-genai
+pandas-ta
+finnhub-python
+fredapi
+requests
