@@ -20,7 +20,7 @@ try:
 except ImportError:
     config = None
 
-BASE_URL = "https://financialmodelingprep.com/api/v3"
+BASE_URL = "https://financialmodelingprep.com/stable"
 
 def get_fmp_api_key() -> str:
     return getattr(config, 'FMP_API_KEY', os.environ.get('FMP_API_KEY', ''))
@@ -61,7 +61,7 @@ def get_earnings_transcript(ticker: str, year: int = None, quarter: int = None) 
     if not api_key:
         return ""
         
-    url = f"{BASE_URL}/earning_call_transcript/{ticker}?"
+    url = f"{BASE_URL}/earning_call_transcript?symbol={ticker}&"
     if year and quarter:
         url += f"year={year}&quarter={quarter}&"
     url += f"apikey={api_key}"
@@ -84,7 +84,7 @@ def get_key_metrics(ticker: str) -> dict:
     if not api_key:
         return {}
         
-    url = f"{BASE_URL}/key-metrics-ttm/{ticker}?apikey={api_key}"
+    url = f"{BASE_URL}/key-metrics-ttm?symbol={ticker}&apikey={api_key}"
     try:
         response = requests.get(url, timeout=10)
         response.raise_for_status()
@@ -111,7 +111,7 @@ def get_historical_pe(ticker: str, years: int = 5) -> pd.DataFrame:
     if not api_key:
         return pd.DataFrame()
         
-    url = f"{BASE_URL}/ratios/{ticker}?period=annual&limit={years}&apikey={api_key}"
+    url = f"{BASE_URL}/ratios?symbol={ticker}&period=annual&limit={years}&apikey={api_key}"
     try:
         response = requests.get(url, timeout=10)
         response.raise_for_status()
@@ -131,7 +131,7 @@ def get_company_profile(ticker: str) -> dict:
     if not api_key:
         return {}
         
-    url = f"{BASE_URL}/profile/{ticker}?apikey={api_key}"
+    url = f"{BASE_URL}/profile?symbol={ticker}&apikey={api_key}"
     try:
         response = requests.get(url, timeout=10)
         response.raise_for_status()

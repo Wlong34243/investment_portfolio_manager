@@ -120,6 +120,43 @@ try:
 except ImportError:
     st = None
 
+def read_gsheet_robust(ws: gspread.Worksheet) -> pd.DataFrame:
+    """
+    Reads a worksheet into a DataFrame, handling duplicate or empty headers
+    that cause get_all_records() to fail.
+    """
+    all_values = ws.get_all_values()
+    if not all_values:
+        return pd.DataFrame()
+    
+    headers = all_values[0]
+    data = all_values[1:]
+    
+    # Clean headers: handle empty or duplicate headers
+    clean_headers = []
+    seen = {}
+    for i, h in enumerate(headers):
+        h = h.strip()
+        if not h:
+            h = f"Unnamed_{i}"
+        
+        if h in seen:
+            seen[h] += 1
+            h = f"{h}_{seen[h]}"
+        else:
+            seen[h] = 0
+        
+        clean_headers.append(h)
+    
+    df = pd.DataFrame(data, columns=clean_headers)
+    
+    # Drop "Unnamed" columns if they are entirely empty
+    cols_to_drop = [c for c in df.columns if c.startswith("Unnamed_") and (df[c] == "").all()]
+    if cols_to_drop:
+        df = df.drop(columns=cols_to_drop)
+        
+    return df
+
 if st:
     @st.cache_data(ttl=300)
     def get_holdings_current() -> pd.DataFrame:
@@ -130,8 +167,7 @@ if st:
             client = get_gspread_client()
             spreadsheet = client.open_by_key(config.PORTFOLIO_SHEET_ID)
             ws = spreadsheet.worksheet(config.TAB_HOLDINGS_CURRENT)
-            data = ws.get_all_records()
-            return pd.DataFrame(data)
+            return read_gsheet_robust(ws)
         except Exception as e:
             print(f"Error reading Holdings_Current: {e}")
             return pd.DataFrame()
@@ -143,8 +179,7 @@ if st:
             client = get_gspread_client()
             spreadsheet = client.open_by_key(config.PORTFOLIO_SHEET_ID)
             ws = spreadsheet.worksheet(config.TAB_RISK_METRICS)
-            data = ws.get_all_records()
-            return pd.DataFrame(data)
+            return read_gsheet_robust(ws)
         except Exception:
             return pd.DataFrame()
 
@@ -155,8 +190,7 @@ if st:
             client = get_gspread_client()
             spreadsheet = client.open_by_key(config.PORTFOLIO_SHEET_ID)
             ws = spreadsheet.worksheet(config.TAB_INCOME_TRACKING)
-            data = ws.get_all_records()
-            return pd.DataFrame(data)
+            return read_gsheet_robust(ws)
         except Exception:
             return pd.DataFrame()
 
@@ -167,8 +201,24 @@ if st:
             client = get_gspread_client()
             spreadsheet = client.open_by_key(config.PORTFOLIO_SHEET_ID)
             ws = spreadsheet.worksheet(config.TAB_REALIZED_GL)
-            data = ws.get_all_records()
-            return pd.DataFrame(data)
+            return read_gsheet_robust(ws)
+        except Exception:
+            return pd.DataFrame()
+
+    @st.cache_data(ttl=300)
+    def get_daily_snapshots() -> pd.DataFrame:
+        """Reads Daily_Snapshots tab and returns DataFrame."""
+        try:
+            client = get_gspread_client()
+            spreadsheet = client.open_by_key(config.PORTFOLIO_SHEET_ID)
+            ws = spreadsheet.worksheet(config.TAB_DAILY_SNAPSHOTS)
+            df = read_gsheet_robust(ws)
+            if not df.empty:
+                # Convert numeric columns to float
+                for col in config.SNAPSHOT_COLUMNS:
+                    if col in df.columns and col != 'Date':
+                        df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0.0)
+            return df
         except Exception:
             return pd.DataFrame()
 

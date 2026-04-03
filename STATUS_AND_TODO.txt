@@ -1,0 +1,31 @@
+# INVESTMENT PORTFOLIO MANAGER - STATUS & TODO
+Last Updated: April 2, 2026
+
+## CURRENT STATUS: [PRODUCTION READY]
+The application has completed all four primary development phases and is now in the "Audit & Refinement" stage. 
+
+### Core Features (Operational):
+- Multi-Account Schwab Parser: Fixed and robust; handles HSA, Trust, Individual, and Roth sections seamlessly.
+- Google Sheets Integration: Atomic "Header + Data" write pattern ensures no data loss during updates.
+- Realized G/L & Tax Tracking: Supports lot-level tracking with fingerprint-based deduplication.
+- Risk Engine: Calculates Portfolio Beta, CAPM projections, and Market Stress Tests using live yfinance data.
+- AI Research Hub: Integrated with Gemini 2.5 Pro for deep-dive ticker analysis and earnings sentiment.
+- Unified Net Worth: Successfully integrated with the Real Estate Property Manager dashboard for total wealth tracking.
+- Macro Monitor: Real-time tracking of CPI, Fed Rates, and VIX with AI-driven strategy generation.
+
+### Verified Pages:
+- 📊 Holdings (Main Dashboard)
+- 💰 Income Tracking
+- ⚠️ Risk Analytics
+- 📈 Performance (Benchmark Comparison)
+- 💸 Tax Intelligence (Wash Sales / Realized G/L)
+- 🔬 Research Hub (AI Ticker Analysis)
+- 🏦 Unified Net Worth (Stock + RE Equity)
+- 💬 AI Advisor (Interactive Portfolio Q&A)
+
+## TODO LIST:
+- [ ] PRODUCTION GATE: Set DRY_RUN = False in config.py for live production use.
+- [ ] DATA CLEANUP: Run a final manual audit of 'Target_Allocation' tab in Google Sheets to set Bill's benchmarks.
+- [ ] CACHE TUNING: Adjust yfinance cache TTL if rate limiting occurs on heavy usage days.
+- [ ] PHASE 5 ENHANCEMENT: Implement direct "Drift Alert" notifications via email/SMS (Optional).
+- [ ] BACKUP: Create a monthly archive of the Google Sheet to prevent accidental manual overwrites.

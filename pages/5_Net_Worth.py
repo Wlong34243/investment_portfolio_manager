@@ -61,7 +61,7 @@ with c1:
         
     df_dist = pd.DataFrame(dist_data)
     fig_pie = px.pie(df_dist, values='Value', names='Asset', color_discrete_sequence=['#2E86AB', '#27AE60', '#F1C40F'])
-    st.plotly_chart(fig_pie, use_container_width=True)
+    st.plotly_chart(fig_pie, width='stretch')
 
 with c2:
     st.subheader("Grand Strategist Q&A")

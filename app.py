@@ -71,7 +71,7 @@ with st.sidebar:
     
     cash_amount = st.number_input("Cash Amount ($)", value=10000.0, step=500.0)
     
-    if st.button("Process CSVs", use_container_width=True):
+    if st.button("Process CSVs", width='stretch'):
         processing_errors = []
         
         # 1. Positions
@@ -167,7 +167,7 @@ with tabs[0]:
             for t in triggers:
                 st.warning(f"**{t['trigger']}:** {t['description']}")
                 
-            if st.button("🗺️ Generate Macro Strategy", use_container_width=True):
+            if st.button("🗺️ Generate Macro Strategy", width='stretch'):
                 with st.spinner("AI is analyzing macro positioning..."):
                     strat = generate_macro_strategy(triggers, macro_data, df)
                     if "error" not in strat:
@@ -184,7 +184,7 @@ with tabs[0]:
         if not upcoming.empty:
             with st.expander(f"📅 Upcoming Earnings ({len(upcoming)} in next 14 days)", expanded=True):
                 st.table(upcoming)
-                if st.button("🔔 Generate AI Earnings Insights", use_container_width=True):
+                if st.button("🔔 Generate AI Earnings Insights", width='stretch'):
                     with st.spinner("Analyzing upcoming catalysts..."):
                         earnings_alerts = generate_earnings_alerts(upcoming, df)
                         for alert in earnings_alerts:
@@ -198,7 +198,7 @@ with tabs[0]:
             for alert in alerts:
                 st.warning(alert)
             
-            if st.button("🛡️ Get AI Hedging Ideas", use_container_width=True):
+            if st.button("🛡️ Get AI Hedging Ideas", width='stretch'):
                 with st.spinner("AI is analyzing your exposure and technical trends..."):
                     risks = scan_concentration_risks(df)
                     suggestions = generate_hedge_suggestions(risks, df)
@@ -241,7 +241,7 @@ with tabs[0]:
                 title='Allocation by Asset Class (Invested Only)',
                 color_discrete_sequence=['#1F4E79', '#2E86AB', '#A8DADC', '#457B9D']
             )
-            st.plotly_chart(fig_class, use_container_width=True)
+            st.plotly_chart(fig_class, width='stretch')
             
         with c2:
             # Allocation by Asset Strategy
@@ -252,7 +252,7 @@ with tabs[0]:
                 title='Allocation by Asset Strategy (Invested Only)',
                 color_discrete_sequence=['#1F4E79', '#2E86AB', '#A8DADC', '#457B9D']
             )
-            st.plotly_chart(fig_strat, use_container_width=True)
+            st.plotly_chart(fig_strat, width='stretch')
             
         # Top 10 positions bar chart
         top_10 = df.nlargest(10, 'Market Value')
@@ -265,7 +265,7 @@ with tabs[0]:
             color_discrete_sequence=['#2E86AB']
         )
         fig_top.update_layout(yaxis={'categoryorder':'total ascending'})
-        st.plotly_chart(fig_top, use_container_width=True)
+        st.plotly_chart(fig_top, width='stretch')
         
         # Holdings table
         st.subheader("Current Holdings")
@@ -318,7 +318,7 @@ with tabs[1]:
         sweep_alert = get_cash_sweep_alert(df)
         if sweep_alert:
             st.info(sweep_alert)
-            if st.button("💵 Optimize Cash Yield", use_container_width=True):
+            if st.button("💵 Optimize Cash Yield", width='stretch'):
                 with st.spinner("Analyzing higher-yielding alternatives..."):
                     cash_analysis = analyze_cash_position(df)
                     suggestion = generate_cash_deployment_suggestion(cash_analysis, df)
@@ -363,7 +363,7 @@ with tabs[1]:
             color_discrete_sequence=['#F39C12'] # Gold/Amber
         )
         fig_income.update_layout(yaxis={'categoryorder':'total ascending'})
-        st.plotly_chart(fig_income, use_container_width=True)
+        st.plotly_chart(fig_income, width='stretch')
         
         # Callout boxes
         if 'ET' in df['Ticker'].values:
@@ -413,7 +413,7 @@ with tabs[2]:
         for alert in alerts:
             st.warning(alert)
             
-        if st.button("Calculate Risk Analytics", use_container_width=True):
+        if st.button("Calculate Risk Analytics", width='stretch'):
             with st.spinner("Fetching 1yr price history and calculating risk..."):
                 try:
                     # Cache price histories in session state
@@ -501,7 +501,7 @@ with tabs[2]:
                 orientation='h',
                 marker_color=['#E74C3C', '#3498DB', '#2ECC71']
             ))
-            st.plotly_chart(fig_capm, use_container_width=True)
+            st.plotly_chart(fig_capm, width='stretch')
             
             # Stress Test Table
             st.subheader("Market Stress Tests")
@@ -522,4 +522,4 @@ with tabs[2]:
                     zmin=-1, zmax=1,
                     title="Price Correlation (1yr Daily Returns)"
                 )
-                st.plotly_chart(fig_corr, use_container_width=True)
+                st.plotly_chart(fig_corr, width='stretch')

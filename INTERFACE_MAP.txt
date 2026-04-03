@@ -1,0 +1,26 @@
+# INTERFACE MAP: METRIC DERIVATIONS
+
+| UI Element | Source / Metric | Derived From |
+|------------|-----------------|--------------|
+| Total Value | Holdings_Current | SUM('Market Value') |
+| Portfolio Beta | Risk Engine | Weighted average of (Ticker Beta * Weight) |
+| Blended Yield | Income Engine | (Annual Income / Total Invested Value) * 100 |
+| Realized G/L | Realized_GL | SUM('Gain/Loss') in the Realized_GL tab |
+| Macro Triggers | Macro Monitor | Live API (St. Louis Fed / Yahoo Finance) |
+| RE Equity | Net Worth Page | (RE Valuation @ 6% Cap) - Total Debt |
+| Concentration | Risk Tab | Logic: Any position > 10% weight (Warning) |
+| Drift Alert | Rebalancing | (Current Weight - Target Weight) > Threshold |
+
+## SPECIALIZED AGENT LOCATIONS:
+- Concentration Hedger: Main Page -> Concentration Alerts section.
+- Earnings Sentinel: Main Page -> Upcoming Earnings expander.
+- Price Narrator: Main Page -> "Explain Movements" button.
+- Cash Sweeper: Income Tab -> "Optimize Cash Yield" button.
+- Grand Strategist: Net Worth Page -> Cross-portfolio Q&A.
+- Advisor Agent: Sidebar -> Advisor Page (Full chat history).
+
+## EXTERNAL DEPENDENCIES:
+1. Google Sheets: Persistent storage for all historical and current data.
+2. yfinance: Live pricing and historical volatility.
+3. FMP API: Earnings transcripts and deep financial data.
+4. Gemini API: All narrative generation and "AI Strategist" logic.

@@ -47,7 +47,7 @@ if not opps.empty:
         'tax_asset_value': '${:,.2f}'
     }))
     
-    if st.button("🔍 Scan for TLH Substitutes", use_container_width=True):
+    if st.button("🔍 Scan for TLH Substitutes", width='stretch'):
         with st.spinner("AI is finding correlated proxy securities..."):
             report = build_tlh_report(holdings_df, realized_gl_df)
             if report:

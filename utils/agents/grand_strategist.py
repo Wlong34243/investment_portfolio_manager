@@ -8,6 +8,19 @@ from utils.sheet_readers import get_gspread_client
 # RE Dashboard Sheet ID from Prompt
 RE_DASHBOARD_ID = "1DXuY1iBo2GqZCCSZ7OrUa4iaunb5s8Kf1Rms8Z237rQ"
 
+def _parse_currency(val: str) -> float:
+    if not val:
+        return 0.0
+    # Strip $, commas, and whitespace
+    clean_val = val.replace('$', '').replace(',', '').strip()
+    # Handle parens for negative numbers
+    if clean_val.startswith('(') and clean_val.endswith(')'):
+        clean_val = '-' + clean_val[1:-1]
+    try:
+        return float(clean_val)
+    except ValueError:
+        return 0.0
+
 @st.cache_data(ttl=3600)
 def read_re_portfolio_summary() -> dict:
     """
@@ -18,19 +31,13 @@ def read_re_portfolio_summary() -> dict:
         client = get_gspread_client()
         spreadsheet = client.open_by_key(RE_DASHBOARD_ID)
         # Assuming summary data is on the first sheet or a sheet named 'Summary'
-        # For now, let's try the first sheet and look for these specific cells
         ws = spreadsheet.get_worksheet(0)
         
         # Mapping based on prompt info (Debt B21, Debt Service B20)
-        # For Property Value, NOI, Reserve, we'll assume some locations or fetch all
-        all_vals = ws.get_all_values()
-        
-        # Simple extraction (this may need tuning based on actual RE sheet structure)
-        # Mocking or extracting based on prompts
         re_data = {
-            "debt": float(ws.acell('B21').value.replace('$','').replace(',','')),
-            "debt_service": float(ws.acell('B20').value.replace('$','').replace(',','')),
-            # Assuming these for now
+            "debt": _parse_currency(ws.acell('B21').value),
+            "debt_service": _parse_currency(ws.acell('B20').value),
+            # Placeholders for now until exact cells are confirmed
             "property_value": 1500000.0, 
             "noi": 90000.0,
             "reserve": 50000.0

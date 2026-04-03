@@ -97,7 +97,7 @@ with col_a:
     st.subheader("📊 Valuation Monitor")
     from utils.agents.valuation_agent import get_valuation_snapshot, generate_accumulation_plan
     
-    if st.button(f"Check Valuation for {selected_ticker}", use_container_width=True):
+    if st.button(f"Check Valuation for {selected_ticker}", width='stretch'):
         with st.spinner("Checking historical P/E ranges..."):
             val_snap = get_valuation_snapshot(selected_ticker)
             if "error" not in val_snap:
@@ -123,7 +123,7 @@ with col_b:
     st.caption(OPTIONS_DISCLAIMER)
     
     if info['Quantity'] >= 100:
-        if st.button(f"Scan Covered Calls for {selected_ticker}", use_container_width=True):
+        if st.button(f"Scan Covered Calls for {selected_ticker}", width='stretch'):
             with st.spinner("Fetching option chain (OTM 5-15%)..."):
                 chain = get_options_chain(selected_ticker)
                 if not chain.empty:
@@ -159,7 +159,7 @@ for i, ex in enumerate(examples):
     if cols[i].button(ex, key=f"ex_{i}"):
         st.info(f"Copied to clipboard (simulated): {ex}") # Streamlit doesn't easily set text_area value from button without rerun logic
 
-if st.button("🔍 Screen Stocks for this Thesis", use_container_width=True):
+if st.button("🔍 Screen Stocks for this Thesis", width='stretch'):
     if not thesis_input:
         st.warning("Please enter a thesis first.")
     else:
@@ -187,7 +187,7 @@ if st.button("🔍 Screen Stocks for this Thesis", use_container_width=True):
 
 # --- AI Deep Analysis ---
 st.divider()
-if st.button(f"Deep Analysis with Gemini 2.5 Pro", use_container_width=True):
+if st.button(f"Deep Analysis with Gemini 3.1 Pro", width='stretch'):
     with st.spinner("Gemini is reviewing transcripts and news..."):
         # Combine data for analysis
         analysis = analyze_ticker(selected_ticker, transcript, news)
@@ -219,7 +219,7 @@ if f"analysis_{selected_ticker}" in st.session_state:
             'bar': {'color': "#2C3E50"}
         }
     ))
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
     
     # Summary
     st.subheader("Executive Summary")

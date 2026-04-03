@@ -13,7 +13,7 @@ from utils.gemini_client import ask_gemini_json
 
 def analyze_ticker(ticker: str, transcript: str, news: list[dict]) -> dict:
     """
-    Orchestrate Gemini 2.5 Pro analysis.
+    Orchestrate Gemini 3.1 Pro analysis.
     Returns: {"bull_cases": [str], "bear_risks": [str], "sentiment_score": float, "summary": str}
     """
     

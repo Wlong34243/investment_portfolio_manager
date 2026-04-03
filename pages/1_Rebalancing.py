@@ -59,7 +59,7 @@ if not drift_df.empty:
         title="Target vs Actual Allocation",
         color_discrete_map={'Target %': '#BDC3C7', 'Actual %': '#2E86AB'}
     )
-    st.plotly_chart(fig_drift, use_container_width=True)
+    st.plotly_chart(fig_drift, width='stretch')
     
     # Table
     st.table(drift_df.style.format({
@@ -74,7 +74,7 @@ else:
 st.divider()
 st.subheader("AI Rebalancing Proposals")
 
-if st.button("🧠 Generate Tax-Aware Proposals", use_container_width=True):
+if st.button("🧠 Generate Tax-Aware Proposals", width='stretch'):
     with st.spinner("AI is evaluating tax lots and drift..."):
         proposals = generate_rebalance_proposals(drift_df, holdings_df)
         if proposals:
@@ -121,7 +121,7 @@ with col_right:
             holdings_df['Term'] = holdings_df['Acquisition Date'].apply(lambda x: 'Long Term' if x < one_year_ago else 'Short Term')
             term_dist = holdings_df.groupby('Term')['Market Value'].sum().reset_index()
             fig_term = px.pie(term_dist, values='Market Value', names='Term', color_discrete_sequence=['#27AE60', '#F1C40F'])
-            st.plotly_chart(fig_term, use_container_width=True)
+            st.plotly_chart(fig_term, width='stretch')
         except:
             st.write("Could not calculate holding periods from available data.")
     else:

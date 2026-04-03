@@ -14,7 +14,7 @@ if _ROOT not in sys.path:
     sys.path.insert(0, _ROOT)
 
 import config
-from utils.sheet_readers import get_gspread_client
+from utils.sheet_readers import get_gspread_client, get_daily_snapshots
 
 st.set_page_config(layout="wide", page_title="Portfolio Performance")
 
@@ -29,23 +29,10 @@ if not check_password():
     st.stop()
 
 # --- Data Loading ---
-@st.cache_data(ttl=300)
-def get_daily_snapshots() -> pd.DataFrame:
-    try:
-        client = get_gspread_client()
-        spreadsheet = client.open_by_key(config.PORTFOLIO_SHEET_ID)
-        ws = spreadsheet.worksheet(config.TAB_DAILY_SNAPSHOTS)
-        data = ws.get_all_records()
-        df = pd.DataFrame(data)
-        if not df.empty:
-            df['Date'] = pd.to_datetime(df['Date'])
-            df = df.sort_values(by='Date')
-        return df
-    except Exception as e:
-        st.error(f"Error loading snapshots: {e}")
-        return pd.DataFrame()
-
 snapshots_df = get_daily_snapshots()
+if not snapshots_df.empty:
+    snapshots_df['Date'] = pd.to_datetime(snapshots_df['Date'])
+    snapshots_df = snapshots_df.sort_values(by='Date')
 
 # --- Page Header ---
 st.title("📈 Portfolio Performance")
@@ -134,7 +121,7 @@ if not bench_data.empty:
         labels={"value": "Normalized Value (100 = Start)", "Date": "Date"},
         color_discrete_map={"Portfolio": "#1F4E79", "SPY": "#F39C12", "VTI": "#2E86AB", "QQQM": "#8E44AD"}
     )
-    st.plotly_chart(fig_bench, use_container_width=True)
+    st.plotly_chart(fig_bench, width='stretch')
 
 # --- Portfolio Value Over Time ---
 st.subheader("Total Value History")
@@ -145,7 +132,7 @@ fig_area = px.area(
     title="Portfolio Market Value",
     color_discrete_sequence=['#2E86AB']
 )
-st.plotly_chart(fig_area, use_container_width=True)
+st.plotly_chart(fig_area, width='stretch')
 
 # --- Contribution Modeling ---
 st.divider()
@@ -194,4 +181,4 @@ fig_proj = px.bar(
     labels={"value": "Projected Value ($)", "variable": "Scenario"},
     color_discrete_map={"No Contributions": "#BDC3C7", "With Contributions": "#2ECC71"}
 )
-st.plotly_chart(fig_proj, use_container_width=True)
+st.plotly_chart(fig_proj, width='stretch')

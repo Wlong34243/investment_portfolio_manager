@@ -45,20 +45,21 @@ RE_DASHBOARD_SHEET_ID = "1DXuY1iBo2GqZCCSZ7OrUa4iaunb5s8Kf1Rms8Z237rQ"
 # ---------------------------------------------------------------------------
 FINNHUB_API_KEY = _secret("finnhub_api_key", "")
 FMP_API_KEY = _secret("fmp_api_key", "")        # Financial Modeling Prep (Phase 4)
-ANTHROPIC_API_KEY = _secret("anthropic_api_key", "")  # AI research (Phase 4)
+FRED_API_KEY = _secret("fred_api_key", "")      # Federal Reserve Economic Data (Phase 2)
+AI_SECONDARY_API_KEY = _secret("ai_secondary_api_key", "")  # Reserved for future secondary AI
 GEMINI_API_KEY = _secret("gemini_api_key", "")      # Google Gemini (Core AI)
 
 # ---------------------------------------------------------------------------
 # AI Model Configuration
 # ---------------------------------------------------------------------------
-GEMINI_MODEL = _secret("gemini_model", "gemini-2.5-pro")
+GEMINI_MODEL = _secret("gemini_model", "gemini-3.1-pro-preview")
 GEMINI_MAX_TOKENS = _secret("gemini_max_tokens", 2000)
 
 # ---------------------------------------------------------------------------
 # Cash / Non-Investment Tickers
 # ---------------------------------------------------------------------------
 # These are cash sweep or money market positions — track as cash, not investments
-CASH_TICKERS = {'CASH_MANUAL', 'QACDS'}
+CASH_TICKERS = {'CASH_MANUAL', 'QACDS', 'CASH & CASH INVESTMENTS'}
 
 # Default cash yield for money market / sweep (editable in Sheet Config tab)
 DEFAULT_CASH_YIELD_PCT = 4.50
