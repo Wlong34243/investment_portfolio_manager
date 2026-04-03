@@ -87,8 +87,11 @@ def main_dashboard():
                         # Rename for UI consistency (Camel Case headers)
                         st.session_state["holdings_df"] = df_norm.rename(columns=config.POSITION_COL_MAP)
                         status.update(label="Positions Complete", state="complete")
-                    except Exception as e:
-                        processing_errors.append(f"Positions Error: {e}")
+
+                        # Force a cache clear for the reader so it sees the new data if re-read
+                        if hasattr(get_holdings_current, "clear"):
+                            get_holdings_current.clear()
+                        except Exception as e:                        processing_errors.append(f"Positions Error: {e}")
                         status.update(label="Positions Failed", state="error")
             
             # 2. Realized G/L

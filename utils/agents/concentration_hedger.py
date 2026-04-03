@@ -74,13 +74,23 @@ def generate_hedge_suggestions(risks: list[dict], holdings_df: pd.DataFrame) -> 
 
 def check_on_page_load(holdings_df: pd.DataFrame) -> list[str]:
     """Quick scan, no LLM. Return alert strings."""
+    if holdings_df.empty:
+        return []
+        
     alerts = []
     
-    conc = holdings_df[holdings_df['Weight'] > config.SINGLE_POSITION_WARN_PCT]
+    # Force Weight to numeric just in case
+    df = holdings_df.copy()
+    if 'Weight' in df.columns:
+        df['Weight'] = pd.to_numeric(df['Weight'], errors='coerce').fillna(0.0)
+    else:
+        return []
+    
+    conc = df[df['Weight'] > config.SINGLE_POSITION_WARN_PCT]
     for _, row in conc.iterrows():
         alerts.append(f"⚠️ **Concentration Alert:** {row['Ticker']} is {row['Weight']:.1f}% of your portfolio.")
         
-    sector_weights = holdings_df.groupby('Asset Class')['Weight'].sum()
+    sector_weights = df.groupby('Asset Class')['Weight'].sum()
     heavy = sector_weights[sector_weights > config.SECTOR_CONCENTRATION_WARN_PCT]
     for sector, weight in heavy.items():
         alerts.append(f"⚠️ **Sector Alert:** {sector} is {weight:.1f}% of your portfolio.")

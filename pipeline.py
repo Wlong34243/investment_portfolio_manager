@@ -498,7 +498,7 @@ def write_to_sheets(df: pd.DataFrame, cash_amount: float, dry_run: bool = True) 
         return results
 
     # Live execution
-    from utils.sheet_readers import get_gspread_client
+    from utils.sheet_readers import get_gspread_client, read_gsheet_robust
     client = get_gspread_client()
     spreadsheet = client.open_by_key(config.PORTFOLIO_SHEET_ID)
 
@@ -512,15 +512,15 @@ def write_to_sheets(df: pd.DataFrame, cash_amount: float, dry_run: bool = True) 
             
             # 2. Holdings_History
             ws_history = spreadsheet.worksheet(config.TAB_HOLDINGS_HISTORY)
-            existing_data_history = ws_history.get_all_records()
-            existing_fps_history = {str(r.get('Fingerprint')) for r in existing_data_history if r.get('Fingerprint')}
+            df_history_existing = read_gsheet_robust(ws_history)
+            existing_fps_history = set(df_history_existing['Fingerprint'].astype(str)) if not df_history_existing.empty else set()
             appended_count = append_holdings_history(ws_history, data_list, existing_fps_history)
             results["history_appended"] = appended_count
             
             # 3. Daily_Snapshots
             ws_snapshots = spreadsheet.worksheet(config.TAB_DAILY_SNAPSHOTS)
-            existing_data_snapshots = ws_snapshots.get_all_records()
-            existing_fps_snapshots = {str(r.get('Fingerprint')) for r in existing_data_snapshots if r.get('Fingerprint')}
+            df_snapshots_existing = read_gsheet_robust(ws_snapshots)
+            existing_fps_snapshots = set(df_snapshots_existing['Fingerprint'].astype(str)) if not df_snapshots_existing.empty else set()
             snapshot_added = append_daily_snapshot(ws_snapshots, df, existing_fps_snapshots)
             results["snapshot"] = snapshot_added
             

@@ -157,21 +157,27 @@ def read_gsheet_robust(ws: gspread.Worksheet) -> pd.DataFrame:
         
     # Standardize numeric columns: convert to float if possible
     for col in df.columns:
-        # Skip known non-numeric columns to avoid errors or slow parsing
+        # Skip known non-numeric columns
         if col.lower() in ['ticker', 'symbol', 'description', 'sector', 'industry', 'asset class', 'asset strategy', 'import date', 'closed date', 'opened date', 'acquisition date']:
             continue
         
-        # Try to clean common currency formatting before numeric conversion
-        first_valid = df[col].replace('', None).first_valid_index()
-        if first_valid is not None:
-            val_str = str(df.loc[first_valid, col])
-            if any(char in val_str for char in ['$', ',', '(', ')']):
-                df[col] = df[col].astype(str).str.replace('$', '', regex=False).str.replace(',', '', regex=False)
-                # Handle Schwab's (123.45) notation for negative
-                mask = df[col].str.startswith('(') & df[col].str.endswith(')')
-                df.loc[mask, col] = '-' + df.loc[mask, col].str[1:-1]
+        # Aggressive cleaning for currency, percentages, and Schwab formatting
+        if df[col].dtype == object:
+            # Strip $, %, commas, and whitespace
+            df[col] = df[col].astype(str).str.replace('$', '', regex=False) \
+                                         .str.replace('%', '', regex=False) \
+                                         .str.replace(',', '', regex=False) \
+                                         .str.strip()
+            
+            # Handle empty strings resulting from strip
+            df[col] = df[col].replace('', '0')
+            
+            # Handle Schwab's (123.45) notation for negative
+            mask = df[col].str.startswith('(') & df[col].str.endswith(')')
+            df.loc[mask, col] = '-' + df.loc[mask, col].str[1:-1]
         
-        df[col] = pd.to_numeric(df[col], errors='ignore')
+        # Force numeric conversion, turning errors into NaN then filling with 0.0
+        df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0.0)
         
     return df
 
