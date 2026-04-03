@@ -10,6 +10,14 @@
 | RE Equity | Net Worth Page | (RE Valuation @ 6% Cap) - Total Debt |
 | Concentration | Risk Tab | Logic: Any position > 10% weight (Warning) |
 | Drift Alert | Rebalancing | (Current Weight - Target Weight) > Threshold |
+| Total Net Worth | Net Worth Page | (Liquid Assets) + (RE Equity) + (RE Reserves) |
+
+## LOGIC & DERIVATIONS:
+- **Real Estate Valuation:** (Annual NOI / 0.06 Cap Rate). Fallback: 'property_value' from RE Sheet.
+- **RE Equity:** (RE Valuation) - (Total Debt).
+- **Liquid Assets:** SUM(Market Value) from current holdings.
+- **Data Source (RE):** Dashboard ID `1DXuY1iBo2GqZCCSZ7OrUa4iaunb5s8Kf1Rms8Z237rQ`.
+- **Target RE Cells:** B21 (Debt), B20 (Debt Service).
 
 ## SPECIALIZED AGENT LOCATIONS:
 - Concentration Hedger: Main Page -> Concentration Alerts section.

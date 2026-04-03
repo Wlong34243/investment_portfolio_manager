@@ -1,17 +1,18 @@
 # INVESTMENT PORTFOLIO MANAGER - STATUS & TODO
-Last Updated: April 2, 2026
+Last Updated: April 3, 2026
 
 ## CURRENT STATUS: [PRODUCTION READY]
-The application has completed all four primary development phases and is now in the "Audit & Refinement" stage. 
+The application has completed all four primary development phases and has undergone a major 2026 tech stack refresh.
 
 ### Core Features (Operational):
 - Multi-Account Schwab Parser: Fixed and robust; handles HSA, Trust, Individual, and Roth sections seamlessly.
-- Google Sheets Integration: Atomic "Header + Data" write pattern ensures no data loss during updates.
+- Google Sheets Integration: Atomic "Header + Data" write pattern with robust duplicate header handling.
 - Realized G/L & Tax Tracking: Supports lot-level tracking with fingerprint-based deduplication.
 - Risk Engine: Calculates Portfolio Beta, CAPM projections, and Market Stress Tests using live yfinance data.
-- AI Research Hub: Integrated with Gemini 2.5 Pro for deep-dive ticker analysis and earnings sentiment.
+- AI Research Hub: Upgraded to Gemini 3.1 Pro Preview for deep-dive ticker analysis and earnings sentiment.
 - Unified Net Worth: Successfully integrated with the Real Estate Property Manager dashboard for total wealth tracking.
 - Macro Monitor: Real-time tracking of CPI, Fed Rates, and VIX with AI-driven strategy generation.
+- Connectivity: Verified Green for Finnhub, FMP (Stable), FRED, and Gemini APIs.
 
 ### Verified Pages:
 - 📊 Holdings (Main Dashboard)

@@ -2,6 +2,29 @@
 
 Every entry must include a **Status** line describing what is currently safe to run.
 
+## [2026-04-03] — Connectivity, Intelligence & Robustness Upgrade
+
+### feat: AI & API Modernization
+**What changed:**
+- **Model Upgrade:** Migrated core AI logic from Gemini 2.5 Pro to **Gemini 3.1 Pro Preview** for enhanced strategic reasoning.
+- **FMP Stable Migration:** Rebuilt `utils/fmp_client.py` to use the **Financial Modeling Prep Stable API** pattern, resolving 403 Legacy Endpoint errors for new API keys.
+- **FRED Integration:** Successfully verified and tested St. Louis Fed API connectivity for macro economic data.
+
+### fix: Data Robustness & Parsing
+**What changed:**
+- **GSheet Header Resilience:** Implemented `read_gsheet_robust` in `utils/sheet_readers.py` to handle worksheets with duplicate or empty headers (common in manual sheet edits).
+- **Net Worth Calculation:** Added robust currency parsing and float conversion in `grand_strategist.py` to prevent `TypeError` when reading RE Dashboard data.
+- **Cash Ticker Expansion:** Added "CASH & CASH INVESTMENTS" to `CASH_TICKERS` to prevent yfinance 404 errors during enrichment.
+- **JSON Parsing:** Enhanced `utils/gemini_client.py` with surgical JSON extraction logic to handle non-strict model responses.
+
+### maintenance: UI & Navigation
+**What changed:**
+- **Navigation Fix:** Updated AI Advisor's system context to prevent hallucinations regarding non-existent pages; correctly routes users to Dashboard Tabs vs Sub-pages.
+- **Streamlit Modernization:** Replaced 60+ occurrences of deprecated `use_container_width=True` with `width='stretch'` to clean logs and ensure 2026+ compatibility.
+- **App Restructuring:** Renamed `app.py` to `Main.py` and updated page title to "Main Dashboard" for better sidebar clarity.
+
+**Status: Production ready. AI logic is now running on Gemini 3.1 Pro. All API connections (FMP, Finnhub, FRED, Gemini) are verified green.**
+
 ## [2026-04-02] — Structural Audit & Refinement
 
 ### refactor: Data Pipeline & Sanitization
