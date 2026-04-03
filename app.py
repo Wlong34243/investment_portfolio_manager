@@ -91,7 +91,8 @@ def main_dashboard():
                         # Force a cache clear for the reader so it sees the new data if re-read
                         if hasattr(get_holdings_current, "clear"):
                             get_holdings_current.clear()
-                        except Exception as e:                        processing_errors.append(f"Positions Error: {e}")
+                    except Exception as e:
+                        processing_errors.append(f"Positions Error: {e}")
                         status.update(label="Positions Failed", state="error")
             
             # 2. Realized G/L
