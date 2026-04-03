@@ -144,8 +144,8 @@ def get_company_profile(ticker: str) -> dict:
                 'sector': p.get('sector'),
                 'industry': p.get('industry'),
                 'description': p.get('description'),
-                'market_cap': p.get('mktCap'),
-                'beta': p.get('beta')
+                'market_cap': float(p.get('mktCap') or 0.0),
+                'beta': float(p.get('beta') or 0.0)
             }
         return {}
     except Exception as e:
