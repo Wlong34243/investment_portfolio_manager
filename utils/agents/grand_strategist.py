@@ -52,7 +52,10 @@ def calculate_net_worth(holdings_df: pd.DataFrame, re_data: dict) -> dict:
     Liquid | RE Equity | Debt | Reserve.
     Total Net Worth = (Investment Portfolio) + (RE NOI / Cap Rate) + (RE Reserve Account) - (Debt)
     """
-    liquid_assets = holdings_df['Market Value'].sum()
+    try:
+        liquid_assets = float(holdings_df['Market Value'].sum())
+    except (ValueError, TypeError):
+        liquid_assets = 0.0
     
     if not re_data:
         return {
@@ -63,16 +66,22 @@ def calculate_net_worth(holdings_df: pd.DataFrame, re_data: dict) -> dict:
     # Net Worth calculation based on prompt formula
     # Using a 6% cap rate if not provided
     cap_rate = 0.06
-    re_valuation = re_data['noi'] / cap_rate if re_data['noi'] > 0 else re_data['property_value']
-    re_equity = re_valuation - re_data['debt']
     
-    total_nw = liquid_assets + re_equity + re_data['reserve']
+    noi = float(re_data.get('noi', 0.0) or 0.0)
+    prop_val = float(re_data.get('property_value', 0.0) or 0.0)
+    debt = float(re_data.get('debt', 0.0) or 0.0)
+    reserve = float(re_data.get('reserve', 0.0) or 0.0)
+
+    re_valuation = noi / cap_rate if noi > 0 else prop_val
+    re_equity = re_valuation - debt
+    
+    total_nw = liquid_assets + re_equity + reserve
     
     return {
         "liquid": liquid_assets,
         "re_equity": re_equity,
-        "debt": re_data['debt'],
-        "reserve": re_data['reserve'],
+        "debt": debt,
+        "reserve": reserve,
         "total": total_nw,
         "re_valuation": re_valuation
     }

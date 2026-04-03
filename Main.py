@@ -18,7 +18,7 @@ from pipeline import (
 from utils.sheet_readers import get_holdings_current
 
 # --- Page Config ---
-st.set_page_config(layout="wide", page_title="Investment Portfolio Manager", page_icon="📈")
+st.set_page_config(layout="wide", page_title="Main Dashboard", page_icon="📈")
 
 # --- Password Gate ---
 def check_password():
