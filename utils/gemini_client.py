@@ -2,6 +2,7 @@ import os
 import json
 import logging
 import time
+import re
 from google import genai
 from google.genai import types
 
@@ -33,7 +34,8 @@ def ask_gemini(prompt: str, system_instruction: str = None, json_mode: bool = Fa
     if not client:
         return ""
         
-    model_name = getattr(config, 'GEMINI_MODEL', 'gemini-2.5-pro')
+    # Correctly pull model name from config (e.g. gemini-3.1-pro-preview)
+    model_name = getattr(config, 'GEMINI_MODEL', 'gemini-2.0-flash')
     
     # Prepend safety preamble to all system instructions
     full_system_instruction = SAFETY_PREAMBLE
@@ -41,7 +43,7 @@ def ask_gemini(prompt: str, system_instruction: str = None, json_mode: bool = Fa
         full_system_instruction += f"\n\n{system_instruction}"
         
     if json_mode:
-        full_system_instruction += "\n\nRespond ONLY with a JSON object. No preamble, no markdown fences, no explanation outside the JSON."
+        full_system_instruction += "\n\nRespond ONLY with a valid JSON object. No preamble, no explanation outside the JSON."
 
     generation_config = types.GenerateContentConfig(
         system_instruction=full_system_instruction,
@@ -60,7 +62,7 @@ def ask_gemini(prompt: str, system_instruction: str = None, json_mode: bool = Fa
         )
         return response.text
     except Exception as e:
-        logging.error(f"Gemini API error: {e}")
+        logging.error(f"Gemini API error ({model_name}): {e}")
         # Simple retry logic for rate limits
         if "429" in str(e):
             logging.info("Rate limited. Waiting 30s...")
@@ -76,28 +78,49 @@ def ask_gemini(prompt: str, system_instruction: str = None, json_mode: bool = Fa
                 logging.error(f"Retry failed: {retry_e}")
         return ""
 
+def _clean_json_response(text: str) -> str:
+    """
+    Surgically extract JSON from a potentially messy response.
+    Handles markdown blocks, preamble, and postamble.
+    """
+    if not text:
+        return ""
+        
+    cleaned = text.strip()
+    
+    # 1. Strip Markdown Fences
+    if cleaned.startswith("```"):
+        # Match ```json ... ``` or just ``` ... ```
+        match = re.search(r"```(?:json)?\s*(.*?)\s*```", cleaned, re.DOTALL)
+        if match:
+            cleaned = match.group(1).strip()
+    
+    # 2. If it still doesn't look like JSON, try finding the first '{' and last '}'
+    if not (cleaned.startswith("{") or cleaned.startswith("[")):
+        start_idx = cleaned.find("{")
+        end_idx = cleaned.rfind("}")
+        if start_idx != -1 and end_idx != -1:
+            cleaned = cleaned[start_idx:end_idx+1]
+            
+    return cleaned
+
 def ask_gemini_json(prompt: str, system_instruction: str = None, max_tokens: int = 2000) -> dict:
     response_text = ask_gemini(prompt, system_instruction, json_mode=True, max_tokens=max_tokens)
     if not response_text:
         return {"error": "Empty response from Gemini"}
         
+    cleaned_text = _clean_json_response(response_text)
+    
     try:
-        return json.loads(response_text)
-    except json.JSONDecodeError:
-        # Fallback: try to strip markdown fences if the model ignored MIME type instructions
-        cleaned_text = response_text.strip()
-        if cleaned_text.startswith("```json"):
-            cleaned_text = cleaned_text[7:]
-        if cleaned_text.startswith("```"):
-            cleaned_text = cleaned_text[3:]
-        if cleaned_text.endswith("```"):
-            cleaned_text = cleaned_text[:-3]
-            
-        try:
-            return json.loads(cleaned_text.strip())
-        except json.JSONDecodeError:
-            logging.error("Failed to parse JSON even after stripping fences.")
-            return {"error": "Failed to parse response", "raw": response_text[:300]}
+        return json.loads(cleaned_text)
+    except json.JSONDecodeError as e:
+        logging.error(f"Failed to parse JSON: {e}")
+        logging.debug(f"Raw response: {response_text}")
+        return {
+            "error": "Failed to parse AI response",
+            "detail": str(e),
+            "raw_snippet": response_text[:200]
+        }
             
 if __name__ == "__main__":
     # CLI Smoke Test
