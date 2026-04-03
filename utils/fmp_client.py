@@ -34,7 +34,8 @@ def get_earnings_calendar(tickers: List[str], days_ahead: int = 14) -> pd.DataFr
     start_date = datetime.now().strftime("%Y-%m-%d")
     end_date = (datetime.now() + timedelta(days=days_ahead)).strftime("%Y-%m-%d")
     
-    url = f"{BASE_URL}/earning_calendar?from={start_date}&to={end_date}&apikey={api_key}"
+    # Corrected path: earnings-calendar (hyphenated and plural)
+    url = f"{BASE_URL}/earnings-calendar?from={start_date}&to={end_date}&apikey={api_key}"
     try:
         response = requests.get(url, timeout=10)
         response.raise_for_status()
@@ -61,7 +62,8 @@ def get_earnings_transcript(ticker: str, year: int = None, quarter: int = None) 
     if not api_key:
         return ""
         
-    url = f"{BASE_URL}/earning_call_transcript?symbol={ticker}&"
+    # Corrected path: earning-call-transcript (hyphenated)
+    url = f"{BASE_URL}/earning-call-transcript?symbol={ticker}&"
     if year and quarter:
         url += f"year={year}&quarter={quarter}&"
     url += f"apikey={api_key}"

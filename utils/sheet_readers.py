@@ -155,6 +155,24 @@ def read_gsheet_robust(ws: gspread.Worksheet) -> pd.DataFrame:
     if cols_to_drop:
         df = df.drop(columns=cols_to_drop)
         
+    # Standardize numeric columns: convert to float if possible
+    for col in df.columns:
+        # Skip known non-numeric columns to avoid errors or slow parsing
+        if col.lower() in ['ticker', 'symbol', 'description', 'sector', 'industry', 'asset class', 'asset strategy', 'import date', 'closed date', 'opened date', 'acquisition date']:
+            continue
+        
+        # Try to clean common currency formatting before numeric conversion
+        first_valid = df[col].replace('', None).first_valid_index()
+        if first_valid is not None:
+            val_str = str(df.loc[first_valid, col])
+            if any(char in val_str for char in ['$', ',', '(', ')']):
+                df[col] = df[col].astype(str).str.replace('$', '', regex=False).str.replace(',', '', regex=False)
+                # Handle Schwab's (123.45) notation for negative
+                mask = df[col].str.startswith('(') & df[col].str.endswith(')')
+                df.loc[mask, col] = '-' + df.loc[mask, col].str[1:-1]
+        
+        df[col] = pd.to_numeric(df[col], errors='ignore')
+        
     return df
 
 if st:
