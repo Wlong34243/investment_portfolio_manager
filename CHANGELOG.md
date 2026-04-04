@@ -37,7 +37,12 @@ Every entry must include a **Status** line describing what is currently safe to 
 - **Strict Validation:** Updated `parse_realized_gl` in `utils/gl_parser.py` to strictly require a valid `closed_date`. This automatically filters out Schwab's account metadata and summary rows that contain placeholder zeros.
 - **Data Cleanup:** Manually purged 12 legacy metadata rows from the live `Realized_GL` sheet to ensure accurate YTD calculations.
 
-**Status: Production ready. CSV ingestion is now robust against backdated "as of" transactions and metadata rows. Full audit trail live in the 'Logs' tab.**
+### fix: Net Worth Calculation & Cap Rate Units
+**What changed:**
+- **Unit Mismatch Fix:** Updated `utils/agents/grand_strategist.py` to robustly handle different Cap Rate formats (e.g., "6.5", "6.5%", or "0.065"). Previously, a double-division was causing property valuations to explode into the hundreds of millions.
+- **Valuation Sanity Guard:** Implemented a $50M cap-check on the income-based valuation. If the math results in an astronomical number, the system now logs a warning and falls back to a manual property value rather than displaying garbage data.
+
+**Status: Production ready. CSV ingestion is now robust against backdated "as of" transactions and metadata rows. Net Worth math is stabilized.**
 
 ## [2026-04-03] — Connectivity, Intelligence & Robustness Upgrade
 

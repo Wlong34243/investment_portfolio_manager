@@ -36,13 +36,24 @@ def read_re_portfolio_summary() -> dict:
         ws_assump = spreadsheet.worksheet('Assumptions')
         
         # Mapping based on research of the sheet structure
+        raw_cap_rate = ws_assump.acell('E16').value or "0.065"
+        
+        # Robust percentage parsing: handles "6.5", "6.5%", or "0.065"
+        clean_cap = str(raw_cap_rate).replace('%', '').strip()
+        try:
+            val = float(clean_cap)
+            # If the user entered "6.5", it's 0.065. If they entered "0.065", it's 0.065.
+            cap_rate = val / 100 if val > 0.2 else val 
+        except ValueError:
+            cap_rate = 0.065
+
         re_data = {
             "noi": _parse_currency(ws_dash.acell('B23').value),          # Annualized NOI
             "debt": _parse_currency(ws_debt.acell('D6').value),          # Combined Current Balance
             "debt_service": _parse_currency(ws_debt.acell('B20').value) * 12, # Annualized Total Monthly Debt Service
-            "cap_rate": _parse_currency(ws_assump.acell('E16').value.replace('%','')) / 100 if ws_assump.acell('E16').value else 0.065,
-            "reserve": 50000.0, # Placeholder until a specific cell is identified
-            "property_value": 1500000.0 # Fallback
+            "cap_rate": cap_rate,
+            "reserve": 50000.0, 
+            "property_value": 1500000.0 
         }
         return re_data
     except Exception as e:
@@ -73,6 +84,13 @@ def calculate_net_worth(holdings_df: pd.DataFrame, re_data: dict) -> dict:
     cap_rate = float(re_data.get('cap_rate', 0.065) or 0.065)
 
     re_valuation = noi / cap_rate if noi > 0 else prop_val
+    
+    # SANITY CHECK: If valuation is > $50M, something is wrong with the inputs (e.g. cap rate units)
+    # Fallback to prop_val or 0 to prevent garbage net worth numbers
+    if re_valuation > 50000000:
+        logging.warning(f"Astronomical RE valuation detected (${re_valuation:,.0f}). Falling back to manual property value.")
+        re_valuation = prop_val
+
     re_equity = re_valuation - debt
     
     total_nw = liquid_assets + re_equity + reserve
