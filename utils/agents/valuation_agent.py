@@ -4,6 +4,7 @@ import streamlit as st
 import config
 from utils.gemini_client import ask_gemini_json, SAFETY_PREAMBLE
 from utils.fmp_client import get_historical_pe, get_key_metrics, get_company_profile
+from utils.finnhub_client import get_basic_financials
 
 def get_valuation_snapshot(ticker: str) -> dict:
     """
@@ -14,25 +15,39 @@ def get_valuation_snapshot(ticker: str) -> dict:
         metrics = get_key_metrics(ticker)
         hist_pe = get_historical_pe(ticker, years=5)
         profile = get_company_profile(ticker)
+        basic = get_basic_financials(ticker) # Get 52W range from Finnhub
         
         current_pe = metrics.get('pe_ratio')
-        if not current_pe:
-            # Fallback to a basic check if PE is missing
+        if current_pe is None:
             return {"error": "No current PE found"}
             
         avg_pe = hist_pe['pe_ratio'].mean() if not hist_pe.empty else current_pe
         pe_discount = ((avg_pe - current_pe) / avg_pe) * 100 if avg_pe else 0
         
+        # Robust metrics extraction
+        def _to_float(v, default=0.0):
+            try:
+                return float(v) if v is not None else default
+            except:
+                return default
+
+        rev_per_share = _to_float(metrics.get('revenue_per_share'))
+        roe = _to_float(metrics.get('roe'))
+        eps_calc = rev_per_share * (roe / 100) if roe else 0.0
+
         return {
             "ticker": ticker,
-            "current_pe": current_pe,
-            "avg_5yr_pe": avg_pe,
-            "pe_discount_pct": pe_discount,
+            "current_pe": float(current_pe),
+            "avg_5yr_pe": float(avg_pe),
+            "pe_discount_pct": float(pe_discount),
             "is_below_average": current_pe < avg_pe,
-            "market_cap": profile.get('market_cap', 0),
-            "eps": metrics.get('revenue_per_share', 0) * (metrics.get('roe', 0) / 100) if metrics.get('roe') else 0, # Rough calc if needed
-            "dividend_yield": metrics.get('dividend_yield', 0),
-            "sector": profile.get('sector', "Unknown")
+            "market_cap": _to_float(profile.get('market_cap')),
+            "dividend_yield": _to_float(metrics.get('dividend_yield')),
+            "eps": eps_calc,
+            "sector": profile.get('sector', "Unknown"),
+            "high_52w": _to_float(basic.get('52WeekHigh')),
+            "low_52w": _to_float(basic.get('52WeekLow')),
+            "forward_pe": _to_float(basic.get('forwardPE'))
         }
     except Exception as e:
         logging.error(f"Valuation snapshot error for {ticker}: {e}")
@@ -51,14 +66,25 @@ def generate_rich_valuation_report(ticker: str, val_snap: dict) -> dict:
     - Market Cap: ${val_snap['market_cap']/1e9:.2f}B
     - Dividend Yield: {val_snap['dividend_yield']:.2f}%
     
-    Provide a report with these exact sections:
-    1. A lead paragraph summarizing if it's "Rich", "Fair", or "Undervalued".
-    2. "What the market is pricing in": Discuss the current multiple vs growth expectations.
-    3. "Valuation signals": Compare vs historical averages and peers.
-    4. "Key metrics": Bulleted list of the stats.
+    Provide a report with these exact sections (formatted in Markdown):
+    
+    ### [Ticker] Valuation Verdict
+    [A lead paragraph summarizing if it's "Rich", "Fair", or "Undervalued". Mention the current price vs target context.]
+    
+    #### What the market is pricing in
+    [Discuss the current multiple vs growth expectations and historical rerating.]
+    
+    #### Valuation signals
+    [Compare vs historical averages and peers. Mention intrinsic value estimates if applicable.]
+    
+    #### Key metrics
+    - Price: $[Price]
+    - Trailing P/E: [PE]
+    - Market Cap: $[MCap]
+    - 52W Range: [Low] to [High]
     """
     
-    system_instruction = f"{SAFETY_PREAMBLE}\n\nYou are a senior equity valuation analyst. Provide a professional, high-signal valuation report. Respond ONLY with JSON: {{'narrative': str, 'verdict': str, 'signals': str, 'metrics_summary': str}}"
+    system_instruction = f"{SAFETY_PREAMBLE}\n\nYou are a senior equity valuation analyst. Provide a professional, high-signal valuation report mirroring the style of Perplexity Finance. Respond ONLY with JSON: {{'narrative': str, 'verdict': str, 'signals': str, 'metrics_summary': str}}"
     
     try:
         return ask_gemini_json(prompt, system_instruction=system_instruction)

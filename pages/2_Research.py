@@ -41,6 +41,12 @@ tickers = [t for t in tickers if t not in ['CASH_MANUAL', 'QACDS', 'Cash & Cash 
 
 selected_ticker = st.sidebar.selectbox("Select Ticker", tickers)
 
+# Clear session state for valuation if ticker changes
+if st.session_state.get("last_val_ticker") != selected_ticker:
+    st.session_state["val_report"] = None
+    st.session_state["val_snap"] = None
+    st.session_state["last_val_ticker"] = selected_ticker
+
 # Get info for selected ticker
 info = df[df['Ticker'] == selected_ticker].iloc[0]
 
@@ -101,41 +107,36 @@ with col_a:
         with st.spinner("Analyzing valuation signals..."):
             val_snap = get_valuation_snapshot(selected_ticker)
             if "error" not in val_snap:
-                report = generate_rich_valuation_report(selected_ticker, val_snap)
-                
-                if "error" not in report:
-                    # Lead Narrative
-                    st.markdown(f"### {selected_ticker} Valuation Verdict")
-                    st.write(report['narrative'])
-                    
-                    # Key Stats
-                    m1, m2, m3 = st.columns(3)
-                    m1.metric("Current P/E", f"{val_snap['current_pe']:.2f}")
-                    m2.metric("5yr Avg P/E", f"{val_snap['avg_5yr_pe']:.2f}")
-                    m3.metric("Discount/Premium", f"{val_snap['pe_discount_pct']:+.1f}%", delta_color="inverse")
-                    
-                    st.markdown("#### What the market is pricing in")
-                    st.write(report['verdict'])
-                    
-                    st.markdown("#### Valuation signals")
-                    st.write(report['signals'])
-                    
-                    with st.expander("View Key Metrics Details"):
-                        st.markdown(report['metrics_summary'])
-                
-                st.divider()
-                if val_snap['is_below_average']:
-                    st.success(f"**Signal:** {selected_ticker} is trading below its 5-year average.")
-                    deploy_amt = st.number_input("Deployment Amount ($)", value=5000.0, step=1000.0)
-                    if st.button("Generate Accumulation Plan"):
-                        plan = generate_accumulation_plan(selected_ticker, deploy_amt, val_snap, df)
-                        st.write(plan.get('analysis'))
-                        st.info(f"**Action:** {plan.get('shares_to_buy')}")
-                        st.write(f"**Rationale:** {plan.get('entry_rationale')}")
-                else:
-                    st.warning(f"**Signal:** {selected_ticker} is trading above its historical average.")
+                st.session_state["val_snap"] = val_snap
+                st.session_state["val_report"] = generate_rich_valuation_report(selected_ticker, val_snap)
             else:
                 st.error(val_snap['error'])
+
+    # Display results from session state if they exist
+    if st.session_state.get("val_snap"):
+        vs = st.session_state["val_snap"]
+        vr = st.session_state.get("val_report", {})
+        
+        if vr and "error" not in vr:
+            # Display AI generated sections directly (they contain the requested headings)
+            st.markdown(vr.get('narrative', ''))
+            st.markdown(vr.get('verdict', ''))
+            st.markdown(vr.get('signals', ''))
+            
+            with st.expander("📊 Key Metrics Details"):
+                st.markdown(vr.get('metrics_summary', ''))
+        
+        st.divider()
+        if vs['is_below_average']:
+            st.success(f"**Signal:** {selected_ticker} is trading below its 5-year average.")
+            deploy_amt = st.number_input("Deployment Amount ($)", value=5000.0, step=1000.0)
+            if st.button("Generate Accumulation Plan"):
+                plan = generate_accumulation_plan(selected_ticker, deploy_amt, vs, df)
+                st.write(plan.get('analysis'))
+                st.info(f"**Action:** {plan.get('shares_to_buy')}")
+                st.write(f"**Rationale:** {plan.get('entry_rationale')}")
+        else:
+            st.warning(f"**Signal:** {selected_ticker} is trading above its historical average.")
 
 with col_b:
     st.subheader("💰 Options Income")

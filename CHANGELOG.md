@@ -45,10 +45,10 @@ Every entry must include a **Status** line describing what is currently safe to 
 ### feat: Perplexity-Style Valuation Narratives
 **What changed:**
 - **Rich Narrative Generation:** Upgraded `utils/agents/valuation_agent.py` to generate professional "Valuation Verdicts" using Gemini. The report now includes sections for "What the market is pricing in" and "Valuation signals."
-- **Enhanced Data Points:** The valuation engine now fetches and incorporates Market Cap, Dividend Yield, and Sector context into its strategic analysis.
-- **UI Refresh:** Updated the `AI Research Hub` (Page 2) to display these expanded narratives alongside the core P/E metrics, providing a deeper "institutional" feel to the research process.
+- **Enhanced Data Points:** The valuation engine now fetches and incorporates Market Cap, Dividend Yield, 52-Week Range, and Sector context into its analysis.
+- **Robustness & Persistence:** Added session-state persistence to the Research Hub to keep reports visible during user interactions. Hardened the data parser to prevent `NoneType` crashes when specific financial metrics are missing.
 
-**Status: Production ready. Valuation Monitor now provides narrative-driven strategic insights for all individual positions.**
+**Status: Production ready. Valuation Monitor now provides persistent, narrative-driven strategic insights.**
 
 ## [2026-04-03] — Connectivity, Intelligence & Robustness Upgrade
 
