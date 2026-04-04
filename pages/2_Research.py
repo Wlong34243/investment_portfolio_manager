@@ -95,17 +95,37 @@ col_a, col_b = st.columns(2)
 
 with col_a:
     st.subheader("📊 Valuation Monitor")
-    from utils.agents.valuation_agent import get_valuation_snapshot, generate_accumulation_plan
+    from utils.agents.valuation_agent import get_valuation_snapshot, generate_accumulation_plan, generate_rich_valuation_report
     
     if st.button(f"Check Valuation for {selected_ticker}", width='stretch'):
-        with st.spinner("Checking historical P/E ranges..."):
+        with st.spinner("Analyzing valuation signals..."):
             val_snap = get_valuation_snapshot(selected_ticker)
             if "error" not in val_snap:
-                st.metric("Current P/E", f"{val_snap['current_pe']:.2f}")
-                st.metric("5yr Avg P/E", f"{val_snap['avg_5yr_pe']:.2f}", f"{val_snap['pe_discount_pct']:+.1f}% vs Avg", delta_color="inverse")
+                report = generate_rich_valuation_report(selected_ticker, val_snap)
                 
+                if "error" not in report:
+                    # Lead Narrative
+                    st.markdown(f"### {selected_ticker} Valuation Verdict")
+                    st.write(report['narrative'])
+                    
+                    # Key Stats
+                    m1, m2, m3 = st.columns(3)
+                    m1.metric("Current P/E", f"{val_snap['current_pe']:.2f}")
+                    m2.metric("5yr Avg P/E", f"{val_snap['avg_5yr_pe']:.2f}")
+                    m3.metric("Discount/Premium", f"{val_snap['pe_discount_pct']:+.1f}%", delta_color="inverse")
+                    
+                    st.markdown("#### What the market is pricing in")
+                    st.write(report['verdict'])
+                    
+                    st.markdown("#### Valuation signals")
+                    st.write(report['signals'])
+                    
+                    with st.expander("View Key Metrics Details"):
+                        st.markdown(report['metrics_summary'])
+                
+                st.divider()
                 if val_snap['is_below_average']:
-                    st.success(f"{selected_ticker} is trading below its 5-year average.")
+                    st.success(f"**Signal:** {selected_ticker} is trading below its 5-year average.")
                     deploy_amt = st.number_input("Deployment Amount ($)", value=5000.0, step=1000.0)
                     if st.button("Generate Accumulation Plan"):
                         plan = generate_accumulation_plan(selected_ticker, deploy_amt, val_snap, df)
@@ -113,7 +133,7 @@ with col_a:
                         st.info(f"**Action:** {plan.get('shares_to_buy')}")
                         st.write(f"**Rationale:** {plan.get('entry_rationale')}")
                 else:
-                    st.warning(f"{selected_ticker} is trading above its historical average.")
+                    st.warning(f"**Signal:** {selected_ticker} is trading above its historical average.")
             else:
                 st.error(val_snap['error'])
 

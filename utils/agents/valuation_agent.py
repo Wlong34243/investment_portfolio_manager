@@ -3,40 +3,66 @@ import logging
 import streamlit as st
 import config
 from utils.gemini_client import ask_gemini_json, SAFETY_PREAMBLE
-from utils.fmp_client import get_historical_pe, get_key_metrics
+from utils.fmp_client import get_historical_pe, get_key_metrics, get_company_profile
 
 def get_valuation_snapshot(ticker: str) -> dict:
     """
-    current_pe, avg_5yr_pe, pe_discount_pct, is_below_average.
+    Returns current_pe, avg_5yr_pe, pe_discount_pct, is_below_average,
+    plus rich metadata for narrative generation.
     """
     try:
         metrics = get_key_metrics(ticker)
         hist_pe = get_historical_pe(ticker, years=5)
+        profile = get_company_profile(ticker)
         
         current_pe = metrics.get('pe_ratio')
         if not current_pe:
+            # Fallback to a basic check if PE is missing
             return {"error": "No current PE found"}
             
-        if not hist_pe.empty:
-            avg_pe = hist_pe['pe_ratio'].mean()
-        else:
-            avg_pe = None
-            
-        pe_discount = 0.0
-        is_below = False
-        if avg_pe and current_pe:
-            pe_discount = ((avg_pe - current_pe) / avg_pe) * 100
-            is_below = current_pe < avg_pe
-            
+        avg_pe = hist_pe['pe_ratio'].mean() if not hist_pe.empty else current_pe
+        pe_discount = ((avg_pe - current_pe) / avg_pe) * 100 if avg_pe else 0
+        
         return {
             "ticker": ticker,
             "current_pe": current_pe,
             "avg_5yr_pe": avg_pe,
             "pe_discount_pct": pe_discount,
-            "is_below_average": is_below
+            "is_below_average": current_pe < avg_pe,
+            "market_cap": profile.get('market_cap', 0),
+            "eps": metrics.get('revenue_per_share', 0) * (metrics.get('roe', 0) / 100) if metrics.get('roe') else 0, # Rough calc if needed
+            "dividend_yield": metrics.get('dividend_yield', 0),
+            "sector": profile.get('sector', "Unknown")
         }
     except Exception as e:
         logging.error(f"Valuation snapshot error for {ticker}: {e}")
+        return {"error": str(e)}
+
+def generate_rich_valuation_report(ticker: str, val_snap: dict) -> dict:
+    """
+    Uses Gemini to generate the Perplexity-style rich narrative.
+    """
+    prompt = f"""
+    Analyze the valuation of {ticker} ({val_snap['sector']}).
+    
+    Metrics:
+    - Current P/E: {val_snap['current_pe']:.2f}
+    - 5-Year Avg P/E: {val_snap['avg_5yr_pe']:.2f}
+    - Market Cap: ${val_snap['market_cap']/1e9:.2f}B
+    - Dividend Yield: {val_snap['dividend_yield']:.2f}%
+    
+    Provide a report with these exact sections:
+    1. A lead paragraph summarizing if it's "Rich", "Fair", or "Undervalued".
+    2. "What the market is pricing in": Discuss the current multiple vs growth expectations.
+    3. "Valuation signals": Compare vs historical averages and peers.
+    4. "Key metrics": Bulleted list of the stats.
+    """
+    
+    system_instruction = f"{SAFETY_PREAMBLE}\n\nYou are a senior equity valuation analyst. Provide a professional, high-signal valuation report. Respond ONLY with JSON: {{'narrative': str, 'verdict': str, 'signals': str, 'metrics_summary': str}}"
+    
+    try:
+        return ask_gemini_json(prompt, system_instruction=system_instruction)
+    except Exception as e:
         return {"error": str(e)}
 
 def scan_valuation_opportunities(holdings_df: pd.DataFrame, watchlist: list = None) -> list[dict]:
