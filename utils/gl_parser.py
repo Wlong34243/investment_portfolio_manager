@@ -139,8 +139,18 @@ def parse_transaction_history(file_or_path) -> pd.DataFrame:
     """
     df = pd.read_csv(file_or_path, encoding="utf-8-sig")
     
-    # Standardize columns
-    df['Date'] = pd.to_datetime(df['Date']).dt.strftime('%Y-%m-%d')
+    # Handle dates like "01/06/2026 as of 01/05/2026" by taking the first part
+    def _clean_tx_date(val):
+        s = str(val).split(" as of")[0].strip()
+        try:
+            return pd.to_datetime(s).strftime('%Y-%m-%d')
+        except:
+            return ""
+
+    df['Date'] = df['Date'].apply(_clean_tx_date)
+    
+    # Filter out rows with empty dates
+    df = df[df['Date'] != ""].copy()
     
     # Clean numeric
     for col in ['Quantity', 'Price', 'Fees & Comm', 'Amount']:

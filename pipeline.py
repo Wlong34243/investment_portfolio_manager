@@ -7,6 +7,25 @@ import config
 
 # --- Position Pipeline Functions ---
 
+def write_pipeline_log(level: str, source: str, message: str, details: str = "", dry_run: bool = False):
+    """Writes a log entry to the Logs tab in the Portfolio Sheet."""
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    log_row = [timestamp, level, source, message, details]
+    
+    print(f"[{timestamp}] {level} | {source} | {message}")
+    
+    if dry_run:
+        return
+
+    try:
+        from utils.sheet_readers import get_gspread_client
+        client = get_gspread_client()
+        spreadsheet = client.open_by_key(config.PORTFOLIO_SHEET_ID)
+        ws = spreadsheet.worksheet(config.TAB_LOGS)
+        ws.append_row(log_row, value_input_option='USER_ENTERED')
+    except Exception as e:
+        print(f"Failed to write to Logs tab: {e}")
+
 def sanitize_dataframe_for_sheets(df: pd.DataFrame, columns: list[str], col_map: dict = None) -> list[list]:
     """
     Universal sanitizer for Google Sheets:
@@ -351,6 +370,7 @@ def ingest_realized_gl(uploaded_file, dry_run=True):
     """
     from utils.gl_parser import parse_realized_gl
     results = {"parsed": 0, "new": 0, "skipped": 0, "errors": []}
+    source = "Realized_GL_Ingestion"
 
     try:
         # 1. Parse CSV
@@ -358,13 +378,14 @@ def ingest_realized_gl(uploaded_file, dry_run=True):
         results["parsed"] = len(df)
         
         if df.empty:
+            write_pipeline_log("INFO", source, "Parsed file is empty.", dry_run=dry_run)
             return results
             
         # Add import date
         df["import_date"] = datetime.now().strftime("%Y-%m-%d")
         
         if dry_run:
-            print(f"DRY RUN: WOULD write {len(df)} rows to Realized_GL")
+            write_pipeline_log("INFO", source, f"DRY RUN: Parsed {len(df)} rows.", dry_run=dry_run)
             results["new"] = len(df)
             return results
 
@@ -417,11 +438,13 @@ def ingest_realized_gl(uploaded_file, dry_run=True):
             # Batch append
             ws.append_rows(data_to_write, value_input_option='USER_ENTERED')
             time.sleep(1.0)
-            print(f"Realized_GL: Appended {len(data_to_write)} new lots.")
+            write_pipeline_log("SUCCESS", source, f"Appended {len(data_to_write)} new lots.", f"Total parsed: {len(df)}, Skipped: {results['skipped']}", dry_run=dry_run)
+        else:
+            write_pipeline_log("INFO", source, "No new unique lots found.", f"Total parsed: {len(df)}", dry_run=dry_run)
             
     except Exception as e:
         results["errors"].append(str(e))
-        print(f"Error ingesting Realized G/L: {e}")
+        write_pipeline_log("ERROR", source, f"Ingestion failed: {e}", dry_run=dry_run)
         
     return results
 
@@ -429,17 +452,20 @@ def ingest_transactions(uploaded_file, dry_run=True):
     """Parse transaction CSV, dedup, and append."""
     from utils.gl_parser import parse_transaction_history
     results = {"parsed": 0, "new": 0, "skipped": 0, "errors": []}
+    source = "Transactions_Ingestion"
 
     try:
         df = parse_transaction_history(uploaded_file)
         results["parsed"] = len(df)
         
         if df.empty:
+            write_pipeline_log("INFO", source, "Parsed file is empty.", dry_run=dry_run)
             return results
             
         df["import_date"] = datetime.now().strftime("%Y-%m-%d")
         
         if dry_run:
+            write_pipeline_log("INFO", source, f"DRY RUN: Parsed {len(df)} rows.", dry_run=dry_run)
             results["new"] = len(df)
             return results
 
@@ -451,6 +477,7 @@ def ingest_transactions(uploaded_file, dry_run=True):
         existing_data = ws.get_all_records()
         existing_fps = {str(r.get('Fingerprint')) for r in existing_data if r.get('Fingerprint')}
         
+        # Note: gl_parser builds 'Fingerprint' with capital F
         new_df = df[~df["Fingerprint"].isin(existing_fps)]
         results["skipped"] = len(df) - len(new_df)
         results["new"] = len(new_df)
@@ -467,15 +494,17 @@ def ingest_transactions(uploaded_file, dry_run=True):
                 'import_date': 'Import Date',
                 'Fingerprint': 'Fingerprint'
             }
-            # Note: Amount in Schwab CSV is already the net amount in most cases, 
-            # but we can refine this later if needed.
             
             data_to_write = sanitize_dataframe_for_sheets(new_df, config.TRANSACTION_COLUMNS, col_map)
             ws.append_rows(data_to_write, value_input_option='USER_ENTERED')
             time.sleep(1.0)
+            write_pipeline_log("SUCCESS", source, f"Appended {len(data_to_write)} new transactions.", f"Total parsed: {len(df)}, Skipped: {results['skipped']}", dry_run=dry_run)
+        else:
+            write_pipeline_log("INFO", source, "No new unique transactions found.", f"Total parsed: {len(df)}", dry_run=dry_run)
             
     except Exception as e:
         results["errors"].append(str(e))
+        write_pipeline_log("ERROR", source, f"Ingestion failed: {e}", dry_run=dry_run)
         
     return results
 
@@ -484,13 +513,14 @@ def write_to_sheets(df: pd.DataFrame, cash_amount: float, dry_run: bool = True) 
     Orchestrate: Holdings_Current -> Holdings_History -> Daily_Snapshots -> Income_Tracking.
     """
     results = {"holdings_written": 0, "history_appended": 0, "snapshot": False, "income_snapshot": False}
+    source = "Positions_Ingestion"
     
     # Prepare data using centralized mapping
     data_list = sanitize_dataframe_for_sheets(df, config.POSITION_COLUMNS, config.POSITION_COL_MAP)
     income_metrics = calculate_income_metrics(df)
     
     if dry_run:
-        print(f"DRY RUN: WOULD write {len(data_list)} rows to Holdings_Current")
+        write_pipeline_log("INFO", source, f"DRY RUN: Prepared {len(data_list)} positions.", dry_run=dry_run)
         results["holdings_written"] = len(data_list)
         results["history_appended"] = len(data_list)
         results["snapshot"] = True
@@ -529,13 +559,15 @@ def write_to_sheets(df: pd.DataFrame, cash_amount: float, dry_run: bool = True) 
             income_snapshot_added = append_income_snapshot(ws_income, income_metrics)
             results["income_snapshot"] = income_snapshot_added
             
+            write_pipeline_log("SUCCESS", source, f"Updated Holdings_Current ({len(data_list)} rows) and History ({appended_count} new).", dry_run=dry_run)
             break
             
         except gspread.exceptions.APIError as e:
             if attempt < max_retries - 1:
-                print(f"API Error, retrying in 60s... {e}")
+                write_pipeline_log("WARNING", source, f"API Error, retrying in 60s... {e}", dry_run=dry_run)
                 time.sleep(60)
             else:
+                write_pipeline_log("ERROR", source, f"Ingestion failed after {max_retries} attempts: {e}", dry_run=dry_run)
                 raise e
     
     return results

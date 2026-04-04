@@ -76,6 +76,7 @@ TAB_RISK_METRICS = "Risk_Metrics"
 TAB_INCOME_TRACKING = "Income_Tracking"
 TAB_REALIZED_GL = "Realized_GL"
 TAB_CONFIG = "Config"
+TAB_LOGS = "Logs"
 
 # ---------------------------------------------------------------------------
 # Schwab CSV Parsing

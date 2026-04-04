@@ -45,6 +45,9 @@ SCHEMA = {
     ],
     "Config": [
         "Key", "Value", "Description"
+    ],
+    "Logs": [
+        "Timestamp", "Level", "Source", "Message", "Details"
     ]
 }
 

@@ -21,7 +21,18 @@ Every entry must include a **Status** line describing what is currently safe to 
 - **Realized_GL Schema:** Completed the `Realized_GL` schema in `create_portfolio_sheet.py` to include all 22 columns (Wash Sales, LT/ST Gain, etc.) and enabled row freezing for the new tab.
 - **Tab Initialization:** Verified and re-ran `create_portfolio_sheet.py` to ensure all 10 project tabs are correctly initialized with headers in the live Google Sheet.
 
-**Status: Production ready. Real Estate net worth is now dynamically linked to the property manager dashboard. FMP valuation logic is stabilized for all tickers.**
+### fix: CSV Parser Resilience & "As Of" Dates
+**What changed:**
+- **Date Parsing Fix:** Updated `utils/gl_parser.py` to handle Schwab's "as of" date strings (e.g., `"01/06/2026 as of 01/05/2026"`) which were previously causing `ValueError` crashes during transaction ingestion.
+- **Transaction History Mapping:** Standardized fingerprint case-sensitivity and header mapping in `pipeline.py` to ensure reliable deduplication of trade history.
+
+### feat: Automated Pipeline Logging
+**What changed:**
+- **New 'Logs' Tab:** Added a dedicated `Logs` tab to the Portfolio Sheet to track ingestion events (Timestamp, Level, Source, Message, Details).
+- **Audit Trail:** Integrated `write_pipeline_log` into `ingest_realized_gl`, `ingest_transactions`, and `write_to_sheets` to provide a permanent record of all data updates and any skipped duplicates.
+- **Header Initialization:** Updated `create_portfolio_sheet.py` to automatically provision the `Logs` tab with the correct schema.
+
+**Status: Production ready. CSV ingestion is now robust against backdated "as of" transactions. Full audit trail live in the 'Logs' tab.**
 
 ## [2026-04-03] — Connectivity, Intelligence & Robustness Upgrade
 
