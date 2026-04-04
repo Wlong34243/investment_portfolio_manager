@@ -32,7 +32,12 @@ Every entry must include a **Status** line describing what is currently safe to 
 - **Audit Trail:** Integrated `write_pipeline_log` into `ingest_realized_gl`, `ingest_transactions`, and `write_to_sheets` to provide a permanent record of all data updates and any skipped duplicates.
 - **Header Initialization:** Updated `create_portfolio_sheet.py` to automatically provision the `Logs` tab with the correct schema.
 
-**Status: Production ready. CSV ingestion is now robust against backdated "as of" transactions. Full audit trail live in the 'Logs' tab.**
+### fix: Realized G/L Metadata Filtering
+**What changed:**
+- **Strict Validation:** Updated `parse_realized_gl` in `utils/gl_parser.py` to strictly require a valid `closed_date`. This automatically filters out Schwab's account metadata and summary rows that contain placeholder zeros.
+- **Data Cleanup:** Manually purged 12 legacy metadata rows from the live `Realized_GL` sheet to ensure accurate YTD calculations.
+
+**Status: Production ready. CSV ingestion is now robust against backdated "as of" transactions and metadata rows. Full audit trail live in the 'Logs' tab.**
 
 ## [2026-04-03] — Connectivity, Intelligence & Robustness Upgrade
 

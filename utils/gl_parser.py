@@ -216,6 +216,10 @@ def parse_realized_gl(file_or_path) -> pd.DataFrame:
                 "account":             section["account"],
             }
 
+            # VALIDATION: If closed_date is empty, this is a header/metadata row, not a trade. Skip it.
+            if not lot["closed_date"]:
+                continue
+
             lot["holding_days"]  = _holding_days(lot["opened_date"], lot["closed_date"])
             lot["is_primary_acct"] = (
                 "individual" in section["account"].lower() 
