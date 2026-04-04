@@ -93,11 +93,17 @@ def get_key_metrics(ticker: str) -> dict:
         data = response.json()
         if data and isinstance(data, list) and len(data) > 0:
             m = data[0]
+            # Try peRatioTTM, then calculate from earningsYieldTTM
+            pe = m.get('peRatioTTM')
+            if not pe and m.get('earningsYieldTTM'):
+                ey = float(m.get('earningsYieldTTM'))
+                pe = 1.0 / ey if ey != 0 else None
+
             return {
-                'pe_ratio': m.get('peRatioTTM'),
+                'pe_ratio': pe,
                 'pb_ratio': m.get('pbRatioTTM'),
                 'dividend_yield': m.get('dividendYieldPercentageTTM'),
-                'roe': m.get('roeTTM'),
+                'roe': m.get('returnOnEquityTTM'),
                 'debt_to_equity': m.get('debtToEquityTTM'),
                 'revenue_per_share': m.get('revenuePerShareTTM'),
                 'free_cash_flow_per_share': m.get('freeCashFlowPerShareTTM')

@@ -2,6 +2,27 @@
 
 Every entry must include a **Status** line describing what is currently safe to run.
 
+## [2026-04-04] — Real Estate Integration & Valuation Stabilization
+
+### feat: Real Estate Dashboard "Wiring"
+**What changed:**
+- **Dynamic RE Metrics:** Hardwired `utils/agents/grand_strategist.py` to pull live data from the **Real Estate Dashboard** (`1DXu...rQ`).
+- **Cell Mapping:** Specifically mapped Annualized NOI (`Dashboard!B23`), Total Debt (`Debt_Schedule!D6`), and Terminal Cap Rate (`Assumptions!E16`) to the Net Worth engine.
+- **Valuation Documentation:** Created `re_portfolio_math.md` to provide a transparent breakdown of the exact formulas and constants used for RE equity and net worth.
+
+### fix: FMP Valuation & "No PE Found" Errors
+**What changed:**
+- **FMP Stable Migration (Complete):** Fixed `utils/fmp_client.py` to handle 403 Legacy errors by switching fully to the `stable` endpoint patterns for both key metrics and historical ratios.
+- **PE Ratio Fallback:** Implemented a smart fallback in `get_key_metrics` that calculates P/E from `earningsYieldTTM` ($1 / Yield$) when the direct `peRatioTTM` field is missing.
+- **Historical Ratio Mapping:** Fixed `get_historical_pe` to correctly map the `priceToEarningsRatio` field from the newer FMP JSON structure.
+
+### maintenance: Schema & Infrastructure
+**What changed:**
+- **Realized_GL Schema:** Completed the `Realized_GL` schema in `create_portfolio_sheet.py` to include all 22 columns (Wash Sales, LT/ST Gain, etc.) and enabled row freezing for the new tab.
+- **Tab Initialization:** Verified and re-ran `create_portfolio_sheet.py` to ensure all 10 project tabs are correctly initialized with headers in the live Google Sheet.
+
+**Status: Production ready. Real Estate net worth is now dynamically linked to the property manager dashboard. FMP valuation logic is stabilized for all tickers.**
+
 ## [2026-04-03] — Connectivity, Intelligence & Robustness Upgrade
 
 ### feat: AI & API Modernization

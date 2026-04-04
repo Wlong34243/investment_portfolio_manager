@@ -25,22 +25,24 @@ def _parse_currency(val: str) -> float:
 def read_re_portfolio_summary() -> dict:
     """
     Read specific cells from RE Dashboard Sheet.
-    property value, NOI, debt (B21), debt service (B20), reserve.
+    Pulls Annualized NOI, Total Debt, Debt Service, and Cap Rate.
     """
     try:
         client = get_gspread_client()
         spreadsheet = client.open_by_key(RE_DASHBOARD_ID)
-        # Assuming summary data is on the first sheet or a sheet named 'Summary'
-        ws = spreadsheet.get_worksheet(0)
         
-        # Mapping based on prompt info (Debt B21, Debt Service B20)
+        ws_dash = spreadsheet.worksheet('Dashboard')
+        ws_debt = spreadsheet.worksheet('Debt_Schedule')
+        ws_assump = spreadsheet.worksheet('Assumptions')
+        
+        # Mapping based on research of the sheet structure
         re_data = {
-            "debt": _parse_currency(ws.acell('B21').value),
-            "debt_service": _parse_currency(ws.acell('B20').value),
-            # Placeholders for now until exact cells are confirmed
-            "property_value": 1500000.0, 
-            "noi": 90000.0,
-            "reserve": 50000.0
+            "noi": _parse_currency(ws_dash.acell('B23').value),          # Annualized NOI
+            "debt": _parse_currency(ws_debt.acell('D6').value),          # Combined Current Balance
+            "debt_service": _parse_currency(ws_debt.acell('B20').value) * 12, # Annualized Total Monthly Debt Service
+            "cap_rate": _parse_currency(ws_assump.acell('E16').value.replace('%','')) / 100 if ws_assump.acell('E16').value else 0.065,
+            "reserve": 50000.0, # Placeholder until a specific cell is identified
+            "property_value": 1500000.0 # Fallback
         }
         return re_data
     except Exception as e:
@@ -64,13 +66,11 @@ def calculate_net_worth(holdings_df: pd.DataFrame, re_data: dict) -> dict:
         }
         
     # Net Worth calculation based on prompt formula
-    # Using a 6% cap rate if not provided
-    cap_rate = 0.06
-    
     noi = float(re_data.get('noi', 0.0) or 0.0)
     prop_val = float(re_data.get('property_value', 0.0) or 0.0)
     debt = float(re_data.get('debt', 0.0) or 0.0)
     reserve = float(re_data.get('reserve', 0.0) or 0.0)
+    cap_rate = float(re_data.get('cap_rate', 0.065) or 0.065)
 
     re_valuation = noi / cap_rate if noi > 0 else prop_val
     re_equity = re_valuation - debt

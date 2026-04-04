@@ -36,12 +36,19 @@ SCHEMA = {
         "Date", "Projected Annual Income", "Blended Yield %", "Top Generator Ticker", 
         "Top Generator Income", "Cash Yield Contribution", "Fingerprint"
     ],
+    "Realized_GL": [
+        "Ticker", "Description", "Closed Date", "Opened Date", "Holding Days", 
+        "Quantity", "Proceeds Per Share", "Cost Per Share", "Proceeds", 
+        "Cost Basis", "Unadjusted Cost", "Gain Loss $", "Gain Loss %", 
+        "LT Gain Loss", "ST Gain Loss", "Term", "Wash Sale", 
+        "Disallowed Loss", "Account", "Is Primary Acct", "Import Date", "Fingerprint"
+    ],
     "Config": [
         "Key", "Value", "Description"
     ]
 }
 
-TABS_TO_FREEZE = ["Holdings_Current", "Holdings_History", "Daily_Snapshots"]
+TABS_TO_FREEZE = ["Holdings_Current", "Holdings_History", "Daily_Snapshots", "Realized_GL"]
 
 def create_sheets():
     print(f"Opening spreadsheet: {config.PORTFOLIO_SHEET_ID}")
