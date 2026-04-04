@@ -38,6 +38,9 @@ def get_earnings_calendar(tickers: List[str], days_ahead: int = 14) -> pd.DataFr
     url = f"{BASE_URL}/earnings-calendar?from={start_date}&to={end_date}&apikey={api_key}"
     try:
         response = requests.get(url, timeout=10)
+        if response.status_code == 402:
+            logging.warning(f"FMP API: Payment Required (402). Subscription limit reached.")
+            return {} if 'metrics' in url or 'profile' in url else pd.DataFrame() if 'calendar' in url or 'ratios' in url or 'screener' in url else ""
         response.raise_for_status()
         data = response.json()
         if not data:
@@ -70,6 +73,9 @@ def get_earnings_transcript(ticker: str, year: int = None, quarter: int = None) 
     
     try:
         response = requests.get(url, timeout=10)
+        if response.status_code == 402:
+            logging.warning(f"FMP API: Payment Required (402). Subscription limit reached.")
+            return {} if 'metrics' in url or 'profile' in url else pd.DataFrame() if 'calendar' in url or 'ratios' in url or 'screener' in url else ""
         response.raise_for_status()
         data = response.json()
         if data and isinstance(data, list) and len(data) > 0:
@@ -89,6 +95,9 @@ def get_key_metrics(ticker: str) -> dict:
     url = f"{BASE_URL}/key-metrics-ttm?symbol={ticker}&apikey={api_key}"
     try:
         response = requests.get(url, timeout=10)
+        if response.status_code == 402:
+            logging.warning(f"FMP API: Payment Required (402). Subscription limit reached.")
+            return {} if 'metrics' in url or 'profile' in url else pd.DataFrame() if 'calendar' in url or 'ratios' in url or 'screener' in url else ""
         response.raise_for_status()
         data = response.json()
         if data and isinstance(data, list) and len(data) > 0:
@@ -122,6 +131,9 @@ def get_historical_pe(ticker: str, years: int = 5) -> pd.DataFrame:
     url = f"{BASE_URL}/ratios?symbol={ticker}&period=annual&limit={years}&apikey={api_key}"
     try:
         response = requests.get(url, timeout=10)
+        if response.status_code == 402:
+            logging.warning(f"FMP API: Payment Required (402). Subscription limit reached.")
+            return {} if 'metrics' in url or 'profile' in url else pd.DataFrame() if 'calendar' in url or 'ratios' in url or 'screener' in url else ""
         response.raise_for_status()
         data = response.json()
         if data:
@@ -142,6 +154,9 @@ def get_company_profile(ticker: str) -> dict:
     url = f"{BASE_URL}/profile?symbol={ticker}&apikey={api_key}"
     try:
         response = requests.get(url, timeout=10)
+        if response.status_code == 402:
+            logging.warning(f"FMP API: Payment Required (402). Subscription limit reached.")
+            return {} if 'metrics' in url or 'profile' in url else pd.DataFrame() if 'calendar' in url or 'ratios' in url or 'screener' in url else ""
         response.raise_for_status()
         data = response.json()
         if data and isinstance(data, list) and len(data) > 0:
@@ -175,6 +190,9 @@ def screen_by_metrics(criteria: dict) -> pd.DataFrame:
             
     try:
         response = requests.get(url, timeout=10)
+        if response.status_code == 402:
+            logging.warning(f"FMP API: Payment Required (402). Subscription limit reached.")
+            return {} if 'metrics' in url or 'profile' in url else pd.DataFrame() if 'calendar' in url or 'ratios' in url or 'screener' in url else ""
         response.raise_for_status()
         data = response.json()
         if not data:

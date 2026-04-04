@@ -5,26 +5,45 @@ import config
 from utils.gemini_client import ask_gemini_json, SAFETY_PREAMBLE
 from utils.fmp_client import get_historical_pe, get_key_metrics, get_company_profile
 from utils.finnhub_client import get_basic_financials
+import yfinance as yf
 
 def get_valuation_snapshot(ticker: str) -> dict:
     """
     Returns current_pe, avg_5yr_pe, pe_discount_pct, is_below_average,
     plus rich metadata for narrative generation.
+    Tries FMP first, falls back to yfinance for current metrics if FMP 402s.
     """
     try:
+        # 1. Try FMP for historical and current
         metrics = get_key_metrics(ticker)
         hist_pe = get_historical_pe(ticker, years=5)
         profile = get_company_profile(ticker)
-        basic = get_basic_financials(ticker) # Get 52W range from Finnhub
+        basic = get_basic_financials(ticker) 
         
         current_pe = metrics.get('pe_ratio')
+        
+        # 2. FALLBACK: If FMP PE is missing (likely 402/limit), try yfinance
+        if current_pe is None or current_pe == 0:
+            try:
+                y_ticker = yf.Ticker(ticker)
+                y_info = y_ticker.info
+                current_pe = y_info.get('trailingPE') or y_info.get('forwardPE')
+                
+                # If we still have no profile/market cap, fill from yfinance
+                if not profile.get('market_cap'):
+                    profile['market_cap'] = y_info.get('marketCap', 0)
+                if not profile.get('sector'):
+                    profile['sector'] = y_info.get('sector', 'Unknown')
+            except Exception as ye:
+                logging.warning(f"yfinance fallback failed for {ticker}: {ye}")
+
         if current_pe is None:
-            return {"error": "No current PE found"}
+            return {"error": f"No valuation data available for {ticker} (FMP restricted & yfinance empty)"}
             
         avg_pe = hist_pe['pe_ratio'].mean() if not hist_pe.empty else current_pe
         pe_discount = ((avg_pe - current_pe) / avg_pe) * 100 if avg_pe else 0
         
-        # Robust metrics extraction
+        # Robust metrics extraction helper
         def _to_float(v, default=0.0):
             try:
                 return float(v) if v is not None else default

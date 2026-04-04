@@ -48,7 +48,13 @@ Every entry must include a **Status** line describing what is currently safe to 
 - **Enhanced Data Points:** The valuation engine now fetches and incorporates Market Cap, Dividend Yield, 52-Week Range, and Sector context into its analysis.
 - **Robustness & Persistence:** Added session-state persistence to the Research Hub to keep reports visible during user interactions. Hardened the data parser to prevent `NoneType` crashes when specific financial metrics are missing.
 
-**Status: Production ready. Valuation Monitor now provides persistent, narrative-driven strategic insights.**
+### fix: Valuation Fallbacks & API Hardening
+**What changed:**
+- **yfinance Fallback:** Implemented a smart fallback in `utils/agents/valuation_agent.py`. If the FMP API returns a "Payment Required" (402) error or restricted data for a ticker (like **BE**), the app now automatically fetches P/E, Market Cap, and Sector info from **Yahoo Finance**.
+- **Robust Error Handling:** Hardened `utils/fmp_client.py` to globally handle 402 errors without crashing. It now returns clean empty objects, allowing the rest of the application to continue and trigger fallbacks where necessary.
+- **Improved Valuation Logic:** Refined the logic to ensure that even if some data sources are restricted, the user still receives a valid valuation snapshot and narrative report.
+
+**Status: Production ready. Research Hub is now resilient to FMP API subscription limits and restricted tickers.**
 
 ## [2026-04-03] — Connectivity, Intelligence & Robustness Upgrade
 
