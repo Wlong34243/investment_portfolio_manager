@@ -48,13 +48,13 @@ Every entry must include a **Status** line describing what is currently safe to 
 - **Enhanced Data Points:** The valuation engine now fetches and incorporates Market Cap, Dividend Yield, 52-Week Range, and Sector context into its analysis.
 - **Robustness & Persistence:** Added session-state persistence to the Research Hub to keep reports visible during user interactions. Hardened the data parser to prevent `NoneType` crashes when specific financial metrics are missing.
 
-### fix: Valuation Fallbacks & API Hardening
+### fix: Dashboard Math & Cash Calibration
 **What changed:**
-- **yfinance Fallback:** Implemented a smart fallback in `utils/agents/valuation_agent.py`. If the FMP API returns a "Payment Required" (402) error or restricted data for a ticker (like **BE**), the app now automatically fetches P/E, Market Cap, and Sector info from **Yahoo Finance**.
-- **Robust Error Handling:** Hardened `utils/fmp_client.py` to globally handle 402 errors without crashing. It now returns clean empty objects, allowing the rest of the application to continue and trigger fallbacks where necessary.
-- **Improved Valuation Logic:** Refined the logic to ensure that even if some data sources are restricted, the user still receives a valid valuation snapshot and narrative report.
+- **Eliminated False Gains:** Updated `utils/csv_parser.py` to ensure that Schwab's cash rows (e.g., "Cash & Cash Investments") automatically set `Cost Basis = Market Value`. This prevents the system from misinterpreting cash as a 100% capital gain and fixes the Unrealized G/L discrepancy.
+- **Manual Cash Calibration:** Changed the default `cash_amount` in `app.py` from $10,000 to **$0.0**. This prevents unintended "double-counting" of cash for users who already have their sweep accounts reflected in the Schwab CSV.
+- **Robust Cash Detection:** Enhanced the parser to recognize more variants of Schwab's cash descriptions and map them to standard tickers (`QACDS`).
 
-**Status: Production ready. Research Hub is now resilient to FMP API subscription limits and restricted tickers.**
+**Status: Production ready. Dashboard KPIs (Total Value, Cost, G/L) are now accurately aligned with Schwab's reporting.**
 
 ## [2026-04-03] — Connectivity, Intelligence & Robustness Upgrade
 

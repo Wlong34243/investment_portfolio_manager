@@ -211,6 +211,10 @@ def parse_schwab_csv(file_bytes: bytes) -> pd.DataFrame:
                 else:
                     continue
             
+            # Map descriptive cash rows to a standard ticker
+            if "cash & cash investments" in symbol.lower():
+                symbol = "QACDS"
+
             # Skip account label rows (e.g., "Individual ...119")
             is_account_label = False
             for p in config.ACCOUNT_SECTION_PATTERNS:
@@ -222,14 +226,21 @@ def parse_schwab_csv(file_bytes: bytes) -> pd.DataFrame:
 
             if 'account total' in symbol.lower() or 'positions total' in symbol.lower():
                 continue
-                
+            
+            mv = clean_numeric(row.iloc[col_indices[mkt_val_col]]) if mkt_val_col else 0.0
+            cb = clean_numeric(row.iloc[col_indices[cost_basis_col]]) if cost_basis_col else 0.0
+            
+            # If it's a cash ticker, ensure cost_basis equals market_value (Schwab often reports 0 cost)
+            if symbol.upper() in config.CASH_TICKERS:
+                cb = mv
+
             pos = {
                 'ticker': symbol,
                 'description': str(row.iloc[col_indices.get('description', 1)]).strip(),
                 'quantity': clean_numeric(row.iloc[col_indices[qty_col]]) if qty_col else 0.0,
                 'price': clean_numeric(row.iloc[col_indices[price_col]]) if price_col else 0.0,
-                'market_value': clean_numeric(row.iloc[col_indices[mkt_val_col]]) if mkt_val_col else 0.0,
-                'cost_basis': clean_numeric(row.iloc[col_indices[cost_basis_col]]) if cost_basis_col else 0.0,
+                'market_value': mv,
+                'cost_basis': cb,
             }
             
             # Add other columns if they exist
@@ -288,8 +299,11 @@ def parse_schwab_csv(file_bytes: bytes) -> pd.DataFrame:
 def inject_cash_manual(df: pd.DataFrame, cash_amount: float) -> pd.DataFrame:
     """
     Add CASH_MANUAL row: beta=0.0, yield=4.5%, is_cash=True.
-    Only add if CASH_MANUAL not already present.
+    Only add if CASH_MANUAL not already present and amount > 0.
     """
+    if cash_amount <= 0:
+        return df
+
     if 'CASH_MANUAL' in df['ticker'].values:
         return df
         

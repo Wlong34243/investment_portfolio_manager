@@ -68,7 +68,7 @@ def main_dashboard():
         gl_file = st.file_uploader("Upload Realized G/L CSV", type=["csv"], help="Schwab: Accounts > History > Realized Gain/Loss > Export")
         tx_file = st.file_uploader("Upload Transaction History CSV", type=["csv"], help="Schwab: Accounts > History > Transactions > Export")
         
-        cash_amount = st.number_input("Cash Amount ($)", value=10000.0, step=500.0)
+        cash_amount = st.number_input("Cash Amount ($)", value=0.0, step=500.0)
         
         if st.button("Process CSVs", width='stretch'):
             processing_errors = []
