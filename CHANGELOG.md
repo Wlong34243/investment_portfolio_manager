@@ -2,6 +2,22 @@
 
 Every entry must include a **Status** line describing what is currently safe to run.
 
+## [2026-04-05] — Spring Cleaning & Consolidation
+
+### refactor: Agent Consolidation (Tax & Rebalancing)
+**What changed:**
+- **New Unified Agent:** Created `utils/agents/tax_intelligence_agent.py` to house all tax-aware logic, including Tax-Loss Harvesting (TLH), Drift Analysis, and AI Rebalancing Proposals.
+- **De-cluttered Utils:** Deleted the redundant `tax_harvester.py` and `tax_rebalancer.py` files.
+- **Robustness:** Consolidated wash-sale logic into a single, high-reliability function used by both the Rebalancing and Tax pages.
+
+### maintenance: Repository Hygiene
+**What changed:**
+- **Deleted 25+ Obsolete Files:** Removed legacy diagnostic scripts (`diagnose_*.py`), older setup files (`create_sa_file.py`, `populate_config.py`), and superseded documentation/prompts to reduce codebase complexity.
+- **Log Purge:** Cleaned up untracked diagnostic logs and temporary session scripts.
+- **Dependency Refresh:** Verified `requirements.txt` aligns with the current modular structure.
+
+**Status: Production ready. Repository is streamlined and easier to maintain. Logic is fully consolidated into high-signal agents.**
+
 ## [2026-04-04] — Real Estate Integration & Valuation Stabilization
 
 ### fix: YTD Tax Filtering (2026 vs Prior)

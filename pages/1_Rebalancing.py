@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from utils.sheet_readers import get_holdings_current, get_realized_gl
-from utils.agents.tax_rebalancer import get_target_allocation, calculate_drift, generate_rebalance_proposals, check_wash_sale_risk
+from utils.agents.tax_intelligence_agent import get_target_allocation, calculate_drift, generate_rebalance_proposals, check_wash_sale_risk
 import os
 import sys
 

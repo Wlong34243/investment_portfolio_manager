@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from utils.sheet_readers import get_holdings_current, get_realized_gl
-from utils.agents.tax_harvester import scan_harvest_opportunities, build_tlh_report
+from utils.agents.tax_intelligence_agent import scan_harvest_opportunities, build_tlh_report
 import os
 import sys
 

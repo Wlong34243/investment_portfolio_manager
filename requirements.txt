@@ -2,6 +2,7 @@ streamlit
 gspread
 google-auth
 pandas
+numpy
 yfinance
 scipy
 openpyxl
@@ -9,6 +10,8 @@ matplotlib
 seaborn
 plotly
 google-genai
+pydantic
 finnhub-python
 fredapi
 requests
+python-dotenv
