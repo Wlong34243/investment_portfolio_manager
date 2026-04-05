@@ -187,11 +187,13 @@ if st:
         """
         Reads Holdings_Current tab and returns DataFrame.
         """
+        from utils.column_guard import ensure_display_columns
         try:
             client = get_gspread_client()
             spreadsheet = client.open_by_key(config.PORTFOLIO_SHEET_ID)
             ws = spreadsheet.worksheet(config.TAB_HOLDINGS_CURRENT)
-            return read_gsheet_robust(ws)
+            df = read_gsheet_robust(ws)
+            return ensure_display_columns(df)
         except Exception as e:
             print(f"Error reading Holdings_Current: {e}")
             return pd.DataFrame()

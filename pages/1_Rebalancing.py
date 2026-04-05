@@ -11,8 +11,13 @@ st.title("⚖️ Tax-Aware Rebalancing")
 st.info("💡 **Analysis only.** This page suggests actions but does not execute trades or modify your spreadsheet.")
 
 # --- Load Data ---
-holdings_df = get_holdings_current()
-holdings_df = ensure_display_columns(holdings_df)
+try:
+    holdings_df = get_holdings_current()
+    holdings_df = ensure_display_columns(holdings_df)
+except Exception as e:
+    st.error("Could not connect to Google Sheets. Check your connection and service account permissions.")
+    st.stop()
+
 targets_df = get_target_allocation()
 realized_gl_df = get_realized_gl()
 

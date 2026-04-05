@@ -133,15 +133,19 @@ def write_holdings_current(ws, data: list[list]) -> None:
     time.sleep(1.0)
     print(f"Holdings_Current: Updated {len(data)} rows (plus headers).")
 
-def append_holdings_history(ws, data: list[list], existing_fps: set) -> int:
+def append_holdings_history(ws, data: list[list], existing_fps: set = None) -> int:
     """
     Filter to rows whose fingerprint not in existing_fps.
-    Append new rows in single batch call: ws.append_rows(new_rows).
-    time.sleep(1.0) after. Return count of rows appended.
+    Uses col_values for efficient duplicate check if existing_fps is None.
     """
     # Fingerprint is the last column in POSITION_COLUMNS
     fp_idx = config.POSITION_COLUMNS.index('Fingerprint')
     
+    # Optimized Check: Read only the Fingerprint column
+    if existing_fps is None:
+        fp_col_idx = len(config.POSITION_COLUMNS)
+        existing_fps = set(ws.col_values(fp_col_idx)[1:])
+
     new_rows = [row for row in data if str(row[fp_idx]) not in existing_fps]
     
     if new_rows:
@@ -153,12 +157,10 @@ def append_holdings_history(ws, data: list[list], existing_fps: set) -> int:
     print("Holdings_History: No new rows to append.")
     return 0
 
-def append_daily_snapshot(ws, df: pd.DataFrame, existing_fps: set) -> bool:
+def append_daily_snapshot(ws, df: pd.DataFrame, existing_fps: set = None) -> bool:
     """
-    Build snapshot row: date, total_value, total_cost, unrealized_gl,
-    cash_value, invested_value, position_count, blended_yield, import_ts.
-    Check fingerprint (date|total_value) before inserting.
-    Return True if inserted, False if duplicate.
+    Build snapshot row and check fingerprint (date|pos_count|total_value).
+    Uses col_values for efficient duplicate check.
     """
     import_date = df['Import Date'].iloc[0]
     total_value = df['Market Value'].sum()
@@ -174,9 +176,14 @@ def append_daily_snapshot(ws, df: pd.DataFrame, existing_fps: set) -> bool:
     total_income = df['Est Annual Income'].sum() if 'Est Annual Income' in df.columns else 0.0
     blended_yield = (total_income / total_value * 100) if total_value > 0 else 0.0
     
-    # Build fingerprint = f"{import_date}|{total_value}"
-    fp = f"{import_date}|{total_value}"
+    # Build fingerprint = f"{import_date}|{position_count}|{round(total_value, 2)}"
+    fp = f"{import_date}|{position_count}|{round(total_value, 2)}"
     
+    # Optimized Check: Read only the Fingerprint column (last column)
+    if existing_fps is None:
+        fp_col_idx = len(config.SNAPSHOT_COLUMNS)
+        existing_fps = set(ws.col_values(fp_col_idx)[1:]) # Skip header
+
     if fp in existing_fps:
         print(f"Daily_Snapshots: Duplicate found for {import_date}. Skipping.")
         return False
@@ -209,6 +216,9 @@ def calculate_income_metrics(df: pd.DataFrame) -> dict:
     - blended_yield_pct = total_income / total_portfolio_value * 100
     - top_generators = df sorted by Est_Annual_Income desc, top 5 rows
     """
+    from utils.column_guard import ensure_display_columns
+    df = ensure_display_columns(df)
+
     total_value = df['Market Value'].sum()
     projected_annual_income = df['Est Annual Income'].sum()
     blended_yield_pct = (projected_annual_income / total_value * 100) if total_value > 0 else 0.0
@@ -222,28 +232,30 @@ def calculate_income_metrics(df: pd.DataFrame) -> dict:
         "projected_annual_income": float(projected_annual_income),
         "blended_yield_pct": float(blended_yield_pct),
         "cash_contribution": float(cash_contribution),
-        "top_generators": top_generators,
-        "total_value": float(total_value)
+        "top_generators": top_generators[['Ticker', 'Est Annual Income']],
+        "total_value": float(total_value),
+        "position_count": int(len(df))
     }
 
-def append_income_snapshot(ws, metrics: dict) -> bool:
+def append_income_snapshot(ws, metrics: dict, existing_fps: set = None) -> bool:
     """
-    - Builds Income_Tracking row from calculate_income_metrics() result
-    - Columns: Date | Projected Annual Income | Blended Yield % |
-              Top Generator Ticker | Top Generator Income |
-              Cash Yield Contribution | Fingerprint
+    - Builds Income_Tracking row and check fingerprint (date|pos_count|income).
+    - Uses col_values for efficient duplicate check.
     """
     import_date = datetime.now().strftime("%Y-%m-%d")
+    position_count = metrics.get("position_count", 0)
     
     top_ticker = metrics["top_generators"]['Ticker'].iloc[0] if not metrics["top_generators"].empty else "N/A"
     top_income = metrics["top_generators"]['Est Annual Income'].iloc[0] if not metrics["top_generators"].empty else 0.0
     
-    fp = f"{import_date}|{metrics['projected_annual_income']:.2f}|{metrics['blended_yield_pct']:.2f}"
+    # Build fingerprint = f"{import_date}|{position_count}|{metrics['projected_annual_income']:.2f}"
+    fp = f"{import_date}|{position_count}|{metrics['projected_annual_income']:.2f}"
     
-    # Check for existing
-    existing_data = ws.get_all_records()
-    existing_fps = {str(r.get('Fingerprint')) for r in existing_data if r.get('Fingerprint')}
-    
+    # Optimized Check: Read only the Fingerprint column (last column)
+    if existing_fps is None:
+        fp_col_idx = len(config.INCOME_COLUMNS)
+        existing_fps = set(ws.col_values(fp_col_idx)[1:])
+
     if fp in existing_fps:
         print("Income_Tracking: Duplicate found. Skipping.")
         return False
@@ -263,20 +275,20 @@ def append_income_snapshot(ws, metrics: dict) -> bool:
     print(f"Income_Tracking: Appended snapshot for {import_date}.")
     return True
 
-def write_risk_snapshot(ws, risk_metrics: dict) -> bool:
+def write_risk_snapshot(ws, risk_metrics: dict, existing_fps: set = None) -> bool:
     """
-    - Builds Risk_Metrics row
-    - Columns: Date | Portfolio Beta | Top Position Conc % | Top Position Ticker |
-              Top Sector Conc % | Top Sector | Estimated VaR 95% | Stress -10% Impact | Fingerprint
+    - Builds Risk_Metrics row and check fingerprint (date|beta|top_pos).
+    - Uses col_values for efficient duplicate check.
     """
     import_date = datetime.now().strftime("%Y-%m-%d")
     
     fp = f"{import_date}|{risk_metrics['portfolio_beta']:.4f}|{risk_metrics['top_pos_pct']:.2f}"
     
-    # Check for existing
-    existing_data = ws.get_all_records()
-    existing_fps = {str(r.get('Fingerprint')) for r in existing_data if r.get('Fingerprint')}
-    
+    # Optimized Check: Read only the Fingerprint column (last column)
+    if existing_fps is None:
+        fp_col_idx = len(config.RISK_COLUMNS)
+        existing_fps = set(ws.col_values(fp_col_idx)[1:])
+
     if fp in existing_fps:
         print("Risk_Metrics: Duplicate found. Skipping.")
         return False
@@ -298,75 +310,9 @@ def write_risk_snapshot(ws, risk_metrics: dict) -> bool:
     print(f"Risk_Metrics: Appended snapshot for {import_date}.")
     return True
 
-def sanitize_gl_for_sheets(df: pd.DataFrame) -> list[list]:
-    """
-    Ensure all columns from config.GL_COLUMNS are present.
-    Return list of lists with native Python types.
-    """
-    df = df.copy()
-    
-    # Mapping our internal snake_case to Sheet's headers
-    col_map = {
-        'ticker': 'Ticker',
-        'description': 'Description',
-        'closed_date': 'Closed Date',
-        'opened_date': 'Opened Date',
-        'holding_days': 'Holding Days',
-        'quantity': 'Quantity',
-        'proceeds_per_share': 'Proceeds Per Share',
-        'cost_per_share': 'Cost Per Share',
-        'proceeds': 'Proceeds',
-        'cost_basis': 'Cost Basis',
-        'unadjusted_cost': 'Unadjusted Cost',
-        'gain_loss_dollars': 'Gain Loss $',
-        'gain_loss_pct': 'Gain Loss %',
-        'lt_gain_loss': 'LT Gain Loss',
-        'st_gain_loss': 'ST Gain Loss',
-        'term': 'Term',
-        'wash_sale': 'Wash Sale',
-        'disallowed_loss': 'Disallowed Loss',
-        'account': 'Account',
-        'is_primary_acct': 'Is Primary Acct',
-        'import_date': 'Import Date',
-        'fingerprint': 'Fingerprint',
-    }
-    
-    df = df.rename(columns=col_map)
-    
-    # Ensure all config.GL_COLUMNS are present
-    for col in config.GL_COLUMNS:
-        if col not in df.columns:
-            df[col] = ""
-
-    # Reorder columns to match GL_COLUMNS exactly
-    df_ordered = df[config.GL_COLUMNS].copy()
-    
-    # Fill NA with empty string
-    df_clean = df_ordered.fillna("")
-    
-    # Cast every value to native Python types
-    data = []
-    for _, row in df_clean.iterrows():
-        clean_row = []
-        for val in row.values:
-            if isinstance(val, (np.float64, np.float32)):
-                clean_row.append(float(val))
-            elif isinstance(val, (np.int64, np.int32)):
-                clean_row.append(int(val))
-            elif isinstance(val, (np.bool_, bool)):
-                clean_row.append(bool(val))
-            elif pd.isna(val) or val is None:
-                clean_row.append("")
-            else:
-                clean_row.append(str(val))
-        data.append(clean_row)
-    
-    return data
-
 def ingest_realized_gl(uploaded_file, dry_run=True):
     """
     Parse Schwab G/L CSV, dedup against Realized_GL tab, append new rows.
-    Returns: {"parsed": int, "new": int, "skipped": int, "errors": list}
     """
     from utils.gl_parser import parse_realized_gl
     results = {"parsed": 0, "new": 0, "skipped": 0, "errors": []}
@@ -389,14 +335,14 @@ def ingest_realized_gl(uploaded_file, dry_run=True):
             results["new"] = len(df)
             return results
 
-        # 2. Get existing fingerprints from Sheet
+        # 2. Get existing fingerprints from Sheet (Optimized: read just FP column)
         from utils.sheet_readers import get_gspread_client
         client = get_gspread_client()
         spreadsheet = client.open_by_key(config.PORTFOLIO_SHEET_ID)
         ws = spreadsheet.worksheet(config.TAB_REALIZED_GL)
         
-        existing_data = ws.get_all_records()
-        existing_fps = {str(r.get('Fingerprint')) for r in existing_data if r.get('Fingerprint')}
+        fp_col_idx = len(config.GL_COLUMNS)
+        existing_fps = set(ws.col_values(fp_col_idx)[1:])
         
         # 3. Filter new rows
         new_df = df[~df["fingerprint"].isin(existing_fps)]
@@ -407,33 +353,7 @@ def ingest_realized_gl(uploaded_file, dry_run=True):
             # Sort by closed_date ascending for the ledger
             new_df = new_df.sort_values(by="closed_date")
             
-            # Mapping our internal snake_case to Sheet's headers
-            col_map = {
-                'ticker': 'Ticker',
-                'description': 'Description',
-                'closed_date': 'Closed Date',
-                'opened_date': 'Opened Date',
-                'holding_days': 'Holding Days',
-                'quantity': 'Quantity',
-                'proceeds_per_share': 'Proceeds Per Share',
-                'cost_per_share': 'Cost Per Share',
-                'proceeds': 'Proceeds',
-                'cost_basis': 'Cost Basis',
-                'unadjusted_cost': 'Unadjusted Cost',
-                'gain_loss_dollars': 'Gain Loss $',
-                'gain_loss_pct': 'Gain Loss %',
-                'lt_gain_loss': 'LT Gain Loss',
-                'st_gain_loss': 'ST Gain Loss',
-                'term': 'Term',
-                'wash_sale': 'Wash Sale',
-                'disallowed_loss': 'Disallowed Loss',
-                'account': 'Account',
-                'is_primary_acct': 'Is Primary Acct',
-                'import_date': 'Import Date',
-                'fingerprint': 'Fingerprint',
-            }
-            
-            data_to_write = sanitize_dataframe_for_sheets(new_df, config.GL_COLUMNS, col_map)
+            data_to_write = sanitize_dataframe_for_sheets(new_df, config.GL_COLUMNS, config.GL_COL_MAP)
             
             # Batch append
             ws.append_rows(data_to_write, value_input_option='USER_ENTERED')
@@ -474,8 +394,8 @@ def ingest_transactions(uploaded_file, dry_run=True):
         spreadsheet = client.open_by_key(config.PORTFOLIO_SHEET_ID)
         ws = spreadsheet.worksheet(config.TAB_TRANSACTIONS)
         
-        existing_data = ws.get_all_records()
-        existing_fps = {str(r.get('Fingerprint')) for r in existing_data if r.get('Fingerprint')}
+        fp_col_idx = len(config.TRANSACTION_COLUMNS)
+        existing_fps = set(ws.col_values(fp_col_idx)[1:])
         
         # Note: gl_parser builds 'Fingerprint' with capital F
         new_df = df[~df["Fingerprint"].isin(existing_fps)]
@@ -485,17 +405,7 @@ def ingest_transactions(uploaded_file, dry_run=True):
         if not new_df.empty:
             new_df = new_df.sort_values(by="Date")
             
-            # Map Schwab Transaction headers to our SCHEMA headers
-            col_map = {
-                'Date': 'Trade Date',
-                'Symbol': 'Ticker',
-                'Fees & Comm': 'Fees',
-                'Amount': 'Net Amount',
-                'import_date': 'Import Date',
-                'Fingerprint': 'Fingerprint'
-            }
-            
-            data_to_write = sanitize_dataframe_for_sheets(new_df, config.TRANSACTION_COLUMNS, col_map)
+            data_to_write = sanitize_dataframe_for_sheets(new_df, config.TRANSACTION_COLUMNS, config.TRANSACTION_COL_MAP)
             ws.append_rows(data_to_write, value_input_option='USER_ENTERED')
             time.sleep(1.0)
             write_pipeline_log("SUCCESS", source, f"Appended {len(data_to_write)} new transactions.", f"Total parsed: {len(df)}, Skipped: {results['skipped']}", dry_run=dry_run)
@@ -528,7 +438,7 @@ def write_to_sheets(df: pd.DataFrame, cash_amount: float, dry_run: bool = True) 
         return results
 
     # Live execution
-    from utils.sheet_readers import get_gspread_client, read_gsheet_robust
+    from utils.sheet_readers import get_gspread_client
     client = get_gspread_client()
     spreadsheet = client.open_by_key(config.PORTFOLIO_SHEET_ID)
 
@@ -540,21 +450,17 @@ def write_to_sheets(df: pd.DataFrame, cash_amount: float, dry_run: bool = True) 
             write_holdings_current(ws_current, data_list)
             results["holdings_written"] = len(data_list)
             
-            # 2. Holdings_History
+            # 2. Holdings_History (Optimized check inside function)
             ws_history = spreadsheet.worksheet(config.TAB_HOLDINGS_HISTORY)
-            df_history_existing = read_gsheet_robust(ws_history)
-            existing_fps_history = set(df_history_existing['Fingerprint'].astype(str)) if not df_history_existing.empty else set()
-            appended_count = append_holdings_history(ws_history, data_list, existing_fps_history)
+            appended_count = append_holdings_history(ws_history, data_list)
             results["history_appended"] = appended_count
             
-            # 3. Daily_Snapshots
+            # 3. Daily_Snapshots (Optimized check inside function)
             ws_snapshots = spreadsheet.worksheet(config.TAB_DAILY_SNAPSHOTS)
-            df_snapshots_existing = read_gsheet_robust(ws_snapshots)
-            existing_fps_snapshots = set(df_snapshots_existing['Fingerprint'].astype(str)) if not df_snapshots_existing.empty else set()
-            snapshot_added = append_daily_snapshot(ws_snapshots, df, existing_fps_snapshots)
+            snapshot_added = append_daily_snapshot(ws_snapshots, df)
             results["snapshot"] = snapshot_added
             
-            # 4. Income_Tracking
+            # 4. Income_Tracking (Optimized check inside function)
             ws_income = spreadsheet.worksheet(config.TAB_INCOME_TRACKING)
             income_snapshot_added = append_income_snapshot(ws_income, income_metrics)
             results["income_snapshot"] = income_snapshot_added

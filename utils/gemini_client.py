@@ -38,7 +38,7 @@ def ask_gemini(prompt: str, system_instruction: str = None, json_mode: bool = Fa
     if not client:
         return "" if not response_schema else None
         
-    model_name = getattr(config, 'GEMINI_MODEL', 'gemini-2.0-flash')
+    model_name = getattr(config, 'GEMINI_MODEL', 'gemini-3.1-pro-preview')
     
     full_system_instruction = SAFETY_PREAMBLE
     if system_instruction:

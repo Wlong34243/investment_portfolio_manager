@@ -58,7 +58,9 @@
 | E | Cash Value | Float | `10000.00` | CASH_MANUAL + QACDS |
 | F | Invested Value | Float | `470234.50` | = Total Value − Cash Value |
 | G | Position Count | Integer | `52` | Including cash positions |
-| H | Fingerprint | String | `2026-03-29\|480234.50` | Dedup key |
+| H | Blended Yield | Float | `1.77` | Portfolio-wide weighted yield |
+| I | Import Timestamp | DateTime | `2026-03-29 10:30:00` | Full timestamp of import |
+| J | Fingerprint | String | `2026-03-29\|52\|480234.50` | Dedup key |
 
 **Row 1:** Headers (frozen)
 **Row 2+:** One row per snapshot date, newest at bottom
@@ -78,11 +80,11 @@
 | E | Action | String | `Buy` / `Sell` / `Dividend` / `Transfer` | |
 | F | Quantity | Float | `5` | Negative for sells |
 | G | Price | Float | `310.50` | Per share |
-| H | Amount | Float | `-1552.50` | Negative = outflow |
+| H | Amount | Float | `-1552.50` | Gross amount |
 | I | Fees | Float | `0` | Commission + fees |
 | J | Net Amount | Float | `-1552.50` | Amount − Fees |
 | K | Account | String | `Individual` | Which account section |
-| L | Fingerprint | String | `2026-03-15\|VTI\|Buy\|5\|310.50` | Dedup key |
+| L | Fingerprint | String | `2026-03-15\|VTI\|Buy\|-1552.50` | Dedup key |
 
 **Write pattern:** Append only with fingerprint dedup.
 
@@ -134,7 +136,8 @@
 | D | Top Generator Ticker | String | `JPIE` | Highest absolute income |
 | E | Top Generator Income | Float | `1200.00` | Highest absolute income $ |
 | F | Cash Yield Contribution | Float | `450.00` | Cash × cash yield |
-| G | Fingerprint | String | `2026-03-29\|8500.00\|1.77` | Dedup key |
+| G | Position Count | Integer | `52` | Including cash positions |
+| H | Fingerprint | String | `2026-03-29\|52\|8500.00` | Dedup key |
 
 **Write pattern:** Append only per snapshot.
 
@@ -172,3 +175,18 @@ For unified net worth view (Phase 5), read these values:
 - **CapEx_Inventory:** Reserve needs
 
 **NEVER write to this sheet from the Investment Portfolio Manager.**
+
+---
+
+## 🛠️ Fingerprint Formats
+Authoritative list of deduplication keys used across the system to prevent duplicate appends.
+
+| Tab | Format | Logic / Purpose |
+|-----|--------|-----------------|
+| `Holdings_History` | `import_date\|ticker\|quantity\|market_value` | Unique position snapshot per import. |
+| `Daily_Snapshots` | `import_date\|pos_count\|total_value` | Prevents duplicate snapshots if re-running same CSV with same cash. |
+| `Transactions` | `date\|ticker\|action\|net_amount` | Prevents duplicate trade entries on overlapping CSV uploads. |
+| `Realized_GL` | `closed_dt\|ticker\|opened_dt\|qty\|proceeds\|cost` | Exact lot match for tax ledger. |
+| `Income_Tracking` | `import_date\|pos_count\|projected_income` | One income snapshot per unique portfolio state per day. |
+| `Risk_Metrics` | `import_date\|beta\|top_pos_pct` | One risk profile per unique portfolio state per day. |
+

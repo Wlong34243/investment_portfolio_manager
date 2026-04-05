@@ -12,8 +12,13 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 
 # --- Load Data for Context ---
-holdings_df = get_holdings_current()
-holdings_df = ensure_display_columns(holdings_df)
+try:
+    holdings_df = get_holdings_current()
+    holdings_df = ensure_display_columns(holdings_df)
+except Exception as e:
+    st.error("Could not connect to Google Sheets. Check your connection and service account permissions.")
+    st.stop()
+
 if holdings_df.empty:
     st.warning("Please upload your portfolio on the main page to enable the advisor.")
     st.stop()

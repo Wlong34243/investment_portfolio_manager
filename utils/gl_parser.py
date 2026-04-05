@@ -158,7 +158,7 @@ def parse_transaction_history(file_or_path) -> pd.DataFrame:
             df[col] = df[col].apply(_clean_dollar)
             
     # Build fingerprint
-    df['Fingerprint'] = df.apply(lambda x: f"{x['Date']}|{x['Action']}|{x.get('Symbol', '')}|{x['Amount']}", axis=1)
+    df['Fingerprint'] = df.apply(lambda x: f"{x['Date']}|{x.get('Symbol', '')}|{x['Action']}|{x['Amount']}", axis=1)
     
     return df
 

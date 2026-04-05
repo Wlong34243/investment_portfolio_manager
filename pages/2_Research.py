@@ -12,8 +12,13 @@ import sys
 st.title("🤖 AI Research Hub")
 
 # --- Load Holdings ---
-df = get_holdings_current()
-df = ensure_display_columns(df)
+try:
+    df = get_holdings_current()
+    df = ensure_display_columns(df)
+except Exception as e:
+    st.error("Could not connect to Google Sheets. Check your connection and service account permissions.")
+    st.stop()
+
 if df.empty:
     st.info("No holdings found. Upload a CSV on the main page first.")
     st.stop()

@@ -143,6 +143,44 @@ POSITION_COL_MAP = {
     'fingerprint': 'Fingerprint',
 }
 
+GL_COL_MAP = {
+    'ticker': 'Ticker',
+    'description': 'Description',
+    'closed_date': 'Closed Date',
+    'opened_date': 'Opened Date',
+    'holding_days': 'Holding Days',
+    'quantity': 'Quantity',
+    'proceeds_per_share': 'Proceeds Per Share',
+    'cost_per_share': 'Cost Per Share',
+    'proceeds': 'Proceeds',
+    'cost_basis': 'Cost Basis',
+    'unadjusted_cost': 'Unadjusted Cost',
+    'gain_loss_dollars': 'Gain Loss $',
+    'gain_loss_pct': 'Gain Loss %',
+    'lt_gain_loss': 'LT Gain Loss',
+    'st_gain_loss': 'ST Gain Loss',
+    'term': 'Term',
+    'wash_sale': 'Wash Sale',
+    'disallowed_loss': 'Disallowed Loss',
+    'account': 'Account',
+    'is_primary_acct': 'Is Primary Acct',
+    'import_date': 'Import Date',
+    'fingerprint': 'Fingerprint',
+}
+
+TRANSACTION_COL_MAP = {
+    'Date': 'Trade Date',
+    'Action': 'Action',
+    'Symbol': 'Ticker',
+    'Description': 'Description',
+    'Quantity': 'Quantity',
+    'Price': 'Price',
+    'Fees & Comm': 'Fees',
+    'Amount': 'Net Amount',
+    'import_date': 'Import Date',
+    'Fingerprint': 'Fingerprint',
+}
+
 # ---------------------------------------------------------------------------
 # Daily Snapshot Columns
 # ---------------------------------------------------------------------------
