@@ -84,7 +84,13 @@ with tabs[0]:
     else:
         # KPIs
         total_val = df['Market Value'].sum()
-        cash_mask = df['Ticker'].isin(['CASH_MANUAL', 'QACDS', 'CASH & CASH INVESTMENTS']) | df['Is Cash'].astype(bool)
+        
+        # Robust column check
+        if 'Ticker' in df.columns:
+            cash_mask = df['Ticker'].isin(['CASH_MANUAL', 'QACDS', 'CASH & CASH INVESTMENTS']) | df['Is Cash'].astype(bool)
+        else:
+            cash_mask = df['Is Cash'].astype(bool) if 'Is Cash' in df.columns else pd.Series([False]*len(df))
+            
         cash_val = df[cash_mask]['Market Value'].sum()
         
         k1, k2, k3 = st.columns(3)

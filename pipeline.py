@@ -234,26 +234,33 @@ def calculate_income_metrics(df: pd.DataFrame) -> dict:
     """
     - projected_annual_income = sum(row.Est_Annual_Income for all rows)
     - blended_yield_pct = total_income / total_portfolio_value * 100
-    - top_generators = df sorted by Est_Annual_Income desc, top 5 rows
     """
     from utils.column_guard import ensure_display_columns
     df = ensure_display_columns(df)
 
-    total_value = df['Market Value'].sum()
-    projected_annual_income = df['Est Annual Income'].sum()
+    # Ensure required columns exist for calculation
+    for col in ['Market Value', 'Est Annual Income', 'Is Cash', 'Ticker']:
+        if col not in df.columns:
+            if col == 'Ticker': df[col] = 'Unknown'
+            elif col == 'Is Cash': df[col] = False
+            else: df[col] = 0.0
+
+    total_value = float(df['Market Value'].sum())
+    projected_annual_income = float(df['Est Annual Income'].sum())
     blended_yield_pct = (projected_annual_income / total_value * 100) if total_value > 0 else 0.0
     
     cash_df = df[df['Is Cash'] == True]
-    cash_contribution = cash_df['Est Annual Income'].sum()
+    cash_contribution = float(cash_df['Est Annual Income'].sum())
     
-    top_generators = df.nlargest(5, 'Est Annual Income')
+    # Use 'Ticker' safely
+    top_generators = df.nlargest(5, 'Est Annual Income')[['Ticker', 'Est Annual Income']]
     
     return {
-        "projected_annual_income": float(projected_annual_income),
-        "blended_yield_pct": float(blended_yield_pct),
-        "cash_contribution": float(cash_contribution),
-        "top_generators": top_generators[['Ticker', 'Est Annual Income']],
-        "total_value": float(total_value),
+        "projected_annual_income": projected_annual_income,
+        "blended_yield_pct": blended_yield_pct,
+        "cash_contribution": cash_contribution,
+        "top_generators": top_generators,
+        "total_value": total_value,
         "position_count": int(len(df))
     }
 
