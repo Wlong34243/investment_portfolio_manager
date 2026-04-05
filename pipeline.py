@@ -75,31 +75,42 @@ def normalize_positions(df: pd.DataFrame, import_date: str) -> pd.DataFrame:
     """
     Add import_date column.
     Calculate weight = market_value / total_portfolio_value * 100.
-    Build fingerprint = "{import_date}|{ticker}|{quantity}|{market_value}".
+    Calculate unrealized_gl and pct if missing or zero.
+    Build fingerprint = "{import_date}|{ticker}|{quantity}".
     Sort by market_value descending.
     """
     df = df.copy()
-    
-    # Mapping our internal snake_case to Sheet's Camel Case with spaces
-    # NOTE: col_map is used inside sanitize_dataframe_for_sheets later
     
     # Add import_date if not present
     df['import_date'] = import_date
     
     # Ensure numeric types for calculation
-    for col in ['market_value', 'quantity', 'cost_basis']:
+    calc_cols = ['market_value', 'quantity', 'cost_basis', 'unrealized_gl', 'unrealized_gl_pct']
+    for col in calc_cols:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0.0)
+        else:
+            df[col] = 0.0
 
+    # Calculate weights
     total_value = df['market_value'].sum()
     if total_value > 0:
         df['weight'] = (df['market_value'] / total_value * 100)
     else:
         df['weight'] = 0.0
         
-    # Build fingerprint = "{import_date}|{ticker}|{quantity}|{market_value}"
+    # Calculate Unrealized G/L if zero but market_value/cost_basis exist
+    # Only calculate for invested positions (where cost_basis > 0)
+    mask = (df['unrealized_gl'] == 0) & (df['cost_basis'] > 0)
+    df.loc[mask, 'unrealized_gl'] = df.loc[mask, 'market_value'] - df.loc[mask, 'cost_basis']
+    
+    # Calculate Unrealized G/L %
+    mask_pct = (df['unrealized_gl_pct'] == 0) & (df['cost_basis'] > 0)
+    df.loc[mask_pct, 'unrealized_gl_pct'] = (df.loc[mask_pct, 'unrealized_gl'] / df.loc[mask_pct, 'cost_basis']) * 100
+
+    # Build fingerprint = "{import_date}|{ticker}|{quantity}"
     df['fingerprint'] = df.apply(
-        lambda x: f"{import_date}|{x['ticker']}|{x.get('quantity',0)}|{x.get('market_value',0)}", 
+        lambda x: f"{import_date}|{x['ticker']}|{x.get('quantity',0)}", 
         axis=1
     )
     
