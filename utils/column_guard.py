@@ -53,5 +53,12 @@ def ensure_display_columns(df: pd.DataFrame) -> pd.DataFrame:
                 df[col] = False
             else:
                 df[col] = ""
+        else:
+            # Explicitly cast boolean columns if they exist but might be strings
+            if col in ['Is Cash', 'Wash Sale']:
+                if df[col].dtype == object:
+                    df[col] = df[col].astype(str).str.upper().isin(['TRUE', 'YES', '1'])
+                else:
+                    df[col] = df[col].astype(bool)
                 
     return df

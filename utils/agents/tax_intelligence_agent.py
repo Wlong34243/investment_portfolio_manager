@@ -29,6 +29,7 @@ class TLHProxyOption(BaseModel):
 class TLHProposal(BaseModel):
     ticker: str
     harvest_rationale: str
+    unrealized_loss: float
     estimated_tax_savings: float
     proxy_options: List[TLHProxyOption]
     risks: List[str]
@@ -185,7 +186,9 @@ def build_tlh_report(holdings_df: pd.DataFrame, realized_gl_df: pd.DataFrame) ->
         try:
             res = ask_gemini(prompt, system_instruction=system_instruction, response_schema=TLHProposal)
             if res:
-                results.append(res.model_dump())
+                p_dict = res.model_dump()
+                p_dict['unrealized_loss'] = abs(row['Unrealized G/L'])
+                results.append(p_dict)
         except Exception as e:
             logging.error(f"TLH proposal error for {ticker}: {e}")
             

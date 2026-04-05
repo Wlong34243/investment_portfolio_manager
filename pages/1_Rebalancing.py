@@ -74,7 +74,7 @@ if st.button("🧠 Generate Tax-Aware Proposals", width='stretch'):
                     with cols[i]:
                         st.markdown(f"**{opt['label']}**")
                         st.write(opt['description'])
-                        st.info(f"Tax: {opt['tax_impact']}\n\nEst. Cost: {opt['estimated_tax']}")
+                        st.info(f"Tax: {opt['tax_impact']}\n\nLevel: {opt['estimated_tax_impact_level']}")
         else:
             st.success("Your portfolio is within tolerance. No urgent rebalancing needed.")
 

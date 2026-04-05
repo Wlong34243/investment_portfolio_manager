@@ -41,7 +41,7 @@ if not opps.empty:
             report = build_tlh_report(holdings_df, realized_gl_df)
             if report:
                 for proposal in report:
-                    with st.expander(f"TLH Strategy for {proposal['ticker']} (Loss: ${abs(proposal['loss']):,.0f})", expanded=True):
+                    with st.expander(f"TLH Strategy for {proposal['ticker']} (Loss: ${abs(proposal['unrealized_loss']):,.0f})", expanded=True):
                         st.write(f"**Rationale:** {proposal['harvest_rationale']}")
                         st.success(f"**Est. Tax Savings:** ${proposal['estimated_tax_savings']:,.2f}")
                         

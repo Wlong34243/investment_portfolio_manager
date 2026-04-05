@@ -128,8 +128,11 @@ def main_dashboard():
 
             st.divider()
             non_cash_df = df[df['Is Cash'] == False]
-            fig_tree = px.treemap(non_cash_df, path=['Asset Class', 'Ticker'], values='Market Value', title='Portfolio Allocation', color_discrete_sequence=['#1F4E79', '#2E86AB', '#A8DADC'])
-            st.plotly_chart(fig_tree, use_container_width=True)
+            if not non_cash_df.empty:
+                fig_tree = px.treemap(non_cash_df, path=['Asset Class', 'Ticker'], values='Market Value', title='Portfolio Allocation', color_discrete_sequence=['#1F4E79', '#2E86AB', '#A8DADC'])
+                st.plotly_chart(fig_tree, use_container_width=True)
+            else:
+                st.info("No invested positions to display in treemap.")
 
             st.subheader("Current Holdings")
             search = st.text_input("🔍 Search Ticker or Description")
