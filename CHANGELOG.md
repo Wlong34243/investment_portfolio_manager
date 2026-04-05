@@ -2,6 +2,14 @@
 
 Every entry must include a **Status** line describing what is currently safe to run.
 
+## [2026-04-05] — Stabilization & Performance
+
+### fix: Module Loading & Package Structure
+**What changed:**
+- **Standardized Packages:** Added `__init__.py` files to `utils/` and `utils/agents/` to ensure robust module discovery on Linux-based production environments (Streamlit Cloud).
+- **Harden Readers:** Refactored `utils/sheet_readers.py` to ensure that all data-fetching functions are always defined, even if Streamlit components aren't immediately available during the boot sequence. This resolves "ImportError: cannot import name..." crashes.
+- **Type Safety:** Updated `calculate_drift` in the Tax Intelligence agent to strictly cast data types, preventing Arrow serialization errors (`ArrowInvalid`) when displaying rebalancing tables.
+
 ## [2026-04-05] — Production Hardening & UI Refactor
 
 ### added

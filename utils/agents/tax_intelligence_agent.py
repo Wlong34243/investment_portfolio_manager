@@ -62,18 +62,32 @@ def calculate_drift(holdings_df: pd.DataFrame, targets_df: pd.DataFrame) -> pd.D
 
     actual_weights = holdings_df.groupby('Asset Class')['Weight'].sum().reset_index()
     actual_weights.columns = ['Category', 'Actual %']
-    drift_df = pd.merge(actual_weights, targets_df, on='Category', how='outer').fillna(0)
-    
+    # Merge with targets
+    drift_df = pd.merge(actual_weights, targets_df, on='Category', how='outer')
+
+    # Fill NA before type conversion
+    drift_df = drift_df.infer_objects(copy=False).fillna(0)
+
     # Standardize Percentage Math
     target_col = next((c for c in drift_df.columns if 'Target' in c or '%' in c), None)
     if target_col:
-        raw_targets = pd.to_numeric(drift_df[target_col], errors='coerce').fillna(0)
+        # Explicit conversion to float
+        raw_targets = pd.to_numeric(drift_df[target_col], errors='coerce').fillna(0).astype(float)
         drift_df['Target %'] = raw_targets if raw_targets.max() > 1.0 else raw_targets * 100
+        drift_df['Actual %'] = drift_df['Actual %'].astype(float)
         drift_df['Drift %'] = drift_df['Actual %'] - drift_df['Target %']
     else:
+        drift_df['Target %'] = 0.0
+        drift_df['Actual %'] = drift_df['Actual %'].astype(float)
         drift_df['Drift %'] = 0.0
-    
+
     drift_df['Breach'] = drift_df['Drift %'].abs() > 5.0
+
+    # Final type cleanup for Arrow compatibility
+    for col in drift_df.columns:
+        if drift_df[col].dtype == object and col != 'Category':
+            drift_df[col] = drift_df[col].astype(str)
+
     return drift_df
 
 def generate_rebalance_proposals(drift_df: pd.DataFrame, holdings_df: pd.DataFrame) -> list[dict]:

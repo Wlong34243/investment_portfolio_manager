@@ -1,18 +1,25 @@
 """
-utils/sheet_readers.py — Google Sheets authentication and smoke test.
-
-Auth priority:
-  1. st.secrets["gcp_service_account"] (Streamlit Cloud / local with secrets.toml)
-  2. service_account.json in project root
-  3. GOOGLE_APPLICATION_CREDENTIALS env var pointing to a service_account.json file
+utils/sheet_readers.py — Google Sheets authentication and reader functions.
 """
 
 import os
 import sys
 import gspread
+import pandas as pd
 from google.oauth2.service_account import Credentials
 
-# Add project root to path so config is importable when run directly
+# Streamlit Cache Fallback
+try:
+    import streamlit as st
+    CACHE = st.cache_data
+except ImportError:
+    st = None
+    def CACHE(ttl=None, **kwargs):
+        def decorator(func):
+            return func
+        return decorator
+
+# Add project root to path
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _ROOT = os.path.dirname(_HERE)
 if _ROOT not in sys.path:
@@ -21,110 +28,36 @@ if _ROOT not in sys.path:
 try:
     import config
 except ImportError:
-    # If config not found, we might be in a different context
     pass
 
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
-
 class AuthError(Exception):
     """Raised when no valid credentials can be found."""
 
-
 def get_gspread_client() -> gspread.Client:
-    """
-    Return an authenticated gspread client.
-
-    Tries Streamlit secrets first, then local service_account.json, then GOOGLE_APPLICATION_CREDENTIALS env var.
-    Raises AuthError with clear instructions if all methods fail.
-    """
-    # --- Method 1: Streamlit secrets ---
-    try:
-        import streamlit as st
-        if hasattr(st, "secrets") and "gcp_service_account" in st.secrets:
+    """Return an authenticated gspread client."""
+    # Method 1: Streamlit secrets
+    if st and hasattr(st, "secrets") and "gcp_service_account" in st.secrets:
+        try:
             creds = Credentials.from_service_account_info(
                 dict(st.secrets["gcp_service_account"]),
                 scopes=SCOPES,
             )
             return gspread.authorize(creds)
-    except Exception:
-        pass  # Not in a Streamlit context, or secret missing — fall through
+        except:
+            pass
 
-    # --- Method 2: local service_account.json ---
-    # Look in the root of the project
-    sa_path_root = os.path.join(_ROOT, "service_account.json")
-    if os.path.isfile(sa_path_root):
-        creds = Credentials.from_service_account_file(sa_path_root, scopes=SCOPES)
-        return gspread.authorize(creds)
-    
-    # Also look in the current working directory as a fallback
-    sa_path_cwd = "service_account.json"
-    if os.path.isfile(sa_path_cwd):
-        creds = Credentials.from_service_account_file(sa_path_cwd, scopes=SCOPES)
+    # Method 2: local service_account.json
+    sa_path = os.path.join(_ROOT, "service_account.json")
+    if os.path.isfile(sa_path):
+        creds = Credentials.from_service_account_file(sa_path, scopes=SCOPES)
         return gspread.authorize(creds)
 
-    # --- Method 3: GOOGLE_APPLICATION_CREDENTIALS env var ---
-    sa_path_env = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
-    if sa_path_env and os.path.isfile(sa_path_env):
-        creds = Credentials.from_service_account_file(sa_path_env, scopes=SCOPES)
-        return gspread.authorize(creds)
-
-    # --- All failed ---
-    raise AuthError(
-        "Could not authenticate with Google Sheets.\n\n"
-        "Fix one of the following:\n"
-        "  A) Streamlit: add [gcp_service_account] to .streamlit/secrets.toml\n"
-        "  B) Local dev: ensure 'service_account.json' exists in the project root\n"
-        "  C) Env var: set the GOOGLE_APPLICATION_CREDENTIALS environment variable\n"
-        "     e.g.  export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service_account.json\n"
-        "     or    set GOOGLE_APPLICATION_CREDENTIALS=C:\\path\\to\\service_account.json\n"
-        "     Then re-run this script."
-    )
-
-
-def smoke_test() -> bool:
-    """
-    Verify end-to-end connectivity:
-      - Authenticate via get_gspread_client()
-      - Open the Portfolio Sheet by config.PORTFOLIO_SHEET_ID
-      - List all worksheet tab names
-      - Read and print headers from Holdings_Current (first row)
-
-    Prints "Auth OK — tabs: [...]" on success.
-    Returns True on success, raises on any failure.
-    """
-    client = get_gspread_client()
-
-    spreadsheet = client.open_by_key(config.PORTFOLIO_SHEET_ID)
-
-    tab_names = [ws.title for ws in spreadsheet.worksheets()]
-    print(f"Auth OK — tabs: {tab_names}")
-
-    try:
-        holdings_ws = spreadsheet.worksheet(config.TAB_HOLDINGS_CURRENT)
-        first_row = holdings_ws.row_values(1)
-        if first_row:
-            print(f"Holdings_Current headers: {first_row}")
-        else:
-            print("Holdings_Current: sheet exists but is empty (no headers yet)")
-    except gspread.exceptions.WorksheetNotFound:
-        print(f"Note: '{config.TAB_HOLDINGS_CURRENT}' tab not found yet — sheet setup pending")
-
-    return True
-
-
-import pandas as pd
-
-try:
-    import streamlit as st
-except ImportError:
-    st = None
+    raise AuthError("Could not authenticate with Google Sheets.")
 
 def read_gsheet_robust(ws: gspread.Worksheet) -> pd.DataFrame:
-    """
-    Reads a worksheet into a DataFrame, handling duplicate or empty headers
-    that cause get_all_records() to fail.
-    """
+    """Reads worksheet into DataFrame with aggressive numeric cleaning."""
     all_values = ws.get_all_values()
     if not all_values:
         return pd.DataFrame()
@@ -132,122 +65,103 @@ def read_gsheet_robust(ws: gspread.Worksheet) -> pd.DataFrame:
     headers = all_values[0]
     data = all_values[1:]
     
-    # Clean headers: handle empty or duplicate headers
     clean_headers = []
     seen = {}
     for i, h in enumerate(headers):
-        h = h.strip()
-        if not h:
-            h = f"Unnamed_{i}"
-        
+        h = h.strip() or f"Unnamed_{i}"
         if h in seen:
             seen[h] += 1
             h = f"{h}_{seen[h]}"
         else:
             seen[h] = 0
-        
         clean_headers.append(h)
     
     df = pd.DataFrame(data, columns=clean_headers)
     
-    # Drop "Unnamed" columns if they are entirely empty
-    cols_to_drop = [c for c in df.columns if c.startswith("Unnamed_") and (df[c] == "").all()]
-    if cols_to_drop:
-        df = df.drop(columns=cols_to_drop)
-        
-    # Standardize numeric columns: convert to float if possible
+    # Cleaning
     for col in df.columns:
-        # Skip known non-numeric columns
         if col.lower() in ['ticker', 'symbol', 'description', 'sector', 'industry', 'asset class', 'asset strategy', 'import date', 'closed date', 'opened date', 'acquisition date']:
             continue
         
-        # Aggressive cleaning for currency, percentages, and Schwab formatting
         if df[col].dtype == object:
-            # Strip $, %, commas, and whitespace
-            df[col] = df[col].astype(str).str.replace('$', '', regex=False) \
-                                         .str.replace('%', '', regex=False) \
-                                         .str.replace(',', '', regex=False) \
-                                         .str.strip()
-            
-            # Handle empty strings resulting from strip
+            df[col] = df[col].astype(str).str.replace('$', '', regex=False).str.replace('%', '', regex=False).str.replace(',', '', regex=False).str.strip()
             df[col] = df[col].replace('', '0')
-            
-            # Handle Schwab's (123.45) notation for negative
             mask = df[col].str.startswith('(') & df[col].str.endswith(')')
             df.loc[mask, col] = '-' + df.loc[mask, col].str[1:-1]
         
-        # Force numeric conversion, turning errors into NaN then filling with 0.0
         df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0.0)
         
     return df
 
-if st:
-    @st.cache_data(ttl=300)
-    def get_holdings_current() -> pd.DataFrame:
-        """
-        Reads Holdings_Current tab and returns DataFrame.
-        """
-        from utils.column_guard import ensure_display_columns
-        try:
-            client = get_gspread_client()
-            spreadsheet = client.open_by_key(config.PORTFOLIO_SHEET_ID)
-            ws = spreadsheet.worksheet(config.TAB_HOLDINGS_CURRENT)
-            df = read_gsheet_robust(ws)
-            return ensure_display_columns(df)
-        except Exception as e:
-            print(f"Error reading Holdings_Current: {e}")
-            return pd.DataFrame()
+@CACHE(ttl=300)
+def get_holdings_current() -> pd.DataFrame:
+    """Reads Holdings_Current tab."""
+    from utils.column_guard import ensure_display_columns
+    try:
+        client = get_gspread_client()
+        spreadsheet = client.open_by_key(config.PORTFOLIO_SHEET_ID)
+        ws = spreadsheet.worksheet(config.TAB_HOLDINGS_CURRENT)
+        df = read_gsheet_robust(ws)
+        return ensure_display_columns(df)
+    except Exception as e:
+        print(f"Error reading Holdings_Current: {e}")
+        return pd.DataFrame()
 
-    @st.cache_data(ttl=300)
-    def get_risk_metrics() -> pd.DataFrame:
-        """Reads Risk_Metrics tab and returns DataFrame."""
-        try:
-            client = get_gspread_client()
-            spreadsheet = client.open_by_key(config.PORTFOLIO_SHEET_ID)
-            ws = spreadsheet.worksheet(config.TAB_RISK_METRICS)
-            return read_gsheet_robust(ws)
-        except Exception:
-            return pd.DataFrame()
+@CACHE(ttl=300)
+def get_risk_metrics() -> pd.DataFrame:
+    """Reads Risk_Metrics tab."""
+    try:
+        client = get_gspread_client()
+        spreadsheet = client.open_by_key(config.PORTFOLIO_SHEET_ID)
+        ws = spreadsheet.worksheet(config.TAB_RISK_METRICS)
+        return read_gsheet_robust(ws)
+    except Exception:
+        return pd.DataFrame()
 
-    @st.cache_data(ttl=300)
-    def get_income_history() -> pd.DataFrame:
-        """Reads Income_Tracking tab and returns DataFrame."""
-        try:
-            client = get_gspread_client()
-            spreadsheet = client.open_by_key(config.PORTFOLIO_SHEET_ID)
-            ws = spreadsheet.worksheet(config.TAB_INCOME_TRACKING)
-            return read_gsheet_robust(ws)
-        except Exception:
-            return pd.DataFrame()
+@CACHE(ttl=300)
+def get_income_history() -> pd.DataFrame:
+    """Reads Income_Tracking tab."""
+    try:
+        client = get_gspread_client()
+        spreadsheet = client.open_by_key(config.PORTFOLIO_SHEET_ID)
+        ws = spreadsheet.worksheet(config.TAB_INCOME_TRACKING)
+        return read_gsheet_robust(ws)
+    except Exception:
+        return pd.DataFrame()
 
-    @st.cache_data(ttl=300)
-    def get_realized_gl() -> pd.DataFrame:
-        """Reads Realized_GL tab and returns DataFrame."""
-        try:
-            client = get_gspread_client()
-            spreadsheet = client.open_by_key(config.PORTFOLIO_SHEET_ID)
-            ws = spreadsheet.worksheet(config.TAB_REALIZED_GL)
-            return read_gsheet_robust(ws)
-        except Exception:
-            return pd.DataFrame()
+@CACHE(ttl=300)
+def get_realized_gl() -> pd.DataFrame:
+    """Reads Realized_GL tab."""
+    try:
+        client = get_gspread_client()
+        spreadsheet = client.open_by_key(config.PORTFOLIO_SHEET_ID)
+        ws = spreadsheet.worksheet(config.TAB_REALIZED_GL)
+        return read_gsheet_robust(ws)
+    except Exception:
+        return pd.DataFrame()
 
-    @st.cache_data(ttl=300)
-    def get_daily_snapshots() -> pd.DataFrame:
-        """Reads Daily_Snapshots tab and returns DataFrame."""
-        try:
-            client = get_gspread_client()
-            spreadsheet = client.open_by_key(config.PORTFOLIO_SHEET_ID)
-            ws = spreadsheet.worksheet(config.TAB_DAILY_SNAPSHOTS)
-            df = read_gsheet_robust(ws)
-            if not df.empty:
-                # Convert numeric columns to float
-                for col in config.SNAPSHOT_COLUMNS:
-                    if col in df.columns and col != 'Date':
-                        df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0.0)
-            return df
-        except Exception:
-            return pd.DataFrame()
+@CACHE(ttl=300)
+def get_daily_snapshots() -> pd.DataFrame:
+    """Reads Daily_Snapshots tab."""
+    try:
+        client = get_gspread_client()
+        spreadsheet = client.open_by_key(config.PORTFOLIO_SHEET_ID)
+        ws = spreadsheet.worksheet(config.TAB_DAILY_SNAPSHOTS)
+        df = read_gsheet_robust(ws)
+        return df
+    except Exception:
+        return pd.DataFrame()
 
+def smoke_test() -> bool:
+    """Verify connectivity."""
+    try:
+        client = get_gspread_client()
+        spreadsheet = client.open_by_key(config.PORTFOLIO_SHEET_ID)
+        print(f"Auth OK — tabs: {[ws.title for ws in spreadsheet.worksheets()]}")
+        return True
+    except Exception as e:
+        print(f"Smoke test failed: {e}")
+        return False
 
 if __name__ == "__main__":
     smoke_test()
