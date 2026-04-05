@@ -2,6 +2,16 @@
 
 Every entry must include a **Status** line describing what is currently safe to run.
 
+## [2026-04-05] — Final Stability & Header Hardening
+
+### fix: Empty Header & Ticker Coercion
+**What changed:**
+- **Robust Header Mapping:** Updated `utils/sheet_readers.py` to specifically detect when the first column in Google Sheets has an empty header (becoming `Unnamed_0`). It now re-maps this to `Ticker` immediately.
+- **Coercion Protection:** Added protection to ensure that ticker symbols (strings) are never accidentally converted to numeric `0.0` during the data cleaning process, even if the header is temporarily missing.
+- **Pipeline Precision:** Verified that `pipeline.py` explicitly writes the correct `Ticker` header to prevent future "unnamed" column issues.
+
+**Status: Production ready. All identified root causes for KeyError: 'Ticker' have been resolved and hardened.**
+
 ## [2026-04-05] — Research Hub Stability & Syntax Audit
 
 ### fix: Syntax & Runtime Crashes

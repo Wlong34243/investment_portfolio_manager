@@ -77,21 +77,27 @@ def read_gsheet_robust(ws: gspread.Worksheet) -> pd.DataFrame:
         clean_headers.append(h)
     
     df = pd.DataFrame(data, columns=clean_headers)
-    
+
+    # ROOT CAUSE FIX: If the first column is unnamed, it's our Ticker column.
+    if 'Unnamed_0' in df.columns:
+        df = df.rename(columns={'Unnamed_0': 'Ticker'})
+
     # Drop entirely empty rows (often present at end of sheet)
     df = df.replace('', None).dropna(how='all').fillna('')
-    
+
     if df.empty:
         return df
     skip_cols = [
         'ticker', 'symbol', 'description', 'sector', 'industry', 
         'asset class', 'asset strategy', 'import date', 'closed date', 
         'opened date', 'acquisition date', 'date', 'import timestamp', 'fingerprint',
-        'is cash', 'wash sale', 'is primary acct', 'winner'
+        'is cash', 'wash sale', 'is primary acct', 'winner', 'unnamed_0'
     ]
-    
     for col in df.columns:
-        if col.lower() in skip_cols:
+        col_lower = col.lower()
+        # Skip known text/identifier columns AND any unnamed columns (Unnamed_0, Unnamed_1 etc.)
+        # Unnamed columns arise when a Sheet header is blank; they typically hold ticker/identifier data
+        if col_lower in skip_cols or col_lower.startswith('unnamed_'):
             continue
         
         if df[col].dtype == object:

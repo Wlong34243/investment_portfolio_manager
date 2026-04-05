@@ -107,13 +107,13 @@ with tabs[0]:
                 invested_df['Market Value'] = invested_df['Market Value'].clip(lower=0.01)
                 fig = px.treemap(invested_df, path=['Asset Class', 'Ticker'], values='Market Value', 
                                  title="Asset Allocation", color_discrete_sequence=px.colors.qualitative.Prism)
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width='stretch')
             else:
                 st.error("Cannot render Treemap: Ticker column missing.")
-        
+
         # Table
         st.subheader("Current Positions")
-        st.dataframe(df, use_container_width=True, hide_index=True)
+        st.dataframe(df, width='stretch', hide_index=True)
 
 with tabs[1]:
     if not df.empty:
