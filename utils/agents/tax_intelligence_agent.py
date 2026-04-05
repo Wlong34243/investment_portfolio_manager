@@ -122,7 +122,9 @@ def generate_rebalance_proposals(drift_df: pd.DataFrame, holdings_df: pd.DataFra
 
 def scan_harvest_opportunities(holdings_df: pd.DataFrame, min_loss_dollars: float = 500.0) -> pd.DataFrame:
     """Filter for positions with significant unrealized losses."""
-    losses = holdings_df[holdings_df['Unrealized G/L'] <= -min_loss_dollars].copy()
+    df = holdings_df.copy()
+    df['Unrealized G/L'] = pd.to_numeric(df['Unrealized G/L'], errors='coerce').fillna(0.0)
+    losses = df[df['Unrealized G/L'] <= -min_loss_dollars].copy()
     losses['tax_asset_value'] = losses['Unrealized G/L'].abs() * 0.15
     return losses.sort_values(by='Unrealized G/L')
 

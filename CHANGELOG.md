@@ -2,6 +2,19 @@
 
 Every entry must include a **Status** line describing what is currently safe to run.
 
+## [2026-04-05] — Dashboard Architecture Fix & Tax Intelligence Repair
+
+### fix: Main Dashboard Not Rendering on Load
+**What changed:**
+- **`app.py` — Navigation Architecture:** Moved all dashboard rendering (title, KPI metrics, treemap, holdings table, income tab) from module-level code into a dedicated `def main_dashboard()` function. `st.navigation` now references `main_dashboard` directly instead of `lambda: None`, so dashboard content no longer prepends every other page.
+- **Deprecated API Cleanup:** Replaced `use_container_width=True` with `width='stretch'` in `st.plotly_chart` and `st.dataframe` calls to eliminate deprecation warnings on Streamlit 1.55.0+.
+
+### fix: Tax Intelligence Page — TypeError on Unrealized G/L Comparison
+**What changed:**
+- **`utils/agents/tax_intelligence_agent.py` — `scan_harvest_opportunities()`:** Added explicit `pd.to_numeric(..., errors='coerce').fillna(0.0)` cast on the `Unrealized G/L` column before the `<= -min_loss_dollars` comparison. Prevents `TypeError: '<=' not supported between instances of 'str' and 'float'` when data is read back from Google Sheets as mixed string/float types.
+
+**Status: Production ready. All 7 pages verified — Main Dashboard, Rebalancing, Research Hub, Performance, Tax Intelligence, Unified Net Worth, and AI Advisor all render without errors.**
+
 ## [2026-04-05] — Final Stability & Header Hardening
 
 ### fix: Empty Header & Ticker Coercion

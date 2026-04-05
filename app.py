@@ -73,66 +73,64 @@ with st.sidebar:
         if 'Import Date' in df.columns:
             st.caption(f"Last Import: {df['Import Date'].iloc[0]}")
 
-# --- Dashboard Layout ---
-st.title("💼 Investment Portfolio")
+# --- Main Dashboard Page Function ---
+def main_dashboard():
+    df = ensure_display_columns(st.session_state.get(
+        "holdings_df", pd.DataFrame(columns=config.POSITION_COLUMNS)
+    ))
 
-tabs = st.tabs(["📊 Holdings", "💰 Income", "🔔 Signals"])
+    st.title("💼 Investment Portfolio")
+    tabs = st.tabs(["📊 Holdings", "💰 Income", "🔔 Signals"])
 
-with tabs[0]:
-    if df.empty:
-        st.info("No data loaded. Use the sidebar to import a Schwab CSV.")
-    else:
-        # KPIs
-        total_val = df['Market Value'].sum()
-        
-        # Robust column check
-        if 'Ticker' in df.columns:
-            cash_mask = df['Ticker'].isin(['CASH_MANUAL', 'QACDS', 'CASH & CASH INVESTMENTS']) | df['Is Cash'].astype(bool)
+    with tabs[0]:
+        if df.empty:
+            st.info("No data loaded. Use the sidebar to import a Schwab CSV.")
         else:
-            cash_mask = df['Is Cash'].astype(bool) if 'Is Cash' in df.columns else pd.Series([False]*len(df))
-            
-        cash_val = df[cash_mask]['Market Value'].sum()
-        
-        k1, k2, k3 = st.columns(3)
-        k1.metric("Total Portfolio", f"${total_val:,.0f}")
-        k2.metric("Cash Balance", f"${cash_val:,.0f}")
-        k3.metric("Invested", f"${total_val - cash_val:,.0f}")
+            total_val = df['Market Value'].sum()
+            cash_mask = (
+                df['Ticker'].isin(['CASH_MANUAL', 'QACDS', 'CASH & CASH INVESTMENTS'])
+                | df['Is Cash'].astype(bool)
+            )
+            cash_val = df[cash_mask]['Market Value'].sum()
 
-        st.divider()
-        
-        # Treemap
-        invested_df = df[~cash_mask].copy()
-        if not invested_df.empty:
-            if 'Ticker' in invested_df.columns:
+            k1, k2, k3 = st.columns(3)
+            k1.metric("Total Portfolio", f"${total_val:,.0f}")
+            k2.metric("Cash Balance",    f"${cash_val:,.0f}")
+            k3.metric("Invested",        f"${total_val - cash_val:,.0f}")
+
+            st.divider()
+
+            invested_df = df[~cash_mask].copy()
+            if not invested_df.empty:
                 invested_df['Market Value'] = invested_df['Market Value'].clip(lower=0.01)
-                fig = px.treemap(invested_df, path=['Asset Class', 'Ticker'], values='Market Value', 
-                                 title="Asset Allocation", color_discrete_sequence=px.colors.qualitative.Prism)
+                fig = px.treemap(
+                    invested_df, path=['Asset Class', 'Ticker'], values='Market Value',
+                    title="Asset Allocation",
+                    color_discrete_sequence=px.colors.qualitative.Prism
+                )
                 st.plotly_chart(fig, width='stretch')
-            else:
-                st.error("Cannot render Treemap: Ticker column missing.")
 
-        # Table
-        st.subheader("Current Positions")
-        st.dataframe(df, width='stretch', hide_index=True)
+            st.subheader("Current Positions")
+            st.dataframe(df, width='stretch', hide_index=True)
 
-with tabs[1]:
-    if not df.empty:
-        metrics = calculate_income_metrics(df)
-        i1, i2 = st.columns(2)
-        i1.metric("Annual Projected Income", f"${metrics['projected_annual_income']:,.2f}")
-        i2.metric("Blended Yield", f"{metrics['blended_yield_pct']:.2f}%")
+    with tabs[1]:
+        if not df.empty:
+            metrics = calculate_income_metrics(df)
+            i1, i2 = st.columns(2)
+            i1.metric("Annual Projected Income", f"${metrics['projected_annual_income']:,.2f}")
+            i2.metric("Blended Yield",           f"{metrics['blended_yield_pct']:.2f}%")
 
-with tabs[2]:
-    st.info("Agent signals appearing in next sync...")
+    with tabs[2]:
+        st.info("Agent signals appearing in next sync...")
 
-# --- Page Nav ---
+# --- Page Navigation ---
 pg = st.navigation([
-    st.Page(lambda: None, title="Main Dashboard", icon="📈"), # Placeholder, handled by app.py main
-    st.Page("pages/1_Rebalancing.py", title="Rebalancing", icon="⚖️"),
-    st.Page("pages/2_Research.py", title="Research Hub", icon="🔬"),
-    st.Page("pages/3_Performance.py", title="Performance", icon="📊"),
-    st.Page("pages/4_Tax.py", title="Tax Intelligence", icon="💸"),
-    st.Page("pages/5_Net_Worth.py", title="Unified Net Worth", icon="🏦"),
-    st.Page("pages/6_Advisor.py", title="AI Advisor", icon="💬"),
+    st.Page(main_dashboard,              title="Main Dashboard",    icon="📈"),
+    st.Page("pages/1_Rebalancing.py",    title="Rebalancing",       icon="⚖️"),
+    st.Page("pages/2_Research.py",       title="Research Hub",      icon="🔬"),
+    st.Page("pages/3_Performance.py",    title="Performance",       icon="📊"),
+    st.Page("pages/4_Tax.py",            title="Tax Intelligence",  icon="💸"),
+    st.Page("pages/5_Net_Worth.py",      title="Unified Net Worth", icon="🏦"),
+    st.Page("pages/6_Advisor.py",        title="AI Advisor",        icon="💬"),
 ])
 pg.run()
