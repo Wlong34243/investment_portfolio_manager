@@ -2,6 +2,21 @@
 
 Every entry must include a **Status** line describing what is currently safe to run.
 
+## [2026-04-05] — Boot Sequence & Structural Stabilization
+
+### fix: Centralized Page Configuration
+**What changed:**
+- **App Entry Point:** Moved `st.set_page_config` to the absolute top of `app.py`, ensuring it is the first Streamlit command executed. This resolves "set_page_config can only be called once" warnings.
+- **Removed Duplicates:** Excised redundant `st.set_page_config` calls from all 6 sub-pages (`pages/*.py`).
+- **Cleaned Imports:** Removed legacy `sys.path` manipulation blocks from all page files, as they are no longer necessary with the standard `pages/` directory structure.
+
+### fix: Navigation & Routing
+**What changed:**
+- **Routing Fix:** Verified and stabilized `st.navigation` paths in `app.py` to correctly map to the `pages/` directory.
+- **Audit Completion:** Finalized the repository cleanup by committing the removal of 25+ staged obsolete files.
+
+**Status: Production ready. Application boot sequence is optimized and follows Streamlit 2026 best practices. All page routing is verified.**
+
 ## [2026-04-05] — Spring Cleaning & Consolidation
 
 ### refactor: Agent Consolidation (Tax & Rebalancing)

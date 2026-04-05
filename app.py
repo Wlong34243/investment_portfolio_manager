@@ -1,4 +1,7 @@
 import streamlit as st
+
+st.set_page_config(layout="wide", page_title="Investment Manager", page_icon="📈")
+
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -16,6 +19,10 @@ from pipeline import (
     ingest_realized_gl, ingest_transactions, calculate_income_metrics
 )
 from utils.sheet_readers import get_holdings_current
+from utils.validators import (
+    validate_percentage_range, validate_no_negative_market_values, 
+    validate_duplicate_tickers, validate_total_sanity
+)
 
 # --- Page Setup & Navigation (2026 Style) ---
 def main_dashboard():
@@ -72,6 +79,7 @@ def main_dashboard():
         
         if st.button("Process CSVs", width='stretch'):
             processing_errors = []
+            data_warnings = []
             
             # 1. Positions
             if uploaded_file is not None:
@@ -80,6 +88,32 @@ def main_dashboard():
                         df_raw = parse_schwab_csv(uploaded_file.read())
                         df_cash = inject_cash_manual(df_raw, cash_amount)
                         df_enriched = enrich_positions(df_cash)
+                        
+                        # --- Validation Step ---
+                        # 1. Daily Change Outliers
+                        pct_issues = validate_percentage_range(df_enriched, 'daily_change_pct')
+                        if not pct_issues.empty:
+                            data_warnings.append(f"⚠️ {len(pct_issues)} positions have suspicious daily changes (>100% or <-50%). Outliers have been capped.")
+                            # Cap the values to prevent downstream distortion
+                            df_enriched['daily_change_pct'] = df_enriched['daily_change_pct'].clip(-50, 100)
+                        
+                        # 2. Negative Market Values
+                        mv_issues = validate_no_negative_market_values(df_enriched)
+                        if not mv_issues.empty:
+                            data_warnings.append(f"⚠️ {len(mv_issues)} non-cash positions have zero or negative market value.")
+                        
+                        # 3. Duplicate Tickers
+                        dup_issues = validate_duplicate_tickers(df_enriched)
+                        if not dup_issues.empty:
+                            data_warnings.append(f"⚠️ {len(dup_issues)} duplicate tickers detected after aggregation.")
+                            
+                        # 4. Total Sanity
+                        total_warnings = validate_total_sanity(df_enriched, expected_range=(400000, 600000))
+                        data_warnings.extend(total_warnings)
+                        
+                        # Save warnings to session state
+                        st.session_state["data_warnings"] = data_warnings
+
                         today_str = str(date.today())
                         df_norm = normalize_positions(df_enriched, today_str)
                         write_to_sheets(df_norm, cash_amount, dry_run=config.DRY_RUN)
@@ -124,6 +158,15 @@ def main_dashboard():
                 st.success("All data processed successfully.")
                 time.sleep(1)
                 st.rerun()
+
+        # Data Quality Report Expander
+        if st.session_state.get("data_warnings"):
+            with st.sidebar.expander("📊 Data Quality Report", expanded=True):
+                for warning in st.session_state["data_warnings"]:
+                    st.warning(warning)
+                if st.button("Clear Report"):
+                    st.session_state["data_warnings"] = []
+                    st.rerun()
 
         # Show info
         if not st.session_state["holdings_df"].empty:
@@ -538,5 +581,4 @@ pg = st.navigation([
     st.Page("pages/6_Advisor.py", title="AI Advisor", icon="💬"),
 ])
 
-st.set_page_config(layout="wide", page_title="Investment Manager", page_icon="📈")
 pg.run()

@@ -6,14 +6,6 @@ from utils.agents.tax_intelligence_agent import get_target_allocation, calculate
 import os
 import sys
 
-# Add project root to path
-_HERE = os.path.dirname(os.path.abspath(__file__))
-_ROOT = os.path.dirname(_HERE)
-if _ROOT not in sys.path:
-    sys.path.insert(0, _ROOT)
-
-st.set_page_config(layout="wide", page_title="Tax-Aware Rebalancing")
-
 # --- Password Gate ---
 def check_password():
     if "app_password" not in st.secrets: return True

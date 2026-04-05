@@ -6,17 +6,8 @@ import yfinance as yf
 from datetime import datetime, timedelta
 import os
 import sys
-
-# Add project root to path
-_HERE = os.path.dirname(os.path.abspath(__file__))
-_ROOT = os.path.dirname(_HERE)
-if _ROOT not in sys.path:
-    sys.path.insert(0, _ROOT)
-
 import config
 from utils.sheet_readers import get_gspread_client, get_daily_snapshots
-
-st.set_page_config(layout="wide", page_title="Portfolio Performance")
 
 # --- Password Gate ---
 def check_password():

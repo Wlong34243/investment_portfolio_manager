@@ -8,14 +8,6 @@ import plotly.graph_objects as go
 import os
 import sys
 
-# Add project root to path
-_HERE = os.path.dirname(os.path.abspath(__file__))
-_ROOT = os.path.dirname(_HERE)
-if _ROOT not in sys.path:
-    sys.path.insert(0, _ROOT)
-
-st.set_page_config(layout="wide", page_title="AI Research Hub")
-
 # --- Password Gate ---
 def check_password():
     if "app_password" not in st.secrets: return True
@@ -58,6 +50,9 @@ k3.metric("Sector", info['Asset Class'])
 k4.metric("Portfolio Weight", f"{info['Weight']:.2f}%")
 
 # --- Data Columns ---
+transcript = None
+news = None
+
 col1, col2 = st.columns(2)
 
 with col1:
@@ -209,14 +204,17 @@ if st.button("🔍 Screen Stocks for this Thesis", width='stretch'):
 # --- AI Deep Analysis ---
 st.divider()
 if st.button(f"Deep Analysis with Gemini 3.1 Pro", width='stretch'):
-    with st.spinner("Gemini is reviewing transcripts and news..."):
-        # Combine data for analysis
-        analysis = analyze_ticker(selected_ticker, transcript, news)
-        
-        if "error" in analysis:
-            st.error(f"AI Analysis failed: {analysis['error']}")
-        else:
-            st.session_state[f"analysis_{selected_ticker}"] = analysis
+    if not transcript and not news:
+        st.warning("No transcript or news data available for this ticker. Fetch data above first.")
+    else:
+        with st.spinner("Gemini is reviewing transcripts and news..."):
+            # Combine data for analysis
+            analysis = analyze_ticker(selected_ticker, transcript, news)
+            
+            if "error" in analysis:
+                st.error(f"AI Analysis failed: {analysis['error']}")
+            else:
+                st.session_state[f"analysis_{selected_ticker}"] = analysis
 
 if f"analysis_{selected_ticker}" in st.session_state:
     res = st.session_state[f"analysis_{selected_ticker}"]
