@@ -2,6 +2,16 @@
 
 Every entry must include a **Status** line describing what is currently safe to run.
 
+## [2026-04-05] — Research Hub Stability & Syntax Audit
+
+### fix: Syntax & Runtime Crashes
+**What changed:**
+- **App Syntax Audit:** Resolved a `SyntaxError` in `app.py` (unmatched brackets) that was preventing the main dashboard from loading.
+- **Hardened Research Hub:** Updated `pages/2_Research.py` with defensive checks to prevent `IndexError` when retrieving ticker data and ensured robust handling of missing `Ticker` columns.
+- **Encoding Safety:** Re-saved core files with UTF-8 encoding to prevent character corruption in production environments.
+
+**Status: Production ready. All pages verified for syntax and runtime stability.**
+
 ## [2026-04-05] — Performance Accuracy & Data Recovery
 
 ### fix: KeyError 'Ticker' & Data Integrity

@@ -41,7 +41,12 @@ if st.session_state.get("last_val_ticker") != selected_ticker:
     st.session_state["last_val_ticker"] = selected_ticker
 
 # Get info for selected ticker
-info = df[df['Ticker'] == selected_ticker].iloc[0]
+ticker_info_df = df[df['Ticker'] == selected_ticker]
+if ticker_info_df.empty:
+    st.error(f"Could not find data for {selected_ticker}. Please refresh the page.")
+    st.stop()
+
+info = ticker_info_df.iloc[0]
 
 # --- Hero Header ---
 st.header(f"{selected_ticker} — {info['Description']}")

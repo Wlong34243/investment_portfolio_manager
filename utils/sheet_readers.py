@@ -86,7 +86,7 @@ def read_gsheet_robust(ws: gspread.Worksheet) -> pd.DataFrame:
     skip_cols = [
         'ticker', 'symbol', 'description', 'sector', 'industry', 
         'asset class', 'asset strategy', 'import date', 'closed date', 
-        'opened date', 'acquisition date', 'date', 'fingerprint'
+        'opened date', 'acquisition date', 'date', 'import timestamp', 'fingerprint'
     ]
     
     for col in df.columns:

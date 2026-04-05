@@ -29,170 +29,76 @@ from utils.validators import (
 )
 from utils.column_guard import ensure_display_columns
 
-# --- Page Setup & Navigation (2026 Style) ---
-def _main_dashboard_impl():
+# --- Main Dashboard Logic ---
+def main_dashboard():
     # --- Load Data ---
     if "holdings_df" not in st.session_state:
         try:
             st.session_state["holdings_df"] = get_holdings_current()
         except Exception as e:
-            st.error("Could not connect to Google Sheets. Check your connection and service account permissions.")
+            st.error("Could not connect to Google Sheets.")
             st.stop()
 
     # --- Sidebar ---
     with st.sidebar:
-        st.header("Control Panel")
+        st.header("Portfolio Management")
         
         # 1. Import Data Expander
-        is_empty = st.session_state.get("holdings_df", pd.DataFrame()).empty
+        df = st.session_state["holdings_df"]
+        is_empty = df.empty
         with st.expander("📥 Import Data", expanded=is_empty):
             uploaded_file = st.file_uploader("Upload Schwab Positions CSV", type=["csv"])
-            gl_file = st.file_uploader("Upload Realized G/L CSV", type=["csv"], help="Schwab: Accounts > History > Realized Gain/Loss > Export")
-            tx_file = st.file_uploader("Upload Transaction History CSV", type=["csv"], help="Schwab: Accounts > History > Transactions > Export")
+            gl_file = st.file_uploader("Upload Realized G/L CSV", type=["csv"])
+            tx_file = st.file_uploader("Upload Transaction History CSV", type=["csv"])
             
-            cash_amount = st.number_input("Cash Amount ($)", value=0.0, step=500.0)
+            cash_amount = st.number_input("Manual Cash Injection ($)", value=0.0, step=500.0)
             
             if st.button("Process CSVs", width='stretch'):
-                processing_errors = []
-                data_warnings = []
-                
-                # 1. Positions
-                if uploaded_file is not None:
-                    with st.status("Processing Positions...") as status:
-                        try:
-                            old_df = st.session_state.get("holdings_df", pd.DataFrame())
-                            
-                            df_raw = parse_schwab_csv(uploaded_file.read())
-                            df_cash = inject_cash_manual(df_raw, cash_amount)
-                            df_enriched = enrich_positions(df_cash)
-                            
-                            # --- Validation Step ---
-                            pct_issues = validate_percentage_range(df_enriched, 'daily_change_pct')
-                            if not pct_issues.empty:
-                                data_warnings.append(f"⚠️ {len(pct_issues)} positions have suspicious daily changes (>100% or <-50%). Outliers capped.")
-                                df_enriched['daily_change_pct'] = df_enriched['daily_change_pct'].clip(-50, 100)
-                            
-                            mv_issues = validate_no_negative_market_values(df_enriched)
-                            if not mv_issues.empty:
-                                data_warnings.append(f"⚠️ {len(mv_issues)} non-cash positions have zero or negative market value.")
-                            
-                            dup_issues = validate_duplicate_tickers(df_enriched)
-                            if not dup_issues.empty:
-                                data_warnings.append(f"⚠️ {len(dup_issues)} duplicate tickers detected.")
-                                
-                            total_warnings = validate_total_sanity(df_enriched, expected_range=(400000, 600000))
-                            data_warnings.extend(total_warnings)
-                            st.session_state["data_warnings"] = data_warnings
-
-                            today_str = str(date.today())
-                            df_norm = normalize_positions(df_enriched, today_str)
-                            write_to_sheets(df_norm, cash_amount, dry_run=config.DRY_RUN)
-                            
-                            # Reconciliation Logic
-                            if not old_df.empty:
-                                old_tickers = set(old_df['Ticker'].unique()) if 'Ticker' in old_df.columns else set()
-                                new_tickers = set(df_norm['ticker'].unique())
-                                added = new_tickers - old_tickers
-                                removed = old_tickers - new_tickers
-                                if added or removed:
-                                    with st.expander("📋 Position Changes Since Last Import", expanded=True):
-                                        if added: st.success(f"**New:** {', '.join(sorted(added))}")
-                                        if removed: st.warning(f"**Removed:** {', '.join(sorted(removed))}")
-                            
-                            df_display = ensure_display_columns(df_norm)
-                            st.session_state["holdings_df"] = df_display
-                            status.update(label="Positions Complete", state="complete")
-
-                            # Audit Trail
-                            if "import_history" not in st.session_state:
-                                st.session_state["import_history"] = []
-                            st.session_state["import_history"].append({
-                                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M"),
-                                "file": uploaded_file.name,
-                                "type": "Positions",
-                                "rows": len(df_norm),
-                                "status": "Success"
-                            })
-
-                            if hasattr(get_holdings_current, "clear"):
-                                get_holdings_current.clear()
-                        except Exception as e:
-                            processing_errors.append(f"Positions Error: {e}")
-                            status.update(label="Positions Failed", state="error")
-                
-                # 2. Realized G/L
-                if gl_file is not None:
-                    with st.status("Processing Realized G/L...") as status:
-                        try:
-                            gl_result = ingest_realized_gl(gl_file, dry_run=config.DRY_RUN)
-                            st.sidebar.success(f"G/L: {gl_result['new']} new lots.")
-                            status.update(label="G/L Complete", state="complete")
-                        except Exception as e:
-                            processing_errors.append(f"G/L Error: {e}")
-                            status.update(label="G/L Failed", state="error")
-
-                # 3. Transactions
-                if tx_file is not None:
-                    with st.status("Processing Transactions...") as status:
-                        try:
-                            tx_result = ingest_transactions(tx_file, dry_run=config.DRY_RUN)
-                            st.sidebar.success(f"TX: {tx_result['new']} new entries.")
-                            status.update(label="Transactions Complete", state="complete")
-                        except Exception as e:
-                            processing_errors.append(f"Transactions Error: {e}")
-                            status.update(label="Transactions Failed", state="error")
-
-                if processing_errors:
-                    for err in processing_errors: st.error(err)
-                else:
-                    st.toast("All data processed successfully.", icon="✅")
+                with st.status("Ingesting data...") as status:
+                    if uploaded_file:
+                        df_raw = parse_schwab_csv(uploaded_file.read())
+                        df_cash = inject_cash_manual(df_raw, cash_amount)
+                        df_enriched = enrich_positions(df_cash)
+                        df_norm = normalize_positions(df_enriched, str(date.today()))
+                        write_to_sheets(df_norm, cash_amount, dry_run=config.DRY_RUN)
+                        st.session_state["holdings_df"] = ensure_display_columns(df_norm)
+                    
+                    if gl_file:
+                        ingest_realized_gl(gl_file, dry_run=config.DRY_RUN)
+                    
+                    if tx_file:
+                        ingest_transactions(tx_file, dry_run=config.DRY_RUN)
+                        
+                    status.update(label="Sync Complete", state="complete")
                     time.sleep(1)
                     st.rerun()
 
         # 2. Portfolio Status Section
         st.divider()
         st.subheader("Portfolio Status")
-        if not st.session_state["holdings_df"].empty:
-            df_status = st.session_state["holdings_df"]
-            if 'Import Date' in df_status.columns:
+        
+        if not df.empty:
+            if 'Import Date' in df.columns:
                 try:
-                    last_import = pd.to_datetime(df_status['Import Date'].iloc[0])
+                    last_import = pd.to_datetime(df['Import Date'].iloc[0])
                     days_old = (pd.Timestamp.now() - last_import).days
-                    if days_old < 1: st.success(f"🟢 Fresh — imported today")
+                    if days_old < 1: st.success("🟢 Fresh — imported today")
                     elif days_old <= 7: st.warning(f"🟡 {days_old} days old")
                     else: st.error(f"🔴 {days_old} days old — re-import")
-                except: st.caption(f"Last Import: {df_status['Import Date'].iloc[0]}")
-            st.metric("Positions", len(df_status))
+                except: st.caption("Freshness: Unknown")
             
-            # Import History Audit Trail
-            if st.session_state.get("import_history"):
-                with st.expander("🕒 Import History"):
-                    for entry in reversed(st.session_state["import_history"][-5:]):
-                        st.write(f"**{entry['timestamp']}**")
-                        st.caption(f"{entry['type']}: {entry['file']} ({entry['rows']} rows)")
+            st.metric("Positions", len(df))
         else:
-            st.info("No data loaded. Import a Schwab CSV.")
+            st.info("No data loaded. Import a CSV above.")
 
         if config.DRY_RUN:
             st.error("🔴 DRY RUN MODE — No writes to Sheets")
 
-        # Data Quality Report Expander
-        if st.session_state.get("data_warnings"):
-            with st.sidebar.expander("📊 Data Quality Report", expanded=True):
-                for warning in st.session_state["data_warnings"]: st.warning(warning)
-                if st.button("Clear Report"):
-                    st.session_state["data_warnings"] = []
-                    st.rerun()
-
         st.divider()
-        if st.button("🔄 Sync with Schwab API", width='stretch', help="Placeholder for real-time API integration"):
-            st.session_state.pop('holdings_df', None)
-            st.rerun()
-
         if st.button("🧹 Clear System Cache", width='stretch'):
             st.cache_data.clear()
             st.session_state.clear()
-            st.toast("Cache and session cleared.")
+            st.toast("Cache cleared.")
             time.sleep(1)
             st.rerun()
 
@@ -208,8 +114,10 @@ def _main_dashboard_impl():
             total_cost = df['Cost Basis'].sum()
             unrealized_gl = total_val - total_cost
             unrealized_gl_pct = (unrealized_gl / total_cost * 100) if total_cost > 0 else 0.0
+            
             cash_val = df[df['Is Cash'] == True]['Market Value'].sum()
             invested_val = total_val - cash_val
+            
             dc_col = 'Daily Change %' if 'Daily Change %' in df.columns else 'daily_change_pct'
             daily_change = (df['Weight'] * df[dc_col]).sum() / 100 if dc_col in df.columns else 0.0
 
@@ -223,17 +131,21 @@ def _main_dashboard_impl():
             fig_tree = px.treemap(non_cash_df, path=['Asset Class', 'Ticker'], values='Market Value', title='Portfolio Allocation', color_discrete_sequence=['#1F4E79', '#2E86AB', '#A8DADC'])
             st.plotly_chart(fig_tree, use_container_width=True)
 
-            with st.expander("📊 Detailed Allocation (Pie Charts)"):
-                pc1, pc2 = st.columns(2)
-                with pc1: st.plotly_chart(px.pie(non_cash_df, values='Market Value', names='Asset Class', title='By Asset Class'), use_container_width=True)
-                with pc2: st.plotly_chart(px.pie(non_cash_df, values='Market Value', names='Asset Strategy', title='By Strategy'), use_container_width=True)
-
-            st.divider()
             st.subheader("Current Holdings")
-            search = st.text_input("🔍 Search Ticker or Description", placeholder="e.g. AAPL")
+            search = st.text_input("🔍 Search Ticker or Description")
             display_df = df if not search else df[df['Ticker'].str.contains(search, case=False) | df['Description'].str.contains(search, case=False)]
+            
             cols = ['Ticker', 'Description', 'Market Value', 'Weight', 'Cost Basis', 'Unrealized G/L', 'Unrealized G/L %', 'Dividend Yield']
-            st.dataframe(display_df[cols], column_config={"Market Value": st.column_config.NumberColumn(format="$%,.2f"), "Cost Basis": st.column_config.NumberColumn(format="$%,.2f"), "Weight": st.column_config.ProgressColumn(format="%.2f%%", min_value=0, max_value=15), "Unrealized G/L": st.column_config.NumberColumn(format="$%,.2f"), "Unrealized G/L %": st.column_config.NumberColumn(format="%.2f%%"), "Dividend Yield": st.column_config.NumberColumn(format="%.2f%%")}, hide_index=True, use_container_width=True)
+            st.dataframe(
+                display_df[cols],
+                column_config={
+                    "Market Value": st.column_config.NumberColumn(format="$%,.2f"),
+                    "Weight": st.column_config.ProgressColumn(format="%.2f%%", min_value=0, max_value=15),
+                    "Unrealized G/L %": st.column_config.NumberColumn(format="%.2f%%"),
+                },
+                hide_index=True,
+                use_container_width=True
+            )
 
     with tabs[1]:
         if not st.session_state["holdings_df"].empty:
@@ -243,21 +155,22 @@ def _main_dashboard_impl():
             k1.metric("Projected Annual Income", f"${metrics['projected_annual_income']:,.2f}")
             k2.metric("Blended Yield %", f"{metrics['blended_yield_pct']:.2f}%")
             k3.metric("Cash Contribution", f"${metrics['cash_contribution']:,.2f}")
+            
             top_gen = df.nlargest(10, 'Est Annual Income')
-            st.plotly_chart(px.bar(top_gen, x='Est Annual Income', y='Ticker', orientation='h', title='Top 10 Generators', color_discrete_sequence=['#F39C12']), use_container_width=True)
+            fig_income = px.bar(top_gen, x='Est Annual Income', y='Ticker', orientation='h', title='Top 10 Generators')
+            st.plotly_chart(fig_income, use_container_width=True)
 
     with tabs[2]:
         if not st.session_state["holdings_df"].empty:
             df = st.session_state["holdings_df"]
             if st.button("Calculate Risk Analytics", width='stretch'):
-                with st.spinner("Analyzing risk..."):
+                with st.spinner("Calculating..."):
                     hist = build_price_histories(df)
                     if not hist.empty and 'SPY' in hist.columns:
                         spy_returns = hist['SPY'].pct_change().dropna()
                         df['Beta'] = df['Ticker'].apply(lambda x: calculate_beta(x, hist, spy_returns))
                         p_beta = calculate_portfolio_beta(df)
                         st.metric("Portfolio Beta", f"{p_beta:.4f}")
-                        st.plotly_chart(px.imshow(calculate_correlation_matrix(df, hist), color_continuous_scale='RdBu_r', zmin=-1, zmax=1, title="Correlation Matrix"), use_container_width=True)
                     else: st.error("Market data unavailable.")
 
     with tabs[3]:
@@ -269,42 +182,10 @@ def _main_dashboard_impl():
                 with st.expander(f"🚀 Daily Movers ({len(movers)} active)", expanded=True):
                     if st.button("🎙️ Explain Movements with AI"):
                         with st.spinner("Checking news..."):
-                            for n in batch_analyze_daily_moves(df): st.info(f"**{n['ticker']} ({n['change_pct']:+.2f}%)**: {n['explanation']}")
-            
-            from utils.agents.macro_monitor import get_macro_snapshot, detect_macro_triggers, generate_macro_strategy
-            with st.expander("🌍 Macro Event Monitor", expanded=True):
-                macro = get_macro_snapshot()
-                m1, m2, m3, m4 = st.columns(4)
-                m1.metric("CPI", f"{macro['cpi']:.1f}", macro['cpi_trend'])
-                m2.metric("Fed Rate", f"{macro['fed_rate']:.2f}%")
-                m3.metric("10Y Treasury", f"{macro['treasury_10y']:.2f}%")
-                m4.metric("VIX", f"{macro['vix']:.1f}", macro['vix_signal'], delta_color="inverse")
-                if st.button("🗺️ Generate Macro Strategy"):
-                    strat = generate_macro_strategy(detect_macro_triggers(macro, df), macro, df)
-                    if "error" not in strat:
-                        st.toast("Macro strategy generated", icon="✅")
-                        st.success(f"**Outlook:** {strat['macro_outlook']}")
-                        for rot in strat.get('sector_rotations', []): st.write(f"🔄 **Rotate:** {rot['from_sector']} → {rot['to_sector']} ({rot['rationale']})")
+                            for n in batch_analyze_daily_moves(df):
+                                st.info(f"**{n['ticker']} ({n['change_pct']:+.2f}%)**: {n['explanation']}")
 
-            from utils.agents.earnings_sentinel import scan_upcoming_earnings, generate_earnings_alerts
-            upcoming = scan_upcoming_earnings(df)
-            if not upcoming.empty:
-                with st.expander(f"📅 Upcoming Earnings ({len(upcoming)})", expanded=True):
-                    st.table(upcoming)
-                    if st.button("🔔 Generate AI Insights"):
-                        for alert in generate_earnings_alerts(upcoming, df): st.info(f"{alert['badge']} **{alert['ticker']} ({alert['date']})**: {alert['alert']}")
-
-def main_dashboard():
-    try:
-        import traceback
-        _main_dashboard_impl()
-    except Exception as e:
-        st.error("Dashboard failed to load.")
-        with st.expander("Details"): st.code(traceback.format_exc())
-        if st.button("🔄 Retry"):
-            st.cache_data.clear()
-            st.rerun()
-
+# --- Define Pages ---
 pg = st.navigation([
     st.Page(main_dashboard, title="Main Dashboard", icon="📈"),
     st.Page("pages/1_Rebalancing.py", title="Rebalancing", icon="⚖️"),
@@ -314,4 +195,5 @@ pg = st.navigation([
     st.Page("pages/5_Net_Worth.py", title="Unified Net Worth", icon="🏦"),
     st.Page("pages/6_Advisor.py", title="AI Advisor", icon="💬"),
 ])
+
 pg.run()
