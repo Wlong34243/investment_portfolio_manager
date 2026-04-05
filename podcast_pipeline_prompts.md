@@ -30,9 +30,12 @@ enforcement, and writes the extracted allocation strategy to a new
 5. **Model name comes from `config.GEMINI_MODEL`.** Currently set to
    `gemini-3.1-pro-preview`. Do not hardcode model strings anywhere.
 
-6. **Asset classes expanded** to match Bill's actual portfolio: Technology, Energy,
-   Healthcare, Financials, International, Broad Market, Fixed Income, Cash,
-   Alternatives, Crypto-Adjacent.
+6. **Asset classes use standard GICS sectors (open-ended).** Instead of locking to
+   a fixed enum, the AI is anchored to standard GICS sector names (Technology,
+   Healthcare, Utilities, Industrials, Materials, Real Estate, etc.) plus
+   macro categories (Fixed Income, Cash, International, Broad Market). This lets
+   the AI surface displacement opportunities in sectors Bill has zero exposure to
+   — the whole point of an idea generation engine. The sandbox tab keeps this safe.
 
 ---
 
@@ -147,7 +150,7 @@ and manually promotes to Target_Allocation when accepted. App writes; Bill decid
 |--------|--------|------|---------|-------|
 | A | Date | Date | `2026-04-05` | When the analysis was generated |
 | B | Source | String | `Forward Guidance EP 412` | Podcast name + episode identifier |
-| C | Asset Class | String | `Technology` | One of: Technology, Energy, Healthcare, Financials, International, Broad Market, Fixed Income, Cash, Alternatives, Crypto-Adjacent |
+| C | Asset Class | String | `Technology` | Standard GICS sector or macro category (e.g., Technology, Utilities, Industrials, Materials, Real Estate, Fixed Income, Cash). AI may introduce new standard sectors for displacement opportunities. |
 | D | Asset Strategy | String | `Defensive AI beneficiaries` | Thesis behind this allocation |
 | E | Target % | Float | `25` | Suggested allocation. All rows must sum to 100 |
 | F | Min % | Float | `20` | Lower drift band |
@@ -200,7 +203,7 @@ Contents:
 3. Pydantic schemas:
 
    class SectorTarget(BaseModel):
-       asset_class: str = Field(description="One of: Technology, Energy, Healthcare, Financials, International, Broad Market, Fixed Income, Cash, Alternatives, Crypto-Adjacent")
+       asset_class: str = Field(description="The macro asset class or standard GICS sector (e.g., Technology, Utilities, Industrials, Materials, Real Estate, Fixed Income, Cash). You MAY introduce a new standard sector if a strong valuation displacement opportunity is presented.")
        asset_strategy: str = Field(description="Brief thesis, e.g. 'Defensive AI beneficiaries'")
        target_pct: float = Field(description="Target allocation %. All targets must sum to 100.")
        min_pct: float = Field(description="Lower drift band, usually target_pct - 5")
@@ -230,8 +233,12 @@ Contents:
            "and risk positioning.\n\n"
            "CONSTRAINTS:\n"
            "- target_pct values across all SectorTarget entries MUST sum to exactly 100.\n"
-           "- Use ONLY these asset classes: Technology, Energy, Healthcare, Financials, "
-           "International, Broad Market, Fixed Income, Cash, Alternatives, Crypto-Adjacent.\n"
+           "- Use standard GICS sectors or macro asset categories (e.g., Technology, "
+           "Healthcare, Energy, Financials, Industrials, Utilities, Materials, "
+           "Real Estate, Consumer Discretionary, Consumer Staples, Communication Services, "
+           "International, Broad Market, Fixed Income, Cash). You MAY introduce a sector "
+           "the investor currently has zero exposure to if the podcast presents a strong "
+           "valuation displacement opportunity — that is the purpose of this analysis.\n"
            "- If the podcast lacks actionable allocation guidance, return a single "
            "SectorTarget with asset_class='Broad Market', target_pct=100, confidence='Low', "
            "and notes explaining why.\n"

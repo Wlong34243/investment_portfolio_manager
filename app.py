@@ -34,14 +34,15 @@ def _main_dashboard_impl():
     # --- Load Data ---
     if "holdings_df" not in st.session_state:
         try:
-            st.session_state["holdings_df"] = get_holdings_current()
+            raw_df = get_holdings_current()
+            st.session_state["holdings_df"] = ensure_display_columns(raw_df)
         except Exception as e:
             st.error("Could not connect to Google Sheets.")
             st.stop()
 
-    # CRITICAL: Always guard the columns immediately after load/retrieval
-    st.session_state["holdings_df"] = ensure_display_columns(st.session_state["holdings_df"])
-    df = st.session_state["holdings_df"]
+    # Always ensure display columns on the current session state
+    df = ensure_display_columns(st.session_state["holdings_df"])
+    st.session_state["holdings_df"] = df
 
     # --- Sidebar ---
     with st.sidebar:
@@ -74,27 +75,24 @@ def _main_dashboard_impl():
         st.divider()
         st.subheader("Portfolio Status")
         if not df.empty:
+            # Data freshness
             if 'Import Date' in df.columns:
                 try:
                     last_import = pd.to_datetime(df['Import Date'].iloc[0])
                     days_old = (pd.Timestamp.now() - last_import).days
                     if days_old < 1: st.success("🟢 Fresh — imported today")
                     elif days_old <= 7: st.warning(f"🟡 {days_old} days old")
-                    else: st.error(f"🔴 {days_old} days old — re-import")
-                except: st.caption("Freshness: Unknown")
+                    else: st.error(f"🔴 {days_old} days old")
+                except: pass
             st.metric("Positions", len(df))
         else:
-            st.info("No data loaded. Import a CSV above.")
+            st.info("No data loaded.")
 
         if config.DRY_RUN:
-            st.error("🔴 DRY RUN MODE — No writes to Sheets")
+            st.error("🔴 DRY RUN MODE")
 
         st.divider()
-        if st.button("🔄 Sync with Schwab API", width='stretch', help="Placeholder for real-time API integration"):
-            st.session_state.pop('holdings_df', None)
-            st.rerun()
-
-        if st.button("🧹 Clear Cache", width='stretch'):
+        if st.button("🔄 Force Clear & Refresh", width='stretch'):
             st.cache_data.clear()
             st.session_state.clear()
             st.rerun()
@@ -106,15 +104,18 @@ def _main_dashboard_impl():
         if df.empty:
             st.info("Upload a CSV to begin.")
         else:
+            # --- KPIs ---
             total_val = df['Market Value'].sum()
             total_cost = df['Cost Basis'].sum()
             unrealized_gl = total_val - total_cost
             unrealized_gl_pct = (unrealized_gl / total_cost * 100) if total_cost > 0 else 0.0
             
-            cash_val = df[df['Is Cash'] == True]['Market Value'].sum()
+            # Robust Cash Detection
+            cash_mask = df['Is Cash'].astype(bool) | df['Ticker'].isin(['CASH_MANUAL', 'QACDS', 'CASH & CASH INVESTMENTS'])
+            cash_val = df[cash_mask]['Market Value'].sum()
             invested_val = total_val - cash_val
             
-            dc_col = 'Daily Change %' if 'Daily Change %' in df.columns else 'daily_change_pct'
+            dc_col = 'Daily Change %'
             daily_change = (df['Weight'] * df[dc_col]).sum() / 100 if dc_col in df.columns else 0.0
 
             c1, c2, c3 = st.columns(3)
@@ -123,35 +124,27 @@ def _main_dashboard_impl():
             with c3: st.metric("Cash Position", f"${cash_val:,.0f}", f"Invested: ${invested_val:,.0f}", delta_color="off")
 
             st.divider()
-            non_cash_df = df[df['Is Cash'] == False].copy()
+            # Treemap (Invested Only)
+            non_cash_df = df[~cash_mask].copy()
             if not non_cash_df.empty:
-                # Treemap requires non-negative values and specific path columns
-                non_cash_df['Market Value'] = pd.to_numeric(non_cash_df['Market Value'], errors='coerce').fillna(0).clip(lower=0)
-                
-                # Check if path columns actually exist before trying to plot
-                path_cols = ['Asset Class', 'Ticker']
-                available_cols = [c for c in path_cols if c in non_cash_df.columns]
-                
-                if len(available_cols) == len(path_cols):
-                    try:
-                        fig_tree = px.treemap(
-                            non_cash_df, 
-                            path=path_cols, 
-                            values='Market Value', 
-                            title='Portfolio Allocation', 
-                            color_discrete_sequence=['#1F4E79', '#2E86AB', '#A8DADC']
-                        )
-                        st.plotly_chart(fig_tree, use_container_width=True)
-                    except Exception as e:
-                        st.warning(f"Could not render allocation treemap: {e}")
-                else:
-                    st.info(f"Treemap unavailable: Missing columns {set(path_cols) - set(available_cols)}")
+                non_cash_df['Market Value'] = non_cash_df['Market Value'].clip(lower=0.01) # Avoid zero/neg for log/plot
+                try:
+                    fig_tree = px.treemap(
+                        non_cash_df, 
+                        path=['Asset Class', 'Ticker'], 
+                        values='Market Value', 
+                        title='Portfolio Allocation',
+                        color_discrete_sequence=px.colors.qualitative.Prism
+                    )
+                    st.plotly_chart(fig_tree, use_container_width=True)
+                except Exception as e:
+                    st.warning(f"Allocation chart error: {e}")
             else:
-                st.info("No invested positions to display in treemap.")
+                st.info("No invested positions to display.")
 
             st.subheader("Current Holdings")
-            search = st.text_input("🔍 Search Ticker or Description")
-            display_df = df if not search else df[df['Ticker'].str.contains(search, case=False) | df['Description'].str.contains(search, case=False)]
+            search = st.text_input("🔍 Search Ticker")
+            display_df = df if not search else df[df['Ticker'].str.contains(search, case=False)]
             
             cols = ['Ticker', 'Description', 'Market Value', 'Weight', 'Cost Basis', 'Unrealized G/L', 'Unrealized G/L %', 'Dividend Yield']
             st.dataframe(
