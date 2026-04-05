@@ -18,6 +18,8 @@ def ensure_display_columns(df: pd.DataFrame) -> pd.DataFrame:
     lookup.update({
         'symbol': 'Ticker',
         'ticker': 'Ticker',
+        'unnamed: 0': 'Ticker',
+        'unnamed_0': 'Ticker',
         'desc': 'Description',
         'market value': 'Market Value',
         'cost': 'Cost Basis',
@@ -32,12 +34,24 @@ def ensure_display_columns(df: pd.DataFrame) -> pd.DataFrame:
             continue
         clean_col = str(col).strip().lower().replace(' ', '_')
         if clean_col in lookup:
-            rename_dict[col] = lookup[clean_col]
+            # If the target already exists in the dataframe, don't rename this one
+            # to avoid duplicate column names which crash plotly/pandas
+            target = lookup[clean_col]
+            if target not in df.columns:
+                rename_dict[col] = target
         elif col.lower() in lookup:
-            rename_dict[col] = lookup[col.lower()]
+            target = lookup[col.lower()]
+            if target not in df.columns:
+                rename_dict[col] = target
             
     if rename_dict:
         df = df.rename(columns=rename_dict)
+        
+    # Extra fallback for any persistent 'Unnamed' column that should be Ticker
+    if 'Ticker' not in df.columns:
+        unnamed_cols = [c for c in df.columns if 'Unnamed' in str(c)]
+        if unnamed_cols:
+            df = df.rename(columns={unnamed_cols[0]: 'Ticker'})
     
     # 2. Guarantee Column Existence & Types
     for col in config.POSITION_COLUMNS:
@@ -59,5 +73,8 @@ def ensure_display_columns(df: pd.DataFrame) -> pd.DataFrame:
                     df[col] = df[col].astype(bool)
             elif col in ['Ticker', 'Asset Class', 'Description']:
                 df[col] = df[col].astype(str).fillna("")
+                
+    # Final cleanup: ensure no duplicate columns exist before returning
+    df = df.loc[:, ~df.columns.duplicated()]
                 
     return df
