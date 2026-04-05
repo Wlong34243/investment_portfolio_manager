@@ -125,13 +125,27 @@ def _main_dashboard_impl():
             st.divider()
             non_cash_df = df[df['Is Cash'] == False].copy()
             if not non_cash_df.empty:
-                # Treemap requires non-negative values
-                non_cash_df['Market Value'] = non_cash_df['Market Value'].clip(lower=0)
-                try:
-                    fig_tree = px.treemap(non_cash_df, path=['Asset Class', 'Ticker'], values='Market Value', title='Portfolio Allocation', color_discrete_sequence=['#1F4E79', '#2E86AB', '#A8DADC'])
-                    st.plotly_chart(fig_tree, use_container_width=True)
-                except Exception as e:
-                    st.warning(f"Could not render allocation treemap: {e}")
+                # Treemap requires non-negative values and specific path columns
+                non_cash_df['Market Value'] = pd.to_numeric(non_cash_df['Market Value'], errors='coerce').fillna(0).clip(lower=0)
+                
+                # Check if path columns actually exist before trying to plot
+                path_cols = ['Asset Class', 'Ticker']
+                available_cols = [c for c in path_cols if c in non_cash_df.columns]
+                
+                if len(available_cols) == len(path_cols):
+                    try:
+                        fig_tree = px.treemap(
+                            non_cash_df, 
+                            path=path_cols, 
+                            values='Market Value', 
+                            title='Portfolio Allocation', 
+                            color_discrete_sequence=['#1F4E79', '#2E86AB', '#A8DADC']
+                        )
+                        st.plotly_chart(fig_tree, use_container_width=True)
+                    except Exception as e:
+                        st.warning(f"Could not render allocation treemap: {e}")
+                else:
+                    st.info(f"Treemap unavailable: Missing columns {set(path_cols) - set(available_cols)}")
             else:
                 st.info("No invested positions to display in treemap.")
 
