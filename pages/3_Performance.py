@@ -70,6 +70,9 @@ if returns:
     ret_df = pd.DataFrame([returns]).T.reset_index()
     ret_df.columns = ["Period", "Return %"]
     st.table(ret_df.style.format({"Return %": "{:+.2f}%"}))
+    st.caption("⚠️ Returns are simple price returns. They include the effect "
+               "of contributions and withdrawals. Time-weighted returns (TWR) "
+               "will be available in a future update.")
 
 # --- Portfolio vs Benchmark ---
 st.subheader("Portfolio vs Benchmarks (Normalized to 100)")
@@ -138,13 +141,15 @@ current_proj_val_no_contrib = total_val
 current_proj_val_with_contrib = total_val
 r = expected_return_pct / 100
 
+monthly_rate = r / 12
+
 for year in range(1, years_to_project + 1):
     # Scenario 1: No contributions
     current_proj_val_no_contrib = current_proj_val_no_contrib * (1 + r)
     
-    # Scenario 2: With contributions
-    # Simple approx: (val * (1+r)) + (monthly * 12)
-    current_proj_val_with_contrib = (current_proj_val_with_contrib * (1 + r)) + (monthly_contrib * 12)
+    # Scenario 2: With contributions (Iterative monthly compounding)
+    for month in range(12):
+        current_proj_val_with_contrib = (current_proj_val_with_contrib * (1 + monthly_rate)) + monthly_contrib
     
     projection_data.append({
         "Year": year,

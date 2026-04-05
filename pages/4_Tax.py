@@ -74,6 +74,47 @@ if not realized_gl_df.empty:
     ytd_gain = ytd_df['Gain Loss $'].sum()
     st.metric(f"Net Realized G/L ({current_year})", f"${ytd_gain:,.2f}", delta_color="inverse" if ytd_gain < 0 else "normal")
     
+    # --- Disposition Effect Analysis ---
+    winners = ytd_df[ytd_df['Gain Loss $'] > 0]
+    losers = ytd_df[ytd_df['Gain Loss $'] < 0]
+    
+    if not winners.empty and not losers.empty:
+        avg_winner_days = winners['Holding Days'].mean()
+        avg_loser_days = losers['Holding Days'].mean()
+        
+        if avg_winner_days < avg_loser_days:
+            st.warning(f"⚡ **Disposition Effect Detected:** Avg holding period for winners "
+                       f"({avg_winner_days:.0f} days) is shorter than losers "
+                       f"({avg_loser_days:.0f} days). Consider letting winners run longer.")
+
+    # --- Wash Sale Activity Section ---
+    # Look for 'Wash Sale' column (case insensitive match via Column Guard if needed, 
+    # but here we use the exact SCHEMA header 'Wash Sale')
+    wash_col = 'Wash Sale' if 'Wash Sale' in realized_gl_df.columns else 'wash_sale'
+    if wash_col in realized_gl_df.columns:
+        # Handle string "TRUE", boolean True, or "YES"
+        wash_mask = realized_gl_df[wash_col].astype(str).str.upper().isin(['TRUE', 'YES', '1'])
+        wash_df = realized_gl_df[wash_mask].copy()
+        
+        if not wash_df.empty:
+            st.subheader("🚿 Wash Sale Activity (YTD)")
+            total_disallowed = wash_df['Disallowed Loss'].sum()
+            st.metric("Total Disallowed Losses", f"${abs(total_disallowed):,.2f}")
+            st.caption("These losses are not gone — they're added to your replacement shares' cost basis.")
+            
+            # Group by Ticker
+            wash_summary = wash_df.groupby('Ticker').agg({
+                'Disallowed Loss': 'sum',
+                'Quantity': 'sum',
+                'Gain Loss $': 'sum'
+            }).sort_values('Disallowed Loss')
+            
+            st.table(wash_summary.style.format({
+                'Disallowed Loss': '${:,.2f}',
+                'Gain Loss $': '${:,.2f}',
+                'Quantity': '{:,.2f}'
+            }))
+
     if not ytd_df.empty:
         with st.expander(f"View {current_year} Realized Lots"):
             st.table(ytd_df.sort_values(by='Closed Date', ascending=False).head(20))
