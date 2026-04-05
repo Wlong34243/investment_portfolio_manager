@@ -3,12 +3,27 @@ import logging
 import streamlit as st
 import config
 import yfinance as yf
-from utils.gemini_client import ask_gemini_json, SAFETY_PREAMBLE
+from pydantic import BaseModel
+from typing import List
+from utils.gemini_client import ask_gemini, SAFETY_PREAMBLE
 
 try:
     from fredapi import Fred
 except ImportError:
     Fred = None
+
+class SectorRotation(BaseModel):
+    from_sector: str
+    to_sector: str
+    rationale: str
+    specific_holdings_affected: List[str]
+
+class MacroStrategy(BaseModel):
+    macro_outlook: str
+    risk_level: str
+    sector_rotations: List[SectorRotation]
+    defensive_moves: List[str]
+    opportunity_plays: List[str]
 
 def get_fred_client():
     if not Fred:
@@ -34,11 +49,9 @@ def get_macro_snapshot() -> dict:
     
     if fred:
         try:
-            # CPI: series_id='CPIAUCSL'
             cpi_series = fred.get_series('CPIAUCSL')
             if not cpi_series.empty:
                 data['cpi'] = cpi_series.iloc[-1]
-                # Trend direction (last 3 months)
                 data['cpi_trend'] = "Rising" if cpi_series.iloc[-1] > cpi_series.iloc[-4] else "Falling"
                 
             data['fed_rate'] = fred.get_series('FEDFUNDS').iloc[-1]
@@ -47,7 +60,6 @@ def get_macro_snapshot() -> dict:
         except Exception as e:
             logging.error(f"FRED API error: {e}")
             
-    # VIX from yfinance
     try:
         vix = yf.Ticker('^VIX').fast_info['lastPrice']
         data['vix'] = vix
@@ -105,18 +117,13 @@ def generate_macro_strategy(triggers: list[dict], macro_data: dict, holdings_df:
     {SAFETY_PREAMBLE}
     You are a macro-economic investment strategist.
     Provide portfolio positioning adjustments based on current conditions.
-    Respond ONLY with JSON:
-    {{
-        "macro_outlook": str,
-        "risk_level": str,
-        "sector_rotations": [{{ "from_sector": str, "to_sector": str, "rationale": str, "specific_holdings_affected": [str] }}],
-        "defensive_moves": [str],
-        "opportunity_plays": [str]
-    }}
     """
     
     try:
-        return ask_gemini_json(prompt, system_instruction=system_instruction)
+        res = ask_gemini(prompt, system_instruction=system_instruction, response_schema=MacroStrategy)
+        if res:
+            return res.model_dump()
+        return {"error": "AI failed to generate macro strategy"}
     except Exception as e:
         logging.error(f"Macro strategy error: {e}")
         return {"error": str(e)}

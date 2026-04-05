@@ -2,18 +2,31 @@ import pandas as pd
 import logging
 import streamlit as st
 import config
-from utils.gemini_client import ask_gemini_json, SAFETY_PREAMBLE
+from pydantic import BaseModel
+from typing import List
+from utils.gemini_client import ask_gemini, SAFETY_PREAMBLE
 from utils.sheet_readers import get_gspread_client
 
 # RE Dashboard Sheet ID from Prompt
 RE_DASHBOARD_ID = "1DXuY1iBo2GqZCCSZ7OrUa4iaunb5s8Kf1Rms8Z237rQ"
 
+class FundingSource(BaseModel):
+    source: str
+    amount: float
+    tax_impact: str
+    notes: str
+
+class GrandStrategy(BaseModel):
+    analysis: str
+    recommendation: str
+    funding_sources: List[FundingSource]
+    total_available: float
+    shortfall: float
+
 def _parse_currency(val: str) -> float:
     if not val:
         return 0.0
-    # Strip $, commas, and whitespace
     clean_val = val.replace('$', '').replace(',', '').strip()
-    # Handle parens for negative numbers
     if clean_val.startswith('(') and clean_val.endswith(')'):
         clean_val = '-' + clean_val[1:-1]
     try:
@@ -25,7 +38,6 @@ def _parse_currency(val: str) -> float:
 def read_re_portfolio_summary() -> dict:
     """
     Read specific cells from RE Dashboard Sheet.
-    Pulls Annualized NOI, Total Debt, Debt Service, and Cap Rate.
     """
     try:
         client = get_gspread_client()
@@ -35,22 +47,18 @@ def read_re_portfolio_summary() -> dict:
         ws_debt = spreadsheet.worksheet('Debt_Schedule')
         ws_assump = spreadsheet.worksheet('Assumptions')
         
-        # Mapping based on research of the sheet structure
         raw_cap_rate = ws_assump.acell('E16').value or "0.065"
-        
-        # Robust percentage parsing: handles "6.5", "6.5%", or "0.065"
         clean_cap = str(raw_cap_rate).replace('%', '').strip()
         try:
             val = float(clean_cap)
-            # If the user entered "6.5", it's 0.065. If they entered "0.065", it's 0.065.
             cap_rate = val / 100 if val > 0.2 else val 
         except ValueError:
             cap_rate = 0.065
 
         re_data = {
-            "noi": _parse_currency(ws_dash.acell('B23').value),          # Annualized NOI
-            "debt": _parse_currency(ws_debt.acell('D6').value),          # Combined Current Balance
-            "debt_service": _parse_currency(ws_debt.acell('B20').value) * 12, # Annualized Total Monthly Debt Service
+            "noi": _parse_currency(ws_dash.acell('B23').value),
+            "debt": _parse_currency(ws_debt.acell('D6').value),
+            "debt_service": _parse_currency(ws_debt.acell('B20').value) * 12,
             "cap_rate": cap_rate,
             "reserve": 50000.0, 
             "property_value": 1500000.0 
@@ -63,7 +71,6 @@ def read_re_portfolio_summary() -> dict:
 def calculate_net_worth(holdings_df: pd.DataFrame, re_data: dict) -> dict:
     """
     Liquid | RE Equity | Debt | Reserve.
-    Total Net Worth = (Investment Portfolio) + (RE NOI / Cap Rate) + (RE Reserve Account) - (Debt)
     """
     try:
         liquid_assets = float(holdings_df['Market Value'].sum())
@@ -76,7 +83,6 @@ def calculate_net_worth(holdings_df: pd.DataFrame, re_data: dict) -> dict:
             "total": liquid_assets
         }
         
-    # Net Worth calculation based on prompt formula
     noi = float(re_data.get('noi', 0.0) or 0.0)
     prop_val = float(re_data.get('property_value', 0.0) or 0.0)
     debt = float(re_data.get('debt', 0.0) or 0.0)
@@ -85,14 +91,11 @@ def calculate_net_worth(holdings_df: pd.DataFrame, re_data: dict) -> dict:
 
     re_valuation = noi / cap_rate if noi > 0 else prop_val
     
-    # SANITY CHECK: If valuation is > $50M, something is wrong with the inputs (e.g. cap rate units)
-    # Fallback to prop_val or 0 to prevent garbage net worth numbers
     if re_valuation > 50000000:
         logging.warning(f"Astronomical RE valuation detected (${re_valuation:,.0f}). Falling back to manual property value.")
         re_valuation = prop_val
 
     re_equity = re_valuation - debt
-    
     total_nw = liquid_assets + re_equity + reserve
     
     return {
@@ -131,10 +134,13 @@ def answer_cross_portfolio_question(question: str, context: str, holdings_df: pd
     Identify tax impacts if selling stock.
     """
     
-    system_instruction = f"{SAFETY_PREAMBLE}\n\nYou are a grand strategist for a high-net-worth investor. Optimize across liquid and real estate assets. Respond ONLY with JSON: {{'analysis': str, 'recommendation': str, 'funding_sources': [{{'source': str, 'amount': float, 'tax_impact': str, 'notes': str}}], 'total_available': float, 'shortfall': float}}"
+    system_instruction = f"{SAFETY_PREAMBLE}\n\nYou are a grand strategist for a high-net-worth investor. Optimize across liquid and real estate assets."
     
     try:
-        return ask_gemini_json(prompt, system_instruction=system_instruction)
+        res = ask_gemini(prompt, system_instruction=system_instruction, response_schema=GrandStrategy)
+        if res:
+            return res.model_dump()
+        return {"error": "AI failed to generate grand strategy"}
     except Exception as e:
         logging.error(f"Grand strategist error: {e}")
         return {"error": str(e)}

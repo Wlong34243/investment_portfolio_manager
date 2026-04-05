@@ -1,15 +1,19 @@
 import pandas as pd
 import logging
 import time
-from utils.gemini_client import ask_gemini_json, SAFETY_PREAMBLE
+from pydantic import BaseModel
+from utils.gemini_client import ask_gemini, SAFETY_PREAMBLE
 from utils.finnhub_client import get_company_news
+
+class MovementExplanation(BaseModel):
+    explanation: str
+    catalyst_type: str
+    confidence: str
 
 def detect_significant_moves(holdings_df: pd.DataFrame, threshold_pct: float = 3.0) -> list[dict]:
     """
     Scan for positions where |Daily Change %| >= threshold.
     """
-    # Assuming holdings_df has 'Price' and we might need to fetch 'Daily Change %'
-    # For now, let's assume enrichment adds 'Daily Change %'
     if 'Daily Change %' not in holdings_df.columns:
         return []
         
@@ -48,16 +52,13 @@ def generate_movement_explanation(ticker: str, change_pct: float) -> dict:
     system_instruction = f"""
     {SAFETY_PREAMBLE}
     You are a sharp, concise financial analyst.
-    Respond ONLY with JSON:
-    {{
-        "explanation": str,
-        "catalyst_type": str,
-        "confidence": str
-    }}
     """
     
     try:
-        return ask_gemini_json(prompt, system_instruction=system_instruction)
+        res = ask_gemini(prompt, system_instruction=system_instruction, response_schema=MovementExplanation)
+        if res:
+            return res.model_dump()
+        return {"error": "AI failed to generate explanation"}
     except Exception as e:
         logging.error(f"Narrator error for {ticker}: {e}")
         return {"error": str(e)}

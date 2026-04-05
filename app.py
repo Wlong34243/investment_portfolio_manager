@@ -10,7 +10,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import time
 import traceback
-from datetime import date
+from datetime import date, datetime
 import config
 from utils.csv_parser import parse_schwab_csv, inject_cash_manual
 from utils.enrichment import enrich_positions
@@ -90,7 +90,7 @@ def _main_dashboard_impl():
                             
                             # Reconciliation Logic
                             if not old_df.empty:
-                                old_tickers = set(old_df['Ticker'].unique())
+                                old_tickers = set(old_df['Ticker'].unique()) if 'Ticker' in old_df.columns else set()
                                 new_tickers = set(df_norm['ticker'].unique())
                                 added = new_tickers - old_tickers
                                 removed = old_tickers - new_tickers
@@ -99,6 +99,7 @@ def _main_dashboard_impl():
                                         if added: st.success(f"**New:** {', '.join(sorted(added))}")
                                         if removed: st.warning(f"**Removed:** {', '.join(sorted(removed))}")
                             
+                            df_display = ensure_display_columns(df_norm)
                             st.session_state["holdings_df"] = df_display
                             status.update(label="Positions Complete", state="complete")
 
@@ -175,12 +176,18 @@ def _main_dashboard_impl():
         if config.DRY_RUN:
             st.error("🔴 DRY RUN MODE — No writes to Sheets")
 
+        # Data Quality Report Expander
         if st.session_state.get("data_warnings"):
             with st.sidebar.expander("📊 Data Quality Report", expanded=True):
                 for warning in st.session_state["data_warnings"]: st.warning(warning)
                 if st.button("Clear Report"):
                     st.session_state["data_warnings"] = []
                     st.rerun()
+
+        st.divider()
+        if st.button("🔄 Sync with Schwab API", width='stretch', help="Placeholder for real-time API integration"):
+            st.session_state.pop('holdings_df', None)
+            st.rerun()
 
     # --- Main Tabs ---
     tabs = st.tabs(["📊 Holdings", "💰 Income", "⚠️ Risk", "🔔 Signals"])
@@ -282,6 +289,7 @@ def _main_dashboard_impl():
 
 def main_dashboard():
     try:
+        import traceback
         _main_dashboard_impl()
     except Exception as e:
         st.error("Dashboard failed to load.")

@@ -92,20 +92,13 @@ def enrich_positions(df: pd.DataFrame) -> pd.DataFrame:
                 info = t.info
                 
                 # Metadata
-                price = t.fast_info.get("last_price")
-                if price is None: price = info.get("regularMarketPrice")
-                
-                change_pct = info.get("regularMarketChangePercent", 0.0)
-                
                 # Fetch basic beta from info, fallback to 1.0
                 beta = info.get("beta", 1.0)
                 
                 enriched_data[ticker] = {
-                    'price': price,
                     'dividend_yield': info.get("dividendYield", 0.0) if info.get("dividendYield") else 0.0,
                     'sector': info.get("sector"),
-                    'beta': beta,
-                    'daily_change_pct': change_pct
+                    'beta': beta
                 }
                 
                 # Apply Ticker Overrides from config
@@ -134,8 +127,6 @@ def enrich_positions(df: pd.DataFrame) -> pd.DataFrame:
         if info is None: continue
         idx = df[df[ticker_col] == ticker].index
         if not idx.empty:
-            if info['price'] is not None:
-                df.loc[idx, price_col_target] = info['price']
             if info['dividend_yield'] is not None:
                 df.loc[idx, yield_col_target] = info['dividend_yield']
             if info['sector'] is not None:

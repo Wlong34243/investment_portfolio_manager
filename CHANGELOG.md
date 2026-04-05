@@ -2,19 +2,15 @@
 
 Every entry must include a **Status** line describing what is currently safe to run.
 
-## [2026-04-05] — Performance Accuracy & Behavioral Insights
+## [2026-04-05] — Performance Accuracy & Data Recovery
 
-### added
-- **Wash Sale Impact:** New "Wash Sale Activity" section in Tax Hub surfacing disallowed losses by ticker.
-- **Behavioral Analytics:** Added "Disposition Effect" detection to flag if winners are being sold faster than losers.
-- **Import Reconciliation:** Auto-compare new CSV uploads against session state to show added/removed tickers immediately.
-- **Import Audit Trail:** Sidebar history tracking for the last 5 ingestion events in the current session.
+### fix: Performance Graphs & Snapshot Recovery
+**What changed:**
+- **Resolved "0.0" Date Bug:** Fixed a case-sensitivity issue in `utils/sheet_readers.py` that was causing the `Date` column in snapshots to be incorrectly converted to a float (0.0), which broke all performance graphs.
+- **Snapshot Hardening:** Updated `pipeline.py` to ensure dates and fingerprints are strictly cast to strings before writing to Google Sheets, preventing data corruption.
+- **Data Recovery:** Surgically cleaned the corrupted `Daily_Snapshots` sheet and successfully backfilled historical data points from the `Holdings_History` tab.
 
-### fixed
-- **Contribution Modeling:** Upgraded growth projections from annual lump-sum to monthly compounding for significantly better accuracy.
-- **Return Disclaimer:** Added methodology clarification for simple price returns vs TWR to manage planning expectations.
+**Status: Production ready. Performance graphs (Portfolio vs Benchmark and Value History) are now fully operational. Data integrity hardened.**
 
-**Status: Production ready. Projections and tax analytics are more precise. UI provides better feedback on data changes.**
-
-## [2026-04-05] — Production Hardening & UI Refactor
+## [2026-04-05] — Stabilization & Performance
 ...

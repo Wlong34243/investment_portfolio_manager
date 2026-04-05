@@ -67,6 +67,7 @@ with col1:
                 st.write(f"**Market Cap:** ${profile.get('market_cap', 0):,.0f}")
                 with st.expander("Business Description"):
                     st.write(profile.get('description'))
+                st.caption(f"Profile refreshed at: {datetime.now().strftime('%H:%M:%S')}")
             else:
                 st.write("No profile found.")
         except Exception as e:
@@ -83,6 +84,7 @@ with col1:
                     with st.expander(f"{item['headline']} ({item['datetime']})"):
                         st.write(item['summary'])
                         st.write(f"[Read more]({item['url']})")
+                st.caption(f"News refreshed at: {datetime.now().strftime('%H:%M:%S')}")
             else:
                 st.write("No recent news found.")
         except Exception as e:
@@ -97,6 +99,7 @@ with col2:
             if transcript:
                 st.write(f"Length: {len(transcript)} characters")
                 st.text_area("Transcript Snippet", transcript, height=500)
+                st.caption(f"Transcript refreshed at: {datetime.now().strftime('%H:%M:%S')}")
             else:
                 st.write("No transcript found.")
         except Exception as e:
@@ -137,6 +140,7 @@ with col_a:
         st.divider()
         if vs['is_below_average']:
             st.success(f"**Signal:** {selected_ticker} is trading below its 5-year average.")
+            st.caption(f"Valuation refreshed at: {datetime.now().strftime('%H:%M:%S')}")
             deploy_amt = st.number_input("Deployment Amount ($)", value=5000.0, step=1000.0)
             if st.button("Generate Accumulation Plan"):
                 plan = generate_accumulation_plan(selected_ticker, deploy_amt, vs, df)
@@ -164,6 +168,7 @@ with col_b:
                                 st.write(f"**Yield:** {strat['annualized_yield_pct']:.1f}% annualized")
                                 st.write(f"**Assignment Risk:** {strat['assignment_probability']}")
                                 st.info(strat['recommendation'])
+                        st.caption(f"Options refreshed at: {datetime.now().strftime('%H:%M:%S')}")
                     else:
                         st.error(proposal['error'])
                 else:
@@ -213,6 +218,7 @@ if st.button("🔍 Screen Stocks for this Thesis", width='stretch'):
                                         st.write(f"**Rationale:** {pick['rationale']}")
                                         st.write(f"**Suggested Weight:** {pick['suggested_weight']}")
                                 st.info(ranked['portfolio_overlap_note'])
+                                st.caption(f"Screening refreshed at: {datetime.now().strftime('%H:%M:%S')}")
                             else:
                                 st.error(ranked['error'])
                     else:
@@ -260,3 +266,4 @@ if f"analysis_{selected_ticker}" in st.session_state:
         st.error("### 🐻 Bear Risks")
         for point in res.get('bear_risks', []):
             st.write(f"- {point}")
+    st.caption(f"Deep Analysis refreshed at: {datetime.now().strftime('%H:%M:%S')}")

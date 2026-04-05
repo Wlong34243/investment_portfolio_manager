@@ -59,6 +59,8 @@ for i, sug in enumerate(suggestions):
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
+        if message["role"] == "assistant":
+            st.caption(f"Refreshed at: {datetime.now().strftime('%H:%M:%S')}")
         if "intent" in message:
             st.caption(f"Intent: {message['intent']}")
 

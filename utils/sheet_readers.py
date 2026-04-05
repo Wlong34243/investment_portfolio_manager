@@ -79,8 +79,14 @@ def read_gsheet_robust(ws: gspread.Worksheet) -> pd.DataFrame:
     df = pd.DataFrame(data, columns=clean_headers)
     
     # Cleaning
+    skip_cols = [
+        'ticker', 'symbol', 'description', 'sector', 'industry', 
+        'asset class', 'asset strategy', 'import date', 'closed date', 
+        'opened date', 'acquisition date', 'date', 'fingerprint'
+    ]
+    
     for col in df.columns:
-        if col.lower() in ['ticker', 'symbol', 'description', 'sector', 'industry', 'asset class', 'asset strategy', 'import date', 'closed date', 'opened date', 'acquisition date']:
+        if col.lower() in skip_cols:
             continue
         
         if df[col].dtype == object:
@@ -147,8 +153,7 @@ def get_daily_snapshots() -> pd.DataFrame:
         client = get_gspread_client()
         spreadsheet = client.open_by_key(config.PORTFOLIO_SHEET_ID)
         ws = spreadsheet.worksheet(config.TAB_DAILY_SNAPSHOTS)
-        df = read_gsheet_robust(ws)
-        return df
+        return read_gsheet_robust(ws)
     except Exception:
         return pd.DataFrame()
 

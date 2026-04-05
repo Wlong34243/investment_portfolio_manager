@@ -183,7 +183,7 @@ Authoritative list of deduplication keys used across the system to prevent dupli
 
 | Tab | Format | Logic / Purpose |
 |-----|--------|-----------------|
-| `Holdings_History` | `import_date\|ticker\|quantity\|market_value` | Unique position snapshot per import. |
+| `Holdings_History` | `import_date\|ticker\|quantity` | Unique position snapshot per import. |
 | `Daily_Snapshots` | `import_date\|pos_count\|total_value` | Prevents duplicate snapshots if re-running same CSV with same cash. |
 | `Transactions` | `date\|ticker\|action\|net_amount` | Prevents duplicate trade entries on overlapping CSV uploads. |
 | `Realized_GL` | `closed_dt\|ticker\|opened_dt\|qty\|proceeds\|cost` | Exact lot match for tax ledger. |

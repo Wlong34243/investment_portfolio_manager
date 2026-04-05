@@ -2,19 +2,33 @@ import pandas as pd
 import logging
 import streamlit as st
 import config
-from utils.gemini_client import ask_gemini_json, SAFETY_PREAMBLE
+from pydantic import BaseModel
+from typing import List
+from utils.gemini_client import ask_gemini, SAFETY_PREAMBLE
 from utils.fmp_client import get_historical_pe, get_key_metrics, get_company_profile
 from utils.finnhub_client import get_basic_financials
 import yfinance as yf
+
+class ValuationReport(BaseModel):
+    narrative: str
+    verdict: str
+    signals: str
+    metrics_summary: str
+
+class AccumulationPlan(BaseModel):
+    analysis: str
+    shares_to_buy: str
+    new_weight_pct: float
+    entry_rationale: str
+    risk_factors: List[str]
+    trigger_condition: str
 
 def get_valuation_snapshot(ticker: str) -> dict:
     """
     Returns current_pe, avg_5yr_pe, pe_discount_pct, is_below_average,
     plus rich metadata for narrative generation.
-    Tries FMP first, falls back to yfinance for current metrics if FMP 402s.
     """
     try:
-        # 1. Try FMP for historical and current
         metrics = get_key_metrics(ticker)
         hist_pe = get_historical_pe(ticker, years=5)
         profile = get_company_profile(ticker)
@@ -22,14 +36,11 @@ def get_valuation_snapshot(ticker: str) -> dict:
         
         current_pe = metrics.get('pe_ratio')
         
-        # 2. FALLBACK: If FMP PE is missing (likely 402/limit), try yfinance
         if current_pe is None or current_pe == 0:
             try:
                 y_ticker = yf.Ticker(ticker)
                 y_info = y_ticker.info
                 current_pe = y_info.get('trailingPE') or y_info.get('forwardPE')
-                
-                # If we still have no profile/market cap, fill from yfinance
                 if not profile.get('market_cap'):
                     profile['market_cap'] = y_info.get('marketCap', 0)
                 if not profile.get('sector'):
@@ -38,12 +49,11 @@ def get_valuation_snapshot(ticker: str) -> dict:
                 logging.warning(f"yfinance fallback failed for {ticker}: {ye}")
 
         if current_pe is None:
-            return {"error": f"No valuation data available for {ticker} (FMP restricted & yfinance empty)"}
+            return {"error": f"No valuation data available for {ticker}"}
             
         avg_pe = hist_pe['pe_ratio'].mean() if not hist_pe.empty else current_pe
         pe_discount = ((avg_pe - current_pe) / avg_pe) * 100 if avg_pe else 0
         
-        # Robust metrics extraction helper
         def _to_float(v, default=0.0):
             try:
                 return float(v) if v is not None else default
@@ -103,10 +113,13 @@ def generate_rich_valuation_report(ticker: str, val_snap: dict) -> dict:
     - 52W Range: [Low] to [High]
     """
     
-    system_instruction = f"{SAFETY_PREAMBLE}\n\nYou are a senior equity valuation analyst. Provide a professional, high-signal valuation report mirroring the style of Perplexity Finance. Respond ONLY with JSON: {{'narrative': str, 'verdict': str, 'signals': str, 'metrics_summary': str}}"
+    system_instruction = f"{SAFETY_PREAMBLE}\n\nYou are a senior equity valuation analyst. Provide a professional, high-signal valuation report mirroring the style of Perplexity Finance."
     
     try:
-        return ask_gemini_json(prompt, system_instruction=system_instruction)
+        res = ask_gemini(prompt, system_instruction=system_instruction, response_schema=ValuationReport)
+        if res:
+            return res.model_dump()
+        return {"error": "AI failed to generate valuation report"}
     except Exception as e:
         return {"error": str(e)}
 
@@ -115,7 +128,6 @@ def scan_valuation_opportunities(holdings_df: pd.DataFrame, watchlist: list = No
     Scan top holdings or watchlist for PE discounts.
     """
     results = []
-    # Take top 10 positions for scanning to be efficient
     tickers = holdings_df.nlargest(10, 'Weight')['Ticker'].tolist()
     if watchlist:
         tickers.extend([t for t in watchlist if t not in tickers])
@@ -145,10 +157,13 @@ def generate_accumulation_plan(ticker: str, deploy_amount: float, valuation_data
     Consider risk factors and provide a trigger condition.
     """
     
-    system_instruction = f"{SAFETY_PREAMBLE}\n\nYou are a valuation and accumulation strategist. Help the investor build positions at attractive prices. Respond ONLY with JSON: {{'analysis': str, 'shares_to_buy': str, 'new_weight_pct': float, 'entry_rationale': str, 'risk_factors': [str], 'trigger_condition': str}}"
+    system_instruction = f"{SAFETY_PREAMBLE}\n\nYou are a valuation and accumulation strategist. Help the investor build positions at attractive prices."
     
     try:
-        return ask_gemini_json(prompt, system_instruction=system_instruction)
+        res = ask_gemini(prompt, system_instruction=system_instruction, response_schema=AccumulationPlan)
+        if res:
+            return res.model_dump()
+        return {"error": "AI failed to generate accumulation plan"}
     except Exception as e:
         logging.error(f"Accumulation plan error for {ticker}: {e}")
         return {"error": str(e)}

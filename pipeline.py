@@ -173,18 +173,20 @@ def append_daily_snapshot(ws, df: pd.DataFrame, existing_fps: set = None) -> boo
     Build snapshot row and check fingerprint (date|pos_count|total_value).
     Uses col_values for efficient duplicate check.
     """
-    import_date = df['Import Date'].iloc[0]
-    total_value = df['Market Value'].sum()
-    total_cost = df['Cost Basis'].sum()
+    # Ensure we have a string date
+    import_date = str(df['Import Date'].iloc[0])
+    
+    total_value = float(df['Market Value'].sum())
+    total_cost = float(df['Cost Basis'].sum())
     unrealized_gl = total_value - total_cost
     
     cash_df = df[df['Is Cash'] == True]
-    cash_value = cash_df['Market Value'].sum()
+    cash_value = float(cash_df['Market Value'].sum())
     invested_value = total_value - cash_value
-    position_count = len(df)
+    position_count = int(len(df))
     
     # Blended yield
-    total_income = df['Est Annual Income'].sum() if 'Est Annual Income' in df.columns else 0.0
+    total_income = float(df['Est Annual Income'].sum() if 'Est Annual Income' in df.columns else 0.0)
     blended_yield = (total_income / total_value * 100) if total_value > 0 else 0.0
     
     # Build fingerprint = f"{import_date}|{position_count}|{round(total_value, 2)}"
@@ -192,8 +194,11 @@ def append_daily_snapshot(ws, df: pd.DataFrame, existing_fps: set = None) -> boo
     
     # Optimized Check: Read only the Fingerprint column (last column)
     if existing_fps is None:
-        fp_col_idx = len(config.SNAPSHOT_COLUMNS)
-        existing_fps = set(ws.col_values(fp_col_idx)[1:]) # Skip header
+        try:
+            fp_col_idx = len(config.SNAPSHOT_COLUMNS)
+            existing_fps = set(ws.col_values(fp_col_idx)[1:]) # Skip header
+        except:
+            existing_fps = set()
 
     if fp in existing_fps:
         print(f"Daily_Snapshots: Duplicate found for {import_date}. Skipping.")
@@ -201,22 +206,26 @@ def append_daily_snapshot(ws, df: pd.DataFrame, existing_fps: set = None) -> boo
         
     snapshot_row = [
         import_date,
-        float(total_value),
-        float(total_cost),
-        float(unrealized_gl),
-        float(cash_value),
-        float(invested_value),
-        int(position_count),
-        float(blended_yield),
+        total_value,
+        total_cost,
+        unrealized_gl,
+        cash_value,
+        invested_value,
+        position_count,
+        blended_yield,
         datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         fp
     ]
     
-    # Cast to native python types
-    snapshot_row = [float(x) if isinstance(x, (np.float64, np.float32)) else x for x in snapshot_row]
-    snapshot_row = [int(x) if isinstance(x, (np.int64, np.int32)) else x for x in snapshot_row]
+    # Final safety cast to ensure no numpy types reach gspread
+    clean_row = []
+    for x in snapshot_row:
+        if isinstance(x, (np.integer, np.floating)):
+            clean_row.append(x.item())
+        else:
+            clean_row.append(x)
 
-    ws.append_rows([snapshot_row], value_input_option='USER_ENTERED')
+    ws.append_rows([clean_row], value_input_option='USER_ENTERED')
     time.sleep(1.0)
     print(f"Daily_Snapshots: Appended snapshot for {import_date}.")
     return True
