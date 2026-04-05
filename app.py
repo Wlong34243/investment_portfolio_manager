@@ -2,6 +2,9 @@ import streamlit as st
 
 st.set_page_config(layout="wide", page_title="Investment Manager", page_icon="📈")
 
+from utils.auth import require_auth
+require_auth()
+
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -23,43 +26,10 @@ from utils.validators import (
     validate_percentage_range, validate_no_negative_market_values, 
     validate_duplicate_tickers, validate_total_sanity
 )
+from utils.column_guard import ensure_display_columns
 
 # --- Page Setup & Navigation (2026 Style) ---
 def main_dashboard():
-    # --- Password Gate ---
-    def check_password():
-        """Returns True if the user had the correct password."""
-        if "app_password" not in st.secrets:
-            return True # Local dev mode
-
-        def password_entered():
-            """Checks whether a password entered by the user is correct."""
-            if st.session_state["password"] == st.secrets["app_password"]:
-                st.session_state["password_correct"] = True
-                del st.session_state["password"]  # don't store password
-            else:
-                st.session_state["password_correct"] = False
-
-        if "password_correct" not in st.session_state:
-            # First run, show input for password.
-            st.text_input(
-                "Password", type="password", on_change=password_entered, key="password"
-            )
-            return False
-        elif not st.session_state["password_correct"]:
-            # Password not correct, show input + error.
-            st.text_input(
-                "Password", type="password", on_change=password_entered, key="password"
-            )
-            st.error("😕 Password incorrect")
-            return False
-        else:
-            # Password correct.
-            return True
-
-    if not check_password():
-        st.stop()
-
     # --- Load Data ---
     if "holdings_df" not in st.session_state:
         st.session_state["holdings_df"] = get_holdings_current()
@@ -119,7 +89,9 @@ def main_dashboard():
                         write_to_sheets(df_norm, cash_amount, dry_run=config.DRY_RUN)
                         
                         # Rename for UI consistency (Camel Case headers)
-                        st.session_state["holdings_df"] = df_norm.rename(columns=config.POSITION_COL_MAP)
+                        # Self-healing column guard
+                        df_display = ensure_display_columns(df_norm)
+                        st.session_state["holdings_df"] = df_display
                         status.update(label="Positions Complete", state="complete")
 
                         # Force a cache clear for the reader so it sees the new data if re-read
@@ -176,7 +148,7 @@ def main_dashboard():
             st.info(f"Last Import: {last_import}\n\nPositions: {len(df)}")
 
     # --- Main Tabs ---
-    tabs = st.tabs(["📊 Holdings", "💰 Income", "⚠️ Risk"])
+    tabs = st.tabs(["📊 Holdings", "💰 Income", "⚠️ Risk", "🔔 Signals"])
 
     with tabs[0]:
         if st.session_state["holdings_df"].empty:
@@ -184,11 +156,102 @@ def main_dashboard():
         else:
             df = st.session_state["holdings_df"]
             
+            # --- Calculations ---
+            total_val = df['Market Value'].sum()
+            total_cost = df['Cost Basis'].sum()
+            unrealized_gl = total_val - total_cost
+            unrealized_gl_pct = (unrealized_gl / total_cost * 100) if total_cost > 0 else 0.0
+            
+            cash_val = df[df['Is Cash'] == True]['Market Value'].sum()
+            invested_val = total_val - cash_val
+            pos_count = len(df)
+            
+            # Weighted Daily Change
+            # Use Column Guard safe names
+            dc_col = 'Daily Change %' if 'Daily Change %' in df.columns else 'daily_change_pct'
+            if dc_col in df.columns:
+                daily_change = (df['Weight'] * df[dc_col]).sum() / 100
+            else:
+                daily_change = 0.0
+
+            # --- Redesigned KPI Row ---
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                st.metric("Portfolio Value", f"${total_val:,.0f}", f"{daily_change:+.2f}%" if daily_change != 0 else None)
+            with c2:
+                st.metric("Unrealized G/L", f"${unrealized_gl:,.0f}", f"{unrealized_gl_pct:+.2f}%")
+            with c3:
+                st.metric("Cash Position", f"${cash_val:,.0f}", f"Invested: ${invested_val:,.0f}", delta_color="off")
+
+            st.divider()
+
+            # --- Visual Allocation (Treemap) ---
+            non_cash_df = df[df['Is Cash'] == False]
+            fig_tree = px.treemap(
+                non_cash_df, 
+                path=['Asset Class', 'Ticker'], 
+                values='Market Value',
+                title='Portfolio Allocation by Sector & Ticker',
+                color_discrete_sequence=['#1F4E79', '#2E86AB', '#A8DADC']
+            )
+            st.plotly_chart(fig_tree, use_container_width=True)
+
+            with st.expander("📊 Detailed Allocation (Pie Charts)"):
+                pc1, pc2 = st.columns(2)
+                with pc1:
+                    fig_class = px.pie(non_cash_df, values='Market Value', names='Asset Class', title='By Asset Class')
+                    st.plotly_chart(fig_class, use_container_width=True)
+                with pc2:
+                    fig_strat = px.pie(non_cash_df, values='Market Value', names='Asset Strategy', title='By Strategy')
+                    st.plotly_chart(fig_strat, use_container_width=True)
+
+            st.divider()
+
+            # --- Holdings Dataframe ---
+            st.subheader("Current Holdings")
+            
+            # Search filter
+            search = st.text_input("🔍 Search Ticker or Description", placeholder="e.g. AAPL or Apple")
+            if search:
+                display_df = df[
+                    df['Ticker'].str.contains(search, case=False) | 
+                    df['Description'].str.contains(search, case=False)
+                ]
+            else:
+                display_df = df
+                
+            # Filtered columns for display
+            cols = ['Ticker', 'Description', 'Market Value', 'Weight', 'Cost Basis', 'Unrealized G/L', 'Unrealized G/L %', 'Dividend Yield']
+            
+            st.dataframe(
+                display_df[cols],
+                column_config={
+                    "Market Value": st.column_config.NumberColumn(format="$%,.2f"),
+                    "Cost Basis": st.column_config.NumberColumn(format="$%,.2f"),
+                    "Weight": st.column_config.ProgressColumn(format="%.2f%%", min_value=0, max_value=15),
+                    "Unrealized G/L": st.column_config.NumberColumn(format="$%,.2f"),
+                    "Unrealized G/L %": st.column_config.NumberColumn(format="%.2f%%"),
+                    "Dividend Yield": st.column_config.NumberColumn(format="%.2f%%"),
+                },
+                hide_index=True,
+                use_container_width=True
+            )
+
+    with tabs[1]:
+...
+    with tabs[2]:
+...
+    with tabs[3]:
+        if st.session_state["holdings_df"].empty:
+            st.info("Upload data to see AI signals.")
+        else:
+            df = st.session_state["holdings_df"]
+            
             # --- Daily Movers (Agent 11) ---
             from utils.agents.price_narrator import detect_significant_moves, batch_analyze_daily_moves
             movers = detect_significant_moves(df)
             if movers:
-                with st.expander(f"🚀 Daily Movers ({len(movers)} active)", expanded=False):
+                with st.expander(f"🚀 Daily Movers ({len(movers)} active)", expanded=True):
                     if st.button("🎙️ Explain Movements with AI"):
                         with st.spinner("AI is checking news catalysts..."):
                             narratives = batch_analyze_daily_moves(df)
@@ -197,17 +260,16 @@ def main_dashboard():
                     else:
                         move_summary = ", ".join([f"{m['Ticker']} ({m['Daily Change %']:+.1f}%)" for m in movers[:5]])
                         st.write(f"Significant moves detected: {move_summary}")
-                st.divider()
-
+            
             # --- Macro Dashboard (Agent 10) ---
             from utils.agents.macro_monitor import get_macro_snapshot, detect_macro_triggers, generate_macro_strategy
-            with st.expander("🌍 Macro Event Monitor", expanded=False):
+            with st.expander("🌍 Macro Event Monitor", expanded=True):
                 macro_data = get_macro_snapshot()
                 m1, m2, m3, m4 = st.columns(4)
-                m1.metric("CPI (Inflation)", f"{macro_data['cpi']:.1f}", macro_data['cpi_trend'])
-                m2.metric("Fed Funds Rate", f"{macro_data['fed_rate']:.2f}%")
+                m1.metric("CPI", f"{macro_data['cpi']:.1f}", macro_data['cpi_trend'])
+                m2.metric("Fed Rate", f"{macro_data['fed_rate']:.2f}%")
                 m3.metric("10Y Treasury", f"{macro_data['treasury_10y']:.2f}%")
-                m4.metric("VIX (Volatility)", f"{macro_data['vix']:.1f}", macro_data['vix_signal'], delta_color="inverse")
+                m4.metric("VIX", f"{macro_data['vix']:.1f}", macro_data['vix_signal'], delta_color="inverse")
                 
                 triggers = detect_macro_triggers(macro_data, df)
                 for t in triggers:
@@ -222,130 +284,37 @@ def main_dashboard():
                             for rot in strat.get('sector_rotations', []):
                                 st.write(f"🔄 **Rotate:** {rot['from_sector']} → {rot['to_sector']}")
                                 st.caption(f"Rationale: {rot['rationale']}")
-                st.divider()
 
             # --- Earnings Sentinel (Agent 4) ---
             from utils.agents.earnings_sentinel import scan_upcoming_earnings, generate_earnings_alerts
             upcoming = scan_upcoming_earnings(df)
             if not upcoming.empty:
-                with st.expander(f"📅 Upcoming Earnings ({len(upcoming)} in next 14 days)", expanded=True):
+                with st.expander(f"📅 Upcoming Earnings ({len(upcoming)})", expanded=True):
                     st.table(upcoming)
                     if st.button("🔔 Generate AI Earnings Insights", width='stretch'):
                         with st.spinner("Analyzing upcoming catalysts..."):
                             earnings_alerts = generate_earnings_alerts(upcoming, df)
                             for alert in earnings_alerts:
                                 st.info(f"{alert['badge']} **{alert['ticker']} ({alert['date']})**: {alert['alert']}")
-                st.divider()
 
             # --- Concentration Alerts (Agent 1) ---
             from utils.agents.concentration_hedger import check_on_page_load, scan_concentration_risks, generate_hedge_suggestions
             alerts = check_on_page_load(df)
             if alerts:
-                for alert in alerts:
-                    st.warning(alert)
-                
-                if st.button("🛡️ Get AI Hedging Ideas", width='stretch'):
-                    with st.spinner("AI is analyzing your exposure and technical trends..."):
-                        risks = scan_concentration_risks(df)
-                        suggestions = generate_hedge_suggestions(risks, df)
-                        for res in suggestions:
-                            with st.expander(f"Hedge Strategies for {res['ticker']}"):
-                                for s in res['suggestions']:
-                                    st.write(f"**{s['strategy']}**")
-                                    st.write(s['description'])
-                                    st.info(f"Impact: {s['impact_estimate']}")
-                st.divider()
-
-            # KPI row
-            total_val = df['Market Value'].sum()
-            total_cost = df['Cost Basis'].sum()
-            unrealized_gl = total_val - total_cost
-            unrealized_gl_pct = (unrealized_gl / total_cost * 100) if total_cost > 0 else 0.0
-            
-            cash_val = df[df['Is Cash'] == True]['Market Value'].sum()
-            invested_val = total_val - cash_val
-            pos_count = len(df)
-            
-            kpi1, kpi2, kpi3, kpi4, kpi5, kpi6 = st.columns(6)
-            kpi1.metric("Total Value", f"${total_val:,.0f}")
-            kpi2.metric("Total Cost", f"${total_cost:,.0f}")
-            kpi3.metric("Unrealized G/L", f"${unrealized_gl:,.0f}", f"{unrealized_gl_pct:+.2f}%")
-            kpi4.metric("Cash", f"${cash_val:,.0f}")
-            kpi5.metric("Invested", f"${invested_val:,.0f}")
-            kpi6.metric("Positions", pos_count)
-            
-            # Charts
-            c1, c2 = st.columns(2)
-            
-            with c1:
-                # Allocation by Asset Class
-                non_cash_df = df[df['Is Cash'] == False]
-                fig_class = px.pie(
-                    non_cash_df, 
-                    values='Market Value', 
-                    names='Asset Class', 
-                    title='Allocation by Asset Class (Invested Only)',
-                    color_discrete_sequence=['#1F4E79', '#2E86AB', '#A8DADC', '#457B9D']
-                )
-                st.plotly_chart(fig_class, width='stretch')
-                
-            with c2:
-                # Allocation by Asset Strategy
-                fig_strat = px.pie(
-                    non_cash_df, 
-                    values='Market Value', 
-                    names='Asset Strategy', 
-                    title='Allocation by Asset Strategy (Invested Only)',
-                    color_discrete_sequence=['#1F4E79', '#2E86AB', '#A8DADC', '#457B9D']
-                )
-                st.plotly_chart(fig_strat, width='stretch')
-                
-            # Top 10 positions bar chart
-            top_10 = df.nlargest(10, 'Market Value')
-            fig_top = px.bar(
-                top_10, 
-                x='Market Value', 
-                y='Ticker', 
-                orientation='h', 
-                title='Top 10 Positions by Market Value',
-                color_discrete_sequence=['#2E86AB']
-            )
-            fig_top.update_layout(yaxis={'categoryorder':'total ascending'})
-            st.plotly_chart(fig_top, width='stretch')
-            
-            # Holdings table
-            st.subheader("Current Holdings")
-            
-            # Search filter
-            search = st.text_input("Search Ticker or Description")
-            if search:
-                display_df = df[
-                    df['Ticker'].str.contains(search, case=False) | 
-                    df['Description'].str.contains(search, case=False)
-                ]
-            else:
-                display_df = df
-                
-            # Format columns for display
-            cols = ['Ticker', 'Description', 'Market Value', 'Weight', 'Cost Basis', 'Unrealized G/L', 'Unrealized G/L %', 'Dividend Yield']
-            
-            # Styling function for concentration
-            def highlight_concentration(row):
-                if row['Weight'] > config.SINGLE_POSITION_WARN_PCT:
-                    return ['background-color: #FFF9C4'] * len(row)
-                return [''] * len(row)
-                
-            # Pagination
-            items_per_page = 20
-            total_pages = (len(display_df) // items_per_page) + (1 if len(display_df) % items_per_page > 0 else 0)
-            page = st.number_input("Page", min_value=1, max_value=max(1, total_pages), value=1, key="holdings_page")
-            start_idx = (page - 1) * items_per_page
-            end_idx = start_idx + items_per_page
-            
-            page_df = display_df.iloc[start_idx:end_idx][cols]
-            
-            st.table(page_df.style.apply(highlight_concentration, axis=1).format({
-                'Market Value': '${:,.2f}',
+                with st.expander("⚠️ Concentration Risk Alerts", expanded=True):
+                    for alert in alerts:
+                        st.warning(alert)
+                    
+                    if st.button("🛡️ Get AI Hedging Ideas", width='stretch'):
+                        with st.spinner("AI is analyzing your exposure and technical trends..."):
+                            risks = scan_concentration_risks(df)
+                            suggestions = generate_hedge_suggestions(risks, df)
+                            for res in suggestions:
+                                with st.expander(f"Hedge Strategies for {res['ticker']}"):
+                                    for s in res['suggestions']:
+                                        st.write(f"**{s['strategy']}**")
+                                        st.write(s['description'])
+                                        st.info(f"Impact: {s['impact_estimate']}")
                 'Weight': '{:.2f}%',
                 'Cost Basis': '${:,.2f}',
                 'Unrealized G/L': '${:,.2f}',

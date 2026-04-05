@@ -2,7 +2,15 @@
 
 Every entry must include a **Status** line describing what is currently safe to run.
 
-## [2026-04-05] — Boot Sequence & Structural Stabilization
+## [2026-04-05] — Authentication & Logic Centralization
+
+### fix: Centralized Authentication Gate
+**What changed:**
+- **Unified Auth Agent:** Created `utils/auth.py` to house the `require_auth()` logic. This extracts the redundant password check that was previously duplicated across 7 different files.
+- **Improved UX:** Called `require_auth()` once at the top level of `app.py`. This ensures that once a user is authenticated, they remain so across all sub-pages without seeing "Please login on the main page" error messages.
+- **De-cluttered Pages:** Removed over 100 lines of redundant authentication code from all sub-pages in the `pages/` directory.
+
+### fix: Boot Sequence & Structural Stabilization
 
 ### fix: Centralized Page Configuration
 **What changed:**

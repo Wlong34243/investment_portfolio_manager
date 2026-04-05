@@ -1,18 +1,9 @@
 import streamlit as st
 from utils.sheet_readers import get_holdings_current
+from utils.column_guard import ensure_display_columns
 from utils.chat_engine import chat, build_portfolio_summary
 import os
 import sys
-
-# --- Password Gate ---
-def check_password():
-    if "app_password" not in st.secrets: return True
-    if st.session_state.get("password_correct"): return True
-    st.error("Please login on the main page first.")
-    st.stop()
-
-if not check_password():
-    st.stop()
 
 st.title("💬 AI Portfolio Advisor")
 
@@ -22,6 +13,7 @@ if "messages" not in st.session_state:
 
 # --- Load Data for Context ---
 holdings_df = get_holdings_current()
+holdings_df = ensure_display_columns(holdings_df)
 if holdings_df.empty:
     st.warning("Please upload your portfolio on the main page to enable the advisor.")
     st.stop()

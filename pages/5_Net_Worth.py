@@ -2,24 +2,16 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from utils.sheet_readers import get_holdings_current
+from utils.column_guard import ensure_display_columns
 from utils.agents.grand_strategist import read_re_portfolio_summary, calculate_net_worth, build_unified_context, answer_cross_portfolio_question
 import os
 import sys
-
-# --- Password Gate ---
-def check_password():
-    if "app_password" not in st.secrets: return True
-    if st.session_state.get("password_correct"): return True
-    st.error("Please login on the main page first.")
-    st.stop()
-
-if not check_password():
-    st.stop()
 
 st.title("🏦 Unified Net Worth")
 
 # --- Load Data ---
 holdings_df = get_holdings_current()
+holdings_df = ensure_display_columns(holdings_df)
 re_data = read_re_portfolio_summary()
 
 if holdings_df.empty:

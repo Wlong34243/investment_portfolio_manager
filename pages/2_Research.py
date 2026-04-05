@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from utils.sheet_readers import get_holdings_current
+from utils.column_guard import ensure_display_columns
 from utils.fmp_client import get_earnings_transcript, get_company_profile
 from utils.finnhub_client import get_company_news
 from utils.ai_research import analyze_ticker
@@ -8,20 +9,11 @@ import plotly.graph_objects as go
 import os
 import sys
 
-# --- Password Gate ---
-def check_password():
-    if "app_password" not in st.secrets: return True
-    if st.session_state.get("password_correct"): return True
-    st.error("Please login on the main page first.")
-    st.stop()
-
-if not check_password():
-    st.stop()
-
 st.title("🤖 AI Research Hub")
 
 # --- Load Holdings ---
 df = get_holdings_current()
+df = ensure_display_columns(df)
 if df.empty:
     st.info("No holdings found. Upload a CSV on the main page first.")
     st.stop()
@@ -42,6 +34,10 @@ if st.session_state.get("last_val_ticker") != selected_ticker:
 # Get info for selected ticker
 info = df[df['Ticker'] == selected_ticker].iloc[0]
 
+# --- Hero Header ---
+st.header(f"{selected_ticker} — {info['Description']}")
+st.caption(f"${info['Price']:,.2f} | Weight: {info['Weight']:.1f}% | {info['Asset Class']}")
+
 # --- KPI Cards ---
 k1, k2, k3, k4 = st.columns(4)
 k1.metric("Ticker", selected_ticker)
@@ -59,36 +55,48 @@ with col1:
     st.subheader("Company Profile & News")
     
     with st.spinner("Fetching profile..."):
-        profile = get_company_profile(selected_ticker)
-        if profile:
-            st.write(f"**Industry:** {profile.get('industry')}")
-            st.write(f"**Market Cap:** ${profile.get('market_cap', 0):,.0f}")
-            with st.expander("Business Description"):
-                st.write(profile.get('description'))
-        else:
-            st.write("No profile found.")
+        try:
+            profile = get_company_profile(selected_ticker)
+            if profile:
+                st.write(f"**Industry:** {profile.get('industry')}")
+                st.write(f"**Market Cap:** ${profile.get('market_cap', 0):,.0f}")
+                with st.expander("Business Description"):
+                    st.write(profile.get('description'))
+            else:
+                st.write("No profile found.")
+        except Exception as e:
+            profile = None
+            st.warning(f"Could not fetch profile: {e}")
             
     st.divider()
     
     with st.spinner("Fetching news..."):
-        news = get_company_news(selected_ticker)
-        if news:
-            for item in news:
-                with st.expander(f"{item['headline']} ({item['datetime']})"):
-                    st.write(item['summary'])
-                    st.write(f"[Read more]({item['url']})")
-        else:
-            st.write("No recent news found.")
+        try:
+            news = get_company_news(selected_ticker)
+            if news:
+                for item in news:
+                    with st.expander(f"{item['headline']} ({item['datetime']})"):
+                        st.write(item['summary'])
+                        st.write(f"[Read more]({item['url']})")
+            else:
+                st.write("No recent news found.")
+        except Exception as e:
+            news = None
+            st.warning(f"Could not fetch news: {e}")
 
 with col2:
     st.subheader("Latest Earnings Transcript")
     with st.spinner("Fetching transcript..."):
-        transcript = get_earnings_transcript(selected_ticker)
-        if transcript:
-            st.write(f"Length: {len(transcript)} characters")
-            st.text_area("Transcript Snippet", transcript, height=500)
-        else:
-            st.write("No transcript found.")
+        try:
+            transcript = get_earnings_transcript(selected_ticker)
+            if transcript:
+                st.write(f"Length: {len(transcript)} characters")
+                st.text_area("Transcript Snippet", transcript, height=500)
+            else:
+                st.write("No transcript found.")
+        except Exception as e:
+            transcript = None
+            st.warning(f"Could not fetch transcript: {e}")
 
 # --- AI Analysis ---
 st.divider()
@@ -163,7 +171,9 @@ st.divider()
 st.subheader("🔭 AI Thesis Screener")
 from utils.agents.thesis_screener import parse_thesis_to_criteria, screen_stocks, rank_and_explain
 
-thesis_input = st.text_area("Describe your investment thesis (e.g. 'Infrastructure stocks with growing free cash flow')", height=100)
+if "thesis_text" not in st.session_state:
+    st.session_state["thesis_text"] = ""
+
 examples = [
     "AI companies with high revenue growth but still undervalued",
     "Dividend aristocrats yielding above 3%",
@@ -173,7 +183,11 @@ examples = [
 cols = st.columns(len(examples))
 for i, ex in enumerate(examples):
     if cols[i].button(ex, key=f"ex_{i}"):
-        st.info(f"Copied to clipboard (simulated): {ex}") # Streamlit doesn't easily set text_area value from button without rerun logic
+        st.session_state["thesis_text"] = ex
+        st.rerun()
+
+thesis_input = st.text_area("Describe your investment thesis (e.g. 'Infrastructure stocks with growing free cash flow')", 
+                            value=st.session_state["thesis_text"], height=100)
 
 if st.button("🔍 Screen Stocks for this Thesis", width='stretch'):
     if not thesis_input:
@@ -221,24 +235,10 @@ if f"analysis_{selected_ticker}" in st.session_state:
     
     st.header(f"AI Equity Research: {selected_ticker}")
     
-    # Sentiment Gauge
+    # Sentiment Metric
     score = res.get('sentiment_score', 0.0)
-    fig = go.Figure(go.Indicator(
-        mode = "gauge+number",
-        value = score,
-        domain = {'x': [0, 1], 'y': [0, 1]},
-        title = {'text': "Sentiment Score (-1 to 1)"},
-        gauge = {
-            'axis': {'range': [-1, 1]},
-            'steps': [
-                {'range': [-1, -0.3], 'color': "#E74C3C"},
-                {'range': [-0.3, 0.3], 'color': "#F1C40F"},
-                {'range': [0.3, 1], 'color': "#2ECC71"}
-            ],
-            'bar': {'color': "#2C3E50"}
-        }
-    ))
-    st.plotly_chart(fig, width='stretch')
+    sentiment_label = "Bullish" if score > 0.3 else "Bearish" if score < -0.3 else "Neutral"
+    st.metric("AI Sentiment", f"{score:.2f}", sentiment_label)
     
     # Summary
     st.subheader("Executive Summary")

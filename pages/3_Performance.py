@@ -9,16 +9,6 @@ import sys
 import config
 from utils.sheet_readers import get_gspread_client, get_daily_snapshots
 
-# --- Password Gate ---
-def check_password():
-    if "app_password" not in st.secrets: return True
-    if st.session_state.get("password_correct"): return True
-    st.error("Please login on the main page first.")
-    st.stop()
-
-if not check_password():
-    st.stop()
-
 # --- Data Loading ---
 snapshots_df = get_daily_snapshots()
 if not snapshots_df.empty:

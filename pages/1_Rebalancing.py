@@ -2,25 +2,17 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from utils.sheet_readers import get_holdings_current, get_realized_gl
+from utils.column_guard import ensure_display_columns
 from utils.agents.tax_intelligence_agent import get_target_allocation, calculate_drift, generate_rebalance_proposals, check_wash_sale_risk
 import os
 import sys
-
-# --- Password Gate ---
-def check_password():
-    if "app_password" not in st.secrets: return True
-    if st.session_state.get("password_correct"): return True
-    st.error("Please login on the main page first.")
-    st.stop()
-
-if not check_password():
-    st.stop()
 
 st.title("⚖️ Tax-Aware Rebalancing")
 st.info("💡 **Analysis only.** This page suggests actions but does not execute trades or modify your spreadsheet.")
 
 # --- Load Data ---
 holdings_df = get_holdings_current()
+holdings_df = ensure_display_columns(holdings_df)
 targets_df = get_target_allocation()
 realized_gl_df = get_realized_gl()
 
