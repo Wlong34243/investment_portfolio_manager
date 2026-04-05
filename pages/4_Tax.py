@@ -74,10 +74,26 @@ else:
 st.divider()
 st.subheader("📝 Year-to-Date Realized Summary")
 if not realized_gl_df.empty:
-    ytd_gain = realized_gl_df['Gain Loss $'].sum()
-    st.metric("YTD Net Realized G/L", f"${ytd_gain:,.2f}", delta_color="inverse" if ytd_gain < 0 else "normal")
+    # Ensure date conversion
+    realized_gl_df['Closed Date'] = pd.to_datetime(realized_gl_df['Closed Date'])
     
-    with st.expander("View Recent Realized Lots"):
-        st.table(realized_gl_df.sort_values(by='Closed Date', ascending=False).head(10))
+    # Filter for current year (2026)
+    current_year = 2026
+    ytd_df = realized_gl_df[realized_gl_df['Closed Date'].dt.year == current_year].copy()
+    prior_df = realized_gl_df[realized_gl_df['Closed Date'].dt.year < current_year].copy()
+    
+    ytd_gain = ytd_df['Gain Loss $'].sum()
+    st.metric(f"Net Realized G/L ({current_year})", f"${ytd_gain:,.2f}", delta_color="inverse" if ytd_gain < 0 else "normal")
+    
+    if not ytd_df.empty:
+        with st.expander(f"View {current_year} Realized Lots"):
+            st.table(ytd_df.sort_values(by='Closed Date', ascending=False).head(20))
+    else:
+        st.info(f"No realized gains/losses recorded for {current_year} yet.")
+
+    if not prior_df.empty:
+        with st.expander("View Historical Realized (2025 & Prior)"):
+            st.write(f"Total Historical Realized: `${prior_df['Gain Loss $'].sum():,.2f}`")
+            st.table(prior_df.sort_values(by='Closed Date', ascending=False).head(10))
 else:
     st.info("No realized gain/loss data found. Upload a Realized G/L CSV on the main page.")
