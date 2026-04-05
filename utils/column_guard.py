@@ -20,6 +20,7 @@ def ensure_display_columns(df: pd.DataFrame) -> pd.DataFrame:
     lookup.update({
         'symbol': 'Ticker',
         'ticker': 'Ticker',
+        'unnamed_0': 'Ticker',
         'desc': 'Description',
         'market value': 'Market Value',
         'cost': 'Cost Basis',

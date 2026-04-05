@@ -189,6 +189,13 @@ def _main_dashboard_impl():
             st.session_state.pop('holdings_df', None)
             st.rerun()
 
+        if st.button("🧹 Clear System Cache", width='stretch'):
+            st.cache_data.clear()
+            st.session_state.clear()
+            st.toast("Cache and session cleared.")
+            time.sleep(1)
+            st.rerun()
+
     # --- Main Tabs ---
     tabs = st.tabs(["📊 Holdings", "💰 Income", "⚠️ Risk", "🔔 Signals"])
 

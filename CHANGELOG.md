@@ -4,13 +4,18 @@ Every entry must include a **Status** line describing what is currently safe to 
 
 ## [2026-04-05] — Performance Accuracy & Data Recovery
 
-### fix: Performance Graphs & Snapshot Recovery
+### fix: KeyError 'Ticker' & Data Integrity
 **What changed:**
-- **Resolved "0.0" Date Bug:** Fixed a case-sensitivity issue in `utils/sheet_readers.py` that was causing the `Date` column in snapshots to be incorrectly converted to a float (0.0), which broke all performance graphs.
-- **Snapshot Hardening:** Updated `pipeline.py` to ensure dates and fingerprints are strictly cast to strings before writing to Google Sheets, preventing data corruption.
-- **Data Recovery:** Surgically cleaned the corrupted `Daily_Snapshots` sheet and successfully backfilled historical data points from the `Holdings_History` tab.
+- **Robust Column Guard:** Updated `utils/column_guard.py` to handle cases where the first column header in Google Sheets is empty (becoming `Unnamed_0`). It now automatically re-maps these to `Ticker`.
+- **Guaranteed Schema:** The column guard now explicitly ensures that all 20 required columns (including `Ticker` and `Unrealized G/L`) exist in the DataFrame, preventing `KeyError` crashes throughout the app.
+- **Fail-Safe Research Hub:** Added an explicit column check in `pages/2_Research.py` to provide a clean error message rather than a traceback if data integrity issues occur.
 
-**Status: Production ready. Performance graphs (Portfolio vs Benchmark and Value History) are now fully operational. Data integrity hardened.**
+### feat: System Maintenance Tools
+**What changed:**
+- **Cache Clearing:** Added a "🧹 Clear System Cache" button to the sidebar. This allows users to manually force a refresh of both Streamlit's data cache and the browser session state, which is useful for resolving persistent data glitches or stuck API calls.
+- **Improved Sidebar Layout:** Refined the sidebar organization to prioritize high-value status metrics and maintenance tools.
+
+**Status: Production ready. Data integrity is hardened against empty sheet headers. User-driven cache clearing is live.**
 
 ## [2026-04-05] — Stabilization & Performance
 ...
