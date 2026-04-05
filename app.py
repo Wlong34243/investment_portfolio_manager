@@ -30,7 +30,7 @@ from utils.validators import (
 from utils.column_guard import ensure_display_columns
 
 # --- Main Dashboard Logic ---
-def main_dashboard():
+def _main_dashboard_impl():
     # --- Load Data ---
     if "holdings_df" not in st.session_state:
         try:
@@ -39,18 +39,18 @@ def main_dashboard():
             st.error("Could not connect to Google Sheets.")
             st.stop()
 
+    # CRITICAL: Always guard the columns immediately after load/retrieval
+    st.session_state["holdings_df"] = ensure_display_columns(st.session_state["holdings_df"])
+    df = st.session_state["holdings_df"]
+
     # --- Sidebar ---
     with st.sidebar:
         st.header("Portfolio Management")
         
-        # 1. Import Data Expander
-        df = st.session_state["holdings_df"]
-        is_empty = df.empty
-        with st.expander("📥 Import Data", expanded=is_empty):
+        with st.expander("📥 Import Data", expanded=df.empty):
             uploaded_file = st.file_uploader("Upload Schwab Positions CSV", type=["csv"])
             gl_file = st.file_uploader("Upload Realized G/L CSV", type=["csv"])
             tx_file = st.file_uploader("Upload Transaction History CSV", type=["csv"])
-            
             cash_amount = st.number_input("Manual Cash Injection ($)", value=0.0, step=500.0)
             
             if st.button("Process CSVs", width='stretch'):
@@ -63,20 +63,16 @@ def main_dashboard():
                         write_to_sheets(df_norm, cash_amount, dry_run=config.DRY_RUN)
                         st.session_state["holdings_df"] = ensure_display_columns(df_norm)
                     
-                    if gl_file:
-                        ingest_realized_gl(gl_file, dry_run=config.DRY_RUN)
-                    
-                    if tx_file:
-                        ingest_transactions(tx_file, dry_run=config.DRY_RUN)
+                    if gl_file: ingest_realized_gl(gl_file, dry_run=config.DRY_RUN)
+                    if tx_file: ingest_transactions(tx_file, dry_run=config.DRY_RUN)
                         
                     status.update(label="Sync Complete", state="complete")
+                    st.toast("Data synchronized successfully!", icon="✅")
                     time.sleep(1)
                     st.rerun()
 
-        # 2. Portfolio Status Section
         st.divider()
         st.subheader("Portfolio Status")
-        
         if not df.empty:
             if 'Import Date' in df.columns:
                 try:
@@ -86,7 +82,6 @@ def main_dashboard():
                     elif days_old <= 7: st.warning(f"🟡 {days_old} days old")
                     else: st.error(f"🔴 {days_old} days old — re-import")
                 except: st.caption("Freshness: Unknown")
-            
             st.metric("Positions", len(df))
         else:
             st.info("No data loaded. Import a CSV above.")
@@ -95,21 +90,22 @@ def main_dashboard():
             st.error("🔴 DRY RUN MODE — No writes to Sheets")
 
         st.divider()
-        if st.button("🧹 Clear System Cache", width='stretch'):
+        if st.button("🔄 Sync with Schwab API", width='stretch', help="Placeholder for real-time API integration"):
+            st.session_state.pop('holdings_df', None)
+            st.rerun()
+
+        if st.button("🧹 Clear Cache", width='stretch'):
             st.cache_data.clear()
             st.session_state.clear()
-            st.toast("Cache cleared.")
-            time.sleep(1)
             st.rerun()
 
     # --- Main Tabs ---
     tabs = st.tabs(["📊 Holdings", "💰 Income", "⚠️ Risk", "🔔 Signals"])
 
     with tabs[0]:
-        if st.session_state["holdings_df"].empty:
+        if df.empty:
             st.info("Upload a CSV to begin.")
         else:
-            df = st.session_state["holdings_df"]
             total_val = df['Market Value'].sum()
             total_cost = df['Cost Basis'].sum()
             unrealized_gl = total_val - total_cost
@@ -127,10 +123,15 @@ def main_dashboard():
             with c3: st.metric("Cash Position", f"${cash_val:,.0f}", f"Invested: ${invested_val:,.0f}", delta_color="off")
 
             st.divider()
-            non_cash_df = df[df['Is Cash'] == False]
+            non_cash_df = df[df['Is Cash'] == False].copy()
             if not non_cash_df.empty:
-                fig_tree = px.treemap(non_cash_df, path=['Asset Class', 'Ticker'], values='Market Value', title='Portfolio Allocation', color_discrete_sequence=['#1F4E79', '#2E86AB', '#A8DADC'])
-                st.plotly_chart(fig_tree, use_container_width=True)
+                # Treemap requires non-negative values
+                non_cash_df['Market Value'] = non_cash_df['Market Value'].clip(lower=0)
+                try:
+                    fig_tree = px.treemap(non_cash_df, path=['Asset Class', 'Ticker'], values='Market Value', title='Portfolio Allocation', color_discrete_sequence=['#1F4E79', '#2E86AB', '#A8DADC'])
+                    st.plotly_chart(fig_tree, use_container_width=True)
+                except Exception as e:
+                    st.warning(f"Could not render allocation treemap: {e}")
             else:
                 st.info("No invested positions to display in treemap.")
 
@@ -151,8 +152,7 @@ def main_dashboard():
             )
 
     with tabs[1]:
-        if not st.session_state["holdings_df"].empty:
-            df = st.session_state["holdings_df"]
+        if not df.empty:
             metrics = calculate_income_metrics(df)
             k1, k2, k3 = st.columns(3)
             k1.metric("Projected Annual Income", f"${metrics['projected_annual_income']:,.2f}")
@@ -164,8 +164,7 @@ def main_dashboard():
             st.plotly_chart(fig_income, use_container_width=True)
 
     with tabs[2]:
-        if not st.session_state["holdings_df"].empty:
-            df = st.session_state["holdings_df"]
+        if not df.empty:
             if st.button("Calculate Risk Analytics", width='stretch'):
                 with st.spinner("Calculating..."):
                     hist = build_price_histories(df)
@@ -177,8 +176,7 @@ def main_dashboard():
                     else: st.error("Market data unavailable.")
 
     with tabs[3]:
-        if not st.session_state["holdings_df"].empty:
-            df = st.session_state["holdings_df"]
+        if not df.empty:
             from utils.agents.price_narrator import detect_significant_moves, batch_analyze_daily_moves
             movers = detect_significant_moves(df)
             if movers:
@@ -188,7 +186,16 @@ def main_dashboard():
                             for n in batch_analyze_daily_moves(df):
                                 st.info(f"**{n['ticker']} ({n['change_pct']:+.2f}%)**: {n['explanation']}")
 
-# --- Define Pages ---
+def main_dashboard():
+    try:
+        _main_dashboard_impl()
+    except Exception as e:
+        st.error("Dashboard failed to load.")
+        with st.expander("Details"): st.code(traceback.format_exc())
+        if st.button("🔄 Retry"):
+            st.cache_data.clear()
+            st.rerun()
+
 pg = st.navigation([
     st.Page(main_dashboard, title="Main Dashboard", icon="📈"),
     st.Page("pages/1_Rebalancing.py", title="Rebalancing", icon="⚖️"),

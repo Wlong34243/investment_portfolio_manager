@@ -6,21 +6,18 @@ def ensure_display_columns(df: pd.DataFrame) -> pd.DataFrame:
     """
     Normalize any DataFrame to use display-format column names 
     (Title Case with spaces, matching config.POSITION_COLUMNS).
-    Guarantees that all required columns exist to prevent KeyError.
+    Guarantees that all required columns exist and have correct types.
     """
-    if df is None:
+    if df is None or (isinstance(df, pd.DataFrame) and df.empty):
         return pd.DataFrame(columns=config.POSITION_COLUMNS)
         
     df = df.copy()
     
     # 1. Aggressive Rename Logic
-    # lookup: lower_case_name -> Correct Title Case Name
     lookup = {k.lower(): v for k, v in config.POSITION_COL_MAP.items()}
-    # Common variations found in Schwab/yfinance/Sheet
     lookup.update({
         'symbol': 'Ticker',
         'ticker': 'Ticker',
-        'unnamed_0': 'Ticker',
         'desc': 'Description',
         'market value': 'Market Value',
         'cost': 'Cost Basis',
@@ -33,7 +30,6 @@ def ensure_display_columns(df: pd.DataFrame) -> pd.DataFrame:
     for col in df.columns:
         if col in config.POSITION_COLUMNS:
             continue
-            
         clean_col = str(col).strip().lower().replace(' ', '_')
         if clean_col in lookup:
             rename_dict[col] = lookup[clean_col]
@@ -43,8 +39,7 @@ def ensure_display_columns(df: pd.DataFrame) -> pd.DataFrame:
     if rename_dict:
         df = df.rename(columns=rename_dict)
     
-    # 2. Guarantee Column Existence (The "Super Guard")
-    # If a column is missing after renaming, create it with defaults
+    # 2. Guarantee Column Existence & Types
     for col in config.POSITION_COLUMNS:
         if col not in df.columns:
             if col in ['Market Value', 'Cost Basis', 'Quantity', 'Price', 'Weight', 'Dividend Yield', 'Est Annual Income', 'Daily Change %']:
@@ -54,11 +49,15 @@ def ensure_display_columns(df: pd.DataFrame) -> pd.DataFrame:
             else:
                 df[col] = ""
         else:
-            # Explicitly cast boolean columns if they exist but might be strings
-            if col in ['Is Cash', 'Wash Sale']:
+            # Type Enforcement for existing columns
+            if col in ['Market Value', 'Cost Basis', 'Quantity', 'Price', 'Weight', 'Dividend Yield', 'Est Annual Income', 'Daily Change %']:
+                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0.0)
+            elif col in ['Is Cash', 'Wash Sale']:
                 if df[col].dtype == object:
                     df[col] = df[col].astype(str).str.upper().isin(['TRUE', 'YES', '1'])
                 else:
                     df[col] = df[col].astype(bool)
+            elif col in ['Ticker', 'Asset Class', 'Description']:
+                df[col] = df[col].astype(str).fillna("")
                 
     return df
