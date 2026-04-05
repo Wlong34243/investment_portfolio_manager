@@ -24,6 +24,10 @@ if df.empty:
     st.stop()
 
 # --- Ticker Selector ---
+if 'Ticker' not in df.columns:
+    st.error("Data integrity error: 'Ticker' column is missing. Please clear cache and retry.")
+    st.stop()
+
 tickers = sorted(df['Ticker'].unique().tolist())
 # Filter out cash
 tickers = [t for t in tickers if t not in ['CASH_MANUAL', 'QACDS', 'Cash & Cash Investments']]

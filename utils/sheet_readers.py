@@ -78,7 +78,11 @@ def read_gsheet_robust(ws: gspread.Worksheet) -> pd.DataFrame:
     
     df = pd.DataFrame(data, columns=clean_headers)
     
-    # Cleaning
+    # Drop entirely empty rows (often present at end of sheet)
+    df = df.replace('', None).dropna(how='all').fillna('')
+    
+    if df.empty:
+        return df
     skip_cols = [
         'ticker', 'symbol', 'description', 'sector', 'industry', 
         'asset class', 'asset strategy', 'import date', 'closed date', 
