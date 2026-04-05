@@ -35,6 +35,6 @@ The app uses a modular agent architecture in `utils/agents/`. Each agent is doma
 - `Transactions`: `trade_date|ticker|action|net_amount`
 
 ## 🚀 Dev Workflow
-- Always trust the ingested price during the import phase.
+- read lessonsLearned.md  Always trust the ingested price during the import phase.
 - Use `ws.col_values()` for fast deduplication checks.
 - Every commit must follow an app audit and prompt review.

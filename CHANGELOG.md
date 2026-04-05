@@ -50,5 +50,16 @@ Every entry must include a **Status** line describing what is currently safe to 
 
 **Status: Production ready. Data integrity is hardened against empty sheet headers. User-driven cache clearing is live.**
 
+## [2026-04-05] — Final Stability & Hardening
+
+### fix: Architectural Hardening & Logic Isolation
+**What changed:**
+- **Dashboard Isolation:** Fully encapsulated the main dashboard UI into `main_dashboard()` to prevent "global scope leakage" where holdings logic would appear on sub-pages.
+- **Systematic Type Safety:** Hardened the `Cash Sweeper` agent against mixed string/float data from Google Sheets, preventing comparison crashes.
+- **Automated Verification:** Implemented `smoke_test.py` to locally verify imports and data-type resilience before production deployment.
+- **Lessons Learned:** Created `lessonsLearned.md` to document architectural best practices for future developers (or AI agents) working on this project.
+
+**Status: Production ready. All pages isolated, math is type-hardened, and automated verification is active.**
+
 ## [2026-04-05] — Stabilization & Performance
 ...

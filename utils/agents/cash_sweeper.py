@@ -15,7 +15,11 @@ def analyze_cash_position(holdings_df: pd.DataFrame) -> dict:
     """
     cash_value, cash_yield, alternatives with yield comparison.
     """
-    cash_rows = holdings_df[holdings_df['Is Cash'] == True]
+    df = holdings_df.copy()
+    if 'Market Value' in df.columns:
+        df['Market Value'] = pd.to_numeric(df['Market Value'], errors='coerce').fillna(0.0)
+    
+    cash_rows = df[df['Is Cash'] == True]
     cash_value = cash_rows['Market Value'].sum()
     
     # Assume default yield from config or from the data if available
@@ -61,8 +65,12 @@ def generate_cash_deployment_suggestion(cash_analysis: dict, holdings_df: pd.Dat
 
 def get_cash_sweep_alert(holdings_df: pd.DataFrame) -> str:
     """Quick check: if cash > 5% AND any position yields 2x cash."""
-    total_val = holdings_df['Market Value'].sum()
-    cash_val = holdings_df[holdings_df['Is Cash'] == True]['Market Value'].sum()
+    df = holdings_df.copy()
+    if 'Market Value' in df.columns:
+        df['Market Value'] = pd.to_numeric(df['Market Value'], errors='coerce').fillna(0.0)
+        
+    total_val = df['Market Value'].sum()
+    cash_val = df[df['Is Cash'] == True]['Market Value'].sum()
     
     if total_val > 0 and (cash_val / total_val * 100) > 5.0:
         return f"💰 **Yield Alert:** You have ${cash_val:,.0f} ({cash_val/total_val*100:.1f}%) in cash. AI can suggest yield improvements."
