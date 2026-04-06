@@ -18,8 +18,8 @@ _ROOT = os.path.dirname(os.path.dirname(_HERE))
 if _ROOT not in sys.path:
     sys.path.insert(0, _ROOT)
 
-from pydantic import BaseModel
-from typing import Dict
+from pydantic import BaseModel, Field
+from typing import List
 from utils.gemini_client import ask_gemini
 
 TAXONOMY = """
@@ -35,13 +35,14 @@ Sectors / Strategies:
 """
 
 
-class HoldingCategory(BaseModel):
-    asset_class: str
-    sector_strategy: str
+class TickerCategory(BaseModel):
+    ticker: str = Field(description="The ticker symbol exactly as provided")
+    asset_class: str = Field(description="Asset class from the taxonomy")
+    sector_strategy: str = Field(description="Sector or strategy from the taxonomy")
 
 
 class PortfolioMapping(BaseModel):
-    mapping: Dict[str, HoldingCategory]
+    holdings: List[TickerCategory] = Field(description="One entry per ticker")
 
 
 def enrich_holdings(input_csv: str, output_file: str = "data/ticker_mapping.json"):
@@ -71,10 +72,12 @@ def enrich_holdings(input_csv: str, output_file: str = "data/ticker_mapping.json
             prompt=prompt,
             system_instruction=system_instruction,
             response_schema=PortfolioMapping,
+            max_tokens=4000,
         )
 
         if res:
-            mapping_dict = res.model_dump()["mapping"]
+            mapping_dict = {item.ticker: {"asset_class": item.asset_class, "sector_strategy": item.sector_strategy}
+                            for item in res.holdings}
             os.makedirs(os.path.dirname(output_file), exist_ok=True)
             with open(output_file, 'w') as f:
                 json.dump(mapping_dict, f, indent=4)
@@ -125,12 +128,14 @@ def enrich_holdings_from_df(df: pd.DataFrame, output_file: str = "data/ticker_ma
             prompt=prompt,
             system_instruction=system_instruction,
             response_schema=PortfolioMapping,
+            max_tokens=4000,
         )
 
         if not res:
             return False, "Gemini returned an empty response."
 
-        mapping_dict = res.model_dump()["mapping"]
+        mapping_dict = {item.ticker: {"asset_class": item.asset_class, "sector_strategy": item.sector_strategy}
+                        for item in res.holdings}
         os.makedirs(os.path.dirname(output_file) or ".", exist_ok=True)
         with open(output_file, 'w') as f:
             json.dump(mapping_dict, f, indent=4)
