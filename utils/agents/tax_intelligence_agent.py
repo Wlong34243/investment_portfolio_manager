@@ -67,6 +67,10 @@ def calculate_drift(holdings_df: pd.DataFrame, targets_df: pd.DataFrame) -> pd.D
 
     # 2. Map Holdings to Target Categories
     h_df = holdings_df.copy()
+    # Force-cast Market Value and Is Cash — defensive against stale string data from cache
+    h_df['Market Value'] = pd.to_numeric(h_df['Market Value'], errors='coerce').fillna(0.0)
+    if h_df['Is Cash'].dtype == object:
+        h_df['Is Cash'] = h_df['Is Cash'].astype(str).str.upper().isin(['TRUE', 'YES', '1', 'T'])
     target_cats = t_df['Category'].tolist()
 
     def match_to_target(asset_class: str) -> str:

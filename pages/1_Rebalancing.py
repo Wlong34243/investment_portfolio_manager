@@ -70,17 +70,28 @@ if not ai_suggested_df.empty:
         hide_index=True
     )
 
-# --- Load Holdings ---
-# Prefer session_state (loaded fresh on main dashboard) over cached sheet read
-# to avoid stale @st.cache_data serving old market values.
+# --- Load Holdings (direct read — bypasses all st.cache_data) ---
 try:
-    if "holdings_df" in st.session_state and not st.session_state["holdings_df"].empty:
-        holdings_df = ensure_display_columns(st.session_state["holdings_df"])
-    else:
-        holdings_df = ensure_display_columns(get_holdings_current())
+    from utils.sheet_readers import get_gspread_client, read_gsheet_robust
+    import config as _cfg
+    _client = get_gspread_client()
+    _ss = _client.open_by_key(_cfg.PORTFOLIO_SHEET_ID)
+    _ws = _ss.worksheet(_cfg.TAB_HOLDINGS_CURRENT)
+    holdings_df = ensure_display_columns(read_gsheet_robust(_ws))
 except Exception as e:
-    st.error("Could not load holdings data. Check your connection and service account permissions.")
+    st.error(f"Could not load holdings data from sheet: {e}")
     st.stop()
+
+# --- Diagnostic expander (remove once confirmed working) ---
+with st.expander("🔍 Data Diagnostic", expanded=False):
+    st.write(f"**Holdings rows:** {len(holdings_df)} | **Total Market Value:** ${holdings_df['Market Value'].sum():,.0f}")
+    st.write(f"**Market Value dtype:** {holdings_df['Market Value'].dtype}")
+    st.write(f"**Is Cash dtype:** {holdings_df['Is Cash'].dtype}")
+    st.write("**Asset Class values in holdings:**")
+    st.write(holdings_df.groupby('Asset Class')['Market Value'].sum().sort_values(ascending=False).to_dict())
+    st.write("**Target categories:**")
+    if not targets_df.empty:
+        st.write(targets_df['Asset Class'].tolist())
 
 if holdings_df.empty:
     st.warning("No holdings data available. Please upload a positions CSV on the main page.")
