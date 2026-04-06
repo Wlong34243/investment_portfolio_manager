@@ -89,6 +89,41 @@ def enrich_holdings(input_csv: str, output_file: str = "data/ticker_mapping.json
         print(f"Error during generation or parsing: {e}")
 
 
+def sync_from_holdings(df: pd.DataFrame, output_file: str = "data/ticker_mapping.json") -> tuple[bool, str]:
+    """
+    Build ticker_mapping.json directly from Asset Class / Asset Strategy columns
+    already in the holdings DataFrame — no AI call required.
+    Use this when the sheet has already been manually enriched.
+    """
+    ticker_col = 'Ticker' if 'Ticker' in df.columns else 'ticker'
+    ac_col = 'Asset Class' if 'Asset Class' in df.columns else 'asset_class'
+    as_col = 'Asset Strategy' if 'Asset Strategy' in df.columns else 'asset_strategy'
+
+    if ticker_col not in df.columns:
+        return False, "DataFrame missing Ticker column."
+
+    mapping = {}
+    for _, row in df.iterrows():
+        ticker = str(row.get(ticker_col, '')).strip()
+        if not ticker or ticker.lower() in ('nan', ''):
+            continue
+        asset_class = str(row.get(ac_col, 'Other')).strip() if ac_col in df.columns else 'Other'
+        sector_strategy = str(row.get(as_col, 'Other')).strip() if as_col in df.columns else 'Other'
+        if asset_class.lower() in ('nan', '', 'n/a'):
+            asset_class = 'Other'
+        if sector_strategy.lower() in ('nan', '', 'n/a'):
+            sector_strategy = 'Other'
+        mapping[ticker] = {'asset_class': asset_class, 'sector_strategy': sector_strategy}
+
+    if not mapping:
+        return False, "No tickers found in DataFrame."
+
+    os.makedirs(os.path.dirname(output_file) or ".", exist_ok=True)
+    with open(output_file, 'w') as f:
+        json.dump(mapping, f, indent=4)
+    return True, f"Synced {len(mapping)} tickers from sheet -> {output_file}"
+
+
 def enrich_holdings_from_df(df: pd.DataFrame, output_file: str = "data/ticker_mapping.json") -> tuple[bool, str]:
     """
     DataFrame-native entry point for Streamlit UI.

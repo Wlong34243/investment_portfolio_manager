@@ -67,52 +67,68 @@ def calculate_drift(holdings_df: pd.DataFrame, targets_df: pd.DataFrame) -> pd.D
 
     # 2. Map Holdings to Target Categories
     h_df = holdings_df.copy()
-    
-    # Define normalization mapping
-    def normalize_cat(cat_name):
-        c = str(cat_name).strip().lower()
-        if 'tech' in c or 'software' in c or 'communication' in c: return 'Information Technology'
-        if 'energy' in c: return 'Energy'
-        if 'financial' in c: return 'Financials'
-        if 'health' in c: return 'Healthcare'
-        if 'industrial' in c: return 'Industrials'
-        if 'fixed' in c or 'bond' in c or 'bill' in c: return 'Fixed Income'
-        if 'cash' in c: return 'Cash'
-        if 'equity' in c or 'market' in c or 'international' in c: return 'Equities'
-        return 'Other'
+    target_cats = t_df['Category'].tolist()
+
+    def match_to_target(asset_class: str) -> str:
+        """Map a holding's Asset Class to the nearest target category.
+        1. Exact match
+        2. Case-insensitive exact match
+        3. Substring match (e.g. 'Technology' ⊂ 'Information Technology')
+        4. Return original value (shows as unmatched in outer join)
+        """
+        if not asset_class or asset_class.lower() in ('other', 'n/a', '', 'nan'):
+            return 'Unallocated'
+        if asset_class in target_cats:
+            return asset_class
+        ac_lower = asset_class.lower()
+        for tc in target_cats:
+            if tc.lower() == ac_lower:
+                return tc
+        for tc in target_cats:
+            if ac_lower in tc.lower() or tc.lower() in ac_lower:
+                return tc
+        return asset_class  # keep original so it surfaces in Unallocated row
 
     def map_row_to_target(row):
-        # Priority 1: Explicit Cash Tickers
         if row['Is Cash'] or str(row['Ticker']).upper() in ['QACDS', 'CASH_MANUAL', 'CASH']:
             return 'Cash'
-
-        # Priority 2: Use Asset Class directly from holdings (set by Gemini enrichment
-        # or Schwab import). Only fall back to normalize_cat if blank or generic.
         asset_class = str(row.get('Asset Class', '')).strip()
-        if asset_class and asset_class.lower() not in ('other', 'n/a', '', 'nan'):
-            return asset_class
-
-        # Priority 3: keyword fallback for blank/Other positions
-        return normalize_cat(asset_class)
+        return match_to_target(asset_class)
 
     h_df['Category'] = h_df.apply(map_row_to_target, axis=1)
 
     # 3. Calculate Actual Weights
     total_mv = h_df['Market Value'].sum()
     if total_mv > 0:
-        actual_weights = h_df.groupby('Category')['Market Value'].apply(lambda x: (x.sum() / total_mv) * 100).reset_index()
+        actual_weights = (
+            h_df.groupby('Category')['Market Value']
+            .apply(lambda x: (x.sum() / total_mv) * 100)
+            .reset_index()
+        )
         actual_weights.columns = ['Category', 'Actual %']
     else:
         actual_weights = pd.DataFrame(columns=['Category', 'Actual %'])
 
-    # 4. Merge
-    # We want ALL categories from Targets to show up, even if Actual is 0
+    # 4. Merge — outer join so unmatched holdings appear as an "Unallocated" bucket
+    matched_cats = set(target_cats)
+    unmatched = actual_weights[~actual_weights['Category'].isin(matched_cats)]
+    unallocated_pct = unmatched['Actual %'].sum()
+
     drift_df = pd.merge(t_df, actual_weights, on='Category', how='left')
-    
-    # Fill missing actuals with 0
     drift_df['Actual %'] = drift_df['Actual %'].fillna(0.0)
-    
+
+    # Append Unallocated row if any holdings didn't map to a target
+    if unallocated_pct > 0.01:
+        unalloc_row = pd.DataFrame([{
+            'Category': 'Unallocated',
+            'Target %': 0.0,
+            'Actual %': round(unallocated_pct, 2),
+        }])
+        drift_df = pd.concat([drift_df, unalloc_row], ignore_index=True)
+
     # 5. Math
+    drift_df['Actual %'] = drift_df['Actual %'].fillna(0.0)
+    drift_df['Target %'] = drift_df['Target %'].fillna(0.0)
     drift_df['Drift %'] = drift_df['Actual %'] - drift_df['Target %']
     drift_df['Breach'] = drift_df['Drift %'].abs() > 5.0
 

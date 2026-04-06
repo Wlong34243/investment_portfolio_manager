@@ -62,9 +62,22 @@ with st.sidebar:
                     st.rerun()
 
     st.divider()
-    with st.expander("🧠 AI Category Enrichment"):
-        st.caption("Re-categorize all tickers via Gemini. Updates `data/ticker_mapping.json` — applied on next CSV import.")
-        if st.button("Run Enrichment", width='stretch', disabled=df.empty):
+    with st.expander("🧠 Category Enrichment"):
+        st.caption("Saves ticker categories to `data/ticker_mapping.json` — applied on next CSV import.")
+        if st.button("⬇️ Sync from Sheet", width='stretch', disabled=df.empty,
+                     help="Reads Asset Class / Asset Strategy already in your Holdings sheet. Fast, no AI call."):
+            with st.spinner("Syncing categories from sheet..."):
+                try:
+                    from utils.agents.portfolio_enricher import sync_from_holdings
+                    ok, msg = sync_from_holdings(df)
+                    if ok:
+                        st.toast(msg, icon="✅")
+                    else:
+                        st.error(msg)
+                except Exception as e:
+                    st.error(f"Sync error: {e}")
+        if st.button("🤖 Re-enrich via Gemini AI", width='stretch', disabled=df.empty,
+                     help="Calls Gemini to re-categorize all tickers. Use if you want AI to overwrite current categories."):
             with st.spinner("Asking Gemini to categorize your holdings..."):
                 try:
                     from utils.agents.portfolio_enricher import enrich_holdings_from_df
@@ -72,7 +85,7 @@ with st.sidebar:
                     if ok:
                         st.toast(msg, icon="✅")
                     else:
-                        st.error(msg)
+                        st.error(f"{msg} (Try 'Sync from Sheet' instead.)")
                 except Exception as e:
                     st.error(f"Enrichment error: {e}")
         if df.empty:
