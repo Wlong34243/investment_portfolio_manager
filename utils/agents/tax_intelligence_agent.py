@@ -82,12 +82,10 @@ def calculate_drift(holdings_df: pd.DataFrame, targets_df: pd.DataFrame) -> pd.D
         drift_df['Actual %'] = drift_df['Actual %'].astype(float)
         drift_df['Drift %'] = 0.0
 
+    drift_df['Target %'] = drift_df['Target %'].astype(float)
+    drift_df['Actual %'] = drift_df['Actual %'].astype(float)
+    drift_df['Drift %'] = drift_df['Drift %'].astype(float)
     drift_df['Breach'] = drift_df['Drift %'].abs() > 5.0
-
-    # Final type cleanup for Arrow compatibility
-    for col in drift_df.columns:
-        if drift_df[col].dtype == object and col != 'Category':
-            drift_df[col] = drift_df[col].astype(str)
 
     return drift_df
 

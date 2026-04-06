@@ -102,11 +102,16 @@ if not drift_df.empty:
     st.plotly_chart(fig_drift, width='stretch')
     
     # Table
-    st.table(drift_df.style.format({
-        'Target %': '{:.1f}%',
-        'Actual %': '{:.1f}%',
-        'Drift %': '{:+.1f}%'
-    }).apply(lambda x: ['background-color: #FADBD8' if abs(v) > 5 else '' for v in x], subset=['Drift %']))
+    st.dataframe(
+        drift_df,
+        column_config={
+            'Target %': st.column_config.NumberColumn(format="%.1f%%"),
+            'Actual %': st.column_config.NumberColumn(format="%.1f%%"),
+            'Drift %': st.column_config.NumberColumn(format="%+.1f%%"),
+        },
+        use_container_width=True,
+        hide_index=True
+    )
 else:
     st.info("Drift data could not be calculated. Ensure Categories in Target_Allocation match your Holdings.")
 
