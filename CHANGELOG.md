@@ -1,5 +1,29 @@
 # Changelog
 
+## [2026-04-06] — Is Cash Column Anti-Pattern Fix
+
+### fix: Cash Balance = Total Portfolio on Main Dashboard / 100% Cash on Rebalancing Page
+**Root Cause:** `Is Cash` column is written correctly during CSV ingestion but becomes `True` for all rows when read back from Google Sheets via `ws.get_all_values()`. Any code using `df['Is Cash'].astype(bool)` or `df['Is Cash'] == True` was silently treating every holding as cash.
+
+**Symptoms observed:**
+- Main Dashboard: Total Portfolio == Cash Balance, Invested = $0
+- Rebalancing page: All drift Actual % = 0% except Cash = 100%
+- Cash Sweeper: Permanently triggered (all assets appeared idle)
+- Options Agent: Zero covered call candidates
+
+**What changed:**
+- **`app.py`** — `cash_mask` in Holdings tab now uses `Asset Class == 'cash'` + `Ticker.isin(CASH_TICKERS)` instead of `Is Cash.astype(bool)`
+- **`pipeline.py`** — Both `calculate_income_metrics()` cash filters updated (x2)
+- **`utils/agents/cash_sweeper.py`** — `get_cash_sweep_alert()` and `analyze_cash_position()` updated (x2)
+- **`utils/agents/options_agent.py`** — `find_covered_call_candidates()` cash exclusion updated
+- **`pages/1_Rebalancing.py`** — `_compute_drift()` already fixed; `Is Cash` column not referenced
+
+**Rule going forward:** Never use `Is Cash` for filtering in display/agent code. Use `Asset Class.str.lower() == 'cash'` and `Ticker.isin(CASH_TICKERS)`. Documented in `lessonsLearned.md` §4.
+
+**Status: Production ready. Pushed to main.**
+
+
+
 ## [Unreleased] — Smart Category Enrichment
 
 ### Added
