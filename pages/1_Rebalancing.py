@@ -82,39 +82,17 @@ except Exception as e:
     st.error(f"Could not load holdings data from sheet: {e}")
     st.stop()
 
-# --- Diagnostic expander (remove once confirmed working) ---
-with st.expander("🔍 Data Diagnostic", expanded=False):
-    st.write(f"**Holdings rows:** {len(holdings_df)} | **Total Market Value:** ${holdings_df['Market Value'].sum():,.0f}")
-    st.write(f"**Market Value dtype:** {holdings_df['Market Value'].dtype}")
-    st.write(f"**Is Cash dtype:** {holdings_df['Is Cash'].dtype}")
-    st.write("**Asset Class values in holdings:**")
-    st.write(holdings_df.groupby('Asset Class')['Market Value'].sum().sort_values(ascending=False).to_dict())
-    st.write("**Target categories:**")
-    if not targets_df.empty:
-        st.write(targets_df['Asset Class'].tolist())
-    st.write("**Drift output:**")
-    if 'drift_df' in dir():
-        st.write(drift_df[['Category','Target %','Actual %','Drift %']].to_dict('records') if not drift_df.empty else "EMPTY")
-
 if holdings_df.empty:
     st.warning("No holdings data available. Please upload a positions CSV on the main page.")
     st.stop()
 
 if targets_df.empty:
-    st.error("Target_Allocation tab not found or empty in Google Sheets. Please define targets to see drift analysis.")
-    # Show example format
-    with st.expander("Required Target_Allocation Schema"):
-        st.write("The 'Target_Allocation' sheet should have two columns:")
-        st.code("Category | Target %")
-        st.write("Categories must match 'Asset Class' values (e.g., Equities, Alternatives, Cash & Fixed Income).")
+    st.error("Target_Allocation tab not found or empty in Google Sheets.")
     st.stop()
 
-# --- Drift Analysis ---
-# Inlined here to avoid stale module cache on Streamlit Cloud.
-st.subheader("Allocation Drift")
-
-def _compute_drift(holdings_df, targets_df):
-    t_df = targets_df.copy()
+# --- Drift Calculation (inlined to avoid stale module cache on Streamlit Cloud) ---
+def _compute_drift(h, t):
+    t_df = t.copy()
     if 'Asset Class' in t_df.columns:
         t_df = t_df.rename(columns={'Asset Class': 'Category'})
     target_pct_col = next((c for c in t_df.columns if 'Target' in c), None)
@@ -123,25 +101,25 @@ def _compute_drift(holdings_df, targets_df):
     t_df['Target %'] = pd.to_numeric(t_df[target_pct_col], errors='coerce').fillna(0.0)
     target_cats = t_df['Category'].tolist()
 
-    h_df = holdings_df.copy()
+    h_df = h.copy()
     h_df['Market Value'] = pd.to_numeric(h_df['Market Value'], errors='coerce').fillna(0.0)
 
     def _match(ac):
-        if not ac or ac.lower() in ('other', 'n/a', '', 'nan'):
+        if not ac or str(ac).lower() in ('other', 'n/a', '', 'nan'):
             return 'Unallocated'
         if ac in target_cats:
             return ac
-        ac_l = ac.lower()
+        ac_l = str(ac).lower()
         for tc in target_cats:
             if tc.lower() == ac_l:
                 return tc
         for tc in target_cats:
             if ac_l in tc.lower() or tc.lower() in ac_l:
                 return tc
-        return ac
+        return ac  # unmatched — surfaces in Unallocated
 
     def _map(row):
-        if row['Is Cash'] or str(row['Ticker']).upper() in ['QACDS', 'CASH_MANUAL', 'CASH']:
+        if bool(row['Is Cash']) or str(row['Ticker']).upper() in ['QACDS', 'CASH_MANUAL', 'CASH']:
             return 'Cash'
         return _match(str(row['Asset Class']).strip())
 
@@ -158,7 +136,6 @@ def _compute_drift(holdings_df, targets_df):
     )
     actual.columns = ['Category', 'Actual %']
 
-    # Surface unmatched holdings as Unallocated
     unmatched_pct = actual[~actual['Category'].isin(target_cats)]['Actual %'].sum()
     result = pd.merge(t_df, actual, on='Category', how='left')
     result['Actual %'] = result['Actual %'].fillna(0.0)
@@ -171,6 +148,19 @@ def _compute_drift(holdings_df, targets_df):
     return result
 
 drift_df = _compute_drift(holdings_df, targets_df)
+
+# --- Diagnostic (shown AFTER drift is computed so all values are visible) ---
+with st.expander("🔍 Data Diagnostic", expanded=False):
+    st.write(f"**Holdings rows:** {len(holdings_df)} | **Total MV:** ${holdings_df['Market Value'].sum():,.0f}")
+    st.write(f"**Is Cash dtype:** {holdings_df['Is Cash'].dtype} | **Market Value dtype:** {holdings_df['Market Value'].dtype}")
+    st.write("**Asset Class → Market Value (from sheet):**")
+    st.write(holdings_df.groupby('Asset Class')['Market Value'].sum().sort_values(ascending=False).to_dict())
+    st.write("**Target categories:**", targets_df['Asset Class'].tolist())
+    st.write("**Drift result:**")
+    st.write(drift_df[['Category','Target %','Actual %','Drift %']].to_dict('records') if not drift_df.empty else "EMPTY — _compute_drift returned nothing")
+
+# --- Drift Analysis ---
+st.subheader("Allocation Drift")
 
 if not drift_df.empty:
     # Chart
