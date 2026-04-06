@@ -108,9 +108,9 @@ def normalize_positions(df: pd.DataFrame, import_date: str) -> pd.DataFrame:
     mask_pct = (df['unrealized_gl_pct'] == 0) & (df['cost_basis'] > 0)
     df.loc[mask_pct, 'unrealized_gl_pct'] = (df.loc[mask_pct, 'unrealized_gl'] / df.loc[mask_pct, 'cost_basis']) * 100
 
-    # Build fingerprint = "{import_date}|{ticker}|{quantity}"
+    # Build fingerprint = "{import_date}|{ticker}|{quantity}|{market_value}"
     df['fingerprint'] = df.apply(
-        lambda x: f"{import_date}|{x['ticker']}|{x.get('quantity',0)}", 
+        lambda x: f"{import_date}|{x['ticker']}|{x.get('quantity',0)}|{round(x.get('market_value',0), 2)}", 
         axis=1
     )
     
@@ -444,6 +444,48 @@ def ingest_transactions(uploaded_file, dry_run=True):
         write_pipeline_log("ERROR", source, f"Ingestion failed: {e}", dry_run=dry_run)
         
     return results
+
+def append_decision_log(date_str: str, tickers: str, action: str,
+                        context: str, rationale: str, tags: str) -> bool:
+    """
+    Append a decision journal entry to the Decision_Log tab.
+    Returns True on success, False on failure.
+    Respects config.DRY_RUN.
+    """
+    timestamp = datetime.now().strftime("%H:%M:%S")
+    fingerprint = f"{date_str}|{timestamp}|{action}|{tickers}"
+    row = [
+        str(date_str),
+        f"{date_str} {timestamp}",
+        str(tickers),
+        str(action),
+        str(context),
+        str(rationale),
+        str(tags),
+        fingerprint,
+    ]
+
+    if config.DRY_RUN:
+        write_pipeline_log("INFO", "Decision_Journal",
+            f"DRY RUN: Would log decision for {tickers} ({action})",
+            dry_run=True)
+        return True
+
+    try:
+        from utils.sheet_readers import get_gspread_client
+        client = get_gspread_client()
+        spreadsheet = client.open_by_key(config.PORTFOLIO_SHEET_ID)
+        ws = spreadsheet.worksheet(config.TAB_DECISION_LOG)
+        ws.append_rows([row], value_input_option='USER_ENTERED')
+        write_pipeline_log("SUCCESS", "Decision_Journal",
+            f"Logged decision: {action} {tickers}",
+            f"Tags: {tags}")
+        return True
+    except Exception as e:
+        write_pipeline_log("ERROR", "Decision_Journal",
+            f"Failed to log decision: {e}")
+        return False
+
 
 def write_to_sheets(df: pd.DataFrame, cash_amount: float, dry_run: bool = True) -> dict:
     """

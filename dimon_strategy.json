@@ -1,0 +1,65 @@
+{
+  "executive_summary": "The U.S. economy remains resilient but faces a 'skunk at the party' in 2026: stickier inflation and higher interest rates driven by the war in Iran, massive deficit spending, and global supply chain reshaping. Dimon's macro outlook is defined by extreme geopolitical tension—specifically with China and Iran—creating a 'tectonic' shift in the global economic order.",
+  "source_quality": "High",
+  "thesis_screener_prompts": [
+    "Capitalize on the $725 billion AI-driven capital spending surge by the five hyperscalers impacting data centers and power consumption.",
+    "Invest in the 'Security and Resiliency' super-cycle, focusing on defense industrial base expansion, shipbuilding, and critical mineral supply chains.",
+    "Monitor the 'Trade 2.0' realignment and U.S. industrial policy shifts in semiconductors and advanced manufacturing for national security."
+  ],
+  "target_allocations": [
+    {
+      "asset_class": "Information Technology",
+      "asset_strategy": "Hyperscaler AI Infrastructure",
+      "target_pct": 25.0,
+      "min_pct": 20.0,
+      "max_pct": 30.0,
+      "confidence": "High",
+      "notes": "Dimon highlights a massive jump in AI-driven CapEx from $450B in 2025 to $725B in 2026 by hyperscalers, viewing AI as a transformational productivity driver."
+    },
+    {
+      "asset_class": "Industrials",
+      "asset_strategy": "Defense and Advanced Manufacturing",
+      "target_pct": 20.0,
+      "min_pct": 15.0,
+      "max_pct": 25.0,
+      "confidence": "High",
+      "notes": "The $1.5 trillion Security and Resiliency Initiative targets shipbuilding, drones, and aerospace as the world becomes less safe and requires a stronger military industrial base."
+    },
+    {
+      "asset_class": "Financials",
+      "asset_strategy": "Diversified Money Centers",
+      "target_pct": 15.0,
+      "min_pct": 10.0,
+      "max_pct": 20.0,
+      "confidence": "Medium",
+      "notes": "Banking remains a source of strength; Dimon expects bank deregulation to free up capital and liquidity for productive use, despite 'ping-pong' regulations."
+    },
+    {
+      "asset_class": "Energy",
+      "asset_strategy": "Energy Independence and Grid Resilience",
+      "target_pct": 15.0,
+      "min_pct": 10.0,
+      "max_pct": 20.0,
+      "confidence": "High",
+      "notes": "War in Iran poses commodity shocks; focuses on grid resilience and battery storage to meet increased demand from AI and data centers."
+    },
+    {
+      "asset_class": "Fixed Income",
+      "asset_strategy": "Short-Duration / T-Bills",
+      "target_pct": 15.0,
+      "min_pct": 5.0,
+      "max_pct": 20.0,
+      "confidence": "Medium",
+      "notes": "Warnings of 'stickier inflation' and 'higher interest rates than markets expect' suggest a cautious approach to long-duration assets."
+    },
+    {
+      "asset_class": "Cash",
+      "asset_strategy": "Liquidity for Volatility",
+      "target_pct": 10.0,
+      "min_pct": 5.0,
+      "max_pct": 15.0,
+      "confidence": "High",
+      "notes": "High asset prices and low credit spreads create risk; Dimon advises keeping 'head when all about you are losing theirs,' emphasizing the need for a 'fortress' posture."
+    }
+  ]
+}

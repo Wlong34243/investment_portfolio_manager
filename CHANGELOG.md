@@ -1,5 +1,36 @@
 # Changelog
 
+## [Unreleased] — Podcast Pipeline + Decision Journal
+
+### Added
+- `utils/agents/podcast_analyst.py` — Gemini-powered podcast transcript analyzer
+  with Pydantic schema (PodcastStrategy, SectorTarget)
+- `tasks/weekly_podcast_sync.py` — CLI: YouTube transcript -> Gemini -> AI_Suggested_Allocation tab
+- `AI_Suggested_Allocation` tab in Portfolio Sheet — AI suggestions kept separate from
+  Bill's manual Target_Allocation
+- `Decision_Log` tab in Portfolio Sheet — Investor memory layer for trade rationales
+- `pages/7_Journal.py` — Decision Journal UI with auto-fetched SPY context
+- `append_decision_log()` in pipeline.py — DRY_RUN-gated append to Decision_Log
+- `youtube-transcript-api` dependency
+
+### Changed
+- `config.py` — Added TAB_AI_SUGGESTED_ALLOCATION, AI_SUGGESTED_ALLOCATION_COLUMNS,
+  AI_SUGGESTED_ALLOCATION_COL_MAP, TAB_DECISION_LOG, DECISION_LOG_COLUMNS
+- `create_portfolio_sheet.py` — Added AI_Suggested_Allocation and Decision_Log to
+  SCHEMA and TABS_TO_FREEZE
+- `PORTFOLIO_SHEET_SCHEMA.md` — Documented AI_Suggested_Allocation and Decision_Log
+  tab schemas and fingerprints
+- `app.py` — Added Decision Journal page to st.navigation
+
+### Architecture Decisions
+1. AI suggestions write to AI_Suggested_Allocation (new tab), never to Target_Allocation.
+   Target_Allocation remains Bill's manual-only authoritative allocation.
+2. Decision_Log is append-only via the Journal UI. Captures the "why" behind trades
+   for year-end review, behavioral pattern analysis, and future AI agent context.
+
+**Status:** Podcast script defaults to DRY RUN (--live flag required). Decision Journal
+respects config.DRY_RUN. Safe to deploy.
+
 Every entry must include a **Status** line describing what is currently safe to run.
 
 ## [2026-04-05] — Dashboard Architecture Fix & Tax Intelligence Repair

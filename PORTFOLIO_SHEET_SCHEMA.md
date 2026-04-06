@@ -106,6 +106,30 @@
 
 ---
 
+### Tab: AI_Suggested_Allocation
+**Purpose:** AI-generated allocation suggestions from podcast analysis. Bill reviews
+and manually promotes to Target_Allocation when accepted. App writes; Bill decides.
+
+| Column | Header | Type | Example | Notes |
+|--------|--------|------|---------|-------|
+| A | Date | Date | `2026-04-05` | When the analysis was generated |
+| B | Source | String | `Forward Guidance EP 412` | Podcast name + episode identifier |
+| C | Asset Class | String | `Technology` | Standard GICS sector or macro category (e.g., Technology, Utilities, Industrials, Materials, Real Estate, Fixed Income, Cash). AI may introduce new standard sectors for displacement opportunities. |
+| D | Asset Strategy | String | `Defensive AI beneficiaries` | Thesis behind this allocation |
+| E | Target % | Float | `25` | Suggested allocation. All rows must sum to 100 |
+| F | Min % | Float | `20` | Lower drift band |
+| G | Max % | Float | `30` | Upper drift band |
+| H | Confidence | String | `High` | High / Medium / Low |
+| I | Notes | String | `Capex cycle favors...` | Supporting rationale from transcript |
+| J | Executive Summary | String | `Risk-off rotation...` | Same across all rows in a batch |
+| K | Fingerprint | String | `2026-04-05\|Forward Guidance EP 412\|Technology` | Dedup key |
+
+**Row 1:** Headers (frozen)
+**Row 2+:** Latest AI analysis. Previous data cleared before each new write.
+**Write pattern:** Clear data rows, write fresh batch. Archived to Logs tab before overwrite.
+
+---
+
 ### Tab: Risk_Metrics (Phase 2)
 **Purpose:** Snapshots of portfolio risk analytics over time.
 
@@ -166,6 +190,27 @@
 
 ---
 
+### Tab: Decision_Log
+**Purpose:** The investor's memory layer. Logs rationales for trades and
+strategic holds. Append-only — never overwrite or delete rows.
+
+| Column | Header | Type | Example | Notes |
+|--------|--------|------|---------|-------|
+| A | Date | Date | `2026-04-10` | Date of the decision |
+| B | Timestamp | DateTime | `2026-04-10 10:30:15` | Exact time of journal entry (dedup key component) |
+| C | Tickers Involved | String | `NVDA, AAPL` | Comma-separated tickers |
+| D | Action | String | `Buy` | Buy / Sell / Hold / Rebalance / Watch |
+| E | Market Context | String | `SPY @ $510.20, VIX @ 18.5` | Auto-fetched SPY price + optional manual notes |
+| F | Rationale | String | `Trimming tech after 3 consecutive...` | The "Why" — what must be true for this decision to work |
+| G | Tags | String | `Macro, Tech, Rebalance` | Comma-separated, for future querying and agent context |
+| H | Fingerprint | String | `2026-04-10\|10:30:15\|Buy\|NVDA, AAPL` | Dedup key using timestamp to allow multiple entries per day |
+
+**Row 1:** Headers (frozen)
+**Row 2+:** One row per journal entry, newest at bottom
+**Write pattern:** Append only via Streamlit Journal UI. Never delete or overwrite.
+
+---
+
 ## Cross-Reference: RE Dashboard Sheet (READ ONLY)
 **Sheet ID:** `1DXuY1iBo2GqZCCSZ7OrUa4iaunb5s8Kf1Rms8Z237rQ`
 
@@ -189,4 +234,6 @@ Authoritative list of deduplication keys used across the system to prevent dupli
 | `Realized_GL` | `closed_dt\|ticker\|opened_dt\|qty\|proceeds\|cost` | Exact lot match for tax ledger. |
 | `Income_Tracking` | `import_date\|pos_count\|projected_income` | One income snapshot per unique portfolio state per day. |
 | `Risk_Metrics` | `import_date\|beta\|top_pos_pct` | One risk profile per unique portfolio state per day. |
+| `AI_Suggested_Allocation` | `date\|source\|asset_class` | One row per sector per podcast analysis. |
+| `Decision_Log` | `date\|timestamp\|action\|tickers` | Timestamp prevents dedup collision on same-day entries. |
 

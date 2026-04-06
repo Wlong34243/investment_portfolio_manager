@@ -132,5 +132,6 @@ pg = st.navigation([
     st.Page("pages/4_Tax.py",            title="Tax Intelligence",  icon="💸"),
     st.Page("pages/5_Net_Worth.py",      title="Unified Net Worth", icon="🏦"),
     st.Page("pages/6_Advisor.py",        title="AI Advisor",        icon="💬"),
+    st.Page("pages/7_Journal.py",        title="Decision Journal",  icon="📝"),
 ])
 pg.run()

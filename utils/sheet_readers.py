@@ -78,6 +78,12 @@ def read_gsheet_robust(ws: gspread.Worksheet) -> pd.DataFrame:
     
     df = pd.DataFrame(data, columns=clean_headers)
 
+    # Filter out redundant header rows (sometimes happens with insert_row at row 1)
+    if not df.empty:
+        # Check if the first column's content is the same as its header
+        first_col = df.columns[0]
+        df = df[df[first_col] != first_col]
+
     # ROOT CAUSE FIX: If the first column is unnamed, it's our Ticker column.
     if 'Unnamed_0' in df.columns:
         df = df.rename(columns={'Unnamed_0': 'Ticker'})

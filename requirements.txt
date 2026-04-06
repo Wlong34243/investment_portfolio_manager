@@ -4,6 +4,7 @@ google-auth
 pandas
 numpy
 yfinance
+youtube-transcript-api
 scipy
 openpyxl
 matplotlib

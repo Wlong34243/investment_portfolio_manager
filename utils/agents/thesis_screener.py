@@ -33,10 +33,7 @@ def parse_thesis_to_criteria(thesis: str) -> dict:
     """
     prompt = f"Investment Thesis: {thesis}"
     
-    system_instruction = f"""
-    {SAFETY_PREAMBLE}
-    You are a quantitative stock screener. Translate the investor's thesis into concrete screening criteria for a stock screening API.
-    """
+    system_instruction = "You are a quantitative stock screener. Translate the investor's thesis into concrete screening criteria for a stock screening API."
     
     try:
         res = ask_gemini(prompt, system_instruction=system_instruction, response_schema=ThesisCriteria)

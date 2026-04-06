@@ -9,17 +9,18 @@ SCHEMA = {
         "Ticker", "Description", "Asset Class", "Asset Strategy", "Quantity", 
         "Price", "Market Value", "Cost Basis", "Unit Cost", "Unrealized G/L", 
         "Unrealized G/L %", "Est Annual Income", "Dividend Yield", "Acquisition Date", 
-        "Wash Sale", "Is Cash", "Weight", "Import Date", "Fingerprint"
+        "Wash Sale", "Is Cash", "Daily Change %", "Weight", "Import Date", "Fingerprint"
     ],
     "Holdings_History": [
         "Ticker", "Description", "Asset Class", "Asset Strategy", "Quantity", 
         "Price", "Market Value", "Cost Basis", "Unit Cost", "Unrealized G/L", 
         "Unrealized G/L %", "Est Annual Income", "Dividend Yield", "Acquisition Date", 
-        "Wash Sale", "Is Cash", "Weight", "Import Date", "Fingerprint"
+        "Wash Sale", "Is Cash", "Daily Change %", "Weight", "Import Date", "Fingerprint"
     ],
     "Daily_Snapshots": [
         "Date", "Total Value", "Total Cost", "Total Unrealized G/L", 
-        "Cash Value", "Invested Value", "Position Count", "Fingerprint"
+        "Cash Value", "Invested Value", "Position Count", "Blended Yield", 
+        "Import Timestamp", "Fingerprint"
     ],
     "Transactions": [
         "Trade Date", "Settlement Date", "Ticker", "Description", "Action", 
@@ -48,10 +49,19 @@ SCHEMA = {
     ],
     "Logs": [
         "Timestamp", "Level", "Source", "Message", "Details"
-    ]
+    ],
+    "AI_Suggested_Allocation": [
+        "Date", "Source", "Asset Class", "Asset Strategy",
+        "Target %", "Min %", "Max %", "Confidence", "Notes",
+        "Executive Summary", "Fingerprint"
+    ],
+    "Decision_Log": [
+        "Date", "Timestamp", "Tickers Involved", "Action",
+        "Market Context", "Rationale", "Tags", "Fingerprint"
+    ],
 }
 
-TABS_TO_FREEZE = ["Holdings_Current", "Holdings_History", "Daily_Snapshots", "Realized_GL"]
+TABS_TO_FREEZE = ["Holdings_Current", "Holdings_History", "Daily_Snapshots", "Realized_GL", "AI_Suggested_Allocation", "Decision_Log"]
 
 def create_sheets():
     print(f"Opening spreadsheet: {config.PORTFOLIO_SHEET_ID}")

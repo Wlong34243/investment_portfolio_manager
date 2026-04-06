@@ -77,6 +77,8 @@ TAB_INCOME_TRACKING = "Income_Tracking"
 TAB_REALIZED_GL = "Realized_GL"
 TAB_CONFIG = "Config"
 TAB_LOGS = "Logs"
+TAB_AI_SUGGESTED_ALLOCATION = "AI_Suggested_Allocation"
+TAB_DECISION_LOG = "Decision_Log"
 
 # ---------------------------------------------------------------------------
 # Schwab CSV Parsing
@@ -142,6 +144,45 @@ POSITION_COL_MAP = {
     'import_date': 'Import Date',
     'fingerprint': 'Fingerprint',
 }
+
+AI_SUGGESTED_ALLOCATION_COLUMNS = [
+    'Date',
+    'Source',
+    'Asset Class',
+    'Asset Strategy',
+    'Target %',
+    'Min %',
+    'Max %',
+    'Confidence',
+    'Notes',
+    'Executive Summary',
+    'Fingerprint',
+]
+
+AI_SUGGESTED_ALLOCATION_COL_MAP = {
+    'date': 'Date',
+    'source': 'Source',
+    'asset_class': 'Asset Class',
+    'asset_strategy': 'Asset Strategy',
+    'target_pct': 'Target %',
+    'min_pct': 'Min %',
+    'max_pct': 'Max %',
+    'confidence': 'Confidence',
+    'notes': 'Notes',
+    'executive_summary': 'Executive Summary',
+    'fingerprint': 'Fingerprint',
+}
+
+DECISION_LOG_COLUMNS = [
+    'Date',
+    'Timestamp',
+    'Tickers Involved',
+    'Action',
+    'Market Context',
+    'Rationale',
+    'Tags',
+    'Fingerprint',
+]
 
 GL_COL_MAP = {
     'ticker': 'Ticker',
