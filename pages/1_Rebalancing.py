@@ -90,7 +90,9 @@ if targets_df.empty:
     st.error("Target_Allocation tab not found or empty in Google Sheets.")
     st.stop()
 
-# --- Drift Calculation (inlined to avoid stale module cache on Streamlit Cloud) ---
+# --- Drift Calculation ---
+# Uses Asset Class and Ticker columns only — intentionally ignores Is Cash
+# because that column can be unreliable from Google Sheets.
 def _compute_drift(h, t):
     # 1. Prepare targets
     t_df = t.copy()
@@ -102,50 +104,41 @@ def _compute_drift(h, t):
     t_df['Target %'] = pd.to_numeric(t_df[tgt_col], errors='coerce').fillna(0.0)
     target_cats = t_df['Category'].tolist()
 
-    # 2. Clean holdings — only the columns we need
-    h_df = h[['Ticker', 'Asset Class', 'Market Value', 'Is Cash']].copy()
+    # 2. Clean holdings
+    h_df = h[['Ticker', 'Asset Class', 'Market Value']].copy()
     h_df['Market Value'] = pd.to_numeric(h_df['Market Value'], errors='coerce').fillna(0.0)
+    h_df['_ac'] = h_df['Asset Class'].astype(str).str.strip()
+    h_df['_tk'] = h_df['Ticker'].astype(str).str.strip().str.upper()
+
     total_mv = h_df['Market Value'].sum()
     if total_mv <= 0:
         return pd.DataFrame(), {}
 
-    # 3. Identify cash rows robustly
-    ic = h_df['Is Cash']
-    if ic.dtype == object:
-        # String representation: "TRUE", "FALSE", "Yes", "1", etc.
-        cash_flag = ic.astype(str).str.strip().str.upper().isin(['TRUE', 'YES', '1', 'T'])
-    else:
-        # Bool or numeric dtype — cast directly
-        cash_flag = ic.fillna(False).astype(bool)
-
-    cash_ticker = h_df['Ticker'].astype(str).str.strip().str.upper().isin(['QACDS', 'CASH_MANUAL', 'CASH'])
-    cash_ac     = h_df['Asset Class'].astype(str).str.strip().str.lower() == 'cash'
-    is_cash     = cash_flag | cash_ticker | cash_ac
+    # 3. Identify cash rows by Asset Class or known cash tickers — no Is Cash column
+    CASH_TICKERS = {'QACDS', 'CASH_MANUAL', 'CASH', 'CASH & CASH INVESTMENTS'}
+    is_cash = (h_df['_ac'].str.lower() == 'cash') | h_df['_tk'].isin(CASH_TICKERS)
 
     # 4. Map each unique non-cash Asset Class to the best target category
     def find_cat(ac):
-        s = str(ac).strip()
-        if not s or s.lower() in ('nan', 'n/a', 'other', ''):
+        if not ac or ac.lower() in ('nan', 'n/a', 'other', ''):
             return 'Unallocated'
-        if s in target_cats:
-            return s
-        sl = s.lower()
+        if ac in target_cats:
+            return ac
+        al = ac.lower()
         for tc in target_cats:
-            if tc.lower() == sl:
+            if tc.lower() == al:
                 return tc
         for tc in target_cats:
-            if sl in tc.lower() or tc.lower() in sl:
+            if al in tc.lower() or tc.lower() in al:
                 return tc
         return 'Unallocated'
 
-    non_cash_df = h_df.loc[~is_cash].copy()
-    non_cash_df['_ac'] = non_cash_df['Asset Class'].astype(str).str.strip()
-    unique_acs  = non_cash_df['_ac'].unique()
-    ac_map      = {ac: find_cat(ac) for ac in unique_acs}  # e.g. {"Technology": "Information Technology"}
+    non_cash = h_df.loc[~is_cash]
+    ac_map = {ac: find_cat(ac) for ac in non_cash['_ac'].unique()}
 
-    # 5. Accumulate market value per target category (plain Python loop — no apply/map magic)
+    # 5. Accumulate MV per target category
     cat_mv: dict = {}
-    for ac, grp in non_cash_df.groupby('_ac'):
+    for ac, grp in non_cash.groupby('_ac'):
         cat = ac_map.get(ac, 'Unallocated')
         cat_mv[cat] = cat_mv.get(cat, 0.0) + float(grp['Market Value'].sum())
 
@@ -160,16 +153,14 @@ def _compute_drift(h, t):
         'cat_mv': {c: round(v, 2) for c, v in cat_mv.items()},
     }
 
-    # 6. Build actual % DataFrame
+    # 6. Build actual % and merge with targets
     actual = pd.DataFrame(
         [{'Category': c, 'Actual %': round(v / total_mv * 100, 2)} for c, v in cat_mv.items()]
     )
-
-    # 7. Left-join against targets so every target category always appears
     result = pd.merge(t_df[['Category', 'Target %']], actual, on='Category', how='left')
     result['Actual %'] = result['Actual %'].fillna(0.0)
 
-    # Append any categories that appear in actual but aren't in targets (e.g. Unallocated)
+    # Append rows in actual that aren't in targets (Unallocated, extra categories)
     extra = actual[~actual['Category'].isin(target_cats)].copy()
     if not extra.empty:
         extra['Target %'] = 0.0
