@@ -239,6 +239,28 @@ SNAPSHOT_COLUMNS = [
     'Fingerprint',
 ]
 
+INCOME_COLUMNS = [
+    'Date',
+    'Projected Annual Income',
+    'Blended Yield %',
+    'Top Generator Ticker',
+    'Top Generator Income',
+    'Cash Yield Contribution',
+    'Fingerprint',
+]
+
+RISK_COLUMNS = [
+    'Date',
+    'Portfolio Beta',
+    'Top Position Conc %',
+    'Top Position Ticker',
+    'Top Sector Conc %',
+    'Top Sector',
+    'Estimated VaR 95%',
+    'Stress -10% Impact',
+    'Fingerprint',
+]
+
 # ---------------------------------------------------------------------------
 # Transaction History Columns
 # ---------------------------------------------------------------------------
