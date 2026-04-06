@@ -10,6 +10,12 @@ import sys
 st.title("⚖️ Tax-Aware Rebalancing")
 st.info("💡 **Analysis only.** This page suggests actions but does not execute trades or modify your spreadsheet.")
 
+if st.button("🔄 Refresh Holdings Data"):
+    st.cache_data.clear()
+    if "holdings_df" in st.session_state:
+        del st.session_state["holdings_df"]
+    st.rerun()
+
 # --- Load Data ---
 targets_df = get_target_allocation()
 ai_suggested_df = get_ai_suggested_allocation()
@@ -65,11 +71,15 @@ if not ai_suggested_df.empty:
     )
 
 # --- Load Holdings ---
+# Prefer session_state (loaded fresh on main dashboard) over cached sheet read
+# to avoid stale @st.cache_data serving old market values.
 try:
-    holdings_df = get_holdings_current()
-    holdings_df = ensure_display_columns(holdings_df)
+    if "holdings_df" in st.session_state and not st.session_state["holdings_df"].empty:
+        holdings_df = ensure_display_columns(st.session_state["holdings_df"])
+    else:
+        holdings_df = ensure_display_columns(get_holdings_current())
 except Exception as e:
-    st.error("Could not connect to Google Sheets. Check your connection and service account permissions.")
+    st.error("Could not load holdings data. Check your connection and service account permissions.")
     st.stop()
 
 if holdings_df.empty:
