@@ -50,105 +50,79 @@ def get_target_allocation():
         return pd.DataFrame()
 
 def calculate_drift(holdings_df: pd.DataFrame, targets_df: pd.DataFrame) -> pd.DataFrame:
-    """Compare actual weight vs target with robust column matching."""
+    """Compare actual weight vs target with robust column matching and fuzzy category alignment."""
     if targets_df.empty or holdings_df.empty: return pd.DataFrame()
     
     # 1. Standardize Target Labels
     t_df = targets_df.copy()
-    
-    # If "Asset Class" exists in targets, use it as the merge key
     if 'Asset Class' in t_df.columns:
         t_df = t_df.rename(columns={'Asset Class': 'Category'})
-    elif 'Category' not in t_df.columns:
-        potential_labels = [c for c in t_df.columns if 'target' not in c.lower() and '%' not in c.lower()]
-        if potential_labels: 
-            t_df = t_df.rename(columns={potential_labels[0]: 'Category'})
-        else: 
-            return pd.DataFrame()
+    
+    # Ensure Target % is numeric and exists
+    target_pct_col = next((c for c in t_df.columns if 'Target' in c), None)
+    if target_pct_col:
+        t_df['Target %'] = pd.to_numeric(t_df[target_pct_col], errors='coerce').fillna(0.0)
+    else:
+        return pd.DataFrame()
 
-    # 2. Standardize Holdings Labels
+    # 2. Map Holdings to Target Categories
     h_df = holdings_df.copy()
     
-    # Define mapping function for robust categorization
-    def map_asset_class(row):
-        # Force Cash based on Is Cash flag or common tickers
-        if row['Is Cash'] or row['Ticker'] in ['QACDS', 'CASH_MANUAL', 'CASH & CASH INVESTMENTS']:
+    # Define normalization mapping
+    def normalize_cat(cat_name):
+        c = str(cat_name).strip().lower()
+        if 'tech' in c or 'software' in c or 'communication' in c: return 'Information Technology'
+        if 'energy' in c: return 'Energy'
+        if 'financial' in c: return 'Financials'
+        if 'health' in c: return 'Healthcare'
+        if 'industrial' in c: return 'Industrials'
+        if 'fixed' in c or 'bond' in c or 'bill' in c: return 'Fixed Income'
+        if 'cash' in c: return 'Cash'
+        if 'equity' in c or 'market' in c or 'international' in c: return 'Equities'
+        return 'Other'
+
+    def map_row_to_target(row):
+        # Priority 1: Explicit Cash Tickers
+        if row['Is Cash'] or str(row['Ticker']).upper() in ['QACDS', 'CASH_MANUAL', 'CASH']:
             return 'Cash'
-            
-        ac = str(row['Asset Class'])
         
-        # Hard mappings for common misclassifications
+        # Priority 2: Hardcoded Ticker Overrides
         ticker_map = {
-            'GOOG': 'Information Technology',
-            'AMZN': 'Information Technology',
-            'NVDA': 'Information Technology',
-            'AMD': 'Information Technology',
-            'META': 'Information Technology',
-            'MSFT': 'Information Technology',
-            'AAPL': 'Information Technology',
-            'QQQM': 'Information Technology',
-            'XOM': 'Energy',
-            'CVX': 'Energy',
-            'VTI': 'Equities',
-            'VEA': 'Equities',
-            'EEM': 'Equities',
-            'COF': 'Financials',
-            'JPM': 'Financials',
+            'GOOG': 'Information Technology', 'AMZN': 'Information Technology', 
+            'NVDA': 'Information Technology', 'AMD': 'Information Technology',
+            'META': 'Information Technology', 'MSFT': 'Information Technology',
+            'AAPL': 'Information Technology', 'QQQM': 'Information Technology',
+            'XOM': 'Energy', 'CVX': 'Energy',
+            'VTI': 'Equities', 'VEA': 'Equities', 'EEM': 'Equities',
+            'COF': 'Financials', 'JPM': 'Financials',
             'UNH': 'Healthcare',
-            'IFRA': 'Industrials',
-            'ETN': 'Industrials',
+            'IFRA': 'Industrials', 'ETN': 'Industrials',
         }
-        
-        if row['Ticker'] in ticker_map:
-            return ticker_map[row['Ticker']]
+        if str(row['Ticker']).upper() in ticker_map:
+            return ticker_map[str(row['Ticker']).upper()]
             
-        # General Asset Class Mapping
-        general_map = {
-            'Technology': 'Information Technology',
-            'Broad Market': 'Equities',
-            'Communication Services': 'Information Technology',
-            'Healthcare': 'Healthcare',
-            'Energy': 'Energy',
-            'Financials': 'Financials',
-            'Fixed Income': 'Fixed Income',
-            'Industrials': 'Industrials',
-            'International': 'Equities'
-        }
-        return general_map.get(ac, 'Other')
+        # Priority 3: Normalize the Asset Class column
+        return normalize_cat(row['Asset Class'])
 
-    h_df['Category'] = h_df.apply(map_asset_class, axis=1)
+    h_df['Category'] = h_df.apply(map_row_to_target, axis=1)
 
-    # Recalculate Weights from Market Value to ensure they aren't zero
+    # 3. Calculate Actual Weights
     total_mv = h_df['Market Value'].sum()
     if total_mv > 0:
-        h_df['Actual %'] = (h_df['Market Value'] / total_mv) * 100
+        actual_weights = h_df.groupby('Category')['Market Value'].apply(lambda x: (x.sum() / total_mv) * 100).reset_index()
+        actual_weights.columns = ['Category', 'Actual %']
     else:
-        h_df['Actual %'] = 0.0
+        actual_weights = pd.DataFrame(columns=['Category', 'Actual %'])
 
-    actual_weights = h_df.groupby('Category')['Actual %'].sum().reset_index()
+    # 4. Merge
+    # We want ALL categories from Targets to show up, even if Actual is 0
+    drift_df = pd.merge(t_df, actual_weights, on='Category', how='left')
     
-    # Merge with targets
-    drift_df = pd.merge(actual_weights, t_df, on='Category', how='outer')
-
-    # Fill NA before type conversion
-    drift_df = drift_df.infer_objects(copy=False).fillna(0)
-
-    # Standardize Percentage Math
-    target_col = next((c for c in drift_df.columns if 'Target' in c or '%' in c), None)
-    if target_col:
-        # Explicit conversion to float
-        raw_targets = pd.to_numeric(drift_df[target_col], errors='coerce').fillna(0).astype(float)
-        drift_df['Target %'] = raw_targets if raw_targets.max() > 1.0 else raw_targets * 100
-        drift_df['Actual %'] = drift_df['Actual %'].astype(float)
-        drift_df['Drift %'] = drift_df['Actual %'] - drift_df['Target %']
-    else:
-        drift_df['Target %'] = 0.0
-        drift_df['Actual %'] = drift_df['Actual %'].astype(float)
-        drift_df['Drift %'] = 0.0
-
-    drift_df['Target %'] = drift_df['Target %'].astype(float)
-    drift_df['Actual %'] = drift_df['Actual %'].astype(float)
-    drift_df['Drift %'] = drift_df['Drift %'].astype(float)
+    # Fill missing actuals with 0
+    drift_df['Actual %'] = drift_df['Actual %'].fillna(0.0)
+    
+    # 5. Math
+    drift_df['Drift %'] = drift_df['Actual %'] - drift_df['Target %']
     drift_df['Breach'] = drift_df['Drift %'].abs() > 5.0
 
     return drift_df
