@@ -53,16 +53,32 @@ def calculate_drift(holdings_df: pd.DataFrame, targets_df: pd.DataFrame) -> pd.D
     """Compare actual weight vs target with robust column matching."""
     if targets_df.empty or holdings_df.empty: return pd.DataFrame()
     
-    # Standardize Target Labels
-    if 'Category' not in targets_df.columns:
+    # 1. Standardize Target Labels
+    # If "Asset Class" exists in targets, use it as the merge key
+    if 'Asset Class' in targets_df.columns:
+        targets_df = targets_df.rename(columns={'Asset Class': 'Category'})
+    elif 'Category' not in targets_df.columns:
         potential_labels = [c for c in targets_df.columns if 'target' not in c.lower() and '%' not in c.lower()]
         if potential_labels: 
             targets_df = targets_df.rename(columns={potential_labels[0]: 'Category'})
         else: 
             return pd.DataFrame()
 
-    actual_weights = holdings_df.groupby('Asset Class')['Weight'].sum().reset_index()
+    # 2. Standardize Holdings Labels
+    # Many mappings: Technology -> Information Technology, etc.
+    h_df = holdings_df.copy()
+    mapping = {
+        'Technology': 'Information Technology',
+        'Broad Market': 'Equities', # Or map to a specific target if known
+        'Healthcare': 'Healthcare',
+        'Communication Services': 'Communication Services',
+        'Financials': 'Financials'
+    }
+    h_df['Asset Class'] = h_df['Asset Class'].replace(mapping)
+
+    actual_weights = h_df.groupby('Asset Class')['Weight'].sum().reset_index()
     actual_weights.columns = ['Category', 'Actual %']
+    
     # Merge with targets
     drift_df = pd.merge(actual_weights, targets_df, on='Category', how='outer')
 
