@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import yfinance as yf
+import json
 import time
 import os
 import sys
@@ -151,6 +152,41 @@ def enrich_positions(df: pd.DataFrame) -> pd.DataFrame:
         }
         
     return df
+
+def apply_smart_categorization(df: pd.DataFrame, mapping_file: str = "data/ticker_mapping.json") -> pd.DataFrame:
+    """
+    Overwrites 'asset_class' and 'asset_strategy' in the DataFrame
+    using the Gemini-generated ticker mapping JSON produced by portfolio_enricher.py.
+    If the mapping file is absent, returns df unchanged.
+    """
+    if not os.path.exists(mapping_file):
+        print(f"Mapping file {mapping_file} not found. Proceeding with raw classifications.")
+        return df
+
+    with open(mapping_file, 'r') as f:
+        mapping = json.load(f)
+
+    def get_asset_class(ticker, current_val):
+        return mapping.get(str(ticker), {}).get("asset_class", current_val)
+
+    def get_asset_strategy(ticker, current_val):
+        return mapping.get(str(ticker), {}).get("sector_strategy", current_val)
+
+    if 'ticker' in df.columns:
+        if 'asset_class' not in df.columns:
+            df['asset_class'] = "Other"
+        if 'asset_strategy' not in df.columns:
+            df['asset_strategy'] = "Other"
+
+        df['asset_class'] = df.apply(
+            lambda row: get_asset_class(row['ticker'], row['asset_class']), axis=1
+        )
+        df['asset_strategy'] = df.apply(
+            lambda row: get_asset_strategy(row['ticker'], row['asset_strategy']), axis=1
+        )
+
+    return df
+
 
 if __name__ == "__main__":
     import pandas as pd

@@ -62,6 +62,23 @@ with st.sidebar:
                     st.rerun()
 
     st.divider()
+    with st.expander("🧠 AI Category Enrichment"):
+        st.caption("Re-categorize all tickers via Gemini. Updates `data/ticker_mapping.json` — applied on next CSV import.")
+        if st.button("Run Enrichment", width='stretch', disabled=df.empty):
+            with st.spinner("Asking Gemini to categorize your holdings..."):
+                try:
+                    from utils.agents.portfolio_enricher import enrich_holdings_from_df
+                    ok, msg = enrich_holdings_from_df(df)
+                    if ok:
+                        st.toast(msg, icon="✅")
+                    else:
+                        st.error(msg)
+                except Exception as e:
+                    st.error(f"Enrichment error: {e}")
+        if df.empty:
+            st.caption("Import a CSV first to enable enrichment.")
+
+    st.divider()
     if st.button("🔄 Clear System Cache", width='stretch'):
         st.cache_data.clear()
         st.session_state.clear()

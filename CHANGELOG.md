@@ -1,5 +1,32 @@
 # Changelog
 
+## [Unreleased] — Smart Category Enrichment
+
+### Added
+- `utils/agents/portfolio_enricher.py` — Gemini-powered ticker categorization agent
+  (Asset Class + Sector/Strategy via GICS taxonomy). Produces `data/ticker_mapping.json`.
+  Includes `enrich_holdings_from_df()` for direct DataFrame use from the Streamlit UI.
+- `utils/smart_enrichment.py` — Earlier standalone draft of the enrichment script (CLI only)
+- `apply_smart_categorization()` in `utils/enrichment.py` — reads `ticker_mapping.json`
+  and overwrites `asset_class`/`asset_strategy` columns; no-ops gracefully if file absent
+
+### Changed
+- `utils/csv_parser.py` — Added lazy-import hook to `apply_smart_categorization()` in
+  `parse_schwab_csv()`. Runs after `get_sector_fast()` baseline so Gemini categories
+  override "Other" before data reaches Google Sheets. Lazy import avoids circular
+  dependency (enrichment.py imports get_sector_fast from csv_parser.py).
+- `app.py` — Added "AI Category Enrichment" expander to sidebar. "Run Enrichment"
+  button calls `enrich_holdings_from_df()` against current session holdings, writes
+  mapping JSON, toasts on success. Button disabled until a CSV is imported.
+
+### Architecture Note
+Enrichment is a two-step process: (1) click "Run Enrichment" in sidebar to regenerate
+`data/ticker_mapping.json` whenever holdings change; (2) next CSV import automatically
+applies the mapping via the hook in `parse_schwab_csv()`.
+
+**Status:** Safe to deploy. Enrichment is opt-in (button-triggered). Missing mapping
+file is handled gracefully — pipeline never blocked.
+
 ## [Unreleased] — Podcast Pipeline + Decision Journal
 
 ### Added

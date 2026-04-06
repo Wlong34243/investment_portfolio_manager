@@ -290,10 +290,17 @@ def parse_schwab_csv(file_bytes: bytes) -> pd.DataFrame:
     # Set is_cash
     df_agg['is_cash'] = df_agg['ticker'].isin(config.CASH_TICKERS)
     
-    # Apply get_sector_fast
+    # Apply get_sector_fast as baseline classification
     df_agg['asset_class'] = df_agg['description'].apply(get_sector_fast)
-    df_agg['asset_strategy'] = "Other" # Placeholder for enrichment
-    
+    df_agg['asset_strategy'] = "Other"
+
+    # Apply Gemini Smart Categorization (lazy import avoids circular dependency)
+    try:
+        from utils.enrichment import apply_smart_categorization
+        df_agg = apply_smart_categorization(df_agg)
+    except Exception:
+        pass
+
     return df_agg
 
 def inject_cash_manual(df: pd.DataFrame, cash_amount: float) -> pd.DataFrame:
