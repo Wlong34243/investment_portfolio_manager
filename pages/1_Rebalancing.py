@@ -118,12 +118,17 @@ def _compute_drift(h, t):
                 return tc
         return ac  # unmatched — surfaces in Unallocated
 
-    def _map(row):
-        if bool(row['Is Cash']) or str(row['Ticker']).upper() in ['QACDS', 'CASH_MANUAL', 'CASH']:
-            return 'Cash'
-        return _match(str(row['Asset Class']).strip())
+    # Build a lookup dict from unique Asset Class values — avoids apply() closure issues
+    unique_ac = h_df['Asset Class'].astype(str).str.strip().unique()
+    ac_to_cat = {ac: _match(ac) for ac in unique_ac}
 
-    h_df['Category'] = h_df.apply(_map, axis=1)
+    # Vectorized assignment: map Asset Class → Category, then override cash rows
+    h_df['Category'] = h_df['Asset Class'].astype(str).str.strip().map(ac_to_cat)
+
+    is_cash_bool = h_df['Is Cash'].astype(str).str.upper().isin(['TRUE', 'YES', '1', 'T'])
+    cash_ticker_mask = h_df['Ticker'].astype(str).str.upper().isin(['QACDS', 'CASH_MANUAL', 'CASH'])
+    h_df.loc[is_cash_bool | cash_ticker_mask, 'Category'] = 'Cash'
+
     total_mv = h_df['Market Value'].sum()
     if total_mv <= 0:
         return pd.DataFrame()
@@ -136,9 +141,18 @@ def _compute_drift(h, t):
     )
     actual.columns = ['Category', 'Actual %']
 
-    unmatched_pct = actual[~actual['Category'].isin(target_cats)]['Actual %'].sum()
+    known_cats = set(target_cats) | {'Cash'}
+    unmatched_pct = actual[~actual['Category'].isin(known_cats)]['Actual %'].sum()
     result = pd.merge(t_df, actual, on='Category', how='left')
     result['Actual %'] = result['Actual %'].fillna(0.0)
+
+    # Append Cash row if Cash is not already a target category
+    cash_actual = actual[actual['Category'] == 'Cash']['Actual %'].sum()
+    if cash_actual > 0.01 and 'Cash' not in target_cats:
+        result = pd.concat([result, pd.DataFrame([{
+            'Category': 'Cash', 'Target %': 0.0, 'Actual %': round(cash_actual, 2)
+        }])], ignore_index=True)
+
     if unmatched_pct > 0.01:
         result = pd.concat([result, pd.DataFrame([{
             'Category': 'Unallocated', 'Target %': 0.0, 'Actual %': round(unmatched_pct, 2)
@@ -155,6 +169,7 @@ with st.expander("🔍 Data Diagnostic", expanded=False):
     st.write(f"**Is Cash dtype:** {holdings_df['Is Cash'].dtype} | **Market Value dtype:** {holdings_df['Market Value'].dtype}")
     st.write("**Asset Class → Market Value (from sheet):**")
     st.write(holdings_df.groupby('Asset Class')['Market Value'].sum().sort_values(ascending=False).to_dict())
+    st.write("**Is Cash sample (first 5):**", holdings_df['Is Cash'].head().tolist())
     st.write("**Target categories:**", targets_df['Asset Class'].tolist())
     st.write("**Drift result:**")
     st.write(drift_df[['Category','Target %','Actual %','Drift %']].to_dict('records') if not drift_df.empty else "EMPTY — _compute_drift returned nothing")
