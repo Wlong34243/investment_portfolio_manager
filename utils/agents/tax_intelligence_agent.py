@@ -69,16 +69,27 @@ def calculate_drift(holdings_df: pd.DataFrame, targets_df: pd.DataFrame) -> pd.D
     # 2. Standardize Holdings Labels
     # Many mappings: Technology -> Information Technology, etc.
     h_df = holdings_df.copy()
+    
+    # Recalculate Weights from Market Value to ensure they aren't zero
+    total_mv = h_df['Market Value'].sum()
+    if total_mv > 0:
+        h_df['Actual %'] = (h_df['Market Value'] / total_mv) * 100
+    else:
+        h_df['Actual %'] = 0.0
+
     mapping = {
         'Technology': 'Information Technology',
-        'Broad Market': 'Equities', # Or map to a specific target if known
-        'Healthcare': 'Healthcare',
-        'Communication Services': 'Communication Services',
-        'Financials': 'Financials'
+        'Broad Market': 'Information Technology', # Fallback for now, or use 'Equities'
+        'Communication Services': 'Information Technology', # Often grouped
+        'Healthcare': 'Information Technology', # Fallback
+        'Energy': 'Energy',
+        'Financials': 'Financials',
+        'Fixed Income': 'Fixed Income',
+        'Cash': 'Cash'
     }
     h_df['Asset Class'] = h_df['Asset Class'].replace(mapping)
 
-    actual_weights = h_df.groupby('Asset Class')['Weight'].sum().reset_index()
+    actual_weights = h_df.groupby('Asset Class')['Actual %'].sum().reset_index()
     actual_weights.columns = ['Category', 'Actual %']
     
     # Merge with targets
