@@ -92,85 +92,107 @@ if targets_df.empty:
 
 # --- Drift Calculation (inlined to avoid stale module cache on Streamlit Cloud) ---
 def _compute_drift(h, t):
+    # 1. Prepare targets
     t_df = t.copy()
     if 'Asset Class' in t_df.columns:
         t_df = t_df.rename(columns={'Asset Class': 'Category'})
-    target_pct_col = next((c for c in t_df.columns if 'Target' in c), None)
-    if not target_pct_col:
-        return pd.DataFrame()
-    t_df['Target %'] = pd.to_numeric(t_df[target_pct_col], errors='coerce').fillna(0.0)
+    tgt_col = next((c for c in t_df.columns if 'Target' in c), None)
+    if not tgt_col:
+        return pd.DataFrame(), {}
+    t_df['Target %'] = pd.to_numeric(t_df[tgt_col], errors='coerce').fillna(0.0)
     target_cats = t_df['Category'].tolist()
 
-    h_df = h.copy()
+    # 2. Clean holdings — only the columns we need
+    h_df = h[['Ticker', 'Asset Class', 'Market Value', 'Is Cash']].copy()
     h_df['Market Value'] = pd.to_numeric(h_df['Market Value'], errors='coerce').fillna(0.0)
-
-    def _match(ac):
-        if not ac or str(ac).lower() in ('other', 'n/a', '', 'nan'):
-            return 'Unallocated'
-        if ac in target_cats:
-            return ac
-        ac_l = str(ac).lower()
-        for tc in target_cats:
-            if tc.lower() == ac_l:
-                return tc
-        for tc in target_cats:
-            if ac_l in tc.lower() or tc.lower() in ac_l:
-                return tc
-        return ac  # unmatched — surfaces in Unallocated
-
-    # Build a lookup dict from unique Asset Class values — avoids apply() closure issues
-    unique_ac = h_df['Asset Class'].astype(str).str.strip().unique()
-    ac_to_cat = {ac: _match(ac) for ac in unique_ac}
-
-    # Vectorized assignment: map Asset Class → Category, then override cash rows
-    h_df['Category'] = h_df['Asset Class'].astype(str).str.strip().map(ac_to_cat)
-
-    is_cash_bool = h_df['Is Cash'].astype(str).str.upper().isin(['TRUE', 'YES', '1', 'T'])
-    cash_ticker_mask = h_df['Ticker'].astype(str).str.upper().isin(['QACDS', 'CASH_MANUAL', 'CASH'])
-    h_df.loc[is_cash_bool | cash_ticker_mask, 'Category'] = 'Cash'
-
     total_mv = h_df['Market Value'].sum()
     if total_mv <= 0:
-        return pd.DataFrame()
+        return pd.DataFrame(), {}
 
-    actual = (
-        h_df.groupby('Category')['Market Value']
-        .sum()
-        .apply(lambda x: round(x / total_mv * 100, 2))
-        .reset_index()
+    # 3. Identify cash rows robustly
+    ic = h_df['Is Cash']
+    if ic.dtype == object:
+        # String representation: "TRUE", "FALSE", "Yes", "1", etc.
+        cash_flag = ic.astype(str).str.strip().str.upper().isin(['TRUE', 'YES', '1', 'T'])
+    else:
+        # Bool or numeric dtype — cast directly
+        cash_flag = ic.fillna(False).astype(bool)
+
+    cash_ticker = h_df['Ticker'].astype(str).str.strip().str.upper().isin(['QACDS', 'CASH_MANUAL', 'CASH'])
+    cash_ac     = h_df['Asset Class'].astype(str).str.strip().str.lower() == 'cash'
+    is_cash     = cash_flag | cash_ticker | cash_ac
+
+    # 4. Map each unique non-cash Asset Class to the best target category
+    def find_cat(ac):
+        s = str(ac).strip()
+        if not s or s.lower() in ('nan', 'n/a', 'other', ''):
+            return 'Unallocated'
+        if s in target_cats:
+            return s
+        sl = s.lower()
+        for tc in target_cats:
+            if tc.lower() == sl:
+                return tc
+        for tc in target_cats:
+            if sl in tc.lower() or tc.lower() in sl:
+                return tc
+        return 'Unallocated'
+
+    non_cash_df = h_df.loc[~is_cash].copy()
+    non_cash_df['_ac'] = non_cash_df['Asset Class'].astype(str).str.strip()
+    unique_acs  = non_cash_df['_ac'].unique()
+    ac_map      = {ac: find_cat(ac) for ac in unique_acs}  # e.g. {"Technology": "Information Technology"}
+
+    # 5. Accumulate market value per target category (plain Python loop — no apply/map magic)
+    cat_mv: dict = {}
+    for ac, grp in non_cash_df.groupby('_ac'):
+        cat = ac_map.get(ac, 'Unallocated')
+        cat_mv[cat] = cat_mv.get(cat, 0.0) + float(grp['Market Value'].sum())
+
+    cash_mv = float(h_df.loc[is_cash, 'Market Value'].sum())
+    if cash_mv > 0:
+        cash_cat = 'Cash' if 'Cash' in target_cats else 'Unallocated'
+        cat_mv[cash_cat] = cat_mv.get(cash_cat, 0.0) + cash_mv
+
+    debug = {
+        'cash_rows': int(is_cash.sum()),
+        'ac_map': ac_map,
+        'cat_mv': {c: round(v, 2) for c, v in cat_mv.items()},
+    }
+
+    # 6. Build actual % DataFrame
+    actual = pd.DataFrame(
+        [{'Category': c, 'Actual %': round(v / total_mv * 100, 2)} for c, v in cat_mv.items()]
     )
-    actual.columns = ['Category', 'Actual %']
 
-    known_cats = set(target_cats) | {'Cash'}
-    unmatched_pct = actual[~actual['Category'].isin(known_cats)]['Actual %'].sum()
-    result = pd.merge(t_df, actual, on='Category', how='left')
+    # 7. Left-join against targets so every target category always appears
+    result = pd.merge(t_df[['Category', 'Target %']], actual, on='Category', how='left')
     result['Actual %'] = result['Actual %'].fillna(0.0)
 
-    # Append Cash row if Cash is not already a target category
-    cash_actual = actual[actual['Category'] == 'Cash']['Actual %'].sum()
-    if cash_actual > 0.01 and 'Cash' not in target_cats:
-        result = pd.concat([result, pd.DataFrame([{
-            'Category': 'Cash', 'Target %': 0.0, 'Actual %': round(cash_actual, 2)
-        }])], ignore_index=True)
+    # Append any categories that appear in actual but aren't in targets (e.g. Unallocated)
+    extra = actual[~actual['Category'].isin(target_cats)].copy()
+    if not extra.empty:
+        extra['Target %'] = 0.0
+        result = pd.concat([result, extra[['Category', 'Target %', 'Actual %']]], ignore_index=True)
 
-    if unmatched_pct > 0.01:
-        result = pd.concat([result, pd.DataFrame([{
-            'Category': 'Unallocated', 'Target %': 0.0, 'Actual %': round(unmatched_pct, 2)
-        }])], ignore_index=True)
     result['Drift %'] = result['Actual %'] - result['Target %']
-    result['Breach'] = result['Drift %'].abs() > 5.0
-    return result
+    result['Breach']  = result['Drift %'].abs() > 5.0
+    return result, debug
 
-drift_df = _compute_drift(holdings_df, targets_df)
+drift_df, drift_debug = _compute_drift(holdings_df, targets_df)
 
 # --- Diagnostic (shown AFTER drift is computed so all values are visible) ---
 with st.expander("🔍 Data Diagnostic", expanded=False):
     st.write(f"**Holdings rows:** {len(holdings_df)} | **Total MV:** ${holdings_df['Market Value'].sum():,.0f}")
     st.write(f"**Is Cash dtype:** {holdings_df['Is Cash'].dtype} | **Market Value dtype:** {holdings_df['Market Value'].dtype}")
+    st.write(f"**Is Cash sample (first 5):** {holdings_df['Is Cash'].head().tolist()}")
     st.write("**Asset Class → Market Value (from sheet):**")
     st.write(holdings_df.groupby('Asset Class')['Market Value'].sum().sort_values(ascending=False).to_dict())
-    st.write("**Is Cash sample (first 5):**", holdings_df['Is Cash'].head().tolist())
     st.write("**Target categories:**", targets_df['Asset Class'].tolist())
+    if drift_debug:
+        st.write(f"**Cash rows identified:** {drift_debug['cash_rows']}")
+        st.write("**Asset Class → Target mapping:**", drift_debug['ac_map'])
+        st.write("**Market Value by target category (before % calc):**", drift_debug['cat_mv'])
     st.write("**Drift result:**")
     st.write(drift_df[['Category','Target %','Actual %','Drift %']].to_dict('records') if not drift_df.empty else "EMPTY — _compute_drift returned nothing")
 
