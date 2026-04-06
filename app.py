@@ -121,7 +121,20 @@ def main_dashboard():
             i2.metric("Blended Yield",           f"{metrics['blended_yield_pct']:.2f}%")
 
     with tabs[2]:
-        st.info("Agent signals appearing in next sync...")
+        if not df.empty:
+            from utils.agents.price_narrator import detect_significant_moves, batch_analyze_daily_moves        
+            movers = detect_significant_moves(df)
+            if movers:
+                st.subheader(f"🚀 Daily Movers ({len(movers)} active)")
+                if st.button("🎙️ Explain Movements with AI"):
+                    with st.spinner("Checking news..."):
+                        analyses = batch_analyze_daily_moves(df)
+                        for n in analyses:
+                            st.info(f"**{n['Ticker']} ({n['Change %']:+.2f}%)**: {n['Explanation']}")
+            else:
+                st.success("No significant price movers detected today. Signals clear.")
+        else:
+            st.info("Agent signals appearing in next sync...")
 
 # --- Page Navigation ---
 pg = st.navigation([
