@@ -11,18 +11,26 @@ from utils.csv_parser import parse_schwab_csv, inject_cash_manual
 from utils.enrichment import enrich_positions
 from utils.risk import (
     build_price_histories, calculate_beta, calculate_portfolio_beta,
-    calculate_correlation_matrix
+    calculate_correlation_matrix, run_stress_tests, capm_projection,
+    concentration_alerts
 )
 from pipeline import (
     normalize_positions, write_to_sheets, ingest_realized_gl, 
     ingest_transactions, calculate_income_metrics
 )
-from utils.sheet_readers import get_holdings_current
+from utils.sheet_readers import get_holdings_current, get_daily_snapshots
 from utils.validators import (
     validate_percentage_range, validate_no_negative_market_values, 
     validate_duplicate_tickers, validate_total_sanity
 )
 from utils.column_guard import ensure_display_columns
+
+# Import New Agents
+from utils.agents.earnings_sentinel import scan_upcoming_earnings, generate_earnings_alerts
+from utils.agents.macro_monitor import get_macro_snapshot, detect_macro_triggers, generate_macro_strategy
+from utils.agents.concentration_hedger import check_on_page_load as check_concentration, scan_concentration_risks, generate_hedge_suggestions
+from utils.agents.cash_sweeper import get_cash_sweep_alert, analyze_cash_position, generate_cash_deployment_suggestion
+from utils.agents.correlation_optimizer import detect_correlation_spikes, calculate_diversification_benefit, generate_optimization_suggestions
 
 # --- Initialization ---
 st.set_page_config(layout="wide", page_title="Investment Manager", page_icon="📈")
@@ -110,7 +118,7 @@ def main_dashboard():
     ))
 
     st.title("💼 Investment Portfolio")
-    tabs = st.tabs(["📊 Holdings", "💰 Income", "🔔 Signals"])
+    tabs = st.tabs(["📊 Holdings", "💰 Income", "🛡️ Risk", "🔔 Signals"])
 
     with tabs[0]:
         if df.empty:
@@ -119,7 +127,7 @@ def main_dashboard():
             total_val = df['Market Value'].sum()
             cash_mask = (
                 df['Ticker'].isin(['CASH_MANUAL', 'QACDS', 'CASH & CASH INVESTMENTS'])
-                | df['Is Cash'].astype(bool)
+                | (df['Asset Class'].astype(str).str.lower() == 'cash')
             )
             cash_val = df[cash_mask]['Market Value'].sum()
 
@@ -149,9 +157,146 @@ def main_dashboard():
             i1, i2 = st.columns(2)
             i1.metric("Annual Projected Income", f"${metrics['projected_annual_income']:,.2f}")
             i2.metric("Blended Yield",           f"{metrics['blended_yield_pct']:.2f}%")
+            
+            # --- Cash Sweeper ---
+            st.divider()
+            st.subheader("💵 Yield Optimization (Cash Sweep)")
+            cash_alert = get_cash_sweep_alert(df)
+            if cash_alert:
+                st.info(cash_alert)
+                if st.button("🤖 Generate Cash Deployment Plan"):
+                    with st.spinner("Analyzing yield alternatives..."):
+                        analysis = analyze_cash_position(df)
+                        suggestion = generate_cash_deployment_suggestion(analysis, df)
+                        if "error" not in suggestion:
+                            st.write(f"**Recommendation:** {suggestion['recommendation']}")
+                            st.write(f"**Action:** {suggestion['proposed_action']}")
+                            st.success(f"**Yield Improvement:** {suggestion['yield_improvement']}")
+                            st.caption(f"Note: {suggestion['risk_note']}")
+                        else:
+                            st.error(suggestion['error'])
+            else:
+                st.success("Cash levels are optimized for yield.")
 
     with tabs[2]:
         if not df.empty:
+            st.subheader("🛡️ Portfolio Risk Analytics")
+            if st.button("📊 Run Deep Risk Scan"):
+                with st.spinner("Downloading price history and calculating correlations..."):
+                    # 1. Beta & Correlation Calculation
+                    hist = build_price_histories(df)
+                    if not hist.empty and 'SPY' in hist.columns:
+                        spy_returns = hist['SPY'].pct_change().dropna()
+                        # Calculate beta for all positions
+                        df['Beta'] = df['Ticker'].apply(lambda x: calculate_beta(x, hist, spy_returns))
+                        p_beta = calculate_portfolio_beta(df)
+                        corr_matrix = calculate_correlation_matrix(df, hist)
+                        
+                        total_val = df['Market Value'].sum()
+                        stress_results = run_stress_tests(total_val, p_beta)
+                        capm_results = capm_projection(total_val, p_beta)
+                        
+                        # Save to session state
+                        st.session_state["risk_results"] = {
+                            "p_beta": p_beta,
+                            "capm": capm_results,
+                            "stress": stress_results,
+                            "corr_matrix": corr_matrix
+                        }
+                        st.rerun()
+                    else:
+                        st.error("Could not fetch enough price history for risk analysis.")
+
+            if "risk_results" in st.session_state:
+                res = st.session_state["risk_results"]
+                
+                r1, r2, r3 = st.columns(3)
+                r1.metric("Portfolio Beta", f"{res['p_beta']:.2f}", 
+                         help="Beta > 1.0 means more volatile than S&P 500")
+                r2.metric("Expected Annual Return", f"{res['capm']['expected_pct']:.1f}%",
+                         help="Based on CAPM (Risk-free rate + Beta * Equity Risk Premium)")
+                r3.metric("Annual Volatility", f"{res['capm']['volatility_pct']:.1f}%")
+                
+                col_left, col_right = st.columns(2)
+                with col_left:
+                    st.write("### Stress Test Scenarios")
+                    stress_df = pd.DataFrame(res['stress'])
+                    st.table(stress_df[['scenario', 'impact_pct', 'impact']].style.format({
+                        'impact_pct': '{:+.2f}%',
+                        'impact': '${:,.0f}'
+                    }))
+                
+                with col_right:
+                    st.write("### Correlation Heatmap (Top 20)")
+                    if not res['corr_matrix'].empty:
+                        fig_corr = px.imshow(
+                            res['corr_matrix'],
+                            color_continuous_scale='RdBu_r',
+                            zmin=-1, zmax=1
+                        )
+                        st.plotly_chart(fig_corr, use_container_width=True)
+
+                # --- Concentration Hedger ---
+                st.divider()
+                st.subheader("🎯 Concentration & Hedging")
+                risks = scan_concentration_risks(df)
+                if risks:
+                    for r in risks:
+                        with st.expander(f"⚠️ {r['risk_type']}: {r['ticker']} ({r['weight']:.1f}%)"):
+                            st.write(f"**Severity:** {r['severity']}")
+                            st.write(f"**Price Trend (50MA):** {r['price_vs_ma']}")
+                            if st.button(f"🤖 Suggest Hedge for {r['ticker']}", key=f"hedge_{r['ticker']}"):
+                                with st.spinner("Consulting hedging strategist..."):
+                                    suggestions = generate_hedge_suggestions([r], df)
+                                    for s in suggestions:
+                                        for sugg in s['suggestions']:
+                                            st.info(f"**{sugg['strategy']}**: {sugg['description']}")
+                else:
+                    st.success("No significant concentration risks detected.")
+
+    with tabs[3]:
+        if not df.empty:
+            # --- Macro Monitor ---
+            st.subheader("🌐 Macro Environment")
+            with st.spinner("Fetching macro data..."):
+                macro_data = get_macro_snapshot()
+                m1, m2, m3, m4 = st.columns(4)
+                m1.metric("10Y Treasury", f"{macro_data['treasury_10y']:.2f}%")
+                m2.metric("Fed Funds Rate", f"{macro_data['fed_rate']:.2f}%")
+                m3.metric("VIX Index", f"{macro_data['vix']:.1f}", macro_data['vix_signal'])
+                m4.metric("CPI Trend", f"{macro_data['cpi']:.1f}", macro_data['cpi_trend'])
+                
+                triggers = detect_macro_triggers(macro_data, df)
+                if triggers:
+                    for t in triggers:
+                        st.warning(f"**{t['trigger']}**: {t['description']}")
+                    if st.button("🤖 Generate Macro Strategy"):
+                        with st.spinner("Analyzing macro implications..."):
+                            strat = generate_macro_strategy(triggers, macro_data, df)
+                            st.info(strat['macro_outlook'])
+                            st.write(f"**Risk Level:** {strat['risk_level']}")
+                            with st.expander("Sector Rotations"):
+                                for rot in strat['sector_rotations']:
+                                    st.write(f"**{rot['from_sector']} ➡️ {rot['to_sector']}**: {rot['rationale']}")
+            
+            st.divider()
+            
+            # --- Earnings Sentinel ---
+            st.subheader("📅 Upcoming Earnings")
+            with st.spinner("Scanning calendar..."):
+                upcoming = scan_upcoming_earnings(df)
+                if not upcoming.empty:
+                    st.dataframe(upcoming[['ticker', 'date', 'eps_estimated', 'revenue_estimated']], hide_index=True)
+                    if st.button("🤖 Generate Earnings Alerts"):
+                        with st.spinner("Analyzing earnings impact..."):
+                            alerts = generate_earnings_alerts(upcoming, df)
+                            for a in alerts:
+                                st.info(f"**{a['badge']} {a['ticker']} ({a['date']})**: {a['alert']}")
+                else:
+                    st.success("No major earnings reported in your holdings for the next 14 days.")
+            
+            st.divider()
+            
             from utils.agents.price_narrator import detect_significant_moves, batch_analyze_daily_moves        
             movers = detect_significant_moves(df)
             if movers:

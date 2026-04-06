@@ -183,7 +183,8 @@ def append_daily_snapshot(ws, df: pd.DataFrame, existing_fps: set = None) -> boo
     total_cost = float(df['Cost Basis'].sum())
     unrealized_gl = total_value - total_cost
     
-    cash_df = df[df['Is Cash'] == True]
+    cash_mask = (df['Asset Class'].astype(str).str.lower() == 'cash') | df['Ticker'].isin(config.CASH_TICKERS)
+    cash_df = df[cash_mask]
     cash_value = float(cash_df['Market Value'].sum())
     invested_value = total_value - cash_value
     position_count = int(len(df))
@@ -252,7 +253,8 @@ def calculate_income_metrics(df: pd.DataFrame) -> dict:
     projected_annual_income = float(df['Est Annual Income'].sum())
     blended_yield_pct = (projected_annual_income / total_value * 100) if total_value > 0 else 0.0
     
-    cash_df = df[df['Is Cash'] == True]
+    cash_mask = (df['Asset Class'].astype(str).str.lower() == 'cash') | df['Ticker'].isin(config.CASH_TICKERS)
+    cash_df = df[cash_mask]
     cash_contribution = float(cash_df['Est Annual Income'].sum())
     
     # Use 'Ticker' safely

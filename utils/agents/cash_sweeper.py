@@ -19,7 +19,8 @@ def analyze_cash_position(holdings_df: pd.DataFrame) -> dict:
     if 'Market Value' in df.columns:
         df['Market Value'] = pd.to_numeric(df['Market Value'], errors='coerce').fillna(0.0)
     
-    cash_rows = df[df['Is Cash'] == True]
+    cash_mask = (df['Asset Class'].astype(str).str.lower() == 'cash') | df['Ticker'].astype(str).str.upper().isin({'QACDS', 'CASH_MANUAL', 'CASH & CASH INVESTMENTS'})
+    cash_rows = df[cash_mask]
     cash_value = cash_rows['Market Value'].sum()
     
     # Assume default yield from config or from the data if available
@@ -70,7 +71,7 @@ def get_cash_sweep_alert(holdings_df: pd.DataFrame) -> str:
         df['Market Value'] = pd.to_numeric(df['Market Value'], errors='coerce').fillna(0.0)
         
     total_val = df['Market Value'].sum()
-    cash_val = df[df['Is Cash'] == True]['Market Value'].sum()
+    cash_val = df[(df['Asset Class'].astype(str).str.lower() == 'cash') | df['Ticker'].astype(str).str.upper().isin({'QACDS', 'CASH_MANUAL', 'CASH & CASH INVESTMENTS'})]['Market Value'].sum()
     
     if total_val > 0 and (cash_val / total_val * 100) > 5.0:
         return f"💰 **Yield Alert:** You have ${cash_val:,.0f} ({cash_val/total_val*100:.1f}%) in cash. AI can suggest yield improvements."

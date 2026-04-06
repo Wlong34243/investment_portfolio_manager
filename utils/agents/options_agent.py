@@ -23,7 +23,8 @@ class CoveredCallProposal(BaseModel):
 def find_covered_call_candidates(holdings_df: pd.DataFrame) -> pd.DataFrame:
     if holdings_df.empty: return pd.DataFrame()
     candidates = holdings_df[holdings_df['Quantity'] >= 100].copy()
-    candidates = candidates[candidates['Is Cash'] == False]
+    candidates = candidates[candidates['Asset Class'].astype(str).str.lower() != 'cash']
+    candidates = candidates[~candidates['Ticker'].astype(str).str.upper().isin({'QACDS', 'CASH_MANUAL', 'CASH & CASH INVESTMENTS'})]
     return candidates
 
 def get_options_chain(ticker: str) -> pd.DataFrame:
