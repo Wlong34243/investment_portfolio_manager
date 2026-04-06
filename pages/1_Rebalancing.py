@@ -92,6 +92,9 @@ with st.expander("🔍 Data Diagnostic", expanded=False):
     st.write("**Target categories:**")
     if not targets_df.empty:
         st.write(targets_df['Asset Class'].tolist())
+    st.write("**Drift output:**")
+    if 'drift_df' in dir():
+        st.write(drift_df[['Category','Target %','Actual %','Drift %']].to_dict('records') if not drift_df.empty else "EMPTY")
 
 if holdings_df.empty:
     st.warning("No holdings data available. Please upload a positions CSV on the main page.")
@@ -107,8 +110,67 @@ if targets_df.empty:
     st.stop()
 
 # --- Drift Analysis ---
+# Inlined here to avoid stale module cache on Streamlit Cloud.
 st.subheader("Allocation Drift")
-drift_df = calculate_drift(holdings_df, targets_df)
+
+def _compute_drift(holdings_df, targets_df):
+    t_df = targets_df.copy()
+    if 'Asset Class' in t_df.columns:
+        t_df = t_df.rename(columns={'Asset Class': 'Category'})
+    target_pct_col = next((c for c in t_df.columns if 'Target' in c), None)
+    if not target_pct_col:
+        return pd.DataFrame()
+    t_df['Target %'] = pd.to_numeric(t_df[target_pct_col], errors='coerce').fillna(0.0)
+    target_cats = t_df['Category'].tolist()
+
+    h_df = holdings_df.copy()
+    h_df['Market Value'] = pd.to_numeric(h_df['Market Value'], errors='coerce').fillna(0.0)
+
+    def _match(ac):
+        if not ac or ac.lower() in ('other', 'n/a', '', 'nan'):
+            return 'Unallocated'
+        if ac in target_cats:
+            return ac
+        ac_l = ac.lower()
+        for tc in target_cats:
+            if tc.lower() == ac_l:
+                return tc
+        for tc in target_cats:
+            if ac_l in tc.lower() or tc.lower() in ac_l:
+                return tc
+        return ac
+
+    def _map(row):
+        if row['Is Cash'] or str(row['Ticker']).upper() in ['QACDS', 'CASH_MANUAL', 'CASH']:
+            return 'Cash'
+        return _match(str(row['Asset Class']).strip())
+
+    h_df['Category'] = h_df.apply(_map, axis=1)
+    total_mv = h_df['Market Value'].sum()
+    if total_mv <= 0:
+        return pd.DataFrame()
+
+    actual = (
+        h_df.groupby('Category')['Market Value']
+        .sum()
+        .apply(lambda x: round(x / total_mv * 100, 2))
+        .reset_index()
+    )
+    actual.columns = ['Category', 'Actual %']
+
+    # Surface unmatched holdings as Unallocated
+    unmatched_pct = actual[~actual['Category'].isin(target_cats)]['Actual %'].sum()
+    result = pd.merge(t_df, actual, on='Category', how='left')
+    result['Actual %'] = result['Actual %'].fillna(0.0)
+    if unmatched_pct > 0.01:
+        result = pd.concat([result, pd.DataFrame([{
+            'Category': 'Unallocated', 'Target %': 0.0, 'Actual %': round(unmatched_pct, 2)
+        }])], ignore_index=True)
+    result['Drift %'] = result['Actual %'] - result['Target %']
+    result['Breach'] = result['Drift %'].abs() > 5.0
+    return result
+
+drift_df = _compute_drift(holdings_df, targets_df)
 
 if not drift_df.empty:
     # Chart
