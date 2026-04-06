@@ -67,9 +67,57 @@ def calculate_drift(holdings_df: pd.DataFrame, targets_df: pd.DataFrame) -> pd.D
             return pd.DataFrame()
 
     # 2. Standardize Holdings Labels
-    # Many mappings: Technology -> Information Technology, etc.
     h_df = holdings_df.copy()
     
+    # Define mapping function for robust categorization
+    def map_asset_class(row):
+        # Force Cash based on Is Cash flag or common tickers
+        if row['Is Cash'] or row['Ticker'] in ['QACDS', 'CASH_MANUAL', 'CASH & CASH INVESTMENTS']:
+            return 'Cash'
+            
+        ac = str(row['Asset Class'])
+        
+        # Hard mappings for common misclassifications
+        ticker_map = {
+            'GOOG': 'Information Technology',
+            'AMZN': 'Information Technology',
+            'NVDA': 'Information Technology',
+            'AMD': 'Information Technology',
+            'META': 'Information Technology',
+            'MSFT': 'Information Technology',
+            'AAPL': 'Information Technology',
+            'QQQM': 'Information Technology',
+            'XOM': 'Energy',
+            'CVX': 'Energy',
+            'VTI': 'Equities',
+            'VEA': 'Equities',
+            'EEM': 'Equities',
+            'COF': 'Financials',
+            'JPM': 'Financials',
+            'UNH': 'Healthcare',
+            'IFRA': 'Industrials',
+            'ETN': 'Industrials',
+        }
+        
+        if row['Ticker'] in ticker_map:
+            return ticker_map[row['Ticker']]
+            
+        # General Asset Class Mapping
+        general_map = {
+            'Technology': 'Information Technology',
+            'Broad Market': 'Equities',
+            'Communication Services': 'Information Technology',
+            'Healthcare': 'Healthcare',
+            'Energy': 'Energy',
+            'Financials': 'Financials',
+            'Fixed Income': 'Fixed Income',
+            'Industrials': 'Industrials',
+            'International': 'Equities'
+        }
+        return general_map.get(ac, 'Other')
+
+    h_df['Category'] = h_df.apply(map_asset_class, axis=1)
+
     # Recalculate Weights from Market Value to ensure they aren't zero
     total_mv = h_df['Market Value'].sum()
     if total_mv > 0:
@@ -77,20 +125,7 @@ def calculate_drift(holdings_df: pd.DataFrame, targets_df: pd.DataFrame) -> pd.D
     else:
         h_df['Actual %'] = 0.0
 
-    mapping = {
-        'Technology': 'Information Technology',
-        'Broad Market': 'Information Technology', # Fallback for now, or use 'Equities'
-        'Communication Services': 'Information Technology', # Often grouped
-        'Healthcare': 'Information Technology', # Fallback
-        'Energy': 'Energy',
-        'Financials': 'Financials',
-        'Fixed Income': 'Fixed Income',
-        'Cash': 'Cash'
-    }
-    h_df['Asset Class'] = h_df['Asset Class'].replace(mapping)
-
-    actual_weights = h_df.groupby('Asset Class')['Actual %'].sum().reset_index()
-    actual_weights.columns = ['Category', 'Actual %']
+    actual_weights = h_df.groupby('Category')['Actual %'].sum().reset_index()
     
     # Merge with targets
     drift_df = pd.merge(actual_weights, t_df, on='Category', how='outer')
