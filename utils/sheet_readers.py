@@ -174,6 +174,28 @@ def get_daily_snapshots() -> pd.DataFrame:
     except Exception:
         return pd.DataFrame()
 
+@CACHE(ttl=300)
+def get_target_allocation() -> pd.DataFrame:
+    """Reads Target_Allocation tab."""
+    try:
+        client = get_gspread_client()
+        spreadsheet = client.open_by_key(config.PORTFOLIO_SHEET_ID)
+        ws = spreadsheet.worksheet(config.TAB_TARGET_ALLOCATION)
+        return read_gsheet_robust(ws)
+    except Exception:
+        return pd.DataFrame()
+
+@CACHE(ttl=300)
+def get_ai_suggested_allocation() -> pd.DataFrame:
+    """Reads AI_Suggested_Allocation tab."""
+    try:
+        client = get_gspread_client()
+        spreadsheet = client.open_by_key(config.PORTFOLIO_SHEET_ID)
+        ws = spreadsheet.worksheet(config.TAB_AI_SUGGESTED_ALLOCATION)
+        return read_gsheet_robust(ws)
+    except Exception:
+        return pd.DataFrame()
+
 def smoke_test() -> bool:
     """Verify connectivity."""
     try:

@@ -1,9 +1,9 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from utils.sheet_readers import get_holdings_current, get_realized_gl
+from utils.sheet_readers import get_holdings_current, get_realized_gl, get_target_allocation, get_ai_suggested_allocation
 from utils.column_guard import ensure_display_columns
-from utils.agents.tax_intelligence_agent import get_target_allocation, calculate_drift, generate_rebalance_proposals, check_wash_sale_risk
+from utils.agents.tax_intelligence_agent import calculate_drift, generate_rebalance_proposals, check_wash_sale_risk
 import os
 import sys
 
@@ -19,6 +19,7 @@ except Exception as e:
     st.stop()
 
 targets_df = get_target_allocation()
+ai_targets_df = get_ai_suggested_allocation()
 realized_gl_df = get_realized_gl()
 
 if holdings_df.empty:
@@ -58,6 +59,39 @@ if not drift_df.empty:
     }).apply(lambda x: ['background-color: #FADBD8' if abs(v) > 5 else '' for v in x], subset=['Drift %']))
 else:
     st.info("Drift data could not be calculated. Ensure Categories in Target_Allocation match your Holdings.")
+
+# --- Strategy Comparison ---
+st.divider()
+st.subheader("🎯 Strategy Comparison: Bill vs. AI")
+st.info("⚠️ AI suggestions are for **review only**. They do not impact the drift calculations above until you manually update your 'Target_Allocation' sheet.")
+
+col_bill, col_ai = st.columns(2)
+
+with col_bill:
+    st.markdown("#### Bill's Official Targets")
+    if not targets_df.empty:
+        # Standardize columns for display
+        display_targets = targets_df.copy()
+        # Find numeric columns for formatting
+        num_cols = display_targets.select_dtypes(include=['number']).columns.tolist()
+        st.dataframe(display_targets, use_container_width=True, hide_index=True)
+    else:
+        st.info("No manual targets defined.")
+
+with col_ai:
+    st.markdown("#### AI's Latest Strategy")
+    if not ai_targets_df.empty:
+        # Standardize columns for display
+        display_ai = ai_targets_df.copy()
+        # Hide internal/large text columns if they exist
+        cols_to_show = [c for c in display_ai.columns if c not in ['Executive Summary', 'Fingerprint', 'Notes']]
+        st.dataframe(display_ai[cols_to_show], use_container_width=True, hide_index=True)
+        
+        if 'Executive Summary' in ai_targets_df.columns and not ai_targets_df['Executive Summary'].empty:
+            with st.expander("AI Thesis Summary"):
+                st.write(ai_targets_df['Executive Summary'].iloc[0])
+    else:
+        st.info("No AI suggestions available. Run the podcast sync tool to generate them.")
 
 # --- Rebalancing Proposals ---
 st.divider()
