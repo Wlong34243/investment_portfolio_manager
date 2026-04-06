@@ -11,16 +11,66 @@ st.title("⚖️ Tax-Aware Rebalancing")
 st.info("💡 **Analysis only.** This page suggests actions but does not execute trades or modify your spreadsheet.")
 
 # --- Load Data ---
+targets_df = get_target_allocation()
+ai_suggested_df = get_ai_suggested_allocation()
+realized_gl_df = get_realized_gl()
+
+# --- AI Strategy Comparison ---
+if not ai_suggested_df.empty:
+    st.header("🤖 AI Strategy Comparison")
+    source = ai_suggested_df['Source'].iloc[0]
+    dt = ai_suggested_df['Date'].iloc[0]
+    st.caption(f"Latest Strategy: {source} — {dt}")
+    
+    if 'Executive Summary' in ai_suggested_df.columns:
+        st.info(ai_suggested_df['Executive Summary'].iloc[0])
+
+    # --- Merge and Delta Calculation ---
+    # Renaming to prevent collisions on merge
+    t_copy = targets_df.copy().rename(columns={'Target %': 'Current Target %'})
+    a_copy = ai_suggested_df.copy().rename(columns={'Target %': 'AI Target %'})
+    
+    # Outer join on Asset Class
+    comparison_df = pd.merge(
+        t_copy, 
+        a_copy, 
+        on='Asset Class', 
+        how='outer'
+    )
+    
+    # Fill NaN with 0.0
+    comparison_df['Current Target %'] = comparison_df['Current Target %'].fillna(0.0)
+    comparison_df['AI Target %'] = comparison_df['AI Target %'].fillna(0.0)
+    
+    # Calculate Delta %
+    comparison_df['Delta %'] = comparison_df['AI Target %'] - comparison_df['Current Target %']
+    
+    # Display table
+    display_cols = ['Asset Class', 'Current Target %', 'AI Target %', 'Delta %']
+    if 'Notes_x' in comparison_df.columns:
+        comparison_df = comparison_df.rename(columns={'Notes_x': 'Notes'})
+        display_cols.append('Notes')
+    elif 'Notes' in comparison_df.columns:
+        display_cols.append('Notes')
+
+    st.dataframe(
+        comparison_df[display_cols],
+        column_config={
+            'Current Target %': st.column_config.NumberColumn(format="%.1f%%"),
+            'AI Target %': st.column_config.NumberColumn(format="%.1f%%"),
+            'Delta %': st.column_config.NumberColumn(format="%+.1f%%"),
+        },
+        use_container_width=True,
+        hide_index=True
+    )
+
+# --- Load Holdings ---
 try:
     holdings_df = get_holdings_current()
     holdings_df = ensure_display_columns(holdings_df)
 except Exception as e:
     st.error("Could not connect to Google Sheets. Check your connection and service account permissions.")
     st.stop()
-
-targets_df = get_target_allocation()
-ai_targets_df = get_ai_suggested_allocation()
-realized_gl_df = get_realized_gl()
 
 if holdings_df.empty:
     st.warning("No holdings data available. Please upload a positions CSV on the main page.")
@@ -59,39 +109,6 @@ if not drift_df.empty:
     }).apply(lambda x: ['background-color: #FADBD8' if abs(v) > 5 else '' for v in x], subset=['Drift %']))
 else:
     st.info("Drift data could not be calculated. Ensure Categories in Target_Allocation match your Holdings.")
-
-# --- Strategy Comparison ---
-st.divider()
-st.subheader("🎯 Strategy Comparison: Bill vs. AI")
-st.info("⚠️ AI suggestions are for **review only**. They do not impact the drift calculations above until you manually update your 'Target_Allocation' sheet.")
-
-col_bill, col_ai = st.columns(2)
-
-with col_bill:
-    st.markdown("#### Bill's Official Targets")
-    if not targets_df.empty:
-        # Standardize columns for display
-        display_targets = targets_df.copy()
-        # Find numeric columns for formatting
-        num_cols = display_targets.select_dtypes(include=['number']).columns.tolist()
-        st.dataframe(display_targets, use_container_width=True, hide_index=True)
-    else:
-        st.info("No manual targets defined.")
-
-with col_ai:
-    st.markdown("#### AI's Latest Strategy")
-    if not ai_targets_df.empty:
-        # Standardize columns for display
-        display_ai = ai_targets_df.copy()
-        # Hide internal/large text columns if they exist
-        cols_to_show = [c for c in display_ai.columns if c not in ['Executive Summary', 'Fingerprint', 'Notes']]
-        st.dataframe(display_ai[cols_to_show], use_container_width=True, hide_index=True)
-        
-        if 'Executive Summary' in ai_targets_df.columns and not ai_targets_df['Executive Summary'].empty:
-            with st.expander("AI Thesis Summary"):
-                st.write(ai_targets_df['Executive Summary'].iloc[0])
-    else:
-        st.info("No AI suggestions available. Run the podcast sync tool to generate them.")
 
 # --- Rebalancing Proposals ---
 st.divider()
