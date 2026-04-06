@@ -125,8 +125,9 @@ if st.button("🧠 Generate Tax-Aware Proposals", width='stretch'):
         if proposals:
             for p in proposals:
                 st.write(f"### Category: {p['category']}")
-                cols = st.columns(3)
-                for i, opt in enumerate(p['options']):
+                opts = p['options']
+                cols = st.columns(max(1, min(len(opts), 3)))
+                for i, opt in enumerate(opts[:3]):
                     with cols[i]:
                         st.markdown(f"**{opt['label']}**")
                         st.write(opt['description'])

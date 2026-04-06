@@ -85,24 +85,15 @@ def calculate_drift(holdings_df: pd.DataFrame, targets_df: pd.DataFrame) -> pd.D
         # Priority 1: Explicit Cash Tickers
         if row['Is Cash'] or str(row['Ticker']).upper() in ['QACDS', 'CASH_MANUAL', 'CASH']:
             return 'Cash'
-        
-        # Priority 2: Hardcoded Ticker Overrides
-        ticker_map = {
-            'GOOG': 'Information Technology', 'AMZN': 'Information Technology', 
-            'NVDA': 'Information Technology', 'AMD': 'Information Technology',
-            'META': 'Information Technology', 'MSFT': 'Information Technology',
-            'AAPL': 'Information Technology', 'QQQM': 'Information Technology',
-            'XOM': 'Energy', 'CVX': 'Energy',
-            'VTI': 'Equities', 'VEA': 'Equities', 'EEM': 'Equities',
-            'COF': 'Financials', 'JPM': 'Financials',
-            'UNH': 'Healthcare',
-            'IFRA': 'Industrials', 'ETN': 'Industrials',
-        }
-        if str(row['Ticker']).upper() in ticker_map:
-            return ticker_map[str(row['Ticker']).upper()]
-            
-        # Priority 3: Normalize the Asset Class column
-        return normalize_cat(row['Asset Class'])
+
+        # Priority 2: Use Asset Class directly from holdings (set by Gemini enrichment
+        # or Schwab import). Only fall back to normalize_cat if blank or generic.
+        asset_class = str(row.get('Asset Class', '')).strip()
+        if asset_class and asset_class.lower() not in ('other', 'n/a', '', 'nan'):
+            return asset_class
+
+        # Priority 3: keyword fallback for blank/Other positions
+        return normalize_cat(asset_class)
 
     h_df['Category'] = h_df.apply(map_row_to_target, axis=1)
 
@@ -143,7 +134,7 @@ def generate_rebalance_proposals(drift_df: pd.DataFrame, holdings_df: pd.DataFra
         Analyze tax impact qualitatively (LT vs ST). Do NOT attempt to calculate exact tax dollars.
         """
         
-        system_instruction = f"{SAFETY_PREAMBLE}\n\nYou are a tax-aware rebalancing advisor for a CPA. Focus on 'The Rule of Three' options."
+        system_instruction = "You are a tax-aware rebalancing advisor for a CPA. Focus on 'The Rule of Three' options."
         
         try:
             res = ask_gemini(prompt, system_instruction=system_instruction, response_schema=RebalanceProposal)
@@ -219,7 +210,7 @@ def build_tlh_report(holdings_df: pd.DataFrame, realized_gl_df: pd.DataFrame) ->
         to maintain market exposure for 31 days while avoiding the wash-sale rule.
         """
         
-        system_instruction = f"{SAFETY_PREAMBLE}\n\nYou are a tax-loss harvesting advisor for a CPA. Suggest proxy options to maintain exposure."
+        system_instruction = "You are a tax-loss harvesting advisor for a CPA. Suggest proxy options to maintain exposure."
         
         try:
             res = ask_gemini(prompt, system_instruction=system_instruction, response_schema=TLHProposal)
