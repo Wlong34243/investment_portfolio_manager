@@ -54,13 +54,15 @@ def calculate_drift(holdings_df: pd.DataFrame, targets_df: pd.DataFrame) -> pd.D
     if targets_df.empty or holdings_df.empty: return pd.DataFrame()
     
     # 1. Standardize Target Labels
+    t_df = targets_df.copy()
+    
     # If "Asset Class" exists in targets, use it as the merge key
-    if 'Asset Class' in targets_df.columns:
-        targets_df = targets_df.rename(columns={'Asset Class': 'Category'})
-    elif 'Category' not in targets_df.columns:
-        potential_labels = [c for c in targets_df.columns if 'target' not in c.lower() and '%' not in c.lower()]
+    if 'Asset Class' in t_df.columns:
+        t_df = t_df.rename(columns={'Asset Class': 'Category'})
+    elif 'Category' not in t_df.columns:
+        potential_labels = [c for c in t_df.columns if 'target' not in c.lower() and '%' not in c.lower()]
         if potential_labels: 
-            targets_df = targets_df.rename(columns={potential_labels[0]: 'Category'})
+            t_df = t_df.rename(columns={potential_labels[0]: 'Category'})
         else: 
             return pd.DataFrame()
 
@@ -80,7 +82,7 @@ def calculate_drift(holdings_df: pd.DataFrame, targets_df: pd.DataFrame) -> pd.D
     actual_weights.columns = ['Category', 'Actual %']
     
     # Merge with targets
-    drift_df = pd.merge(actual_weights, targets_df, on='Category', how='outer')
+    drift_df = pd.merge(actual_weights, t_df, on='Category', how='outer')
 
     # Fill NA before type conversion
     drift_df = drift_df.infer_objects(copy=False).fillna(0)
