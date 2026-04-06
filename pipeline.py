@@ -173,6 +173,9 @@ def append_daily_snapshot(ws, df: pd.DataFrame, existing_fps: set = None) -> boo
     Build snapshot row and check fingerprint (date|pos_count|total_value).
     Uses col_values for efficient duplicate check.
     """
+    from utils.column_guard import ensure_display_columns
+    df = ensure_display_columns(df)
+
     # Ensure we have a string date
     import_date = str(df['Import Date'].iloc[0])
     
