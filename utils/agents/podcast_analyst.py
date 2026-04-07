@@ -38,30 +38,45 @@ class PodcastStrategy(BaseModel):
 
 def analyze_podcast(transcript: str, source_name: str = "Unknown Podcast") -> dict | None:
     """
-    Send transcript to Gemini, extract structured allocation strategy.
+    Send transcript or financial report to Gemini, extract structured allocation strategy.
+    Detects if the source is a STAX report and adjusts instructions to derive forward signals.
     Returns dict (model_dump) on success, None on failure.
     """
+    is_stax = "STAX" in source_name.upper()
+
+    if is_stax:
+        role_instruction = (
+            "You are a Quantitative Strategist parsing a retail sentiment and flow report (Schwab STAX).\n\n"
+            "STAX DATA INTERPRETATION:\n"
+            "- STAX is retrospective (last month's flows), but your job is to DERIVE a forward-looking allocation.\n"
+            "- If retail is net-buying a sector on a dip, analyze if that signals a 'buy the dip' consensus.\n"
+            "- If a sector saw massive outflows, evaluate if it represents a rotation opportunity or a risk to avoid.\n"
+            "- Use the flow data to build a GRANULAR sector-by-sector allocation (do not just output Broad Market).\n"
+        )
+    else:
+        role_instruction = (
+            "You are a Chief Investment Officer parsing an institutional strategy discussion.\n\n"
+            "EXTRACT: the core 6-to-12 month macro thesis, sector rotation consensus, and risk positioning.\n"
+        )
+
     system_instruction = (
-        "You are a Chief Investment Officer parsing an institutional strategy discussion.\n\n"
+        f"{role_instruction}\n"
         "IGNORE: sponsor reads, day-trading advice, short-term options flow, meme stock hype, "
         "crypto speculation without institutional backing, and advertisements.\n\n"
-        "EXTRACT: the core 6-to-12 month macro thesis, sector rotation consensus, "
-        "and risk positioning.\n\n"
         "CONSTRAINTS:\n"
         "- target_pct values across all SectorTarget entries MUST sum to exactly 100.\n"
         "- Use standard GICS sectors or macro asset categories (e.g., Technology, "
         "Healthcare, Energy, Financials, Industrials, Utilities, Materials, "
         "Real Estate, Consumer Discretionary, Consumer Staples, Communication Services, "
         "International, Broad Market, Fixed Income, Cash). You MAY introduce a sector "
-        "the investor currently has zero exposure to if the podcast presents a strong "
-        "valuation displacement opportunity — that is the purpose of this analysis.\n"
-        "- If the podcast lacks actionable allocation guidance, return a single "
-        "SectorTarget with asset_class='Broad Market', target_pct=100, confidence='Low', "
-        "and notes explaining why.\n"
+        "the investor currently has zero exposure to if the source presents a strong "
+        "displacement opportunity.\n"
+        "- If the source truly lacks any actionable signals, only then return a single "
+        "SectorTarget with asset_class='Broad Market', target_pct=100, confidence='Low'.\n"
         f"- Source: {source_name}"
     )
 
-    prompt = f"Analyze this podcast transcript and extract a target allocation strategy:\n\n{transcript}"
+    prompt = f"Analyze this content and extract a target allocation strategy:\n\n{transcript}"
 
     result = ask_gemini(
         prompt=prompt,
