@@ -51,8 +51,18 @@ st.write(f"Cash rows: {cash_mask.sum()} of {len(df)}")
 ```
 If this shows an impossible number (e.g., 47 of 47), the bug is in the mask, not the math.
 
-## 5. Engineering Workflow
+## 6. Refactoring & Multi-Function Safety
 
-### Git Verification
-**Discovery:** Local "fixes" that aren't pushed to the remote repository are the #1 cause of "But it works on my machine" failures in Streamlit Cloud.
-**Lesson:** Verification is not complete until `git status` shows a clean tree and `git push` has successfully completed. Use a `smoke_test.py` to verify imports and syntax locally before pushing.
+### The Refactoring "Omission" Error
+**Discovery:** When using surgical text-replacement tools (like `replace`) on blocks of code that contain multiple functions or UI elements, it is easy to accidentally delete "neighboring" code by simply leaving it out of the replacement string. 
+- Example 1: Overwriting the sidebar `Import Hub` to add category enrichment logic while omitting the existing `Realized G/L` and `Transactions` uploaders.
+- Example 2: Updating a single function (`calculate_beta`) but omitting the second function in that same source block (`calculate_portfolio_beta`), causing an immediate `ImportError` across the app.
+
+**Lesson:** Refactoring is an "all-or-nothing" operation for the targeted block. Always read the *full* scope of the block being replaced. If a block contains multiple distinct features (like several file uploaders or multiple math functions), ensure every single one is explicitly represented in the new version of the code.
+
+### Verification of Runtime State (Imports & Syntax)
+**Discovery:** Small omissions in imports (e.g., forgetting `import streamlit as st` or `from typing import Optional`) can pass a cursory code review but cause a catastrophic crash (`NameError`) at runtime on Streamlit Cloud.
+**Lesson:** After any structural code change or refactoring:
+1.  **Syntax Check:** Run `python -m py_compile path/to/file.py` to catch basic syntax and indentation errors before pushing.
+2.  **Import Audit:** Specifically verify that every decorator (like `@st.cache_data`) and every type hint (like `Optional`) has its corresponding import at the top of the file.
+3.  **UI Sanity Check:** Manually verify that all previously existing UI components (uploaders, buttons, tabs) are still visible in their expected locations.

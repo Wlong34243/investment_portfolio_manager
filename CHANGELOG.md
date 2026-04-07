@@ -1,5 +1,14 @@
 # Changelog
 
+## [Unreleased] — STAX Market Intelligence Ingestion
+
+### Added
+- **📊 STAX Integration:** Added a new "Ingest STAX Report" UI to the Rebalancing page. Users can now paste raw text from Schwab's Trading Activity Index (STAX) reports for instant Gemini-driven sector rotation analysis.
+- **Backend Orchestrator:** Created `tasks/stax_sync.py` to handle raw text analysis, schema validation, and "clear-and-replace" writing to the `AI_Suggested_Allocation` tab.
+
+### Fixed
+- **Parser Flexibility:** Updated the strategy JSON parser to handle multiple schemas (e.g., `allocations` vs `target_allocations`) and nested metadata, fixing a `KeyError` when importing STAX-formatted JSON.
+
 ## [Unreleased] — Sidebar UI Restoration
 
 ### Fixed
