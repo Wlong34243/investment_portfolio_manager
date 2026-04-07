@@ -1,5 +1,15 @@
 # Changelog
 
+## [Unreleased] — Risk Refinements: Beta Dilution & Heatmap UX
+
+### Added
+- **🔥 On-Demand Heatmap:** Added a "Generate Correlation Heatmap" button to the Risk tab. This allows users to view persistent beta/stress results instantly while deferring heavy data downloads until needed.
+- **Improved Stress Matrix:** Added "Total New Value" column to stress tests, showing the projected total portfolio balance (Cash + Invested) for each scenario.
+
+### Changed
+- **Beta Dilution (Cash Handling):** Updated `calculate_portfolio_beta` to properly dilute risk based on the **Total Portfolio Value**. Cash positions are now explicitly beta-zeroed, ensuring stress tests accurately reflect high cash buffers.
+- **Import Hardening:** Fixed missing imports (`streamlit`, `typing`) in `utils/risk.py` that caused runtime NameErrors.
+
 ## [Unreleased] — Risk Persistence & Beta Hardening
 
 ### Added

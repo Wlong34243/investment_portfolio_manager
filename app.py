@@ -251,9 +251,11 @@ def main_dashboard():
                 with col_left:
                     st.write("### Stress Test Scenarios")
                     stress_df = pd.DataFrame(res['stress'])
-                    st.table(stress_df[['scenario', 'impact_pct', 'impact']].style.format({
+                    # Add Total New Value column for clarity
+                    st.table(stress_df[['scenario', 'impact_pct', 'impact', 'new_value']].style.format({
                         'impact_pct': '{:+.2f}%',
-                        'impact': '${:,.0f}'
+                        'impact': '${:,.0f}',
+                        'new_value': '${:,.0f}'
                     }))
                 
                 with col_right:
@@ -265,6 +267,14 @@ def main_dashboard():
                             zmin=-1, zmax=1
                         )
                         st.plotly_chart(fig_corr, use_container_width=True)
+                    else:
+                        st.info("Heatmap not loaded from cache.")
+                        if st.button("🔥 Generate Correlation Heatmap"):
+                            with st.spinner("Downloading histories..."):
+                                hist = build_price_histories(df)
+                                res['corr_matrix'] = calculate_correlation_matrix(df, hist)
+                                st.session_state["risk_results"] = res
+                                st.rerun()
 
                 # --- Concentration Hedger ---
                 st.divider()

@@ -63,32 +63,33 @@ def calculate_beta(ticker, price_history, spy_returns) -> float:
 
 def calculate_portfolio_beta(df) -> float:
     """
-    - invested_only = df[~df["ticker"].isin(config.CASH_TICKERS)]
-    - weighted_beta = sum(row.weight * row.beta for row in invested_only)
-    - divide by sum of weights for invested positions only
-    - Return rounded to 4 decimal places
+    Weighted Beta calculation across the TOTAL portfolio.
+    Cash positions must have beta=0.0 to properly dilute the total risk.
+    Formula: Sum(Position_Beta * Position_Weight)
+    Where Weight = Position_MV / Total_Portfolio_MV
     """
     ticker_col = 'ticker' if 'ticker' in df.columns else 'Ticker'
-    weight_col = 'weight' if 'weight' in df.columns else 'Weight'
+    mv_col = 'market_value' if 'market_value' in df.columns else 'Market Value'
     beta_col = 'beta' if 'beta' in df.columns else 'Beta'
     
-    invested_only = df[~df[ticker_col].isin(config.CASH_TICKERS)].copy()
+    df_calc = df.copy()
     
-    if invested_only.empty:
+    # 1. Ensure numeric types
+    df_calc[mv_col] = pd.to_numeric(df_calc[mv_col], errors='coerce').fillna(0.0)
+    df_calc[beta_col] = pd.to_numeric(df_calc[beta_col], errors='coerce').fillna(1.0)
+    
+    # 2. Force Beta=0 for cash tickers (dilution)
+    cash_mask = (df_calc[ticker_col].isin(config.CASH_TICKERS)) | (df_calc.get('Asset Class', '').astype(str).str.lower() == 'cash')
+    df_calc.loc[cash_mask, beta_col] = 0.0
+    
+    total_mv = df_calc[mv_col].sum()
+    if total_mv <= 0:
         return 0.0
         
-    # Ensure weight and beta are numeric
-    invested_only[weight_col] = pd.to_numeric(invested_only[weight_col], errors='coerce').fillna(0.0)
-    invested_only[beta_col] = pd.to_numeric(invested_only[beta_col], errors='coerce').fillna(1.0)
+    # 3. Calculate weighted beta
+    weighted_beta = (df_calc[mv_col] * df_calc[beta_col]).sum() / total_mv
     
-    total_invested_weight = invested_only[weight_col].sum()
-    if total_invested_weight == 0:
-        return 0.0
-        
-    weighted_beta = (invested_only[weight_col] * invested_only[beta_col]).sum()
-    portfolio_beta = weighted_beta / total_invested_weight
-    
-    return round(float(portfolio_beta), 4)
+    return round(float(weighted_beta), 4)
 
 @st.cache_data(ttl=config.YFINANCE_CACHE_TTL)
 def build_price_histories(df) -> pd.DataFrame:
