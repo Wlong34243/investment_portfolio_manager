@@ -145,7 +145,7 @@ try:
                                 
                             try:
                                 result = subprocess.run(
-                                    ["python", "tasks/weekly_podcast_sync.py", "--import-json", temp_path, "--live"],
+                                    [sys.executable, "tasks/weekly_podcast_sync.py", "--import-json", temp_path, "--live"],
                                     capture_output=True, text=True, check=True
                                 )
                                 os.remove(temp_path)
@@ -176,7 +176,7 @@ try:
                         
                     try:
                         result = subprocess.run(
-                            ["python", "tasks/stax_sync.py", "--file", temp_stax, "--source", stax_source, "--live"],
+                            [sys.executable, "tasks/stax_sync.py", "--file", temp_stax, "--source", stax_source, "--live"],
                             capture_output=True, text=True, check=True
                         )
                         os.remove(temp_stax)
