@@ -1,5 +1,16 @@
 # Changelog
 
+## [Unreleased] — Rebalancing UI Overhaul
+
+### Added
+- **Triple-Source Comparative Matrix:** Rewrote the core rebalancing logic to perform a "grand merge" of Current Holdings, Manual Targets, and AI Suggested Allocations using a unified `Asset Class` key.
+- **AI Delta Analysis:** Added automated calculations for `AI Delta %`, showing the variance between manual targets and AI podcast recommendations.
+- **Grouped Visualization:** Integrated a new Plotly bar chart comparing Actual, Target, and AI allocations side-by-side.
+
+### Changed
+- **Matrix UI:** Enhanced the data table with `st.column_config` for professional percentage formatting and included `Asset Strategy` and `AI Notes` for thesis-driven rebalancing.
+- **Robustness:** Added defensive type-casting for all percentage columns and explicit error handling for empty sheet states.
+
 ## [Unreleased] — UI Strategy Import & Rebalancing Consolidation
 
 ### Added
