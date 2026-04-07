@@ -61,6 +61,35 @@ def calculate_beta(ticker, price_history, spy_returns) -> float:
     except Exception:
         return 1.0
 
+def calculate_portfolio_beta(df) -> float:
+    """
+    - invested_only = df[~df["ticker"].isin(config.CASH_TICKERS)]
+    - weighted_beta = sum(row.weight * row.beta for row in invested_only)
+    - divide by sum of weights for invested positions only
+    - Return rounded to 4 decimal places
+    """
+    ticker_col = 'ticker' if 'ticker' in df.columns else 'Ticker'
+    weight_col = 'weight' if 'weight' in df.columns else 'Weight'
+    beta_col = 'beta' if 'beta' in df.columns else 'Beta'
+    
+    invested_only = df[~df[ticker_col].isin(config.CASH_TICKERS)].copy()
+    
+    if invested_only.empty:
+        return 0.0
+        
+    # Ensure weight and beta are numeric
+    invested_only[weight_col] = pd.to_numeric(invested_only[weight_col], errors='coerce').fillna(0.0)
+    invested_only[beta_col] = pd.to_numeric(invested_only[beta_col], errors='coerce').fillna(1.0)
+    
+    total_invested_weight = invested_only[weight_col].sum()
+    if total_invested_weight == 0:
+        return 0.0
+        
+    weighted_beta = (invested_only[weight_col] * invested_only[beta_col]).sum()
+    portfolio_beta = weighted_beta / total_invested_weight
+    
+    return round(float(portfolio_beta), 4)
+
 @st.cache_data(ttl=config.YFINANCE_CACHE_TTL)
 def build_price_histories(df) -> pd.DataFrame:
     """
