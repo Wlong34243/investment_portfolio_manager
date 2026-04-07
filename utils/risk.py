@@ -4,6 +4,8 @@ import yfinance as yf
 import scipy.stats
 import os
 import sys
+import streamlit as st
+from typing import Optional
 
 # Add project root to path so config is importable
 _HERE = os.path.dirname(os.path.abspath(__file__))
