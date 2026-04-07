@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased] — Sidebar UI Restoration
+
+### Fixed
+- **Missing Uploaders:** Restored the "Realized G/L" and "Transactions" file uploaders in the sidebar. These were accidentally removed during the Risk tab overhaul.
+- **CSV Processing:** Restored the ingestion logic for Gains and Transactions in the main processing loop.
+
 ## [Unreleased] — Risk Refinements: Beta Dilution & Heatmap UX
 
 ### Added

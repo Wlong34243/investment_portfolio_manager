@@ -54,20 +54,41 @@ with st.sidebar:
     # Import Hub
     with st.expander("📥 Import Schwab CSVs", expanded=df.empty):
         pos_file = st.file_uploader("Positions", type=["csv"])
+        gl_file = st.file_uploader("Realized G/L", type=["csv"])
+        tx_file = st.file_uploader("Transactions", type=["csv"])
+        
         cash_inject = st.number_input("Manual Cash ($)", value=0.0, step=500.0)
         
         if st.button("Process Data", width='stretch'):
             if pos_file:
-                with st.spinner("Ingesting..."):
+                with st.spinner("Ingesting Positions..."):
                     df_raw = parse_schwab_csv(pos_file.read())
                     df_cash = inject_cash_manual(df_raw, cash_inject)
                     df_enriched = enrich_positions(df_cash)
                     df_norm = normalize_positions(df_enriched, str(date.today()))
                     write_to_sheets(df_norm, cash_inject, dry_run=config.DRY_RUN)
                     st.session_state["holdings_df"] = ensure_display_columns(df_norm)
-                    st.toast("Portfolio Updated", icon="✅")
-                    time.sleep(1)
-                    st.rerun()
+                    st.toast("Positions Updated", icon="✅")
+            
+            if gl_file:
+                with st.spinner("Ingesting Gains..."):
+                    res = ingest_realized_gl(gl_file, dry_run=config.DRY_RUN)
+                    if res.get("new", 0) > 0:
+                        st.toast(f"Gains: {res['new']} new rows", icon="💸")
+                    else:
+                        st.toast("Gains: No new rows", icon="ℹ️")
+
+            if tx_file:
+                with st.spinner("Ingesting Transactions..."):
+                    res = ingest_transactions(tx_file, dry_run=config.DRY_RUN)
+                    if res.get("new", 0) > 0:
+                        st.toast(f"Transactions: {res['new']} new rows", icon="📑")
+                    else:
+                        st.toast("Transactions: No new rows", icon="ℹ️")
+
+            if pos_file or gl_file or tx_file:
+                time.sleep(1)
+                st.rerun()
 
     st.divider()
     with st.expander("🧠 Category Enrichment"):
