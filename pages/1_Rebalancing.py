@@ -9,6 +9,7 @@ import sys
 import json
 import subprocess
 from datetime import date
+import config
 
 st.set_page_config(layout="wide", page_title="Rebalancing", page_icon="⚖️")
 
@@ -34,6 +35,15 @@ try:
     # Ensure Market Value is numeric
     df_holdings['Market Value'] = pd.to_numeric(df_holdings['Market Value'], errors='coerce').fillna(0.0)
     total_portfolio_value = df_holdings['Market Value'].sum()
+
+    # --- NORMALIZE CASH ---
+    # Identify cash rows by Asset Class or known cash tickers
+    cash_mask = (
+        (df_holdings['Asset Class'].astype(str).str.lower() == 'cash') | 
+        (df_holdings['Ticker'].astype(str).str.upper().isin(config.CASH_TICKERS))
+    )
+    # Force Asset Class to 'Cash' for these rows before grouping
+    df_holdings.loc[cash_mask, 'Asset Class'] = 'Cash'
 
     # Group by Asset Class
     df_actuals = df_holdings.groupby('Asset Class')['Market Value'].sum().reset_index()

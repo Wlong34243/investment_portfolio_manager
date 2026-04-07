@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased] — Cash Aggregation Fix
+
+### Fixed
+- **Cash Normalization:** Fixed a bug in the Rebalancing page where cash-sweep tickers (like `QACDS`) were not being aggregated into the "Cash" category. The logic now robustly identifies cash by both Asset Class and Ticker before grouping.
+
 ## [Unreleased] — STAX Market Intelligence Ingestion
 
 ### Added
