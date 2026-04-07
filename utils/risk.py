@@ -16,21 +16,32 @@ try:
 except ImportError:
     pass
 
+@st.cache_data(ttl=config.YFINANCE_CACHE_TTL)
+def get_ticker_beta_fast(ticker: str) -> Optional[float]:
+    """Fetch beta from yfinance info (fastest)."""
+    if ticker in config.CASH_TICKERS: return 0.0
+    try:
+        t = yf.Ticker(ticker)
+        return t.info.get('beta')
+    except:
+        return None
+
 def calculate_beta(ticker, price_history, spy_returns) -> float:
     """
-    - Covariance method ONLY (not regression):
-        ticker_returns = price_history[ticker].pct_change().dropna()
-        common_idx = ticker_returns.index.intersection(spy_returns.index)
-        if len(common_idx) < config.MIN_BETA_DATA_POINTS: return 1.0
-        beta = ticker_returns[common_idx].cov(spy_returns[common_idx]) / spy_returns[common_idx].var()
-    - CASH_TICKERS always return 0.0
-    - Outlier protection: Clamp beta to range [-0.5, 3.5]
+    Beta calculation with fallback chain:
+    1. yfinance info['beta']
+    2. Covariance method (if history available)
+    3. Default to 1.0 (or 0.0 for cash)
     """
     if ticker in config.CASH_TICKERS:
         return 0.0
     
+    # Try fast info first
+    fast_beta = get_ticker_beta_fast(ticker)
+    if fast_beta is not None:
+        return float(np.clip(fast_beta, -0.5, 3.5))
+
     if ticker not in price_history.columns:
-        print(f"Warning: {ticker} not in price history. Using beta=1.0")
         return 1.0
         
     ticker_series = price_history[ticker]
@@ -39,74 +50,45 @@ def calculate_beta(ticker, price_history, spy_returns) -> float:
     common_idx = ticker_returns.index.intersection(spy_returns.index)
     
     if len(common_idx) < config.MIN_BETA_DATA_POINTS:
-        print(f"Warning: {ticker} has only {len(common_idx)} data points. Using beta=1.0")
         return 1.0
         
     try:
         # Covariance method
         beta = ticker_returns[common_idx].cov(spy_returns[common_idx]) / spy_returns[common_idx].var()
-        
-        # Clamp
         return float(np.clip(beta, -0.5, 3.5))
-    except Exception as e:
-        print(f"Error calculating beta for {ticker}: {e}")
+    except Exception:
         return 1.0
 
-def calculate_portfolio_beta(df) -> float:
-    """
-    - invested_only = df[~df["ticker"].isin(config.CASH_TICKERS)]
-    - weighted_beta = sum(row.weight * row.beta for row in invested_only)
-    - divide by sum of weights for invested positions only
-    - Return rounded to 4 decimal places
-    """
-    ticker_col = 'ticker' if 'ticker' in df.columns else 'Ticker'
-    weight_col = 'weight' if 'weight' in df.columns else 'Weight'
-    beta_col = 'beta' if 'beta' in df.columns else 'Beta'
-    
-    invested_only = df[~df[ticker_col].isin(config.CASH_TICKERS)].copy()
-    
-    if invested_only.empty:
-        return 0.0
-        
-    # Ensure weight and beta are numeric
-    invested_only[weight_col] = pd.to_numeric(invested_only[weight_col], errors='coerce').fillna(0.0)
-    invested_only[beta_col] = pd.to_numeric(invested_only[beta_col], errors='coerce').fillna(1.0)
-    
-    total_invested_weight = invested_only[weight_col].sum()
-    if total_invested_weight == 0:
-        return 0.0
-        
-    weighted_beta = (invested_only[weight_col] * invested_only[beta_col]).sum()
-    portfolio_beta = weighted_beta / total_invested_weight
-    
-    return round(float(portfolio_beta), 4)
-
+@st.cache_data(ttl=config.YFINANCE_CACHE_TTL)
 def build_price_histories(df) -> pd.DataFrame:
     """
-    - Bulk download top 20 + SPY in single yf.download() call
-    - Return DataFrame of adjusted close prices
-    - Include "SPY" always.
+    Bulk download price histories for risk analysis.
+    Cached to prevent excessive API calls.
     """
     ticker_col = 'ticker' if 'ticker' in df.columns else 'Ticker'
     mv_col = 'market_value' if 'market_value' in df.columns else 'Market Value'
     
-    invested_df = df[~df[ticker_col].isin(config.CASH_TICKERS)]
-    top_tickers = invested_df.nlargest(config.TOP_N_ENRICH, mv_col)[ticker_col].tolist()
+    # Force numeric market value
+    df_clean = df.copy()
+    df_clean[mv_col] = pd.to_numeric(df_clean[mv_col], errors='coerce').fillna(0.0)
     
+    invested_df = df_clean[~df_clean[ticker_col].isin(config.CASH_TICKERS)]
+    if invested_df.empty:
+        return pd.DataFrame()
+
+    # Get top positions + SPY
+    top_tickers = invested_df.nlargest(config.TOP_N_ENRICH, mv_col)[ticker_col].tolist()
     tickers_to_download = list(set(top_tickers + ["SPY"]))
     
-    print(f"Downloading history for {len(tickers_to_download)} tickers...")
     try:
         data = yf.download(tickers_to_download, period="1y", auto_adjust=True, progress=False)
         if isinstance(data.columns, pd.MultiIndex):
-            # If multiple tickers, columns are (Attribute, Ticker)
             if 'Close' in data.columns.levels[0]:
                 return data['Close']
             elif 'Adj Close' in data.columns.levels[0]:
                 return data['Adj Close']
         return data
-    except Exception as e:
-        print(f"Error downloading price histories: {e}")
+    except Exception:
         return pd.DataFrame()
 
 def calculate_correlation_matrix(df, price_histories) -> pd.DataFrame:

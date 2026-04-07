@@ -492,6 +492,52 @@ def append_decision_log(date_str: str, tickers: str, action: str,
         return False
 
 
+def write_risk_metrics(res: dict, df: pd.DataFrame, dry_run: bool = False) -> bool:
+    """
+    Persists deep risk results to the Risk_Metrics tab.
+    Calculates top concentration metrics from the dataframe.
+    """
+    import_date = datetime.now().strftime("%Y-%m-%d")
+    total_val = df['Market Value'].sum()
+    
+    # Calculate concentration
+    top_pos = df.nlargest(1, 'Market Value').iloc[0]
+    top_pos_ticker = top_pos['Ticker']
+    top_pos_pct = (top_pos['Market Value'] / total_val * 100) if total_val > 0 else 0.0
+    
+    sector_weights = df.groupby('Asset Class')['Market Value'].sum()
+    top_sector_name = sector_weights.idxmax() if not sector_weights.empty else "N/A"
+    top_sector_pct = (sector_weights.max() / total_val * 100) if total_val > 0 else 0.0
+    
+    # Stress -10% impact
+    stress_10 = [s['impact'] for s in res['stress'] if '-10%' in s['scenario']]
+    stress_impact = stress_10[0] if stress_10 else 0.0
+    
+    # Build metrics dict for write_risk_snapshot
+    metrics = {
+        "portfolio_beta": res['p_beta'],
+        "top_pos_pct": top_pos_pct,
+        "top_pos_ticker": top_pos_ticker,
+        "top_sector_pct": top_sector_pct,
+        "top_sector_name": top_sector_name,
+        "var_95": 0.0, # Placeholder for VaR if added later
+        "stress_impact": stress_impact
+    }
+    
+    if dry_run:
+        print(f"DRY RUN: Would write risk metrics for {import_date}")
+        return True
+
+    try:
+        from utils.sheet_readers import get_gspread_client
+        client = get_gspread_client()
+        spreadsheet = client.open_by_key(config.PORTFOLIO_SHEET_ID)
+        ws = spreadsheet.worksheet(config.TAB_RISK_METRICS)
+        return write_risk_snapshot(ws, metrics)
+    except Exception as e:
+        print(f"Failed to write risk metrics: {e}")
+        return False
+
 def write_to_sheets(df: pd.DataFrame, cash_amount: float, dry_run: bool = True) -> dict:
     """
     Orchestrate: Holdings_Current -> Holdings_History -> Daily_Snapshots -> Income_Tracking.

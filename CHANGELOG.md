@@ -1,5 +1,16 @@
 # Changelog
 
+## [Unreleased] — Risk Persistence & Beta Hardening
+
+### Added
+- **Risk Persistence:** Added `write_risk_metrics` to the pipeline. Deep risk results (Beta, stress impacts, concentration) are now saved to the `Risk_Metrics` tab in Google Sheets.
+- **Auto-Load Analytics:** The Risk tab now automatically restores the latest metrics from the Sheet on app startup, eliminating the need to re-run scans on every refresh.
+
+### Changed
+- **Authority Beta Chain:** Upgraded `utils/risk.py` to use a multi-source fallback: `yfinance` info -> 1yr Covariance -> Default 1.0.
+- **Performance:** Implemented `st.cache_data` for price history downloads and beta lookups to reduce API latency and prevent rate-limiting.
+- **UI State Management:** Integrated `get_risk_metrics` into the main dashboard initialization to ensure session persistence.
+
 ## [Unreleased] — Rebalancing UI Overhaul
 
 ### Added

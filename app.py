@@ -18,7 +18,7 @@ from pipeline import (
     normalize_positions, write_to_sheets, ingest_realized_gl, 
     ingest_transactions, calculate_income_metrics
 )
-from utils.sheet_readers import get_holdings_current, get_daily_snapshots
+from utils.sheet_readers import get_holdings_current, get_daily_snapshots, get_risk_metrics
 from utils.validators import (
     validate_percentage_range, validate_no_negative_market_values, 
     validate_duplicate_tickers, validate_total_sanity
@@ -181,12 +181,33 @@ def main_dashboard():
     with tabs[2]:
         if not df.empty:
             st.subheader("🛡️ Portfolio Risk Analytics")
-            if st.button("📊 Run Deep Risk Scan"):
+            
+            # Load existing risk results from session state OR try to fetch from Sheet
+            if "risk_results" not in st.session_state:
+                try:
+                    risk_df = get_risk_metrics()
+                    if not risk_df.empty:
+                        # Extract latest metrics from Sheet
+                        latest = risk_df.iloc[0]
+                        st.session_state["risk_results"] = {
+                            "p_beta": float(latest.get('Portfolio Beta', 1.0)),
+                            "capm": {
+                                "expected_pct": float(latest.get('Estimated Annual Return', 9.0)),
+                                "volatility_pct": float(latest.get('Annual Volatility', 15.0)),
+                            },
+                            "stress": run_stress_tests(df['Market Value'].sum(), float(latest.get('Portfolio Beta', 1.0))),
+                            "corr_matrix": pd.DataFrame() # Matrix isn't stored in sheet usually
+                        }
+                except:
+                    pass
+
+            # Action button
+            if st.button("📊 Run Deep Risk Scan", help="Calculates Beta, Correlation, and Stress Tests using live market data."):
                 with st.spinner("Downloading price history and calculating correlations..."):
-                    # 1. Beta & Correlation Calculation
                     hist = build_price_histories(df)
                     if not hist.empty and 'SPY' in hist.columns:
                         spy_returns = hist['SPY'].pct_change().dropna()
+                        
                         # Calculate beta for all positions
                         df['Beta'] = df['Ticker'].apply(lambda x: calculate_beta(x, hist, spy_returns))
                         p_beta = calculate_portfolio_beta(df)
@@ -197,12 +218,21 @@ def main_dashboard():
                         capm_results = capm_projection(total_val, p_beta)
                         
                         # Save to session state
-                        st.session_state["risk_results"] = {
+                        res = {
                             "p_beta": p_beta,
                             "capm": capm_results,
                             "stress": stress_results,
                             "corr_matrix": corr_matrix
                         }
+                        st.session_state["risk_results"] = res
+                        
+                        # PERSIST TO SHEET (Hidden Step)
+                        try:
+                            from pipeline import write_risk_metrics
+                            write_risk_metrics(res, df)
+                        except:
+                            pass
+                            
                         st.rerun()
                     else:
                         st.error("Could not fetch enough price history for risk analysis.")
