@@ -77,8 +77,28 @@ def main():
         parser.print_help()
         sys.exit(1)
 
+    # --- Data Resolution & Validation ---
+    # Handle schema variations (e.g. 'target_allocations' vs 'allocations')
+    targets = strategy.get("target_allocations") or strategy.get("allocations")
+    if not targets or not isinstance(targets, list):
+        print("ERROR: JSON file must contain a list of 'target_allocations' or 'allocations'.")
+        sys.exit(1)
+
+    # Resolve executive summary
+    exec_summary = strategy.get("executive_summary")
+    if not exec_summary and "metadata" in strategy:
+        exec_summary = strategy["metadata"].get("executive_summary")
+    
+    if not exec_summary:
+        exec_summary = "Strategy imported from JSON."
+
     # Validate allocation sum
-    total = sum(s["target_pct"] for s in strategy["target_allocations"])
+    try:
+        total = sum(float(s.get("target_pct", 0)) for s in targets)
+    except (ValueError, TypeError):
+        print("ERROR: 'target_pct' values must be numeric.")
+        sys.exit(1)
+
     if abs(total - 100.0) > 0.5:
         print(f"ERROR: Allocations sum to {total}%, expected 100%")
         sys.exit(1)
@@ -123,19 +143,28 @@ def main():
     # Build rows
     today = datetime.now().strftime("%Y-%m-%d")
     rows = []
-    for sector in strategy["target_allocations"]:
-        fingerprint = f"{today}|{source_name}|{sector['asset_class']}"
+    for sector in targets:
+        # Use .get() with defaults for missing fields
+        asset_class = str(sector.get("asset_class", "Other"))
+        asset_strategy = str(sector.get("asset_strategy", "N/A"))
+        target_pct = float(sector.get("target_pct", 0.0))
+        min_pct = float(sector.get("min_pct", target_pct - 5.0))
+        max_pct = float(sector.get("max_pct", target_pct + 5.0))
+        confidence = str(sector.get("confidence", "Medium"))
+        notes = str(sector.get("notes", ""))
+
+        fingerprint = f"{today}|{source_name}|{asset_class}"
         rows.append([
             today,
             source_name,
-            str(sector["asset_class"]),
-            str(sector["asset_strategy"]),
-            float(sector["target_pct"]),
-            float(sector["min_pct"]),
-            float(sector["max_pct"]),
-            str(sector["confidence"]),
-            str(sector["notes"]),
-            str(strategy["executive_summary"]),
+            asset_class,
+            asset_strategy,
+            target_pct,
+            min_pct,
+            max_pct,
+            confidence,
+            notes,
+            str(exec_summary),
             fingerprint,
         ])
 
