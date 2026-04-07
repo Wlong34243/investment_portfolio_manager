@@ -6,146 +6,118 @@ from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime, timedelta
 from utils.gemini_client import ask_gemini, SAFETY_PREAMBLE
-from utils.sheet_readers import get_gspread_client
+from utils.sheet_readers import get_gspread_client, get_target_allocation
 from utils.fmp_client import get_company_profile
 
 # --- Schemas ---
-
-class RebalanceOption(BaseModel):
-    label: str
-    description: str
-    tax_impact: str
-    estimated_tax_impact_level: str
-
-class RebalanceProposal(BaseModel):
-    category: str
-    options: List[RebalanceOption]
-
-class TLHProxyOption(BaseModel):
-    ticker: str
-    description: str
-    correlation_rationale: str
-
-class TLHProposal(BaseModel):
-    ticker: str
-    harvest_rationale: str
-    unrealized_loss: float
-    estimated_tax_savings: float
-    proxy_options: List[TLHProxyOption]
-    risks: List[str]
-
+...
 # --- Target Allocation & Drift (Rebalancing) ---
 
-@st.cache_data(ttl=300)
-def get_target_allocation():
-    """Read Target_Allocation tab from Google Sheets."""
-    try:
-        client = get_gspread_client()
-        spreadsheet = client.open_by_key(config.PORTFOLIO_SHEET_ID)
-        ws = spreadsheet.worksheet(config.TAB_TARGET_ALLOCATION)
-        data = ws.get_all_records()
-        return pd.DataFrame(data)
-    except Exception as e:
-        logging.error(f"Error reading Target_Allocation: {e}")
-        return pd.DataFrame()
-
-def calculate_drift(holdings_df: pd.DataFrame, targets_df: pd.DataFrame) -> pd.DataFrame:
-    """Compare actual weight vs target with robust column matching and fuzzy category alignment."""
-    if targets_df.empty or holdings_df.empty: return pd.DataFrame()
+def calculate_drift(holdings_df: pd.DataFrame, targets_df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
+    """
+    Robust drift calculation:
+    1. Standardizes category labels.
+    2. Identifies cash via Asset Class + Ticker (ignores flaky Is Cash column).
+    3. Fuzzy matches Asset Classes to Target Categories.
+    4. Handles Unallocated positions.
+    Returns: (drift_df, debug_dict)
+    """
+    if targets_df.empty or holdings_df.empty:
+        return pd.DataFrame(), {}
     
-    # 1. Standardize Target Labels
+    # 1. Prepare targets
     t_df = targets_df.copy()
     if 'Asset Class' in t_df.columns:
         t_df = t_df.rename(columns={'Asset Class': 'Category'})
     
-    # Ensure Target % is numeric and exists
-    target_pct_col = next((c for c in t_df.columns if 'Target' in c), None)
-    if target_pct_col:
-        t_df['Target %'] = pd.to_numeric(t_df[target_pct_col], errors='coerce').fillna(0.0)
-    else:
-        return pd.DataFrame()
-
-    # 2. Map Holdings to Target Categories
-    h_df = holdings_df.copy()
-    # Force-cast Market Value and Is Cash — defensive against stale string data from cache
-    h_df['Market Value'] = pd.to_numeric(h_df['Market Value'], errors='coerce').fillna(0.0)
-    if h_df['Is Cash'].dtype == object:
-        h_df['Is Cash'] = h_df['Is Cash'].astype(str).str.upper().isin(['TRUE', 'YES', '1', 'T'])
+    tgt_col = next((c for c in t_df.columns if 'Target' in c), None)
+    if not tgt_col:
+        return pd.DataFrame(), {}
+    t_df['Target %'] = pd.to_numeric(t_df[tgt_col], errors='coerce').fillna(0.0)
     target_cats = t_df['Category'].tolist()
 
-    def match_to_target(asset_class: str) -> str:
-        """Map a holding's Asset Class to the nearest target category.
-        1. Exact match
-        2. Case-insensitive exact match
-        3. Substring match (e.g. 'Technology' ⊂ 'Information Technology')
-        4. Return original value (shows as unmatched in outer join)
-        """
-        if not asset_class or asset_class.lower() in ('other', 'n/a', '', 'nan'):
-            return 'Unallocated'
-        if asset_class in target_cats:
-            return asset_class
-        ac_lower = asset_class.lower()
-        for tc in target_cats:
-            if tc.lower() == ac_lower:
-                return tc
-        for tc in target_cats:
-            if ac_lower in tc.lower() or tc.lower() in ac_lower:
-                return tc
-        return asset_class  # keep original so it surfaces in Unallocated row
+    # 2. Clean holdings
+    h_df = holdings_df[['Ticker', 'Asset Class', 'Market Value']].copy()
+    h_df['Market Value'] = pd.to_numeric(h_df['Market Value'], errors='coerce').fillna(0.0)
+    h_df['_ac'] = h_df['Asset Class'].astype(str).str.strip()
+    h_df['_tk'] = h_df['Ticker'].astype(str).str.strip().str.upper()
 
-    def map_row_to_target(row):
-        if row['Is Cash'] or str(row['Ticker']).upper() in ['QACDS', 'CASH_MANUAL', 'CASH']:
-            return 'Cash'
-        asset_class = str(row.get('Asset Class', '')).strip()
-        return match_to_target(asset_class)
-
-    h_df['Category'] = h_df.apply(map_row_to_target, axis=1)
-
-    # 3. Calculate Actual Weights
     total_mv = h_df['Market Value'].sum()
-    if total_mv > 0:
-        actual_weights = (
-            h_df.groupby('Category')['Market Value']
-            .apply(lambda x: (x.sum() / total_mv) * 100)
-            .reset_index()
-        )
-        actual_weights.columns = ['Category', 'Actual %']
-    else:
-        actual_weights = pd.DataFrame(columns=['Category', 'Actual %'])
+    if total_mv <= 0:
+        return pd.DataFrame(), {}
 
-    # 4. Merge — outer join so unmatched holdings appear as an "Unallocated" bucket
-    matched_cats = set(target_cats)
-    unmatched = actual_weights[~actual_weights['Category'].isin(matched_cats)]
-    unallocated_pct = unmatched['Actual %'].sum()
+    # 3. Identify cash rows by Asset Class or known cash tickers — ignores Is Cash column
+    CASH_TICKERS = {'QACDS', 'CASH_MANUAL', 'CASH', 'CASH & CASH INVESTMENTS'}
+    is_cash = (h_df['_ac'].str.lower() == 'cash') | h_df['_tk'].isin(CASH_TICKERS)
 
-    drift_df = pd.merge(t_df, actual_weights, on='Category', how='left')
-    drift_df['Actual %'] = drift_df['Actual %'].fillna(0.0)
+    # 4. Map each unique non-cash Asset Class to the best target category
+    def find_cat(ac):
+        if not ac or ac.lower() in ('nan', 'n/a', 'other', ''):
+            return 'Unallocated'
+        if ac in target_cats:
+            return ac
+        al = ac.lower()
+        for tc in target_cats:
+            if tc.lower() == al:
+                return tc
+        for tc in target_cats:
+            if al in tc.lower() or tc.lower() in al:
+                return tc
+        return 'Unallocated'
 
-    # Append Unallocated row if any holdings didn't map to a target
-    if unallocated_pct > 0.01:
-        unalloc_row = pd.DataFrame([{
-            'Category': 'Unallocated',
-            'Target %': 0.0,
-            'Actual %': round(unallocated_pct, 2),
-        }])
-        drift_df = pd.concat([drift_df, unalloc_row], ignore_index=True)
+    non_cash = h_df.loc[~is_cash]
+    ac_map = {ac: find_cat(ac) for ac in non_cash['_ac'].unique()}
 
-    # 5. Math
-    drift_df['Actual %'] = drift_df['Actual %'].fillna(0.0)
-    drift_df['Target %'] = drift_df['Target %'].fillna(0.0)
-    drift_df['Drift %'] = drift_df['Actual %'] - drift_df['Target %']
-    drift_df['Breach'] = drift_df['Drift %'].abs() > 5.0
+    # 5. Accumulate MV per target category
+    cat_mv: dict = {}
+    for ac, grp in non_cash.groupby('_ac'):
+        cat = ac_map.get(ac, 'Unallocated')
+        cat_mv[cat] = cat_mv.get(cat, 0.0) + float(grp['Market Value'].sum())
 
-    return drift_df
+    cash_mv = float(h_df.loc[is_cash, 'Market Value'].sum())
+    if cash_mv > 0:
+        cash_cat = 'Cash' if 'Cash' in target_cats else 'Unallocated'
+        cat_mv[cash_cat] = cat_mv.get(cash_cat, 0.0) + cash_mv
+
+    debug = {
+        'cash_rows': int(is_cash.sum()),
+        'ac_map': ac_map,
+        'cat_mv': {c: round(v, 2) for c, v in cat_mv.items()},
+    }
+
+    # 6. Build actual % and merge with targets
+    actual = pd.DataFrame(
+        [{'Category': c, 'Actual %': round(v / total_mv * 100, 2)} for c, v in cat_mv.items()]
+    )
+    result = pd.merge(t_df[['Category', 'Target %']], actual, on='Category', how='left')
+    result['Actual %'] = result['Actual %'].fillna(0.0)
+
+    # Append rows in actual that aren't in targets (Unallocated, extra categories)
+    extra = actual[~actual['Category'].isin(target_cats)].copy()
+    if not extra.empty:
+        extra['Target %'] = 0.0
+        result = pd.concat([result, extra[['Category', 'Target %', 'Actual %']]], ignore_index=True)
+
+    result['Drift %'] = result['Actual %'] - result['Target %']
+    result['Breach']  = result['Drift %'].abs() > 5.0
+    return result, debug
 
 def generate_rebalance_proposals(drift_df: pd.DataFrame, holdings_df: pd.DataFrame) -> list[dict]:
     """AI-generated rebalancing suggestions using the Rule of Three."""
     proposals = []
+    # Drift threshold for proposal generation
     overweight = drift_df[drift_df['Drift %'] > 2.0]
     
     for _, row in overweight.iterrows():
         cat = row['Category']
-        tickers = holdings_df[holdings_df['Asset Class'] == cat]['Ticker'].tolist()
+        # Use Asset Class fuzzy matching or Category column if it exists in holdings
+        # For now, filter by exact Asset Class if Category isn't in holdings
+        mask = holdings_df['Asset Class'] == cat
+        tickers = holdings_df[mask]['Ticker'].tolist()
+        
+        if not tickers:
+            continue
+            
         prompt = f"""
         Category '{cat}' is overweight by {row['Drift %']:.2f}%.
         Target: {row['Target %']:.2f}%, Actual: {row['Actual %']:.2f}%.

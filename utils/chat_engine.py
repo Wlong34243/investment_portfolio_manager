@@ -47,21 +47,23 @@ def chat(user_message: str, history: list, portfolio_summary: str) -> str:
     
     ### STREAMLIT APP STRUCTURE (Navigation):
     1. Dashboard (Main Page): `app.py`
-       - Tab 1: Holdings (KPIs, Movers, Macro, Earnings, Concentration Alerts)
-       - Tab 2: Income (Cash Sweep, Options Potential, Yield Metrics)
-       - Tab 3: Risk (Correlation, Beta, Stress Tests, CAPM)
+       - Tab 1: Holdings (KPIs, Treemap Allocation, Positions Table)
+       - Tab 2: Income (Yield Metrics, Cash Sweep Advisor)
+       - Tab 3: Risk (Beta, CAPM Returns, Stress Tests, Correlation Heatmap, Concentration Alerts)
+       - Tab 4: Signals (Macro Monitor, Earnings Sentinel, Daily Price Movers)
     2. Rebalancing: `pages/1_Rebalancing.py`
     3. Research: `pages/2_Research.py` (Ticker analysis, transcripts, valuation plan)
     4. Performance: `pages/3_Performance.py` (Historical snapshots, benchmarks, projections)
-    5. Tax: `pages/4_Tax.py` (Lot-level details, cost basis analysis)
+    5. Tax: `pages/4_Tax.py` (Lot-level details, cost basis analysis, TLH scanner)
     6. Net Worth: `pages/5_Net_Worth.py` (Investment + Real Estate + Cash)
     7. Advisor: `pages/6_Advisor.py` (This chat interface)
     
     ### NAVIGATION RULES:
-    - For "Concentration" or "Exposure" questions, refer the user to the "Dashboard (Main Page) > Risk Tab" or the "Dashboard (Main Page) > Holdings Tab (for specific alerts)".
+    - For "Concentration", "Exposure", "Risk", "Beta", or "Correlation" questions, refer the user to the "Dashboard (Main Page) > Risk Tab".
     - For "Rebalancing" or "Trimming" questions, refer to the "Rebalancing" page.
-    - For "Dividends" or "Income" questions, refer to the "Dashboard (Main Page) > Income Tab".
+    - For "Dividends", "Income", or "Cash Sweep" questions, refer to the "Dashboard (Main Page) > Income Tab".
     - For "Market Value History" or "Benchmarks", refer to the "Performance" page.
+    - For "Macro", "Earnings Dates", or "Why is a stock moving" questions, refer to the "Dashboard (Main Page) > Signals Tab".
     - For "Deep Ticker Research", refer to the "Research" page.
     
     Be concise, professional, and act as a senior portfolio strategist co-pilot.

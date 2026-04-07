@@ -1,0 +1,43 @@
+name: Weekly Podcast Sync
+
+on:
+  schedule:
+    # 10:00 PM UTC every Friday = 5:00 PM EST / 6:00 PM EDT
+    - cron: '0 22 * * 5'
+  workflow_dispatch:
+    # Manual trigger from GitHub UI for testing
+
+jobs:
+  sync_podcasts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Need write access to commit processed_videos.json back
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run batch podcast sync (LIVE)
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.GCP_SERVICE_ACCOUNT_JSON }}
+        run: python tasks/batch_podcast_sync.py --live
+
+      - name: Commit dedup log
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/processed_videos.json
+          git diff --staged --quiet || git commit -m "chore: update processed_videos.json [skip ci]"
+          git push

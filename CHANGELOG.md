@@ -1,5 +1,52 @@
 # Changelog
 
+## [Unreleased] — UI Strategy Import & Rebalancing Consolidation
+
+### Added
+- **Offline Strategy Import:** Added drag-and-drop JSON uploader to the Rebalancing page. Users can now import strategies from Claude/ChatGPT and execute the sync pipeline (`weekly_podcast_sync.py`) directly from the UI.
+- **Consolidated Drift Engine:** Moved the robust `_compute_drift` logic into a central `calculate_drift` function in `tax_intelligence_agent.py`.
+- **Hardened Cash Logic:** Rebalancing and drift calculations now use a dual-check (Asset Class + Ticker) to identify cash, bypassing the unreliable `Is Cash` sheet column.
+
+### Changed
+- **Code Cleanup:** Removed the redundant `_compute_drift` function from `pages/1_Rebalancing.py` and synchronized diagnostic debug tools.
+- **DRY Data Flow:** Removed the duplicate `get_target_allocation` reader from the agent module; it now uses the standard reader from `utils/sheet_readers.py`.
+
+## [Unreleased] — Risk & Signals Tab Wiring
+
+### Added
+- **🛡️ Risk Analytics Tab:** Wired up dormant logic for Portfolio Beta, Correlation Heatmaps, Stress Testing, and CAPM Expected Returns.
+- **🔔 Signals Tab:** Consolidated Macro Monitor (FRED/YFinance), Earnings Sentinel (FMP), and Daily Price Narrator into a single real-time intelligence hub.
+- **Agent Activation:** Fully wired 5 "ghost" agents into the UI: `cash_sweeper`, `concentration_hedger`, `correlation_optimizer`, `earnings_sentinel`, and `macro_monitor`.
+- **Diversification Advisor:** Integrated AI suggestions for reducing high-correlation pairs and managing single-position concentration.
+
+### Changed
+- **`app.py` Architecture:** Refined the main dashboard tab structure to support the new Risk and Signals hubs.
+- **`chat_engine.py`:** Updated the AI Advisor's navigation rules to correctly direct users to the new Risk and Signals tabs.
+
+### Removed
+- `utils/smart_enrichment.py` — Redundant CLI-only script (functionality merged into `portfolio_enricher.py`).
+
+## [Unreleased] — Scheduled Podcast Automation
+
+### Added
+- `tasks/batch_podcast_sync.py` — Batch orchestrator: YouTube RSS → episode detection
+  → dedup check → calls `weekly_podcast_sync.py` for new episodes
+- `.github/workflows/podcast_sync.yml` — GitHub Actions cron: runs every Friday at
+  5:00 PM EST, commits dedup log back to repo
+- `data/processed_videos.json` — Dedup log tracking which video IDs have been processed
+- GCP credential resolution chain in `utils/sheet_readers.py`: env var → Streamlit
+  secrets → local file (enables GitHub Actions without Streamlit)
+
+### Architecture Decision
+Batch orchestrator shells out to `weekly_podcast_sync.py` via subprocess rather than
+importing internals. This keeps the single-video CLI usable for ad-hoc runs and the
+batch script focused on episode detection + dedup. Last podcast processed wins the
+AI_Suggested_Allocation tab (clear-and-replace pattern). Multi-podcast consensus is
+a future enhancement.
+
+**Status:** Dry-run by default. GitHub Actions workflow passes --live explicitly.
+
+
 ## [2026-04-06] — Is Cash Column Anti-Pattern Fix
 
 ### fix: Cash Balance = Total Portfolio on Main Dashboard / 100% Cash on Rebalancing Page

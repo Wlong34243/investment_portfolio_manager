@@ -70,6 +70,7 @@ def ask_gemini(prompt: str, system_instruction: str = None, json_mode: bool = Fa
             return response.parsed
         return response.text
     except Exception as e:
+        print(f"DEBUG: Gemini API error: {e}")
         logging.error(f"Gemini API error ({model_name}): {e}")
         if "429" in str(e):
             logging.info("Rate limited. Waiting 30s...")

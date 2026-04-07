@@ -36,8 +36,25 @@ class AuthError(Exception):
     """Raised when no valid credentials can be found."""
 
 def get_gspread_client() -> gspread.Client:
-    """Return an authenticated gspread client."""
-    # Method 1: Streamlit secrets
+    """
+    Return an authenticated gspread client. Credential resolution order:
+    1. GCP_SERVICE_ACCOUNT_JSON env var (GitHub Actions — JSON string)
+    2. .streamlit/secrets.toml (Streamlit Cloud)
+    3. service_account.json file (local development)
+    """
+    import json
+
+    # Option 1: Environment variable (GitHub Actions)
+    env_json = os.environ.get("GCP_SERVICE_ACCOUNT_JSON")
+    if env_json:
+        try:
+            info = json.loads(env_json)
+            creds = Credentials.from_service_account_info(info, scopes=SCOPES)
+            return gspread.authorize(creds)
+        except Exception as e:
+            print(f"Warning: Failed to load credentials from env var: {e}")
+
+    # Option 2: Streamlit secrets
     if st and hasattr(st, "secrets") and "gcp_service_account" in st.secrets:
         try:
             creds = Credentials.from_service_account_info(
@@ -48,7 +65,7 @@ def get_gspread_client() -> gspread.Client:
         except:
             pass
 
-    # Method 2: local service_account.json
+    # Option 3: local service_account.json
     sa_path = os.path.join(_ROOT, "service_account.json")
     if os.path.isfile(sa_path):
         creds = Credentials.from_service_account_file(sa_path, scopes=SCOPES)

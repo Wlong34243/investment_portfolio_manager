@@ -1,0 +1,22 @@
+{
+    "AMD": {
+        "asset_class": "Equity",
+        "sector_strategy": "Technology"
+    },
+    "AMZN": {
+        "asset_class": "Equity",
+        "sector_strategy": "Consumer Discretionary"
+    },
+    "AVGO": {
+        "asset_class": "Equity",
+        "sector_strategy": "Technology"
+    },
+    "BABA": {
+        "asset_class": "Equity",
+        "sector_strategy": "Consumer Discretionary"
+    },
+    "BE": {
+        "asset_class": "Equity",
+        "sector_strategy": "Industrials"
+    }
+}
