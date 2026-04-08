@@ -50,6 +50,30 @@ AI_SECONDARY_API_KEY = _secret("ai_secondary_api_key", "")  # Reserved for futur
 GEMINI_API_KEY = _secret("gemini_api_key", "")      # Google Gemini (Core AI)
 
 # ---------------------------------------------------------------------------
+# Schwab API (Phase 5-S)
+# ---------------------------------------------------------------------------
+SCHWAB_ACCOUNTS_APP_KEY    = _secret("schwab_accounts_app_key", "")
+SCHWAB_ACCOUNTS_APP_SECRET = _secret("schwab_accounts_app_secret", "")
+SCHWAB_MARKET_APP_KEY      = _secret("schwab_market_app_key", "")
+SCHWAB_MARKET_APP_SECRET   = _secret("schwab_market_app_secret", "")
+
+SCHWAB_TOKEN_BUCKET   = _secret("schwab_token_bucket", "portfolio-manager-tokens")
+SCHWAB_ACCOUNT_HASH   = _secret("schwab_account_hash", "")
+SCHWAB_CALLBACK_URL   = _secret("schwab_callback_url", "https://127.0.0.1")
+
+# Token blob names in GCS (one per app — Market Data client cannot read accounts blob)
+SCHWAB_TOKEN_BLOB_ACCOUNTS = "token_accounts.json"
+SCHWAB_TOKEN_BLOB_MARKET   = "token_market.json"
+SCHWAB_ALERT_BLOB          = "schwab_alert.json"
+
+# GCP context (already used elsewhere — duplicated here for the Cloud Function)
+GCP_PROJECT_ID = "re-property-manager-487122"
+GCP_REGION     = "us-central1"
+
+# Client cache TTL (Cloud Function does the actual refresh — this just caches the client object in Streamlit)
+SCHWAB_CLIENT_CACHE_TTL = 1500   # 25 min
+
+# ---------------------------------------------------------------------------
 # AI Model Configuration
 # ---------------------------------------------------------------------------
 GEMINI_MODEL = _secret("gemini_model", "gemini-3.1-pro-preview")

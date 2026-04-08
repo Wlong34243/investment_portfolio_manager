@@ -19,6 +19,12 @@ ENV/
 *.docx
 ~$*.docx
 
+# Schwab OAuth tokens
+token_accounts.json
+token_market.json
+*.token.json
+.schwab/
+
 # OS files
 .DS_Store
 Thumbs.db
