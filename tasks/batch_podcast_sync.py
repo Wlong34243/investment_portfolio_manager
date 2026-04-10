@@ -36,7 +36,8 @@ PODCAST_CHANNELS = {
 # Optional title filters — if set, skip videos whose titles don't contain the keyword.
 # Prevents short clips / highlights from being processed instead of full episodes.
 TITLE_FILTERS = {
-    "The Compound": "TCAF",   # Only process full "The Compound and Friends" episodes
+    "The Compound": "TCAF",         # Only process full "The Compound and Friends" episodes
+    "Risk Reversal": "On The Tape", # Only process full "On The Tape" episodes
 }
 
 DEDUP_FILE = os.path.join(os.path.dirname(__file__), "..", "data", "processed_videos.json")

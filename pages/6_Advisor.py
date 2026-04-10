@@ -2,6 +2,7 @@ import streamlit as st
 from utils.sheet_readers import get_holdings_current
 from utils.column_guard import ensure_display_columns
 from utils.chat_engine import chat, build_portfolio_summary
+from datetime import datetime
 import os
 import sys
 
@@ -29,6 +30,22 @@ with st.sidebar:
         st.session_state.messages = []
         st.rerun()
     st.write(f"Messages: {len(st.session_state.messages)}")
+
+# --- Podcast-Driven Trade Ideas ---
+with st.expander("📻 Podcast-Driven Trade Ideas", expanded=False):
+    st.caption("Generates BUY / REDUCE / HOLD recommendations by combining recent analyst podcast signals with your top 15 holdings.")
+    if st.button("Generate Trade Ideas from Podcasts"):
+        with st.spinner("Loading podcast signals and building recommendations..."):
+            try:
+                from utils.podcast_digest import build_trade_prompt
+                from utils.gemini_client import ask_gemini
+                prompt_text = build_trade_prompt(holdings_df)
+                trade_ideas = ask_gemini(prompt_text)
+                st.markdown(trade_ideas)
+            except Exception as e:
+                st.error(f"Could not generate trade ideas: {e}")
+
+st.divider()
 
 # --- Suggested Prompts ---
 suggestions = [

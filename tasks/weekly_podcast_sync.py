@@ -155,6 +155,15 @@ def main():
     print(f"SUCCESS: Wrote {len(new_rows)} rows for '{source_name}' "
           f"({len(other_rows)} rows from other sources preserved)")
 
+    # --- Write markdown summary file ---
+    try:
+        from utils.podcast_digest import write_summaries_from_sheet, purge_old_summaries
+        purge_old_summaries()
+        written = write_summaries_from_sheet()
+        for p in written:
+            print(f"  Summary written: {p}")
+    except Exception as e:
+        print(f"WARNING: Could not write podcast summaries: {e}")
 
 
 if __name__ == "__main__":
