@@ -121,58 +121,39 @@ def main():
     spreadsheet = client.open_by_key(config.PORTFOLIO_SHEET_ID)
     ws = spreadsheet.worksheet(config.TAB_AI_SUGGESTED_ALLOCATION)
 
-    # Archive existing rows to Logs tab before overwrite
-    existing_rows = ws.get_all_values()[1:]
-    if existing_rows:
-        ws_logs = spreadsheet.worksheet(config.TAB_LOGS)
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        prev_source = existing_rows[0][1] if existing_rows else "N/A"
-        ws_logs.append_row([
-            timestamp,
-            "INFO",
-            "Podcast_Sync",
-            f"Archived {len(existing_rows)} rows before overwrite",
-            f"Previous source: {prev_source}",
-        ])
-        time.sleep(1.0)
+    # Remove any existing rows for this source (by matching Source column = col index 1)
+    # then append the new rows — preserves other sources on the same date
+    existing = ws.get_all_values()
+    header = existing[0] if existing else []
+    other_rows = [r for r in existing[1:] if len(r) > 1 and r[1] != source_name]
 
-    # Clear data rows, preserve header
-    ws.batch_clear(["A2:K1000"])
-    time.sleep(1.0)
-
-    # Build rows
+    # Build new rows for this source
     today = datetime.now().strftime("%Y-%m-%d")
-    rows = []
+    new_rows = []
     for sector in targets:
-        # Use .get() with defaults for missing fields
-        asset_class = str(sector.get("asset_class", "Other"))
+        asset_class    = str(sector.get("asset_class", "Other"))
         asset_strategy = str(sector.get("asset_strategy", "N/A"))
-        target_pct = float(sector.get("target_pct", 0.0))
-        min_pct = float(sector.get("min_pct", target_pct - 5.0))
-        max_pct = float(sector.get("max_pct", target_pct + 5.0))
-        confidence = str(sector.get("confidence", "Medium"))
-        notes = str(sector.get("notes", ""))
-
-        fingerprint = f"{today}|{source_name}|{asset_class}"
-        rows.append([
-            today,
-            source_name,
-            asset_class,
-            asset_strategy,
-            target_pct,
-            min_pct,
-            max_pct,
-            confidence,
-            notes,
-            str(exec_summary),
-            fingerprint,
+        target_pct     = float(sector.get("target_pct", 0.0))
+        min_pct        = float(sector.get("min_pct", target_pct - 5.0))
+        max_pct        = float(sector.get("max_pct", target_pct + 5.0))
+        confidence     = str(sector.get("confidence", "Medium"))
+        notes          = str(sector.get("notes", ""))
+        fingerprint    = f"{today}|{source_name}|{asset_class}"
+        new_rows.append([
+            today, source_name, asset_class, asset_strategy,
+            target_pct, min_pct, max_pct, confidence,
+            notes, str(exec_summary), fingerprint,
         ])
 
-    # Batch write
-    ws.update(f"A2:K{1 + len(rows)}", rows, value_input_option="USER_ENTERED")
+    # Write header + all rows (other sources preserved + this source updated)
+    all_rows = [header] + other_rows + new_rows
+    ws.batch_clear(["A1:K1000"])
+    time.sleep(0.5)
+    ws.update("A1", all_rows, value_input_option="USER_ENTERED")
     time.sleep(1.0)
 
-    print(f"SUCCESS: Wrote {len(rows)} allocation rows to AI_Suggested_Allocation")
+    print(f"SUCCESS: Wrote {len(new_rows)} rows for '{source_name}' "
+          f"({len(other_rows)} rows from other sources preserved)")
 
 
 

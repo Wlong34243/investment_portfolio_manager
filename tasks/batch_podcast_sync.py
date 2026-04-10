@@ -33,6 +33,12 @@ PODCAST_CHANNELS = {
     "Risk Reversal": "UCRAOycPjsSgcEyQcuJD_ENA",   # verified: RiskReversal Media (@RiskReversalMedia)
 }
 
+# Optional title filters — if set, skip videos whose titles don't contain the keyword.
+# Prevents short clips / highlights from being processed instead of full episodes.
+TITLE_FILTERS = {
+    "The Compound": "TCAF",   # Only process full "The Compound and Friends" episodes
+}
+
 DEDUP_FILE = os.path.join(os.path.dirname(__file__), "..", "data", "processed_videos.json")
 
 # YouTube Atom feed namespace
@@ -61,10 +67,11 @@ def save_processed_videos(data: dict) -> None:
         logger.error(f"Failed to save dedup file: {e}")
 
 # RSS fetch function
-def get_latest_video(channel_id: str) -> tuple[str, str] | tuple[None, None]:
+def get_latest_video(channel_id: str, title_filter: str = None) -> tuple[str, str] | tuple[None, None]:
     """
     Fetch the YouTube RSS feed for a channel and return (video_id, title)
-    for the most recent upload. Returns (None, None) on failure.
+    for the most recent upload matching the optional title_filter keyword.
+    Scans up to 15 recent videos. Returns (None, None) on failure.
     """
     feed_url = f"https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}"
     try:
@@ -72,19 +79,21 @@ def get_latest_video(channel_id: str) -> tuple[str, str] | tuple[None, None]:
             xml_data = response.read()
         root = ET.fromstring(xml_data)
 
-        # Find the first <entry> element (most recent video)
-        entry = root.find(f"{{{ATOM_NS}}}entry")
-        if entry is None:
-            return None, None
+        entries = root.findall(f"{{{ATOM_NS}}}entry")
+        for entry in entries[:15]:
+            video_id_elem = entry.find(f"{{{YT_NS}}}videoId")
+            title_elem    = entry.find(f"{{{ATOM_NS}}}title")
+            video_id = video_id_elem.text if video_id_elem is not None else None
+            title    = title_elem.text    if title_elem    is not None else "Unknown Title"
 
-        # Extract video ID from <yt:videoId>
-        video_id_elem = entry.find(f"{{{YT_NS}}}videoId")
-        title_elem = entry.find(f"{{{ATOM_NS}}}title")
+            if title_filter and title_filter.lower() not in title.lower():
+                logger.info(f"  Skipping '{title}' (doesn't match filter '{title_filter}')")
+                continue
 
-        video_id = video_id_elem.text if video_id_elem is not None else None
-        title = title_elem.text if title_elem is not None else "Unknown Title"
+            return video_id, title
 
-        return video_id, title
+        logger.warning(f"No video matching filter '{title_filter}' found in last 15 uploads")
+        return None, None
     except Exception as e:
         logger.error(f"Failed to fetch RSS for channel {channel_id}: {e}")
         return None, None
@@ -106,7 +115,8 @@ def main():
     for channel_name, channel_id in PODCAST_CHANNELS.items():
         logger.info(f"Checking: {channel_name} ({channel_id})")
 
-        video_id, title = get_latest_video(channel_id)
+        title_filter = TITLE_FILTERS.get(channel_name)
+        video_id, title = get_latest_video(channel_id, title_filter=title_filter)
         if video_id is None:
             logger.warning(f"  Could not fetch latest video for {channel_name}")
             results["failed"].append(channel_name)
