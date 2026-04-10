@@ -103,3 +103,43 @@ If this shows an impossible number (e.g., 47 of 47), the bug is in the mask, not
   `token_write_func` with `refresh_token=...` as a keyword argument
   on refresh. A writer with only `(token)` in its signature raises
   `TypeError` and silently kills the live data path.
+
+## 7. Streamlit Cloud & Subprocess Hygiene
+
+### Use `sys.executable` for Internal Subprocesses
+**Discovery:** When calling one project script from another (e.g., `batch_sync` calling `weekly_sync`), using `subprocess.run(["python", ...])` works locally but fails on Streamlit Cloud with `ModuleNotFoundError`. The shell `python` command may point to a system binary rather than the app's virtual environment.
+**Lesson:** Always use `sys.executable` to ensure the subprocess uses the exact same Python environment as the parent process:
+```python
+import sys, subprocess
+subprocess.run([sys.executable, "tasks/script.py", ...])
+```
+
+### Page-Level Import Discipline
+**Discovery:** In a multi-page app, pages are often lazy-loaded. If `pages/1_Rebalancing.py` references `datetime.date` without an explicit `from datetime import date` (relying instead on a global import in `app.py`), it can crash with a `NameError` if the user navigates directly to that page or if the session clears.
+**Lesson:** Every page file must be import-complete. Never rely on global scope leakage from `app.py`.
+
+### Default to Safety (DRY_RUN)
+**Discovery:** A hardcoded `DRY_RUN = False` in `config.py` is a landmine. If a developer clones the repo or if a secret is missing, it might write to a production sheet accidentally.
+**Lesson:** Always use `DRY_RUN = _secret("dry_run", True)`. Safety must be the default; live writes should require an explicit opt-in via a secret/environment variable.
+
+## Phase 5-S Post-Integration Lessons (2026-04-10)
+
+### Cash Lives in Account Balances, Not Position Arrays
+**Discovery:** Schwab's API returns cash sweep vehicles (e.g., "Cash & Cash Investments") as CASH_EQUIVALENT entries in the `positions` array. Skipping those positions (as was done to avoid double-counting) silently dropped ~$49K of cash from the portfolio, making Total Portfolio ~$52K lower than Schwab's reported total.
+**Lesson:** For multi-account cash aggregation, read `currentBalances.cashBalance` from each `securitiesAccount` object and sum across all accounts. This is more reliable than parsing CASH_EQUIVALENT position rows, which can vary in structure between account types (margin vs. IRA vs. 401k).
+
+### Quote Enrichment Masks Must Guard Against Zero
+**Discovery:** After fetching live quotes from the Market Data API to enrich prices, the merge mask used `positions_df["last_price"].notna()`. This passes for `0.0` (not NaN), so when the market is closed and `lastPrice` returns 0, every single position's price was overwritten with 0. The main dashboard and Research Hub both showed `$0.00` for all tickers.
+**Lesson:** When merging live quotes over snapshot data, always use:
+```python
+mask = positions_df["last_price"].notna() & (positions_df["last_price"] > 0)
+```
+The Schwab Accounts API snapshot (`market_value / qty`) is the reliable fallback. Live quotes should only override when they provide a real, non-zero price.
+
+### Enrichment Coverage Gap for Non-Top-N Positions
+**Discovery:** `enrich_positions()` was designed to only run yfinance `.info` lookups for the top 20 positions by market value to keep enrichment fast. The remaining ~28 positions received no description enrichment — particularly visible for positions held in IRA/401k/HSA accounts where the Schwab API returns an empty `description` string for CASH-type account structures.
+**Lesson:** Separate "full enrichment" (dividends, sector, beta — expensive, top-N only) from "name enrichment" (longName/shortName — cheap, all tickers with empty descriptions). Run a second bulk `yf.Tickers()` pass for any invested ticker that still has a blank description after the top-N pass, with ticker symbol as the absolute fallback.
+
+### Same Data Source on Both Sides of a Comparison Produces Meaningless Metrics
+**Discovery:** When FMP returns 402 (subscription limit), `get_historical_pe()` returns an empty DataFrame. The valuation agent fell back to `avg_pe = current_pe` (since `hist_pe.empty`), making them identical. The resulting `pe_discount_pct = 0.0` was displayed as a valid metric, and the Research Hub showed "trading above its historical average" — a false and misleading signal that eroded trust in the tool.
+**Lesson:** Before calculating any relative metric (X vs. historical X), verify that the historical value came from a *different data fetch* than the current value. If both sides fall back to the same source, the comparison is undefined — surface `None` explicitly and tell the UI to show an "unavailable" state rather than a misleading 0%. The right signal for a broken data dependency is "data unavailable," not a silent zero.
