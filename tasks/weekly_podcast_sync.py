@@ -53,8 +53,8 @@ def main():
             sys.exit(1)
 
         try:
-            transcript_segments = YouTubeTranscriptApi.get_transcript(args.video_id)
-            full_text = " ".join([seg["text"] for seg in transcript_segments])
+            transcript_segments = list(YouTubeTranscriptApi().fetch(args.video_id))
+            full_text = " ".join([seg.text for seg in transcript_segments])
         except Exception as e:
             print(f"ERROR: Could not download transcript for {args.video_id}: {e}")
             sys.exit(1)
