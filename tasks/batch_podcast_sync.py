@@ -30,6 +30,7 @@ logger = logging.getLogger(__name__)
 PODCAST_CHANNELS = {
     "Forward Guidance": "UCkrwgzhIBKccuDsi_SvZtnQ",  # verified: Forward Guidance (@ForwardGuidanceBW)
     "The Compound": "UCBRpqrzuuqE8TZcWw75JSdw",    # verified: The Compound (Josh Brown / Ritholtz)
+    "Risk Reversal": "UCRAOycPjsSgcEyQcuJD_ENA",   # verified: RiskReversal Media (@RiskReversalMedia)
 }
 
 DEDUP_FILE = os.path.join(os.path.dirname(__file__), "..", "data", "processed_videos.json")
