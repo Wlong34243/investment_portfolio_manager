@@ -78,6 +78,17 @@ def main_dashboard():
         else:
             st.warning("⚪ Market Data API offline")
 
+        # --- Credential Debugger ---
+        with st.expander("🛠️ Credential Debugger"):
+            st.caption("Last 4 of App Keys (Cloud Active):")
+            acc_key = config.SCHWAB_ACCOUNTS_APP_KEY
+            mkt_key = config.SCHWAB_MARKET_APP_KEY
+            st.code(f"Acc: ...{acc_key[-4:] if acc_key else 'MISSING'}")
+            st.code(f"Mkt: ...{mkt_key[-4:] if mkt_key else 'MISSING'}")
+            if st.button("Purge Cache & Rerun"):
+                st.cache_resource.clear()
+                st.rerun()
+
         source_options = []
         if api_status["accounts"]:
             source_options.append("Schwab API (live)")

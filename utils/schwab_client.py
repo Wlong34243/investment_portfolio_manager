@@ -261,8 +261,13 @@ def fetch_positions(client: schwab.client.Client) -> pd.DataFrame:
 
         return df[list(config.POSITION_COL_MAP.keys())]
     except Exception as e:
-        logging.error(f"fetch_positions failed: {e}")
-        schwab_token_store.write_alert(f"Failed to fetch positions: {e}", "warning")
+        err_msg = str(e)
+        logging.error(f"fetch_positions failed: {err_msg}")
+        if "Unauthorized" in err_msg or "invalid_client" in err_msg:
+            logging.error("CRITICAL: App Key mismatch detected between tokens and config.")
+            schwab_token_store.write_alert("Schwab App Key mismatch — check Cloud Secrets vs Local Re-Auth", "critical")
+        else:
+            schwab_token_store.write_alert(f"Failed to fetch positions: {e}", "warning")
         return pd.DataFrame()
 
 def fetch_transactions(client: schwab.client.Client, start_date=None, end_date=None) -> pd.DataFrame:
