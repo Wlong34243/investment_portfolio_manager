@@ -218,6 +218,14 @@ def fetch_positions(client: schwab.client.Client) -> pd.DataFrame:
                     e['Description'] = row['Description']
 
         df = pd.DataFrame(list(agg.values()))
+        
+        # Fallback: If description is still empty/UNKNOWN, use the ticker symbol 
+        # as a placeholder so enrichment has something to work with.
+        df['Description'] = df.apply(
+            lambda x: x['Description'] if x['Description'] and x['Description'] != 'UNKNOWN' else x['Ticker'],
+            axis=1
+        )
+
         logging.info(f"fetch_positions: {len(df)} unique tickers from {len(accounts)} accounts")
 
         # Add Import Date and Fingerprint (Title Case names still active here)

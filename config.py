@@ -416,4 +416,4 @@ TICKER_OVERRIDES = {
         'asset_class': 'International', # Ensure BABA isn't just 'Other' or 'Equity'
     }
 }
-DRY_RUN = _secret("dry_run", True)  # Set to False only when ready to write to live Sheet
+DRY_RUN = _secret("dry_run", False)  # Set to False only when ready to write to live Sheet

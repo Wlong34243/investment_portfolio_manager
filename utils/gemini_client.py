@@ -66,8 +66,15 @@ def ask_gemini(prompt: str, system_instruction: str = None, json_mode: bool = Fa
             config=generation_config
         )
         
+        # DEBUG
+        print(f"DEBUG: Gemini Raw Response: {response.text[:200]}...")
+        
         if response_schema:
-            return response.parsed
+            try:
+                return response.parsed
+            except Exception as pe:
+                print(f"DEBUG: Pydantic Parsing Failed: {pe}")
+                return None
         return response.text
     except Exception as e:
         print(f"DEBUG: Gemini API error: {e}")

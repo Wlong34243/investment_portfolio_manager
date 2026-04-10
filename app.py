@@ -199,7 +199,16 @@ def main_dashboard():
             raw_df = enrich_positions(raw_df)
             raw_df = apply_smart_categorization(raw_df)
 
-        positions_df = normalize_positions(raw_df, import_date=today_iso, source="schwab_api")
+        try:
+            positions_df = normalize_positions(raw_df, import_date=today_iso, source="schwab_api")
+        except TypeError as te:
+            st.error(f"Normalization failed: {te}")
+            st.info(f"raw_df columns: {list(raw_df.columns)}")
+            st.stop()
+        except Exception as e:
+            st.error(f"Unexpected error during normalization: {e}")
+            st.stop()
+
         st.success(f"✅ Fetched {len(positions_df)} positions from Schwab API (all accounts)")
 
         if api_status["market"]:

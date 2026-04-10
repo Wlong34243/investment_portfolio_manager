@@ -26,7 +26,7 @@ def write_pipeline_log(level: str, source: str, message: str, details: str = "",
     except Exception as e:
         print(f"Failed to write to Logs tab: {e}")
 
-def sanitize_dataframe_for_sheets(df: pd.DataFrame, columns: list[str], col_map: dict = None) -> list[list]:
+def sanitize_dataframe_for_sheets(df: pd.DataFrame, columns: list[str], col_map: dict = None, is_holdings: bool = False) -> list[list]:
     """
     Universal sanitizer for Google Sheets:
     1. Apply col_map rename if provided.
@@ -34,6 +34,7 @@ def sanitize_dataframe_for_sheets(df: pd.DataFrame, columns: list[str], col_map:
     3. Reorder to match 'columns' list exactly.
     4. Fill NA with empty string.
     5. Cast every value to native Python types (no numpy, no NaT).
+    6. If is_holdings=True, inject relative formulas for G/L columns using {ROW} placeholder.
     """
     df = df.copy()
     
@@ -56,14 +57,28 @@ def sanitize_dataframe_for_sheets(df: pd.DataFrame, columns: list[str], col_map:
     data = []
     for _, row in df_clean.iterrows():
         clean_row = []
-        for val in row.values:
+        for col_name in columns:
+            val = row[col_name]
+            
+            # Injection of Formulas for G/L Columns
+            # Market Value = G, Cost Basis = H, Unrealized G/L = J, Unrealized G/L % = K
+            if is_holdings:
+                if col_name == 'Unrealized G/L':
+                    # =G{ROW}-H{ROW}
+                    clean_row.append('=G{ROW}-H{ROW}')
+                    continue
+                elif col_name == 'Unrealized G/L %':
+                    # =IF(H{ROW}<>0, J{ROW}/H{ROW}, 0)
+                    clean_row.append('=IF(H{ROW}<>0, J{ROW}/H{ROW}, 0)')
+                    continue
+
             if isinstance(val, (np.float64, np.float32)):
                 clean_row.append(float(val))
             elif isinstance(val, (np.int64, np.int32)):
                 clean_row.append(int(val))
             elif isinstance(val, (np.bool_, bool)):
                 clean_row.append(bool(val))
-            elif pd.isna(val) or val is None or str(val).lower() == 'nat':
+            elif pd.isna(val) or val is None or str(val).lower() == 'nat' or val == "":
                 clean_row.append("")
             else:
                 clean_row.append(val)
@@ -122,16 +137,21 @@ def normalize_positions(df: pd.DataFrame, import_date: str, source: str = "csv")
 def write_holdings_current(ws, data: list[list]) -> None:
     """
     Update Holdings_Current worksheet atomically.
-    1. Prepare full data block (headers + data).
-    2. Clear worksheet.
-    3. Update in a single API call to ensure integrity.
+    Injects correct row index for formulas.
     """
     if not data:
         print("Holdings_Current: No data to write.")
         return
 
+    # Replace {ROW} placeholder with actual row index (starting at 2 because row 1 is header)
+    processed_data = []
+    for i, row in enumerate(data):
+        row_idx = i + 2
+        new_row = [str(cell).replace("{ROW}", str(row_idx)) if "{ROW}" in str(cell) else cell for cell in row]
+        processed_data.append(new_row)
+
     # Prepare headers and data for a single update
-    full_data = [config.POSITION_COLUMNS] + data
+    full_data = [config.POSITION_COLUMNS] + processed_data
     
     # Clear the entire sheet (up to a reasonable limit) to ensure no stale data remains
     num_cols = len(config.POSITION_COLUMNS)
@@ -147,7 +167,7 @@ def write_holdings_current(ws, data: list[list]) -> None:
 def append_holdings_history(ws, data: list[list], existing_fps: set = None) -> int:
     """
     Filter to rows whose fingerprint not in existing_fps.
-    Uses col_values for efficient duplicate check if existing_fps is None.
+    Injects correct row index for formulas before appending.
     """
     # Fingerprint is the last column in POSITION_COLUMNS
     fp_idx = config.POSITION_COLUMNS.index('Fingerprint')
@@ -157,13 +177,24 @@ def append_holdings_history(ws, data: list[list], existing_fps: set = None) -> i
         fp_col_idx = len(config.POSITION_COLUMNS)
         existing_fps = set(ws.col_values(fp_col_idx)[1:])
 
-    new_rows = [row for row in data if str(row[fp_idx]) not in existing_fps]
+    new_rows_raw = [row for row in data if str(row[fp_idx]) not in existing_fps]
     
-    if new_rows:
-        ws.append_rows(new_rows, value_input_option='USER_ENTERED')
+    if new_rows_raw:
+        # Determine starting row for formulas
+        # append_rows goes to end of existing data
+        # Let's get current row count to calculate formula indices
+        current_rows = len(ws.col_values(1))
+        
+        processed_rows = []
+        for i, row in enumerate(new_rows_raw):
+            row_idx = current_rows + i + 1
+            new_row = [str(cell).replace("{ROW}", str(row_idx)) if "{ROW}" in str(cell) else cell for cell in row]
+            processed_rows.append(new_row)
+
+        ws.append_rows(processed_rows, value_input_option='USER_ENTERED')
         time.sleep(1.0)
-        print(f"Holdings_History: Appended {len(new_rows)} rows.")
-        return len(new_rows)
+        print(f"Holdings_History: Appended {len(processed_rows)} rows.")
+        return len(processed_rows)
     
     print("Holdings_History: No new rows to append.")
     return 0
@@ -546,7 +577,8 @@ def write_to_sheets(df: pd.DataFrame, cash_amount: float, dry_run: bool = True) 
     source = "Positions_Ingestion"
     
     # Prepare data using centralized mapping
-    data_list = sanitize_dataframe_for_sheets(df, config.POSITION_COLUMNS, config.POSITION_COL_MAP)
+    # Enable is_holdings=True to inject row-relative formulas for G/L columns
+    data_list = sanitize_dataframe_for_sheets(df, config.POSITION_COLUMNS, config.POSITION_COL_MAP, is_holdings=True)
     income_metrics = calculate_income_metrics(df)
     
     if dry_run:

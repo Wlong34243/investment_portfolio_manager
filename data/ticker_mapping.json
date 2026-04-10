@@ -18,5 +18,197 @@
     "BE": {
         "asset_class": "Equity",
         "sector_strategy": "Industrials"
+    },
+    "IGV": {
+        "asset_class": "Equity",
+        "sector_strategy": "Sector-Specific"
+    },
+    "NEE": {
+        "asset_class": "Equity",
+        "sector_strategy": "Utilities"
+    },
+    "NVDA": {
+        "asset_class": "Equity",
+        "sector_strategy": "Technology"
+    },
+    "XOM": {
+        "asset_class": "Equity",
+        "sector_strategy": "Energy"
+    },
+    "QQQM": {
+        "asset_class": "Equity",
+        "sector_strategy": "Broad Market US"
+    },
+    "UNH": {
+        "asset_class": "Equity",
+        "sector_strategy": "Healthcare"
+    },
+    "EEM": {
+        "asset_class": "Equity",
+        "sector_strategy": "Emerging Markets"
+    },
+    "DELL": {
+        "asset_class": "Equity",
+        "sector_strategy": "Technology"
+    },
+    "VTI": {
+        "asset_class": "Equity",
+        "sector_strategy": "Broad Market US"
+    },
+    "JPIE": {
+        "asset_class": "Fixed Income",
+        "sector_strategy": "Dividend/Yield"
+    },
+    "NOW": {
+        "asset_class": "Equity",
+        "sector_strategy": "Technology"
+    },
+    "CRWV": {
+        "asset_class": "Equity",
+        "sector_strategy": "Industrials"
+    },
+    "ET": {
+        "asset_class": "Equity",
+        "sector_strategy": "Energy"
+    },
+    "MSFT": {
+        "asset_class": "Equity",
+        "sector_strategy": "Technology"
+    },
+    "RSP": {
+        "asset_class": "Equity",
+        "sector_strategy": "Broad Market US"
+    },
+    "IFRA": {
+        "asset_class": "Equity",
+        "sector_strategy": "Sector-Specific"
+    },
+    "EWZ": {
+        "asset_class": "Equity",
+        "sector_strategy": "Emerging Markets"
+    },
+    "IREN": {
+        "asset_class": "Equity",
+        "sector_strategy": "Technology"
+    },
+    "ETN": {
+        "asset_class": "Equity",
+        "sector_strategy": "Industrials"
+    },
+    "EFG": {
+        "asset_class": "Equity",
+        "sector_strategy": "Growth"
+    },
+    "COF": {
+        "asset_class": "Equity",
+        "sector_strategy": "Financials"
+    },
+    "VEA": {
+        "asset_class": "Equity",
+        "sector_strategy": "Broad Market International"
+    },
+    "VEU": {
+        "asset_class": "Equity",
+        "sector_strategy": "Broad Market International"
+    },
+    "XLV": {
+        "asset_class": "Equity",
+        "sector_strategy": "Sector-Specific"
+    },
+    "CNQ": {
+        "asset_class": "Equity",
+        "sector_strategy": "Energy"
+    },
+    "SNPS": {
+        "asset_class": "Equity",
+        "sector_strategy": "Technology"
+    },
+    "XBI": {
+        "asset_class": "Equity",
+        "sector_strategy": "Sector-Specific"
+    },
+    "BA": {
+        "asset_class": "Equity",
+        "sector_strategy": "Industrials"
+    },
+    "GOOG": {
+        "asset_class": "Equity",
+        "sector_strategy": "Communication Services"
+    },
+    "CSCO": {
+        "asset_class": "Equity",
+        "sector_strategy": "Technology"
+    },
+    "CAT": {
+        "asset_class": "Equity",
+        "sector_strategy": "Industrials"
+    },
+    "INTC": {
+        "asset_class": "Equity",
+        "sector_strategy": "Technology"
+    },
+    "NFLX": {
+        "asset_class": "Equity",
+        "sector_strategy": "Communication Services"
+    },
+    "HWM": {
+        "asset_class": "Equity",
+        "sector_strategy": "Industrials"
+    },
+    "META": {
+        "asset_class": "Equity",
+        "sector_strategy": "Communication Services"
+    },
+    "PANW": {
+        "asset_class": "Equity",
+        "sector_strategy": "Technology"
+    },
+    "XLF": {
+        "asset_class": "Equity",
+        "sector_strategy": "Sector-Specific"
+    },
+    "EWJ": {
+        "asset_class": "Equity",
+        "sector_strategy": "Broad Market International"
+    },
+    "CRWD": {
+        "asset_class": "Equity",
+        "sector_strategy": "Technology"
+    },
+    "BBJP": {
+        "asset_class": "Equity",
+        "sector_strategy": "Broad Market International"
+    },
+    "PPA": {
+        "asset_class": "Equity",
+        "sector_strategy": "Sector-Specific"
+    },
+    "DIS": {
+        "asset_class": "Equity",
+        "sector_strategy": "Communication Services"
+    },
+    "XLE": {
+        "asset_class": "Equity",
+        "sector_strategy": "Sector-Specific"
+    },
+    "CFG": {
+        "asset_class": "Equity",
+        "sector_strategy": "Financials"
+    },
+    "DLR": {
+        "asset_class": "Real Estate",
+        "sector_strategy": "Financials"
+    },
+    "CORZ": {
+        "asset_class": "Equity",
+        "sector_strategy": "Technology"
+    },
+    "EMXC": {
+        "asset_class": "Equity",
+        "sector_strategy": "Emerging Markets"
+    },
+    "CASH_MANUAL": {
+        "asset_class": "Cash",
+        "sector_strategy": null
     }
 }
