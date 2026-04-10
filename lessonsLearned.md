@@ -66,3 +66,40 @@ If this shows an impossible number (e.g., 47 of 47), the bug is in the mask, not
 1.  **Syntax Check:** Run `python -m py_compile path/to/file.py` to catch basic syntax and indentation errors before pushing.
 2.  **Import Audit:** Specifically verify that every decorator (like `@st.cache_data`) and every type hint (like `Optional`) has its corresponding import at the top of the file.
 3.  **UI Sanity Check:** Manually verify that all previously existing UI components (uploaders, buttons, tabs) are still visible in their expected locations.
+
+## Phase 5-S Lessons
+
+- **Two Schwab apps, two tokens, one auth flow per app** — each Schwab
+  app gets its own App Key/Secret and its own OAuth token. They share
+  the same browser login but generate independent refresh tokens.
+  Storing them in separate GCS blobs gives the Market Data client a
+  physical inability to reach account endpoints.
+
+- **Refresh token 7-day expiry is the real constraint** — the access
+  token lasts 30 minutes (auto-refreshed by schwab-py), but the
+  refresh token dies in 7 days unless something keeps it warm. The
+  Cloud Function exists solely to make sure that "something" is
+  automated and reliable.
+
+- **Cloud Function on 24/7 schedule, not market hours** — saves nothing
+  in dollars (free tier) and removes a class of weekend edge cases
+  against the 7-day window.
+
+- **Two-failure threshold for Gmail alerts** — single transient
+  failures get caught by the next 25-minute cycle without notification.
+  Two consecutive failures (~50 min of trouble) means it's a real
+  problem worth pinging about.
+
+- **Never log token contents** — only log blob names and success/fail.
+  Token files are gitignored AND never written to stdout/stderr.
+
+- **`client_from_access_functions` takes no `callback_url`** — the
+  callback URL is only needed during the initial browser OAuth flow
+  (`schwab.auth.client_from_login_flow`). Passing it to
+  `client_from_access_functions` silently shifts every arg one position
+  right, causing `'str' object is not callable` at runtime.
+
+- **Token writer must accept `**kwargs`** — schwab-py calls the
+  `token_write_func` with `refresh_token=...` as a keyword argument
+  on refresh. A writer with only `(token)` in its signature raises
+  `TypeError` and silently kills the live data path.

@@ -38,8 +38,8 @@ def get_accounts_client() -> schwab.client.Client | None:
     
     def token_loader():
         return schwab_token_store.load_token(config.SCHWAB_TOKEN_BLOB_ACCOUNTS)
-    
-    def token_saver(new_token):
+
+    def token_saver(new_token, **kwargs):
         schwab_token_store.save_token(new_token, config.SCHWAB_TOKEN_BLOB_ACCOUNTS)
 
     try:
@@ -49,7 +49,6 @@ def get_accounts_client() -> schwab.client.Client | None:
                 return schwab.auth.client_from_access_functions(
                     config.SCHWAB_ACCOUNTS_APP_KEY,
                     config.SCHWAB_ACCOUNTS_APP_SECRET,
-                    config.SCHWAB_CALLBACK_URL,
                     token_loader,
                     token_saver
                 )
@@ -58,7 +57,6 @@ def get_accounts_client() -> schwab.client.Client | None:
             return schwab.auth.client_from_access_functions(
                 config.SCHWAB_ACCOUNTS_APP_KEY,
                 config.SCHWAB_ACCOUNTS_APP_SECRET,
-                config.SCHWAB_CALLBACK_URL,
                 token_loader,
                 token_saver
             )
@@ -78,8 +76,8 @@ def get_market_client() -> schwab.client.Client | None:
     
     def token_loader():
         return schwab_token_store.load_token(config.SCHWAB_TOKEN_BLOB_MARKET)
-    
-    def token_saver(new_token):
+
+    def token_saver(new_token, **kwargs):
         schwab_token_store.save_token(new_token, config.SCHWAB_TOKEN_BLOB_MARKET)
 
     try:
@@ -89,7 +87,6 @@ def get_market_client() -> schwab.client.Client | None:
                 return schwab.auth.client_from_access_functions(
                     config.SCHWAB_MARKET_APP_KEY,
                     config.SCHWAB_MARKET_APP_SECRET,
-                    config.SCHWAB_CALLBACK_URL,
                     token_loader,
                     token_saver
                 )
@@ -98,7 +95,6 @@ def get_market_client() -> schwab.client.Client | None:
             return schwab.auth.client_from_access_functions(
                 config.SCHWAB_MARKET_APP_KEY,
                 config.SCHWAB_MARKET_APP_SECRET,
-                config.SCHWAB_CALLBACK_URL,
                 token_loader,
                 token_saver
             )
@@ -108,89 +104,154 @@ def get_market_client() -> schwab.client.Client | None:
 
 def fetch_positions(client: schwab.client.Client) -> pd.DataFrame:
     """
-    Fetch positions from Schwab API and normalize to project schema.
-    Returns empty DataFrame on error or if no positions found.
+    Fetch and aggregate positions from ALL linked Schwab accounts.
+    Uses get_accounts() so no single account hash is required.
+    Positions with the same ticker across accounts are summed so the
+    portfolio view is unified (e.g. AMZN in brokerage + IRA = one row).
+    Returns empty DataFrame on error or if no invested positions found.
     """
-    if not config.SCHWAB_ACCOUNT_HASH:
-        logging.error("SCHWAB_ACCOUNT_HASH not set in config.")
-        return pd.DataFrame()
-
     try:
-        r = client.get_account(config.SCHWAB_ACCOUNT_HASH, fields=client.Account.Fields.POSITIONS)
+        r = client.get_accounts(fields=client.Account.Fields.POSITIONS)
         r.raise_for_status()
-        data = r.json()
-        
-        # securitiesAccount -> positions
-        positions = data.get('securitiesAccount', {}).get('positions', [])
-        if not positions:
-            logging.info("No positions returned from Schwab API.")
+        accounts = r.json()
+
+        if not isinstance(accounts, list) or not accounts:
+            logging.info("No accounts returned from Schwab API.")
             return pd.DataFrame()
 
-        rows = []
-        for p in positions:
-            instr = p.get('instrument', {})
-            ticker = instr.get('symbol', 'UNKNOWN')
-            
-            # Skip cash sweep tickers (managed via manual entry/logic in app)
-            if ticker in config.CASH_TICKERS or instr.get('assetClass') == 'CASH_EQUIVALENT':
-                continue
-                
-            qty = p.get('longQuantity', 0)
-            market_value = p.get('marketValue', 0)
-            unit_cost = p.get('averagePrice', 0)
-            cost_basis = unit_cost * qty
-            unrealized_gl = p.get('unrealizedProfitLoss', 0)
-            current_price = market_value / qty if qty > 0 else 0
-            
-            row = {
-                'Ticker': ticker,
-                'Description': instr.get('description', ''),
-                'Asset Class': instr.get('assetClass', 'Equity'),
-                'Asset Strategy': '', # Filled by downstream enrichment
-                'Quantity': qty,
-                'Price': current_price,
-                'Market Value': market_value,
-                'Cost Basis': cost_basis,
-                'Unit Cost': unit_cost,
-                'Unrealized G/L': unrealized_gl,
-                'Unrealized G/L %': (unrealized_gl / cost_basis * 100) if cost_basis > 0 else 0,
-                'Est Annual Income': 0.0, # Filled by enrichment/yfinance
-                'Dividend Yield': 0.0,    # Filled by enrichment
-                'Acquisition Date': '',   # Not provided in positions summary
+        # Collect every position row across all accounts; sum cash from balances
+        all_rows = []
+        total_cash = 0.0
+
+        for acc in accounts:
+            sa = acc.get('securitiesAccount', {})
+
+            # Sum cash from account-level balances (most reliable source)
+            balances = sa.get('currentBalances', {})
+            total_cash += float(balances.get('cashBalance', 0) or 0)
+
+            positions = sa.get('positions', [])
+            for p in positions:
+                instr = p.get('instrument', {})
+                ticker = instr.get('symbol', 'UNKNOWN')
+
+                # Skip cash sweep positions — cash is captured from account balances above
+                if ticker in config.CASH_TICKERS or instr.get('assetClass') == 'CASH_EQUIVALENT':
+                    continue
+
+                qty = p.get('longQuantity', 0)
+                market_value = p.get('marketValue', 0)
+                unit_cost = p.get('averagePrice', 0)
+                cost_basis = unit_cost * qty
+                unrealized_gl = p.get('unrealizedProfitLoss', 0)
+                current_price = market_value / qty if qty > 0 else 0
+
+                all_rows.append({
+                    'Ticker': ticker,
+                    'Description': instr.get('description', ''),
+                    'Asset Class': instr.get('assetClass', 'Equity'),
+                    'Asset Strategy': '',  # Filled by downstream enrichment
+                    'Quantity': qty,
+                    'Price': current_price,
+                    'Market Value': market_value,
+                    'Cost Basis': cost_basis,
+                    'Unit Cost': unit_cost,
+                    'Unrealized G/L': unrealized_gl,
+                    'Unrealized G/L %': (unrealized_gl / cost_basis * 100) if cost_basis > 0 else 0,
+                    'Est Annual Income': 0.0,  # Filled by enrichment/yfinance
+                    'Dividend Yield': 0.0,     # Filled by enrichment
+                    'Acquisition Date': '',    # Not provided in positions summary
+                    'Wash Sale': False,
+                    'Is Cash': False,
+                    'Daily Change %': 0.0,
+                    'Weight': 0.0,             # Computed by pipeline.normalize_positions
+                })
+
+        if not all_rows:
+            logging.info("No invested positions found across all accounts.")
+            return pd.DataFrame()
+
+        # Append a single consolidated cash row if cash > 0
+        if total_cash > 0:
+            all_rows.append({
+                'Ticker': 'CASH_MANUAL',
+                'Description': 'Cash & Cash Investments',
+                'Asset Class': 'Cash',
+                'Asset Strategy': 'Cash',
+                'Quantity': 1.0,
+                'Price': total_cash,
+                'Market Value': total_cash,
+                'Cost Basis': total_cash,
+                'Unit Cost': total_cash,
+                'Unrealized G/L': 0.0,
+                'Unrealized G/L %': 0.0,
+                'Est Annual Income': 0.0,
+                'Dividend Yield': 0.0,
+                'Acquisition Date': '',
                 'Wash Sale': False,
-                'Is Cash': False,
+                'Is Cash': True,
                 'Daily Change %': 0.0,
-                'Weight': 0.0,            # Computed by pipeline.normalize_positions
-            }
-            rows.append(row)
+                'Weight': 0.0,
+            })
+            logging.info(f"fetch_positions: added cash row ${total_cash:,.2f} from account balances")
 
-        df = pd.DataFrame(rows)
+        # Aggregate duplicate tickers (same stock held in multiple accounts)
+        agg: dict = {}
+        for row in all_rows:
+            t = row['Ticker']
+            if t not in agg:
+                agg[t] = row.copy()
+            else:
+                e = agg[t]
+                e['Quantity']       += row['Quantity']
+                e['Market Value']   += row['Market Value']
+                e['Cost Basis']     += row['Cost Basis']
+                e['Unrealized G/L'] += row['Unrealized G/L']
+                qty = e['Quantity']
+                mv  = e['Market Value']
+                cb  = e['Cost Basis']
+                e['Price']            = mv / qty if qty > 0 else 0
+                e['Unit Cost']        = cb / qty if qty > 0 else 0
+                e['Unrealized G/L %'] = (e['Unrealized G/L'] / cb * 100) if cb > 0 else 0
+                # Keep the best (non-empty) description across accounts
+                if not e['Description'] and row['Description']:
+                    e['Description'] = row['Description']
 
-        # Nuclear type enforcement — schwab-py occasionally returns numeric
-        # fields as strings; coerce before downstream code touches the frame.
-        numeric_cols = [
-            'Quantity', 'Price', 'Market Value', 'Cost Basis', 'Unit Cost',
-            'Unrealized G/L', 'Unrealized G/L %', 'Est Annual Income',
-            'Dividend Yield', 'Daily Change %', 'Weight'
-        ]
-        for col in numeric_cols:
-            if col in df.columns:
-                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0.0)
+        df = pd.DataFrame(list(agg.values()))
+        logging.info(f"fetch_positions: {len(df)} unique tickers from {len(accounts)} accounts")
 
-        # Add Import Date and Fingerprint
+        # Add Import Date and Fingerprint (Title Case names still active here)
         import_date = datetime.utcnow().strftime("%Y-%m-%d")
         df['Import Date'] = import_date
         df['Fingerprint'] = df.apply(
-            lambda x: f"{import_date}|{x['Ticker']}|{x['Quantity']}|{round(x['Market Value'], 2)}", 
+            lambda x: f"{import_date}|{x['Ticker']}|{x['Quantity']}|{round(x['Market Value'], 2)}",
             axis=1
         )
 
-        # Ensure all columns exist to avoid KeyError in downstream code
-        for col in config.POSITION_COLUMNS:
+        # Rename Title Case → snake_case so normalize_positions() and all
+        # downstream code can operate on internal names.  Title Case is
+        # reapplied at write time by sanitize_dataframe_for_sheets().
+        inverse_map = {v: k for k, v in config.POSITION_COL_MAP.items()}
+        df = df.rename(columns=inverse_map)
+
+        # Nuclear type enforcement — operates on snake_case names after rename.
+        # schwab-py occasionally returns numeric fields as strings; also forces
+        # int64 columns (e.g. unrealized_gl) to float64 for pipeline consistency.
+        numeric_cols = [
+            'quantity', 'price', 'market_value', 'cost_basis', 'unit_cost',
+            'unrealized_gl', 'unrealized_gl_pct', 'est_annual_income',
+            'dividend_yield', 'daily_change_pct', 'weight'
+        ]
+        for col in numeric_cols:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0.0).astype(float)
+
+        # Ensure all snake_case columns exist to avoid KeyError downstream
+        for col in config.POSITION_COL_MAP.keys():
             if col not in df.columns:
                 df[col] = ""
-        
-        return df[config.POSITION_COLUMNS]
+
+        return df[list(config.POSITION_COL_MAP.keys())]
     except Exception as e:
         logging.error(f"fetch_positions failed: {e}")
         schwab_token_store.write_alert(f"Failed to fetch positions: {e}", "warning")

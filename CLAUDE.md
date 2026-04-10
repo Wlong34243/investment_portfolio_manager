@@ -35,6 +35,38 @@ investment-portfolio-manager/
 └── CHANGELOG.md                  # Development history & current status
 ```
 
+## Critical Infrastructure
+
+### Schwab API Integration (Phase 5-S)
+
+- Two Schwab apps: Accounts and Trading + Market Data
+- Each app has its own OAuth token, stored in
+  `gs://portfolio-manager-tokens/{token_accounts.json, token_market.json}`
+- Token refresh handled by Cloud Function `schwab-token-refresh`
+  on a 24/7 every-25-minute Cloud Scheduler trigger
+- Streamlit app uses two scoped clients:
+    - `utils/schwab_client.get_accounts_client()` → positions, balances, transactions
+    - `utils/schwab_client.get_market_client()` → quotes, price history
+- CSV upload remains as the explicit fallback path
+- PROHIBITED endpoints (never imported anywhere):
+    `place_order`, `replace_order`, `cancel_order`,
+    `get_orders_for_account`, `get_orders_for_all_linked_accounts`
+- Recovery procedures:
+    - Token expired (offline > 7 days): `python scripts/schwab_manual_reauth.py`
+    - Token missing (first setup or wiped): `python scripts/schwab_initial_auth.py`
+- Alert channels:
+    - `alert.json` in GCS → banner in Streamlit app sidebar
+    - Gmail (after 2+ consecutive Cloud Function failures, ~50 min)
+
+Repo additions:
+  `utils/schwab_client.py`
+  `utils/schwab_token_store.py`
+  `scripts/schwab_initial_auth.py`
+  `scripts/schwab_manual_reauth.py`
+  `cloud_functions/token_refresh/main.py`
+  `cloud_functions/token_refresh/requirements.txt`
+  `cloud_functions/token_refresh/deploy.sh`
+
 ## Critical Guardrails (CRITICAL)
 1. **No LLM Math:** All yields, drift %, tax dollar estimates, and projections MUST be calculated in Python. Pass facts to Gemini for narrative ONLY.
 2. **Pydantic Schemas:** Every `ask_gemini` call must use a Pydantic `BaseModel` passed via `response_schema`. Never trust raw JSON strings.

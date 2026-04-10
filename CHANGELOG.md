@@ -1,5 +1,39 @@
 # Changelog
 
+## [2026-04-09] — Phase 5-S: Schwab API Integration
+
+### feat: Automated position, transaction, and quote pulls via Schwab API
+
+**What changed:**
+- `utils/schwab_client.py` — read-only Schwab API client (positions,
+  balances, transactions, quotes); two scoped factory functions for
+  the Accounts and Market Data apps
+- `utils/schwab_token_store.py` — GCS-backed OAuth token persistence
+  plus alert read/write/clear helpers
+- `cloud_functions/token_refresh/` — Cloud Function keep-alive that
+  refreshes both tokens every 25 min, 24/7; Gmail escalation after
+  2+ consecutive failures
+- `scripts/schwab_initial_auth.py` — one-time browser OAuth setup for
+  both apps; uploads tokens to GCS and prints account hashes
+- `scripts/schwab_manual_reauth.py` — emergency token recovery
+- `app.py` sidebar — Schwab API as the primary data source with CSV
+  upload as the explicit fallback; manual refresh button included
+
+**Architecture:**
+- Two Schwab apps, two GCS-stored tokens, one keep-alive Cloud Function
+- Market Data client physically cannot reach account endpoints (separate
+  app key, separate token, separate client object)
+- DRY_RUN safety gate unchanged — still gates all Sheet writes
+- Graceful degradation to CSV on any Schwab API failure
+
+**Bug fixes during integration:**
+- `client_from_access_functions` called with spurious `callback_url` arg — removed
+- `token_saver` needed `**kwargs` to accept `refresh_token` kwarg from schwab-py
+- `fetch_positions` returned Title Case columns — fixed to snake_case to match pipeline convention
+- `unrealized_gl` returned as int64 — coerced to float64 for pipeline consistency
+
+**Status:** Live API confirmed — 43 positions fetched, weights sum to 100.0. UI wiring pending (P5-S-C).
+
 ## [Unreleased] — Cash Aggregation Fix
 
 ### Fixed

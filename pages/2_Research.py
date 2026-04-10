@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+from datetime import datetime
 from utils.sheet_readers import get_holdings_current
 from utils.column_guard import ensure_display_columns
 from utils.fmp_client import get_earnings_transcript, get_company_profile
@@ -11,16 +12,20 @@ import sys
 
 st.title("🤖 AI Research Hub")
 
-# --- Load Holdings ---
-try:
-    df = get_holdings_current()
-    df = ensure_display_columns(df)
-except Exception as e:
-    st.error("Could not connect to Google Sheets. Check your connection and service account permissions.")
-    st.stop()
+# --- Load Holdings (prefer live session state from Schwab API) ---
+_live = st.session_state.get("holdings_df")
+if _live is not None and not _live.empty:
+    df = ensure_display_columns(_live)
+else:
+    try:
+        df = get_holdings_current()
+        df = ensure_display_columns(df)
+    except Exception as e:
+        st.error("Could not connect to Google Sheets. Check your connection and service account permissions.")
+        st.stop()
 
 if df.empty:
-    st.info("No holdings found. Upload a CSV on the main page first.")
+    st.info("No holdings found. Load the main dashboard first.")
     st.stop()
 
 # --- Ticker Selector ---
@@ -48,14 +53,24 @@ if ticker_info_df.empty:
 
 info = ticker_info_df.iloc[0]
 
+# Resolve live price: prefer holdings value; fallback to yfinance if 0 or missing
+_display_price = float(info.get('Price', 0) or 0)
+if _display_price == 0:
+    try:
+        import yfinance as yf
+        _fi = yf.Ticker(selected_ticker).fast_info
+        _display_price = float(_fi.get("last_price") or _fi.get("regular_market_price") or 0)
+    except Exception:
+        pass
+
 # --- Hero Header ---
 st.header(f"{selected_ticker} — {info['Description']}")
-st.caption(f"${info['Price']:,.2f} | Weight: {info['Weight']:.1f}% | {info['Asset Class']}")
+st.caption(f"${_display_price:,.2f} | Weight: {info['Weight']:.1f}% | {info['Asset Class']}")
 
 # --- KPI Cards ---
 k1, k2, k3, k4 = st.columns(4)
 k1.metric("Ticker", selected_ticker)
-k2.metric("Price", f"${info['Price']:,.2f}")
+k2.metric("Price", f"${_display_price:,.2f}")
 k3.metric("Sector", info['Asset Class'])
 k4.metric("Portfolio Weight", f"{info['Weight']:.2f}%")
 
@@ -147,8 +162,13 @@ with col_a:
                 st.markdown(vr.get('metrics_summary', ''))
         
         st.divider()
-        if vs['is_below_average']:
-            st.success(f"**Signal:** {selected_ticker} is trading below its 5-year average.")
+        if vs.get('fmp_unavailable'):
+            st.info(
+                f"ℹ️ **Historical P/E unavailable** — FMP subscription required for 5-year comparison. "
+                f"Current P/E: **{vs['current_pe']:.2f}**. See AI report above for absolute valuation context."
+            )
+        elif vs.get('is_below_average'):
+            st.success(f"**Signal:** {selected_ticker} is trading below its 5-year average P/E ({vs['avg_5yr_pe']:.2f}x).")
             st.caption(f"Valuation refreshed at: {datetime.now().strftime('%H:%M:%S')}")
             deploy_amt = st.number_input("Deployment Amount ($)", value=5000.0, step=1000.0)
             if st.button("Generate Accumulation Plan"):
@@ -157,7 +177,10 @@ with col_a:
                 st.info(f"**Action:** {plan.get('shares_to_buy')}")
                 st.write(f"**Rationale:** {plan.get('entry_rationale')}")
         else:
-            st.warning(f"**Signal:** {selected_ticker} is trading above its historical average.")
+            st.warning(
+                f"**Signal:** {selected_ticker} is trading above its 5-year average P/E ({vs.get('avg_5yr_pe', 0):.2f}x). "
+                f"Current P/E: {vs['current_pe']:.2f}x."
+            )
 
 with col_b:
     st.subheader("💰 Options Income")

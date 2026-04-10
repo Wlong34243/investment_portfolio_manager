@@ -1,0 +1,163 @@
+{
+  "metadata": {
+    "source": "Schwab STAX Summary March 2026",
+    "date": "2026-04-07",
+    "executive_summary": "Risk-off rotation underway as Iran war shock drives clients toward diversified ETFs over individual names. STAX fell 2.23% to 56.04 — still elevated historically but showing first crack since December. Info tech saw the biggest net outflows despite prior strength; industrials, financials, consumer discretionary led inflows. Fed is caught between stagflation pressures with no clear cut signal. Oil near $100/bbl. Positioning implies clients expect volatility but not a prolonged bear — net-buyers remain active in mega-cap tech on dips."
+  },
+  "allocations": [
+    {
+      "date": "2026-04-07",
+      "source": "Schwab STAX Summary March 2026",
+      "asset_class": "Information Technology",
+      "asset_strategy": "Mega-cap AI infrastructure dip buyers (MSFT, AMZN, MU)",
+      "target_pct": 22,
+      "min_pct": 18,
+      "max_pct": 28,
+      "confidence": "Medium",
+      "notes": "MSFT and AMZN were top net-buys despite sharp drawdowns — clients buying dips on AI infrastructure thesis. MSFT down 25% YTD, NVDA near 200-day MA support. Broadcom (AVGO) top net-sell signals rotation within tech. AMD also net-sold.",
+      "executive_summary": "Risk-off rotation underway as Iran war shock drives clients toward diversified ETFs over individual names. STAX fell 2.23% to 56.04. Info tech saw the biggest net outflows despite prior strength; industrials, financials, consumer discretionary led inflows. Fed caught between stagflation pressures.",
+      "fingerprint": "2026-04-07|Schwab STAX Summary March 2026|Information Technology"
+    },
+    {
+      "date": "2026-04-07",
+      "source": "Schwab STAX Summary March 2026",
+      "asset_class": "Industrials",
+      "asset_strategy": "War-driven industrial demand, infrastructure beneficiaries",
+      "target_pct": 10,
+      "min_pct": 7,
+      "max_pct": 13,
+      "confidence": "High",
+      "notes": "Industrials led all sectors in net-positive flows in March. War in Iran driving defense and infrastructure demand. Aligns with existing IFRA position in Bill's portfolio.",
+      "executive_summary": "Risk-off rotation underway as Iran war shock drives clients toward diversified ETFs over individual names. STAX fell 2.23% to 56.04. Info tech saw the biggest net outflows despite prior strength; industrials, financials, consumer discretionary led inflows. Fed caught between stagflation pressures.",
+      "fingerprint": "2026-04-07|Schwab STAX Summary March 2026|Industrials"
+    },
+    {
+      "date": "2026-04-07",
+      "source": "Schwab STAX Summary March 2026",
+      "asset_class": "Financials",
+      "asset_strategy": "Rate pause beneficiaries, broad financial sector exposure",
+      "target_pct": 8,
+      "min_pct": 5,
+      "max_pct": 11,
+      "confidence": "Medium",
+      "notes": "Financials saw second-best net-positive sector flows. Fed paused for second consecutive meeting at 3.5–3.75% target range. Rate stability benefits banks and diversified financials. COF and CFG already in portfolio.",
+      "executive_summary": "Risk-off rotation underway as Iran war shock drives clients toward diversified ETFs over individual names. STAX fell 2.23% to 56.04. Info tech saw the biggest net outflows despite prior strength; industrials, financials, consumer discretionary led inflows. Fed caught between stagflation pressures.",
+      "fingerprint": "2026-04-07|Schwab STAX Summary March 2026|Financials"
+    },
+    {
+      "date": "2026-04-07",
+      "source": "Schwab STAX Summary March 2026",
+      "asset_class": "Consumer Discretionary",
+      "asset_strategy": "Selective dip exposure; Tesla as speculative recovery play",
+      "target_pct": 6,
+      "min_pct": 4,
+      "max_pct": 9,
+      "confidence": "Low",
+      "notes": "Third in net-positive sector flows. TSLA returned to top 5 net-buys at $360–$380 support. Consumer sentiment weakened (payrolls -92K vs estimates). Risk is stagflation eroding consumer spending. Confidence low given macro headwinds.",
+      "executive_summary": "Risk-off rotation underway as Iran war shock drives clients toward diversified ETFs over individual names. STAX fell 2.23% to 56.04. Info tech saw the biggest net outflows despite prior strength; industrials, financials, consumer discretionary led inflows. Fed caught between stagflation pressures.",
+      "fingerprint": "2026-04-07|Schwab STAX Summary March 2026|Consumer Discretionary"
+    },
+    {
+      "date": "2026-04-07",
+      "source": "Schwab STAX Summary March 2026",
+      "asset_class": "Consumer Staples",
+      "asset_strategy": "Defensive rotation, war-driven risk-off positioning",
+      "target_pct": 5,
+      "min_pct": 3,
+      "max_pct": 7,
+      "confidence": "Medium",
+      "notes": "Consumer staples saw net-positive flows — consistent with risk-off rotation pattern. Historically outperforms during geopolitical shocks and inflationary environments. Underweighted in Bill's current portfolio — potential displacement opportunity.",
+      "executive_summary": "Risk-off rotation underway as Iran war shock drives clients toward diversified ETFs over individual names. STAX fell 2.23% to 56.04. Info tech saw the biggest net outflows despite prior strength; industrials, financials, consumer discretionary led inflows. Fed caught between stagflation pressures.",
+      "fingerprint": "2026-04-07|Schwab STAX Summary March 2026|Consumer Staples"
+    },
+    {
+      "date": "2026-04-07",
+      "source": "Schwab STAX Summary March 2026",
+      "asset_class": "Real Estate",
+      "asset_strategy": "Rate pause REIT exposure, diversification vs liquid portfolio",
+      "target_pct": 4,
+      "min_pct": 2,
+      "max_pct": 6,
+      "confidence": "Low",
+      "notes": "Real estate saw net-positive flows. Fed rate pause at 3.5–3.75% relieves some pressure on rate-sensitive REITs. Note: Bill's RE portfolio provides direct real estate exposure — liquid REIT allocation should be sized with total wealth in mind to avoid double-counting.",
+      "executive_summary": "Risk-off rotation underway as Iran war shock drives clients toward diversified ETFs over individual names. STAX fell 2.23% to 56.04. Info tech saw the biggest net outflows despite prior strength; industrials, financials, consumer discretionary led inflows. Fed caught between stagflation pressures.",
+      "fingerprint": "2026-04-07|Schwab STAX Summary March 2026|Real Estate"
+    },
+    {
+      "date": "2026-04-07",
+      "source": "Schwab STAX Summary March 2026",
+      "asset_class": "Health Care",
+      "asset_strategy": "Defensive allocation; existing UNH/XBI/XLV positions",
+      "target_pct": 10,
+      "min_pct": 7,
+      "max_pct": 13,
+      "confidence": "Medium",
+      "notes": "Health care saw net-positive flows in March. Defensive characteristic suits current geopolitical uncertainty. Bill already has significant exposure (UNH 9% of portfolio, XBI, XLV). Maintain rather than add aggressively given UNH concentration.",
+      "executive_summary": "Risk-off rotation underway as Iran war shock drives clients toward diversified ETFs over individual names. STAX fell 2.23% to 56.04. Info tech saw the biggest net outflows despite prior strength; industrials, financials, consumer discretionary led inflows. Fed caught between stagflation pressures.",
+      "fingerprint": "2026-04-07|Schwab STAX Summary March 2026|Health Care"
+    },
+    {
+      "date": "2026-04-07",
+      "source": "Schwab STAX Summary March 2026",
+      "asset_class": "Energy",
+      "asset_strategy": "War premium oil play; trim OXY-style producers, hold pipeline/midstream",
+      "target_pct": 8,
+      "min_pct": 5,
+      "max_pct": 12,
+      "confidence": "Medium",
+      "notes": "Energy saw net-negative flows as clients took profits on war-driven price spike (OXY top 5 net-sell). Oil near $100/bbl. Prefer midstream/infrastructure (ET already held) over pure E&P for income stability. XOM position offers both yield and war premium.",
+      "executive_summary": "Risk-off rotation underway as Iran war shock drives clients toward diversified ETFs over individual names. STAX fell 2.23% to 56.04. Info tech saw the biggest net outflows despite prior strength; industrials, financials, consumer discretionary led inflows. Fed caught between stagflation pressures.",
+      "fingerprint": "2026-04-07|Schwab STAX Summary March 2026|Energy"
+    },
+    {
+      "date": "2026-04-07",
+      "source": "Schwab STAX Summary March 2026",
+      "asset_class": "Fixed Income",
+      "asset_strategy": "Short-duration income; JPIE-style high-income ETFs",
+      "target_pct": 12,
+      "min_pct": 9,
+      "max_pct": 16,
+      "confidence": "High",
+      "notes": "Fed paused at 3.5–3.75% but faces stagflation crosswinds. PPI rose far above expectations in February. Duration risk elevated. Short-duration income ETFs like JPIE remain attractive. Avoid long-duration Treasuries given inflationary pressure from oil spike.",
+      "executive_summary": "Risk-off rotation underway as Iran war shock drives clients toward diversified ETFs over individual names. STAX fell 2.23% to 56.04. Info tech saw the biggest net outflows despite prior strength; industrials, financials, consumer discretionary led inflows. Fed caught between stagflation pressures.",
+      "fingerprint": "2026-04-07|Schwab STAX Summary March 2026|Fixed Income"
+    },
+    {
+      "date": "2026-04-07",
+      "source": "Schwab STAX Summary March 2026",
+      "asset_class": "International",
+      "asset_strategy": "Developed markets hedge; avoid EM war exposure",
+      "target_pct": 7,
+      "min_pct": 4,
+      "max_pct": 10,
+      "confidence": "Low",
+      "notes": "STAX doesn't surface international flows directly. VEA (developed markets) and EWZ/EEM (EM) in existing portfolio. Iran war increases geopolitical risk in EM. Developed markets (VEA, EFG) preferred. BABA exposure adds China risk — monitor.",
+      "executive_summary": "Risk-off rotation underway as Iran war shock drives clients toward diversified ETFs over individual names. STAX fell 2.23% to 56.04. Info tech saw the biggest net outflows despite prior strength; industrials, financials, consumer discretionary led inflows. Fed caught between stagflation pressures.",
+      "fingerprint": "2026-04-07|Schwab STAX Summary March 2026|International"
+    },
+    {
+      "date": "2026-04-07",
+      "source": "Schwab STAX Summary March 2026",
+      "asset_class": "Cash",
+      "asset_strategy": "Elevated cash buffer; money market at ~4.5% yield",
+      "target_pct": 8,
+      "min_pct": 5,
+      "max_pct": 12,
+      "confidence": "High",
+      "notes": "S&P 500 fell 7%+ in March — worst since September 2022. Maintaining elevated cash buffer is prudent for opportunistic deployment. Money market at ~4.5% is competitive. STAX at 56 suggests clients expect volatility to abate, but geopolitical uncertainty justifies dry powder.",
+      "executive_summary": "Risk-off rotation underway as Iran war shock drives clients toward diversified ETFs over individual names. STAX fell 2.23% to 56.04. Info tech saw the biggest net outflows despite prior strength; industrials, financials, consumer discretionary led inflows. Fed caught between stagflation pressures.",
+      "fingerprint": "2026-04-07|Schwab STAX Summary March 2026|Cash"
+    }
+  ],
+  "validation": {
+    "total_target_pct": 100,
+    "sector_count": 11,
+    "tab": "AI_Suggested_Allocation",
+    "write_pattern": "Clear data rows, write fresh batch. Never touches Target_Allocation.",
+    "confidence_distribution": {
+      "High": 3,
+      "Medium": 5,
+      "Low": 3
+    }
+  }
+}

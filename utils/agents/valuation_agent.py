@@ -34,25 +34,40 @@ def get_valuation_snapshot(ticker: str) -> dict:
         profile = get_company_profile(ticker)
         basic = get_basic_financials(ticker) 
         
+        # Detect FMP availability: both metrics and hist_pe must return real data
+        fmp_available = bool(metrics) and not hist_pe.empty
+
         current_pe = metrics.get('pe_ratio')
-        
+
+        # Always attempt yfinance fallback for profile enrichment
+        y_info = {}
+        try:
+            y_ticker = yf.Ticker(ticker)
+            y_info = y_ticker.info
+        except Exception as ye:
+            logging.warning(f"yfinance fallback failed for {ticker}: {ye}")
+
         if current_pe is None or current_pe == 0:
-            try:
-                y_ticker = yf.Ticker(ticker)
-                y_info = y_ticker.info
-                current_pe = y_info.get('trailingPE') or y_info.get('forwardPE')
-                if not profile.get('market_cap'):
-                    profile['market_cap'] = y_info.get('marketCap', 0)
-                if not profile.get('sector'):
-                    profile['sector'] = y_info.get('sector', 'Unknown')
-            except Exception as ye:
-                logging.warning(f"yfinance fallback failed for {ticker}: {ye}")
+            current_pe = y_info.get('trailingPE') or y_info.get('forwardPE')
+
+        if not profile.get('market_cap'):
+            profile['market_cap'] = y_info.get('marketCap', 0)
+        if not profile.get('sector'):
+            profile['sector'] = y_info.get('sector', 'Unknown')
 
         if current_pe is None:
             return {"error": f"No valuation data available for {ticker}"}
-            
-        avg_pe = hist_pe['pe_ratio'].mean() if not hist_pe.empty else current_pe
-        pe_discount = ((avg_pe - current_pe) / avg_pe) * 100 if avg_pe else 0
+
+        # Historical P/E comparison — only valid when FMP provides multiple years of data
+        if not hist_pe.empty:
+            avg_pe = hist_pe['pe_ratio'].mean()
+            pe_discount = ((avg_pe - current_pe) / avg_pe) * 100 if avg_pe else 0
+            is_below_avg = current_pe < avg_pe
+        else:
+            # FMP historical unavailable — cannot make a valid historical comparison
+            avg_pe = None
+            pe_discount = None
+            is_below_avg = None
         
         def _to_float(v, default=0.0):
             try:
@@ -67,9 +82,10 @@ def get_valuation_snapshot(ticker: str) -> dict:
         return {
             "ticker": ticker,
             "current_pe": float(current_pe),
-            "avg_5yr_pe": float(avg_pe),
-            "pe_discount_pct": float(pe_discount),
-            "is_below_average": current_pe < avg_pe,
+            "avg_5yr_pe": float(avg_pe) if avg_pe is not None else None,
+            "pe_discount_pct": float(pe_discount) if pe_discount is not None else None,
+            "is_below_average": is_below_avg,
+            "fmp_unavailable": not fmp_available,
             "market_cap": _to_float(profile.get('market_cap')),
             "dividend_yield": _to_float(metrics.get('dividend_yield')),
             "eps": eps_calc,
@@ -86,31 +102,40 @@ def generate_rich_valuation_report(ticker: str, val_snap: dict) -> dict:
     """
     Uses Gemini to generate the Perplexity-style rich narrative.
     """
+    hist_pe_line = (
+        f"- 5-Year Avg P/E: {val_snap['avg_5yr_pe']:.2f} (Discount vs avg: {val_snap['pe_discount_pct']:.1f}%)"
+        if val_snap.get('avg_5yr_pe') is not None
+        else "- Historical P/E: Unavailable (FMP subscription required). Evaluate on absolute basis vs sector norms."
+    )
+
     prompt = f"""
     Analyze the valuation of {ticker} ({val_snap['sector']}).
-    
+
     Metrics:
     - Current P/E: {val_snap['current_pe']:.2f}
-    - 5-Year Avg P/E: {val_snap['avg_5yr_pe']:.2f}
+    {hist_pe_line}
     - Market Cap: ${val_snap['market_cap']/1e9:.2f}B
     - Dividend Yield: {val_snap['dividend_yield']:.2f}%
-    
+    - Forward P/E: {val_snap.get('forward_pe', 0):.2f}
+    - 52W Range: {val_snap.get('low_52w', 0):.2f} — {val_snap.get('high_52w', 0):.2f}
+
+    {"NOTE: Historical P/E data is unavailable. Do NOT mention comparing to a 5-year average. Instead, compare the current multiple to typical sector P/E ranges and forward growth expectations." if val_snap.get('fmp_unavailable') else ""}
+
     Provide a report with these exact sections (formatted in Markdown):
-    
-    ### [Ticker] Valuation Verdict
-    [A lead paragraph summarizing if it's "Rich", "Fair", or "Undervalued". Mention the current price vs target context.]
-    
+
+    ### {ticker} Valuation Verdict
+    [A lead paragraph summarizing if it's "Rich", "Fair", or "Undervalued". Base it on current P/E vs sector norms and growth rate.]
+
     #### What the market is pricing in
-    [Discuss the current multiple vs growth expectations and historical rerating.]
-    
+    [Discuss the current multiple vs growth expectations and any recent re-rating catalysts.]
+
     #### Valuation signals
-    [Compare vs historical averages and peers. Mention intrinsic value estimates if applicable.]
-    
+    [Compare vs sector peers. Mention forward P/E, PEG ratio context, and intrinsic value estimates.]
+
     #### Key metrics
-    - Price: $[Price]
-    - Trailing P/E: [PE]
-    - Market Cap: $[MCap]
-    - 52W Range: [Low] to [High]
+    - Trailing P/E: {val_snap['current_pe']:.2f}
+    - Market Cap: ${val_snap['market_cap']/1e9:.2f}B
+    - 52W Range: {val_snap.get('low_52w', 0):.2f} to {val_snap.get('high_52w', 0):.2f}
     """
     
     system_instruction = f"{SAFETY_PREAMBLE}\n\nYou are a senior equity valuation analyst. Provide a professional, high-signal valuation report mirroring the style of Perplexity Finance."
@@ -144,10 +169,15 @@ def generate_accumulation_plan(ticker: str, deploy_amount: float, valuation_data
     """
     Gemini JSON: analysis, shares_to_buy, new_weight_pct, entry_rationale.
     """
+    avg_pe_text = (
+        f"5yr Avg: {valuation_data['avg_5yr_pe']:.2f}, Discount: {valuation_data['pe_discount_pct']:.1f}% below average"
+        if valuation_data.get('avg_5yr_pe') is not None
+        else "historical avg P/E unavailable"
+    )
+
     prompt = f"""
     Ticker: {ticker}
-    Current P/E: {valuation_data['current_pe']:.2f} (5yr Avg: {valuation_data['avg_5yr_pe']:.2f})
-    Discount: {valuation_data['pe_discount_pct']:.1f}% below average.
+    Current P/E: {valuation_data['current_pe']:.2f} ({avg_pe_text}).
     
     Investor wants to deploy ${deploy_amount:,.2f} into this position.
     

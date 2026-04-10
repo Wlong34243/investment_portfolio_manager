@@ -71,7 +71,7 @@ def sanitize_dataframe_for_sheets(df: pd.DataFrame, columns: list[str], col_map:
     
     return data
 
-def normalize_positions(df: pd.DataFrame, import_date: str) -> pd.DataFrame:
+def normalize_positions(df: pd.DataFrame, import_date: str, source: str = "csv") -> pd.DataFrame:
     """
     Add import_date column.
     Calculate weight = market_value / total_portfolio_value * 100.

@@ -8,13 +8,19 @@ import sys
 
 st.title("✂️ Tax Optimization Hub")
 
-# --- Load Data ---
-try:
-    holdings_df = get_holdings_current()
-    holdings_df = ensure_display_columns(holdings_df)
-except Exception as e:
-    st.error("Could not connect to Google Sheets. Check your connection and service account permissions.")
-    st.stop()
+# --- Load Data (prefer live session state from Schwab API) ---
+_live = st.session_state.get("holdings_df")
+if _live is not None and not _live.empty:
+    holdings_df = ensure_display_columns(_live)
+    st.caption("📡 Using live positions from Schwab API")
+else:
+    try:
+        holdings_df = get_holdings_current()
+        holdings_df = ensure_display_columns(holdings_df)
+        st.caption("⚠️ Using last saved snapshot from Google Sheets. Load the main dashboard to refresh.")
+    except Exception as e:
+        st.error("Could not connect to Google Sheets. Check your connection and service account permissions.")
+        st.stop()
 
 realized_gl_df = get_realized_gl()
 
@@ -62,6 +68,11 @@ else:
 # --- Realized Gains Summary ---
 st.divider()
 st.subheader("📝 Year-to-Date Realized Summary")
+st.caption(
+    "⚠️ Realized G/L data is sourced from manually imported CSVs. "
+    "If only the primary brokerage account was exported, figures may not reflect activity in the HSA, 401k, IRA, or custodial account. "
+    "To get a complete picture, export and import Realized G/L CSVs from each account separately."
+)
 if not realized_gl_df.empty:
     # Ensure date conversion
     realized_gl_df['Closed Date'] = pd.to_datetime(realized_gl_df['Closed Date'])

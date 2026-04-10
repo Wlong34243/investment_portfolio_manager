@@ -27,10 +27,19 @@ last_date = snapshots_df['Date'].max().date()
 st.subheader(f"Tracking period: {first_date} to {last_date}")
 
 # --- KPI Cards ---
-latest = snapshots_df.iloc[-1]
-total_val = float(latest['Total Value'])
-total_cost = float(latest['Total Cost'])
-unrealized_gl = total_val - total_cost
+# Prefer live session state (populated by Schwab API fetch) over stale sheet snapshot
+_live = st.session_state.get("holdings_df")
+if _live is not None and not _live.empty and 'Market Value' in _live.columns:
+    total_val  = float(_live['Market Value'].sum())
+    total_cost = float(_live['Cost Basis'].sum()) if 'Cost Basis' in _live.columns else 0.0
+    st.caption("📡 Current values from live Schwab data")
+else:
+    latest     = snapshots_df.iloc[-1]
+    total_val  = float(latest['Total Value'])
+    total_cost = float(latest['Total Cost'])
+    st.caption(f"⚠️ Showing last snapshot ({last_date}). Load the main dashboard to refresh live data.")
+
+unrealized_gl  = total_val - total_cost
 unrealized_pct = (unrealized_gl / total_cost * 100) if total_cost > 0 else 0.0
 
 k1, k2, k3, k4 = st.columns(4)
@@ -65,14 +74,29 @@ def calculate_returns(df):
     
     return {"MTD": mtd, "QTD": qtd, "YTD": ytd, "Inception": inception}
 
-returns = calculate_returns(snapshots_df)
+# Scale historical snapshots if live total differs significantly from latest snapshot.
+# This corrects for the period when only 1 account was being tracked.
+latest_snap_val = float(snapshots_df.iloc[-1]['Total Value'])
+scale_factor = total_val / latest_snap_val if latest_snap_val > 0 else 1.0
+
+if abs(scale_factor - 1.0) > 0.05:
+    _scaled = snapshots_df.copy()
+    _scaled['Total Value'] = _scaled['Total Value'] * scale_factor
+    _scaled['Total Cost']  = _scaled['Total Cost']  * scale_factor
+    returns_source = _scaled
+    st.info(
+        f"📐 Historical snapshots scaled ×{scale_factor:.2f} to match current full-portfolio total. "
+        f"Period return percentages are estimated — they will self-correct as new complete "
+        f"snapshots accumulate. Returns include contributions/withdrawals (not time-weighted)."
+    )
+else:
+    returns_source = snapshots_df
+
+returns = calculate_returns(returns_source)
 if returns:
     ret_df = pd.DataFrame([returns]).T.reset_index()
     ret_df.columns = ["Period", "Return %"]
     st.table(ret_df.style.format({"Return %": "{:+.2f}%"}))
-    st.caption("⚠️ Returns are simple price returns. They include the effect "
-               "of contributions and withdrawals. Time-weighted returns (TWR) "
-               "will be available in a future update.")
 
 # --- Portfolio vs Benchmark ---
 st.subheader("Portfolio vs Benchmarks (Normalized to 100)")

@@ -99,7 +99,8 @@ def enrich_positions(df: pd.DataFrame) -> pd.DataFrame:
                 enriched_data[ticker] = {
                     'dividend_yield': info.get("dividendYield", 0.0) if info.get("dividendYield") else 0.0,
                     'sector': info.get("sector"),
-                    'beta': beta
+                    'beta': beta,
+                    'long_name': info.get("longName") or info.get("shortName") or "",
                 }
                 
                 # Apply Ticker Overrides from config
@@ -132,14 +133,42 @@ def enrich_positions(df: pd.DataFrame) -> pd.DataFrame:
                 df.loc[idx, yield_col_target] = info['dividend_yield']
             if info['sector'] is not None:
                 df.loc[idx, sector_col_target] = info['sector']
-            
+            if info.get('long_name'):
+                df.loc[idx, desc_col] = info['long_name']
+
             # Recalculate Est Annual Income
             if info['dividend_yield'] is not None:
                 df.loc[idx, income_col_target] = df.loc[idx, mv_col] * info['dividend_yield'] / 100
 
+    # 4b. Name-only lookup for remaining invested tickers that still have empty descriptions
+    already_enriched = set(top_tickers)
+    remaining_no_desc = [
+        row[ticker_col] for _, row in df.iterrows()
+        if row[ticker_col] not in config.CASH_TICKERS
+        and row[ticker_col] not in already_enriched
+        and (pd.isna(row.get(desc_col, "")) or str(row.get(desc_col, "")).strip() == "")
+    ]
+    if remaining_no_desc:
+        try:
+            rem_obj = yf.Tickers(" ".join(remaining_no_desc))
+            for rem_ticker in remaining_no_desc:
+                try:
+                    info = rem_obj.tickers[rem_ticker].info
+                    name = info.get("longName") or info.get("shortName") or ""
+                    if name:
+                        idx = df[df[ticker_col] == rem_ticker].index
+                        df.loc[idx, desc_col] = name
+                except Exception:
+                    pass
+        except Exception as e:
+            print(f"Name-only enrichment batch failed: {e}")
+
     # 5. Fallback for ALL positions
     for idx, row in df.iterrows():
         if row[ticker_col] not in config.CASH_TICKERS:
+            # If description is still empty, use ticker symbol as minimum
+            if pd.isna(df.loc[idx, desc_col]) or str(df.loc[idx, desc_col]).strip() == "":
+                df.loc[idx, desc_col] = row[ticker_col]
             # If sector is still missing/Other, try get_sector_fast
             if pd.isna(df.loc[idx, sector_col_target]) or df.loc[idx, sector_col_target] == "Other":
                 df.loc[idx, sector_col_target] = get_sector_fast(row[desc_col])

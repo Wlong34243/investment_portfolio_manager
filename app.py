@@ -8,22 +8,24 @@ from datetime import date, datetime
 import config
 from utils.auth import require_auth
 from utils.csv_parser import parse_schwab_csv, inject_cash_manual
-from utils.enrichment import enrich_positions
+from utils.enrichment import enrich_positions, apply_smart_categorization
 from utils.risk import (
     build_price_histories, calculate_beta, calculate_portfolio_beta,
     calculate_correlation_matrix, run_stress_tests, capm_projection,
     concentration_alerts
 )
 from pipeline import (
-    normalize_positions, write_to_sheets, ingest_realized_gl, 
+    normalize_positions, write_to_sheets, ingest_realized_gl,
     ingest_transactions, calculate_income_metrics
 )
 from utils.sheet_readers import get_holdings_current, get_daily_snapshots, get_risk_metrics
 from utils.validators import (
-    validate_percentage_range, validate_no_negative_market_values, 
+    validate_percentage_range, validate_no_negative_market_values,
     validate_duplicate_tickers, validate_total_sanity
 )
 from utils.column_guard import ensure_display_columns
+from utils import schwab_client
+from utils import schwab_token_store
 
 # Import New Agents
 from utils.agents.earnings_sentinel import scan_upcoming_earnings, generate_earnings_alerts
@@ -45,92 +47,7 @@ if "holdings_df" not in st.session_state:
 
 # Force sanitization on every rerun
 st.session_state["holdings_df"] = ensure_display_columns(st.session_state["holdings_df"])
-df = st.session_state["holdings_df"]
 
-# --- Sidebar ---
-with st.sidebar:
-    st.header("Maintenance")
-    
-    # Import Hub
-    with st.expander("📥 Import Schwab CSVs", expanded=df.empty):
-        pos_file = st.file_uploader("Positions", type=["csv"])
-        gl_file = st.file_uploader("Realized G/L", type=["csv"])
-        tx_file = st.file_uploader("Transactions", type=["csv"])
-        
-        cash_inject = st.number_input("Manual Cash ($)", value=0.0, step=500.0)
-        
-        if st.button("Process Data", width='stretch'):
-            if pos_file:
-                with st.spinner("Ingesting Positions..."):
-                    df_raw = parse_schwab_csv(pos_file.read())
-                    df_cash = inject_cash_manual(df_raw, cash_inject)
-                    df_enriched = enrich_positions(df_cash)
-                    df_norm = normalize_positions(df_enriched, str(date.today()))
-                    write_to_sheets(df_norm, cash_inject, dry_run=config.DRY_RUN)
-                    st.session_state["holdings_df"] = ensure_display_columns(df_norm)
-                    st.toast("Positions Updated", icon="✅")
-            
-            if gl_file:
-                with st.spinner("Ingesting Gains..."):
-                    res = ingest_realized_gl(gl_file, dry_run=config.DRY_RUN)
-                    if res.get("new", 0) > 0:
-                        st.toast(f"Gains: {res['new']} new rows", icon="💸")
-                    else:
-                        st.toast("Gains: No new rows", icon="ℹ️")
-
-            if tx_file:
-                with st.spinner("Ingesting Transactions..."):
-                    res = ingest_transactions(tx_file, dry_run=config.DRY_RUN)
-                    if res.get("new", 0) > 0:
-                        st.toast(f"Transactions: {res['new']} new rows", icon="📑")
-                    else:
-                        st.toast("Transactions: No new rows", icon="ℹ️")
-
-            if pos_file or gl_file or tx_file:
-                time.sleep(1)
-                st.rerun()
-
-    st.divider()
-    with st.expander("🧠 Category Enrichment"):
-        st.caption("Saves ticker categories to `data/ticker_mapping.json` — applied on next CSV import.")
-        if st.button("⬇️ Sync from Sheet", width='stretch', disabled=df.empty,
-                     help="Reads Asset Class / Asset Strategy already in your Holdings sheet. Fast, no AI call."):
-            with st.spinner("Syncing categories from sheet..."):
-                try:
-                    from utils.agents.portfolio_enricher import sync_from_holdings
-                    ok, msg = sync_from_holdings(df)
-                    if ok:
-                        st.toast(msg, icon="✅")
-                    else:
-                        st.error(msg)
-                except Exception as e:
-                    st.error(f"Sync error: {e}")
-        if st.button("🤖 Re-enrich via Gemini AI", width='stretch', disabled=df.empty,
-                     help="Calls Gemini to re-categorize all tickers. Use if you want AI to overwrite current categories."):
-            with st.spinner("Asking Gemini to categorize your holdings..."):
-                try:
-                    from utils.agents.portfolio_enricher import enrich_holdings_from_df
-                    ok, msg = enrich_holdings_from_df(df)
-                    if ok:
-                        st.toast(msg, icon="✅")
-                    else:
-                        st.error(f"{msg} (Try 'Sync from Sheet' instead.)")
-                except Exception as e:
-                    st.error(f"Enrichment error: {e}")
-        if df.empty:
-            st.caption("Import a CSV first to enable enrichment.")
-
-    st.divider()
-    if st.button("🔄 Clear System Cache", width='stretch'):
-        st.cache_data.clear()
-        st.session_state.clear()
-        st.rerun()
-    
-    if not df.empty:
-        st.subheader("Stats")
-        st.metric("Total Positions", len(df))
-        if 'Import Date' in df.columns:
-            st.caption(f"Last Import: {df['Import Date'].iloc[0]}")
 
 # --- Main Dashboard Page Function ---
 def main_dashboard():
@@ -138,6 +55,188 @@ def main_dashboard():
         "holdings_df", pd.DataFrame(columns=config.POSITION_COLUMNS)
     ))
 
+    # --- Sidebar ---
+    with st.sidebar:
+        st.header("Maintenance")
+
+        # --- Data Source ---
+        st.markdown("### Data Source")
+        api_status = schwab_client.is_api_available()
+        alert = schwab_token_store.read_alert()
+
+        if alert:
+            st.error(f"⚠️ Schwab API: {alert['message']}")
+            st.caption("Falling back to CSV upload below.")
+
+        if api_status["accounts"]:
+            st.success("✅ Accounts API connected")
+        else:
+            st.warning("⚪ Accounts API offline")
+
+        if api_status["market"]:
+            st.success("✅ Market Data API connected")
+        else:
+            st.warning("⚪ Market Data API offline")
+
+        source_options = []
+        if api_status["accounts"]:
+            source_options.append("Schwab API (live)")
+        source_options.append("CSV Upload (manual)")
+
+        data_source = st.radio(
+            "Choose data source",
+            source_options,
+            index=0,
+            help="Schwab API pulls live positions automatically. CSV upload is the manual fallback.",
+            key="data_source_radio",
+        )
+
+        if data_source == "Schwab API (live)":
+            if st.button("🔄 Refresh from Schwab API", key="refresh_schwab_btn"):
+                st.cache_resource.clear()
+                st.cache_data.clear()
+                st.rerun()
+
+        st.divider()
+
+        # Import Hub
+        with st.expander("📥 Import Schwab CSVs", expanded=df.empty and data_source != "Schwab API (live)"):
+            pos_file = st.file_uploader("Positions", type=["csv"])
+            gl_file = st.file_uploader("Realized G/L", type=["csv"])
+            tx_file = st.file_uploader("Transactions", type=["csv"])
+
+            cash_inject = st.number_input("Manual Cash ($)", value=0.0, step=500.0)
+
+            if st.button("Process Data", width='stretch'):
+                if pos_file:
+                    with st.spinner("Ingesting Positions..."):
+                        df_raw = parse_schwab_csv(pos_file.read())
+                        df_cash = inject_cash_manual(df_raw, cash_inject)
+                        df_enriched = enrich_positions(df_cash)
+                        df_norm = normalize_positions(df_enriched, str(date.today()), source="csv")
+                        write_to_sheets(df_norm, cash_inject, dry_run=config.DRY_RUN)
+                        st.session_state["holdings_df"] = ensure_display_columns(df_norm)
+                        st.toast("Positions Updated", icon="✅")
+
+                if gl_file:
+                    with st.spinner("Ingesting Gains..."):
+                        res = ingest_realized_gl(gl_file, dry_run=config.DRY_RUN)
+                        if res.get("new", 0) > 0:
+                            st.toast(f"Gains: {res['new']} new rows", icon="💸")
+                        else:
+                            st.toast("Gains: No new rows", icon="ℹ️")
+
+                if tx_file:
+                    with st.spinner("Ingesting Transactions..."):
+                        res = ingest_transactions(tx_file, dry_run=config.DRY_RUN)
+                        if res.get("new", 0) > 0:
+                            st.toast(f"Transactions: {res['new']} new rows", icon="📑")
+                        else:
+                            st.toast("Transactions: No new rows", icon="ℹ️")
+
+                if pos_file or gl_file or tx_file:
+                    time.sleep(1)
+                    st.rerun()
+
+        st.divider()
+        with st.expander("🧠 Category Enrichment"):
+            st.caption("Saves ticker categories to `data/ticker_mapping.json` — applied on next CSV import.")
+            if st.button("⬇️ Sync from Sheet", width='stretch', disabled=df.empty,
+                         help="Reads Asset Class / Asset Strategy already in your Holdings sheet. Fast, no AI call."):
+                with st.spinner("Syncing categories from sheet..."):
+                    try:
+                        from utils.agents.portfolio_enricher import sync_from_holdings
+                        ok, msg = sync_from_holdings(df)
+                        if ok:
+                            st.toast(msg, icon="✅")
+                        else:
+                            st.error(msg)
+                    except Exception as e:
+                        st.error(f"Sync error: {e}")
+            if st.button("🤖 Re-enrich via Gemini AI", width='stretch', disabled=df.empty,
+                         help="Calls Gemini to re-categorize all tickers. Use if you want AI to overwrite current categories."):
+                with st.spinner("Asking Gemini to categorize your holdings..."):
+                    try:
+                        from utils.agents.portfolio_enricher import enrich_holdings_from_df
+                        ok, msg = enrich_holdings_from_df(df)
+                        if ok:
+                            st.toast(msg, icon="✅")
+                        else:
+                            st.error(f"{msg} (Try 'Sync from Sheet' instead.)")
+                    except Exception as e:
+                        st.error(f"Enrichment error: {e}")
+            if df.empty:
+                st.caption("Import a CSV first to enable enrichment.")
+
+        st.divider()
+        if st.button("🔄 Clear System Cache", width='stretch'):
+            st.cache_data.clear()
+            st.session_state.clear()
+            st.rerun()
+
+        if not df.empty:
+            st.subheader("Stats")
+            st.metric("Total Positions", len(df))
+            if 'Import Date' in df.columns:
+                st.caption(f"Last Import: {df['Import Date'].iloc[0]}")
+
+    # --- Data Source Branching ---
+    today_iso = date.today().isoformat()
+
+    if data_source == "Schwab API (live)":
+        with st.spinner("Fetching positions from Schwab API..."):
+            client = schwab_client.get_accounts_client()
+            if client is None:
+                st.error("Could not initialize Schwab client. Check the alert above or switch to CSV Upload.")
+                st.stop()
+
+            raw_df = schwab_client.fetch_positions(client)
+            if raw_df.empty:
+                st.error("Schwab API returned no positions. Check the alert above or switch to CSV Upload.")
+                st.stop()
+
+        with st.spinner("Enriching positions (dividend yield, descriptions, categories)..."):
+            raw_df = enrich_positions(raw_df)
+            raw_df = apply_smart_categorization(raw_df)
+
+        positions_df = normalize_positions(raw_df, import_date=today_iso, source="schwab_api")
+        st.success(f"✅ Fetched {len(positions_df)} positions from Schwab API (all accounts)")
+
+        if api_status["market"]:
+            try:
+                market_client = schwab_client.get_market_client()
+                if market_client is not None:
+                    tickers = positions_df["ticker"].tolist()
+                    quotes_df = schwab_client.fetch_quotes(market_client, tickers)
+                    if not quotes_df.empty:
+                        positions_df = positions_df.merge(
+                            quotes_df[["ticker", "last_price"]],
+                            on="ticker",
+                            how="left",
+                        )
+                        mask = positions_df["last_price"].notna() & (positions_df["last_price"] > 0)
+                        positions_df.loc[mask, "price"] = positions_df.loc[mask, "last_price"]
+                        positions_df = positions_df.drop(columns=["last_price"])
+            except Exception as e:
+                import logging
+                logging.warning(f"Quote enrichment failed, using account snapshot prices: {e}")
+
+        df = ensure_display_columns(positions_df)
+        st.session_state["holdings_df"] = df
+
+        # Persist snapshot to Sheets so Performance page builds complete history.
+        # Gated by config.DRY_RUN — set dry_run = false in secrets.toml to enable.
+        try:
+            write_to_sheets(positions_df, 0.0, dry_run=config.DRY_RUN)
+        except Exception as _e:
+            import logging
+            logging.warning(f"Snapshot write skipped: {_e}")
+    else:
+        df = ensure_display_columns(st.session_state.get(
+            "holdings_df", pd.DataFrame(columns=config.POSITION_COLUMNS)
+        ))
+
+    # --- Tabs ---
     st.title("💼 Investment Portfolio")
     tabs = st.tabs(["📊 Holdings", "💰 Income", "🛡️ Risk", "🔔 Signals"])
 
@@ -170,7 +269,24 @@ def main_dashboard():
                 st.plotly_chart(fig, width='stretch')
 
             st.subheader("Current Positions")
-            st.dataframe(df, width='stretch', hide_index=True)
+            st.dataframe(
+                df,
+                width='stretch',
+                hide_index=True,
+                column_config={
+                    "Price":           st.column_config.NumberColumn(format="$%.2f"),
+                    "Market Value":    st.column_config.NumberColumn(format="$%.0f"),
+                    "Cost Basis":      st.column_config.NumberColumn(format="$%.0f"),
+                    "Unit Cost":       st.column_config.NumberColumn(format="$%.2f"),
+                    "Unrealized G/L":  st.column_config.NumberColumn(format="$%.0f"),
+                    "Unrealized G/L %":st.column_config.NumberColumn(format="%.2f%%"),
+                    "Weight":          st.column_config.NumberColumn(format="%.2f%%"),
+                    "Quantity":        st.column_config.NumberColumn(format="%.4f"),
+                    "Est Annual Income":st.column_config.NumberColumn(format="$%.2f"),
+                    "Dividend Yield":  st.column_config.NumberColumn(format="%.2f%%"),
+                    "Daily Change %":  st.column_config.NumberColumn(format="%.2f%%"),
+                },
+            )
 
     with tabs[1]:
         if not df.empty:
@@ -178,7 +294,7 @@ def main_dashboard():
             i1, i2 = st.columns(2)
             i1.metric("Annual Projected Income", f"${metrics['projected_annual_income']:,.2f}")
             i2.metric("Blended Yield",           f"{metrics['blended_yield_pct']:.2f}%")
-            
+
             # --- Cash Sweeper ---
             st.divider()
             st.subheader("💵 Yield Optimization (Cash Sweep)")
@@ -202,7 +318,7 @@ def main_dashboard():
     with tabs[2]:
         if not df.empty:
             st.subheader("🛡️ Portfolio Risk Analytics")
-            
+
             # Load existing risk results from session state OR try to fetch from Sheet
             if "risk_results" not in st.session_state:
                 try:
@@ -217,7 +333,7 @@ def main_dashboard():
                                 "volatility_pct": float(latest.get('Annual Volatility', 15.0)),
                             },
                             "stress": run_stress_tests(df['Market Value'].sum(), float(latest.get('Portfolio Beta', 1.0))),
-                            "corr_matrix": pd.DataFrame() # Matrix isn't stored in sheet usually
+                            "corr_matrix": pd.DataFrame()  # Matrix isn't stored in sheet usually
                         }
                 except:
                     pass
@@ -228,16 +344,16 @@ def main_dashboard():
                     hist = build_price_histories(df)
                     if not hist.empty and 'SPY' in hist.columns:
                         spy_returns = hist['SPY'].pct_change().dropna()
-                        
+
                         # Calculate beta for all positions
                         df['Beta'] = df['Ticker'].apply(lambda x: calculate_beta(x, hist, spy_returns))
                         p_beta = calculate_portfolio_beta(df)
                         corr_matrix = calculate_correlation_matrix(df, hist)
-                        
+
                         total_val = df['Market Value'].sum()
                         stress_results = run_stress_tests(total_val, p_beta)
                         capm_results = capm_projection(total_val, p_beta)
-                        
+
                         # Save to session state
                         res = {
                             "p_beta": p_beta,
@@ -246,28 +362,28 @@ def main_dashboard():
                             "corr_matrix": corr_matrix
                         }
                         st.session_state["risk_results"] = res
-                        
+
                         # PERSIST TO SHEET (Hidden Step)
                         try:
                             from pipeline import write_risk_metrics
                             write_risk_metrics(res, df)
                         except:
                             pass
-                            
+
                         st.rerun()
                     else:
                         st.error("Could not fetch enough price history for risk analysis.")
 
             if "risk_results" in st.session_state:
                 res = st.session_state["risk_results"]
-                
+
                 r1, r2, r3 = st.columns(3)
-                r1.metric("Portfolio Beta", f"{res['p_beta']:.2f}", 
+                r1.metric("Portfolio Beta", f"{res['p_beta']:.2f}",
                          help="Beta > 1.0 means more volatile than S&P 500")
                 r2.metric("Expected Annual Return", f"{res['capm']['expected_pct']:.1f}%",
                          help="Based on CAPM (Risk-free rate + Beta * Equity Risk Premium)")
                 r3.metric("Annual Volatility", f"{res['capm']['volatility_pct']:.1f}%")
-                
+
                 col_left, col_right = st.columns(2)
                 with col_left:
                     st.write("### Stress Test Scenarios")
@@ -278,7 +394,7 @@ def main_dashboard():
                         'impact': '${:,.0f}',
                         'new_value': '${:,.0f}'
                     }))
-                
+
                 with col_right:
                     st.write("### Correlation Heatmap (Top 20)")
                     if not res['corr_matrix'].empty:
@@ -326,7 +442,7 @@ def main_dashboard():
                 m2.metric("Fed Funds Rate", f"{macro_data['fed_rate']:.2f}%")
                 m3.metric("VIX Index", f"{macro_data['vix']:.1f}", macro_data['vix_signal'])
                 m4.metric("CPI Trend", f"{macro_data['cpi']:.1f}", macro_data['cpi_trend'])
-                
+
                 triggers = detect_macro_triggers(macro_data, df)
                 if triggers:
                     for t in triggers:
@@ -339,9 +455,9 @@ def main_dashboard():
                             with st.expander("Sector Rotations"):
                                 for rot in strat['sector_rotations']:
                                     st.write(f"**{rot['from_sector']} ➡️ {rot['to_sector']}**: {rot['rationale']}")
-            
+
             st.divider()
-            
+
             # --- Earnings Sentinel ---
             st.subheader("📅 Upcoming Earnings")
             with st.spinner("Scanning calendar..."):
@@ -355,10 +471,10 @@ def main_dashboard():
                                 st.info(f"**{a['badge']} {a['ticker']} ({a['date']})**: {a['alert']}")
                 else:
                     st.success("No major earnings reported in your holdings for the next 14 days.")
-            
+
             st.divider()
-            
-            from utils.agents.price_narrator import detect_significant_moves, batch_analyze_daily_moves        
+
+            from utils.agents.price_narrator import detect_significant_moves, batch_analyze_daily_moves
             movers = detect_significant_moves(df)
             if movers:
                 st.subheader(f"🚀 Daily Movers ({len(movers)} active)")
@@ -371,6 +487,7 @@ def main_dashboard():
                 st.success("No significant price movers detected today. Signals clear.")
         else:
             st.info("Agent signals appearing in next sync...")
+
 
 # --- Page Navigation ---
 pg = st.navigation([

@@ -7,7 +7,9 @@
 ---
 
 ### Tab: Holdings_Current
-**Purpose:** Latest snapshot of every position. Overwritten on each CSV import.
+**Purpose:** Latest snapshot of every position. Overwritten on each import.
+
+**Source:** May be populated via Schwab API (`source = 'schwab_api'`) or manual CSV upload (`source = 'csv'`). The tab schema is identical regardless of source — both paths flow through `pipeline.normalize_positions()`.
 
 | Column | Header | Type | Example | Notes |
 |--------|--------|------|---------|-------|
