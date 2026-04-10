@@ -1,5 +1,34 @@
 # Changelog
 
+## [2026-04-10] — Phase 5-S: Post-Integration Bug Fixes
+
+### fix: Portfolio total, prices, descriptions, and valuation accuracy
+
+**Cash from all accounts:**
+- `fetch_positions()` now reads `currentBalances.cashBalance` from every account and appends a single `CASH_MANUAL` row. Previously, all CASH_EQUIVALENT positions were silently skipped, leaving ~$49K in cash invisible and Total Portfolio ~$52K below Schwab's reported total.
+
+**Price showing as $0.00:**
+- Quote enrichment in `app.py` was overwriting Schwab account-snapshot prices with `last_price = 0` when the Market Data API returned 0 (common outside market hours). Fixed mask: only overwrite when `last_price > 0`.
+- Research Hub: added yfinance `fast_info` live-price fallback for any ticker where holdings price is still 0.
+
+**Descriptions incomplete:**
+- `enrich_positions()` previously only ran name lookups for the top 20 positions by market value. Added a second yfinance bulk pass for all remaining invested tickers that have empty descriptions. Absolute fallback: ticker symbol used if yfinance also returns nothing.
+
+**AVGO / Valuation always showing 0% discount:**
+- `get_valuation_snapshot()` now detects FMP 402 (subscription limit). When `hist_pe` is empty, `avg_5yr_pe`, `pe_discount_pct`, and `is_below_average` are set to `None` rather than using `current_pe` as both sides of the comparison.
+- Gemini prompt updated to evaluate on absolute sector-norm basis when historical data is unavailable.
+- Research Hub signal updated: shows "Historical P/E unavailable — FMP subscription required" instead of the misleading "trading above historical average."
+
+**Performance period returns:**
+- Historical snapshots scaled by `live_total / last_snapshot_total` when ratio > 5%, correcting for the period when only 1 account was tracked.
+
+**Tax page — G/L disclaimer:**
+- Added caption noting that Realized G/L only reflects manually imported CSVs and may not include HSA/401k/IRA/custodial activity.
+
+**Status: All 5 accounts loading, total matches Schwab (~$545K), prices correct, descriptions populated.**
+
+---
+
 ## [2026-04-09] — Phase 5-S: Schwab API Integration
 
 ### feat: Automated position, transaction, and quote pulls via Schwab API
@@ -33,6 +62,20 @@
 - `unrealized_gl` returned as int64 — coerced to float64 for pipeline consistency
 
 **Status:** Live API confirmed — 43 positions fetched, weights sum to 100.0. UI wiring pending (P5-S-C).
+# Changelog
+
+## [2026-04-09] — Phase 5-S: Schwab API Integration (Scaffolding)
+
+### Added
+- **🤖 Schwab API Clients:** Created `utils/schwab_client.py` with two scoped clients (Accounts vs. Market Data) to ensure physical isolation of sensitive data.
+- **🔐 Token Persistence:** Created `utils/schwab_token_store.py` to handle OAuth token storage in Google Cloud Storage (GCS) with local fallback for development.
+- **🔄 Token Keep-Alive:** Created `cloud_functions/token_refresh/` (Python Cloud Function) to automatically refresh Schwab tokens every 25 minutes, preventing 7-day expiry.
+- **🛠️ Auth Utility Scripts:** Added `scripts/schwab_initial_auth.py` for one-time browser OAuth setup and `scripts/schwab_manual_reauth.py` for emergency recovery.
+- **🚦 API Status Indicators:** Added `is_api_available()` and `read_alert()` helpers to monitor connectivity and surface Schwab maintenance/auth alerts in the UI.
+
+### Fixed
+- **☁️ Streamlit Cloud Pathing:** Switched to `sys.executable` for all internal subprocess calls in `tasks/stax_sync.py` and `tasks/weekly_podcast_sync.py`, resolving `ModuleNotFoundError` during remote execution.
+- **📦 Missing Imports:** Fixed a crash on the Rebalancing page caused by a missing `import datetime.date`.
 
 ## [Unreleased] — Cash Aggregation Fix
 
@@ -44,6 +87,7 @@
 ### Added
 - **📊 STAX Integration:** Added a new "Ingest STAX Report" UI to the Rebalancing page. Users can now paste raw text from Schwab's Trading Activity Index (STAX) reports for instant Gemini-driven sector rotation analysis.
 - **Backend Orchestrator:** Created `tasks/stax_sync.py` to handle raw text analysis, schema validation, and "clear-and-replace" writing to the `AI_Suggested_Allocation` tab.
+- **Assertive Signal Derivation:** Enhanced the podcast agent to more assertively derive sector signals (Overweight/Underweight) from raw STAX report text, improving rebalancing suggestions.
 
 ### Fixed
 - **Parser Flexibility:** Updated the strategy JSON parser to handle multiple schemas (e.g., `allocations` vs `target_allocations`) and nested metadata, fixing a `KeyError` when importing STAX-formatted JSON.
