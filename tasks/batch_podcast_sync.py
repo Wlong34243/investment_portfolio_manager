@@ -28,9 +28,8 @@ logger = logging.getLogger(__name__)
 
 # Constants
 PODCAST_CHANNELS = {
-    # Forward Guidance (Jack Farley / Blockworks macro pod) — confirm correct channel ID
-    # "Forward Guidance": "REPLACE_WITH_CORRECT_ID",
-    "The Compound": "UCBRpqrzuuqE8TZcWw75JSdw",  # verified: The Compound (Josh Brown / Ritholtz)
+    "Forward Guidance": "UCkrwgzhIBKccuDsi_SvZtnQ",  # verified: Forward Guidance (@ForwardGuidanceBW)
+    "The Compound": "UCBRpqrzuuqE8TZcWw75JSdw",    # verified: The Compound (Josh Brown / Ritholtz)
 }
 
 DEDUP_FILE = os.path.join(os.path.dirname(__file__), "..", "data", "processed_videos.json")
