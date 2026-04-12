@@ -1,5 +1,40 @@
 # Changelog
 
+## [Unreleased] — CLI Migration Phase 1: Immutable Data Spine
+
+### Added
+- `manager.py` — Typer CLI entry point with `snapshot` subcommand
+- `core/bundle.py` — Immutable context bundle with SHA256 content hashing
+- `core/__init__.py` — New CLI-only package (no Streamlit imports)
+- `utils/gemini_client.py::ask_gemini_bundled()` — Bundle-aware Gemini call
+  with mandatory bundle_hash verification
+- `bundles/` directory (gitignored) for local bundle artifacts
+- `typer>=0.12.0` and `rich>=13.7.0` dependencies
+
+### Architecture Decision
+Streamlit's rerun loop and cache TTLs create race conditions where AI
+agents receive a mix of stale and live data. To establish an auditable
+chain from input snapshot to agent conclusion, the CLI freezes all
+market state to a SHA256-hashed JSON bundle before any LLM call. Every
+agent response must include the bundle_hash in its Pydantic output,
+forcing permanent linkage between the snapshot and the conclusion
+drawn from it.
+
+V1 scope is quant-only (CSV + yfinance + manual cash). Google Drive
+Vault bundling is deferred to CLI Migration Phase 2 with a separate
+composite-hash design.
+
+### Unchanged
+- The Streamlit app (`app.py`) continues to run during the transition
+- `ask_gemini()` legacy function preserved for existing Streamlit agents
+- `config.py`, Google Sheet schema, existing agents
+
+**Status:** CLI defaults to DRY RUN. `manager.py snapshot` produces
+bundles locally and does not touch Google Sheets. Safe to use in
+parallel with the existing Streamlit app.
+
+---
+
 ## [2026-04-12] — ADC Auth Migration
 
 ### Changed
