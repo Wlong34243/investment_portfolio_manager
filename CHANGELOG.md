@@ -1,5 +1,37 @@
 # Changelog
 
+## [Unreleased] — CLI Migration Phase 2: Vault Bundling
+
+### Added
+- `core/vault_bundle.py` — Immutable vault bundle: thesis files, transcripts,
+  research notes. SHA256 content-hash (not Drive revision ID) for
+  self-contained auditability. Missing thesis = warning, not failure.
+- `core/composite_bundle.py` — Composite bundle wrapper: combines
+  market_hash + vault_hash into a single agent-ready artifact with one
+  composite_hash. Sub-bundles are pointers, not merges.
+- `utils/gemini_client.py::ask_gemini_composite()` — Composite-bundle-aware
+  Gemini call. Loads both sub-bundles, builds unified context preamble,
+  filters thesis content by ticker. composite_hash propagates to all
+  agent response metadata.
+- `manager.py vault snapshot` — Freeze vault docs to disk.
+- `manager.py vault add-thesis --ticker X` — Scaffold a new thesis file.
+- `manager.py bundle composite` — Build composite from latest sub-bundles.
+- `manager.py bundle verify <path>` — Verify any bundle hash.
+- `tests/test_vault_bundle_smoke.py` — Vault and composite round-trip tests.
+- `vault/` directory structure: theses/, transcripts/, research/
+- **Qualitative Backfill**: Created 51 investment theses (`_thesis.md` files) across core positions, ETFs, and speculative satellites to enable agent reasoning.
+
+### Architecture Decision
+Content-hash (SHA256 of file bytes) chosen over Drive revision ID.
+Audit guarantee must be self-contained — verifiable at any future time
+without Drive API access. Drive fallback for missing files is stubbed
+(logs and continues); full Drive integration deferred to Phase 02b if needed.
+
+### Unchanged
+- `manager.py snapshot` — market bundle, unmodified
+- `ask_gemini()` and `ask_gemini_bundled()` — unmodified
+- `app.py` — Streamlit app continues to run in parallel
+
 ## [Unreleased] — CLI Migration Phase 1: Immutable Data Spine
 
 ### Added
