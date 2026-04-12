@@ -17,12 +17,13 @@ import json
 import logging
 import time
 import re
+from pathlib import Path
 import google.auth
 import google.auth.exceptions
 from google import genai
 from google.genai import types
 from pydantic import BaseModel
-from typing import Type, TypeVar, Any
+from typing import Type, TypeVar, Any, Union
 
 try:
     import config
@@ -127,8 +128,12 @@ def ask_gemini(prompt: str, system_instruction: str = None, json_mode: bool = Fa
         print(f"DEBUG: Gemini Raw Response: {response.text[:200]}...")
         
         if response_schema:
-            try:
+            # response.parsed is populated by AI Studio but not always by
+            # Vertex AI backend. Fall back to manual JSON parse when None.
+            if response.parsed is not None:
                 return response.parsed
+            try:
+                return response_schema.model_validate_json(response.text)
             except Exception as pe:
                 print(f"DEBUG: Pydantic Parsing Failed: {pe}")
                 return None
@@ -155,14 +160,80 @@ def ask_gemini_json(prompt: str, system_instruction: str = None, max_tokens: int
     """Legacy wrapper for raw JSON extraction."""
     response_text = ask_gemini(prompt, system_instruction, json_mode=True, max_tokens=max_tokens)
     if not response_text: return {"error": "Empty response"}
-    
+
     # Surgical extract
     cleaned = response_text.strip()
     if cleaned.startswith("```"):
         match = re.search(r"```(?:json)?\s*(.*?)\s*```", cleaned, re.DOTALL)
         if match: cleaned = match.group(1).strip()
-    
+
     try:
         return json.loads(cleaned)
     except:
         return {"error": "JSON Parse Failure", "raw": response_text[:200]}
+
+
+def ask_gemini_bundled(
+    prompt: str,
+    bundle_path: Union[Path, str],
+    response_schema: Type[T],
+    system_instruction: str = None,
+    max_tokens: int = 4000,
+) -> T | None:
+    """
+    Bundle-aware Gemini call. Loads an immutable context bundle, verifies
+    its hash, injects the hash into the Pydantic response metadata, and
+    returns the parsed model instance.
+
+    The response_schema MUST include a `bundle_hash: str` field. This is
+    enforced at call time — if the schema lacks the field, raise ValueError
+    before the LLM is invoked.
+
+    This function is the ONLY sanctioned path for CLI agents. The legacy
+    ask_gemini() remains for the Streamlit app during the transition.
+    """
+    from core.bundle import load_bundle
+
+    # 1. Enforce schema contract before touching the LLM
+    if "bundle_hash" not in response_schema.model_fields:
+        raise ValueError(
+            f"{response_schema.__name__} must include a 'bundle_hash: str' field "
+            "to be used with ask_gemini_bundled()"
+        )
+
+    # 2. Load and verify bundle (raises ValueError on hash mismatch)
+    bundle = load_bundle(Path(bundle_path))
+
+    # 3. Build structured preamble that locks the model to this snapshot
+    bundle_preamble = (
+        f"CONTEXT BUNDLE (immutable snapshot):\n"
+        f"  bundle_hash: {bundle['bundle_hash']}\n"
+        f"  timestamp_utc: {bundle['timestamp_utc']}\n"
+        f"  total_value: {bundle['total_value']}\n"
+        f"  position_count: {bundle['position_count']}\n"
+        f"  positions: {json.dumps(bundle['positions'], default=str)}\n\n"
+        f"You MUST include bundle_hash='{bundle['bundle_hash']}' in your "
+        f"response. This is how the output is traced to its input snapshot.\n\n"
+        f"USER PROMPT:\n{prompt}"
+    )
+
+    # 4. Call existing ask_gemini() — SAFETY_PREAMBLE is auto-prepended there
+    result = ask_gemini(
+        bundle_preamble,
+        system_instruction=system_instruction,
+        response_schema=response_schema,
+        max_tokens=max_tokens,
+    )
+
+    if result is None:
+        return None
+
+    # 5. Verify the returned hash matches; overwrite if the LLM hallucinated
+    if result.bundle_hash != bundle["bundle_hash"]:
+        logging.warning(
+            f"ask_gemini_bundled: LLM returned bundle_hash={result.bundle_hash!r} "
+            f"but expected {bundle['bundle_hash']!r}. Overwriting with correct hash."
+        )
+        result.bundle_hash = bundle["bundle_hash"]
+
+    return result

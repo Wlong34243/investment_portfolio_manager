@@ -37,6 +37,10 @@ PORTFOLIO_SHEET_ID = _secret(
     "1DuY68xVvyHq-0dyb7XUQgcoK7fqcVS0fv7UoGdTnfxA"  # TBD — create during Phase 1 setup, share with service account
 )
 
+# GCP Project Context
+GCP_PROJECT_ID = "re-property-manager-487122"
+GCP_REGION     = "us-central1"
+
 # Cross-reference to RE Property Manager (READ ONLY — never write from this app)
 RE_DASHBOARD_SHEET_ID = "1DXuY1iBo2GqZCCSZ7OrUa4iaunb5s8Kf1Rms8Z237rQ"
 
@@ -47,7 +51,7 @@ FINNHUB_API_KEY = _secret("finnhub_api_key", "")
 FMP_API_KEY = _secret("fmp_api_key", "")        # Financial Modeling Prep (Phase 4)
 FRED_API_KEY = _secret("fred_api_key", "")      # Federal Reserve Economic Data (Phase 2)
 AI_SECONDARY_API_KEY = _secret("ai_secondary_api_key", "")  # Reserved for future secondary AI
-GEMINI_API_KEY = _secret("gemini_api_key", "")      # Google Gemini (Core AI)
+# GEMINI_API_KEY removed — using ADC auth via gcloud auth application-default login
 
 # ---------------------------------------------------------------------------
 # Schwab API (Phase 5-S)
@@ -66,17 +70,13 @@ SCHWAB_TOKEN_BLOB_ACCOUNTS = "token_accounts.json"
 SCHWAB_TOKEN_BLOB_MARKET   = "token_market.json"
 SCHWAB_ALERT_BLOB          = "schwab_alert.json"
 
-# GCP context (already used elsewhere — duplicated here for the Cloud Function)
-GCP_PROJECT_ID = "re-property-manager-487122"
-GCP_REGION     = "us-central1"
-
 # Client cache TTL (Cloud Function does the actual refresh — this just caches the client object in Streamlit)
 SCHWAB_CLIENT_CACHE_TTL = 1500   # 25 min
 
 # ---------------------------------------------------------------------------
 # AI Model Configuration
 # ---------------------------------------------------------------------------
-GEMINI_MODEL = _secret("gemini_model", "gemini-2.5-pro")  # Vertex AI (ADC path). AI Studio path also accepts this name.
+GEMINI_MODEL = _secret("gemini_model", "gemini-2.5-flash")  # Vertex AI confirmed accessible on re-property-manager-487122
 GEMINI_MAX_TOKENS = _secret("gemini_max_tokens", 2000)
 
 # ---------------------------------------------------------------------------
