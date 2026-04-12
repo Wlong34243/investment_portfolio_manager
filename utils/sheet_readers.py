@@ -1,5 +1,7 @@
 """
 utils/sheet_readers.py — Google Sheets authentication and reader functions.
+
+Credential resolution: ADC (local CLI) → env var (CI) → Streamlit secrets → file
 """
 
 import os
@@ -30,21 +32,39 @@ try:
 except ImportError:
     pass
 
-SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
+SCOPES = [
+    "https://spreadsheets.google.com/feeds",
+    "https://www.googleapis.com/auth/drive",
+]
 
 class AuthError(Exception):
     """Raised when no valid credentials can be found."""
 
 def get_gspread_client() -> gspread.Client:
     """
-    Return an authenticated gspread client. Credential resolution order:
-    1. GCP_SERVICE_ACCOUNT_JSON env var (GitHub Actions — JSON string)
-    2. .streamlit/secrets.toml (Streamlit Cloud)
-    3. service_account.json file (local development)
+    Return an authenticated gspread client.
+
+    Credential resolution order:
+    1. ADC via gcloud auth application-default login  ← preferred for local CLI
+    2. GCP_SERVICE_ACCOUNT_JSON env var               ← GitHub Actions
+    3. st.secrets["gcp_service_account"]              ← Streamlit Cloud
+    4. Local service_account.json file                ← legacy fallback
+
+    For local CLI use, run once:
+        gcloud auth application-default login
+        gcloud auth application-default set-quota-project re-property-manager-487122
     """
     import json
 
-    # Option 1: Environment variable (GitHub Actions)
+    # Option 1: ADC — works after gcloud auth application-default login
+    try:
+        import google.auth
+        credentials, _ = google.auth.default(scopes=SCOPES)
+        return gspread.authorize(credentials)
+    except Exception:
+        pass  # Fall through to next option
+
+    # Option 2: Environment variable (GitHub Actions)
     env_json = os.environ.get("GCP_SERVICE_ACCOUNT_JSON")
     if env_json:
         try:
@@ -54,7 +74,7 @@ def get_gspread_client() -> gspread.Client:
         except Exception as e:
             print(f"Warning: Failed to load credentials from env var: {e}")
 
-    # Option 2: Streamlit secrets
+    # Option 3: Streamlit secrets
     if st and hasattr(st, "secrets") and "gcp_service_account" in st.secrets:
         try:
             creds = Credentials.from_service_account_info(
@@ -62,16 +82,20 @@ def get_gspread_client() -> gspread.Client:
                 scopes=SCOPES,
             )
             return gspread.authorize(creds)
-        except:
+        except Exception:
             pass
 
-    # Option 3: local service_account.json
+    # Option 4: local service_account.json
     sa_path = os.path.join(_ROOT, "service_account.json")
     if os.path.isfile(sa_path):
         creds = Credentials.from_service_account_file(sa_path, scopes=SCOPES)
         return gspread.authorize(creds)
 
-    raise AuthError("Could not authenticate with Google Sheets.")
+    raise AuthError(
+        "No Google Sheets credentials found. For local CLI use, run:\n"
+        "  gcloud auth application-default login\n"
+        "  gcloud auth application-default set-quota-project re-property-manager-487122"
+    )
 
 def read_gsheet_robust(ws: gspread.Worksheet) -> pd.DataFrame:
     """Reads worksheet into DataFrame with aggressive numeric cleaning."""

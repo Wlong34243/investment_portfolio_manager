@@ -76,7 +76,7 @@ SCHWAB_CLIENT_CACHE_TTL = 1500   # 25 min
 # ---------------------------------------------------------------------------
 # AI Model Configuration
 # ---------------------------------------------------------------------------
-GEMINI_MODEL = _secret("gemini_model", "gemini-3.1-pro-preview")
+GEMINI_MODEL = _secret("gemini_model", "gemini-2.5-pro")  # Vertex AI (ADC path). AI Studio path also accepts this name.
 GEMINI_MAX_TOKENS = _secret("gemini_max_tokens", 2000)
 
 # ---------------------------------------------------------------------------

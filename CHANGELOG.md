@@ -1,5 +1,33 @@
 # Changelog
 
+## [2026-04-12] — ADC Auth Migration
+
+### Changed
+- `utils/gemini_client.py` — Gemini client now uses Application Default
+  Credentials (ADC) as the primary auth path. API key fallback preserved for
+  Streamlit Cloud. No code changes needed after `gcloud auth application-default
+  login` — same credential used by Gemini CLI.
+- `utils/sheet_readers.py` — `get_gspread_client()` resolution chain updated:
+  ADC first (local CLI), then GCP_SERVICE_ACCOUNT_JSON env var (GitHub Actions),
+  then Streamlit secrets, then local service_account.json file. All existing
+  paths preserved.
+- `config.py` — `GEMINI_MODEL` default updated to `gemini-2.5-pro` (Vertex AI
+  accessible). Override via Streamlit secret `gemini_model` if needed.
+
+### Infrastructure
+- Enabled Vertex AI API (`aiplatform.googleapis.com`) on GCP project
+  `re-property-manager-487122`.
+
+### Architecture Note
+Local CLI agent runs now share auth with Gemini CLI. No API keys in environment
+variables, no JSON files on disk. One-time setup:
+`gcloud auth application-default login && gcloud auth application-default set-quota-project re-property-manager-487122`
+
+**Status:** Safe to deploy. ADC path fails gracefully to next option — Streamlit
+Cloud behavior unchanged.
+
+---
+
 ## [2026-04-10] — Phase 5-S: Post-Integration Bug Fixes
 
 ### fix: Portfolio total, prices, descriptions, and valuation accuracy
