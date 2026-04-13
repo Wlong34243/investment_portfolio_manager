@@ -4,9 +4,8 @@ content hash. Every AI agent downstream receives a bundle path and stamps
 the hash into its output metadata, creating an auditable chain from
 input snapshot to agent conclusion.
 
-V1 scope: CSV holdings + yfinance enrichment + manual cash. Vault
-documents are NOT included in V1 — see cli_migration_02 for vault
-bundling.
+V1 scope: CSV holdings + yfinance enrichment + manual cash.
+V2 scope: Schwab API + CSV fallback. Pluggable data sources.
 """
 
 import hashlib
@@ -16,7 +15,7 @@ import sys
 from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Union
 
 import pandas as pd
 import yfinance
@@ -27,13 +26,25 @@ from utils.csv_parser import parse_schwab_csv, clean_numeric
 BUNDLE_DIR = Path("bundles")
 BUNDLE_SCHEMA_VERSION = "1.0.0"
 
+# Data source modes for build_bundle()
+SOURCE_SCHWAB = "schwab"
+SOURCE_CSV = "csv"
+SOURCE_AUTO = "auto"
+VALID_SOURCES = {SOURCE_SCHWAB, SOURCE_CSV, SOURCE_AUTO}
+
+# Cash tickers constants
+CASH_TICKERS = {'CASH_MANUAL', 'QACDS', 'CASH & CASH INVESTMENTS'}
+
 @dataclass
 class ContextBundle:
     schema_version: str
     timestamp_utc: str          # ISO-8601 with 'Z' suffix
     bundle_hash: str            # SHA256 hex, 64 chars — computed last
-    source_csv_path: str
-    source_csv_sha256: str      # SHA256 of raw CSV bytes
+    source_csv_path: str        # Identifies the source (path or "schwab_api")
+    source_csv_sha256: str      # Source fingerprint (file SHA or account hash)
+    data_source: str            # "schwab" | "csv"
+    data_source_fingerprint: str # stable identity of the source
+    tax_treatment_available: bool # True only on Schwab path in v1
     positions: list[dict]       # enriched holdings: ticker, qty, price,
                                 # value, cost_basis, sector, weight_pct
     cash_manual: float
@@ -126,16 +137,138 @@ def _normalize_positions(records: list[dict]) -> list[dict]:
         out.append(clean)
     return out
 
-
-def build_bundle(csv_path: Path, cash_manual: float) -> ContextBundle:
+def _build_from_schwab(
+    cash_manual: float,
+) -> tuple[pd.DataFrame, str, list[str]]:
     """
-    Steps:
-      a. Read and parse CSV using the existing project parser.
-      b. Enrich with yfinance unique tickers.
-      c. Compute value, then weight_pct.
-      d. Inject the synthetic CASH_MANUAL row.
-      e. Compute total_value and position_count.
-      f. Build the payload and compute hash.
+    Fetch positions from the live Schwab API.
+
+    Returns:
+        (positions_df, data_source_fingerprint, enrichment_errors)
+
+    Raises:
+        RuntimeError: if get_accounts_client() returns None (no token,
+            auth failure, GCS unreachable) — the caller decides
+            whether to fall back to CSV.
+    """
+    # Lazy import so core/bundle.py is importable even on machines
+    # without schwab-py installed (unit tests, CI).
+    try:
+        from utils.schwab_client import get_accounts_client, fetch_positions
+    except ImportError as e:
+        raise RuntimeError(
+            f"Schwab client not available: {e}. "
+            "Install schwab-py or use --source csv."
+        )
+
+    client = get_accounts_client()
+    if client is None:
+        raise RuntimeError(
+            "Schwab accounts client returned None — token missing, "
+            "expired, or GCS unreachable. Check "
+            "`gsutil ls gs://portfolio-manager-tokens/` and "
+            "the Cloud Function logs. Fall back to --source csv "
+            "or run scripts/schwab_manual_reauth.py."
+        )
+
+    df = fetch_positions(client)
+    if df is None or df.empty:
+        raise RuntimeError(
+            "fetch_positions() returned empty. Check Schwab API "
+            "availability and verify the account hash in secrets.toml."
+        )
+
+    enrichment_errors: list[str] = []
+
+    # Mark every row with price_source="schwab_quote" unless the
+    # 2026-04-10 zero-price patch fires (handled below)
+    df["price_source"] = "schwab_quote"
+
+    # Zero-price fallback: any position where Schwab returned 0
+    # gets yfinance enrichment. This matches the app.py fix from
+    # the 2026-04-10 bug patches.
+    zero_price_mask = df["price"] <= 0
+    if zero_price_mask.any():
+        zero_tickers = df.loc[zero_price_mask, "ticker"].tolist()
+        logger_warning = (
+            f"{len(zero_tickers)} position(s) returned zero price "
+            f"from Schwab; falling back to yfinance: {zero_tickers}"
+        )
+        enrichment_errors.append(logger_warning)
+        for idx in df.index[zero_price_mask]:
+            ticker = df.at[idx, "ticker"]
+            if ticker in CASH_TICKERS:
+                continue
+            try:
+                yt = yfinance.Ticker(ticker)
+                try:
+                    price = yt.fast_info["lastPrice"]
+                except (AttributeError, KeyError, Exception):
+                    hist = yt.history(period="1d")
+                    if hist.empty:
+                        raise ValueError(f"No yfinance data for {ticker}")
+                    price = hist["Close"].iloc[-1]
+                df.at[idx, "price"] = float(price)
+                df.at[idx, "price_source"] = "yfinance_live"
+                # Recompute market_value with the fallback price
+                df.at[idx, "market_value"] = (
+                    float(df.at[idx, "quantity"]) * float(price)
+                )
+            except Exception as e:
+                enrichment_errors.append(
+                    f"Zero-price fallback failed for {ticker}: {e}"
+                )
+
+    # Tax treatment per position. If fetch_positions() already
+    # populates a tax_treatment column, trust it. Otherwise default
+    # to "unknown" and log.
+    if "tax_treatment" not in df.columns:
+        df["tax_treatment"] = "unknown"
+        enrichment_errors.append(
+            "Schwab fetch_positions did not return tax_treatment — "
+            "all positions marked 'unknown'. Extend fetch_positions "
+            "in a follow-up if tax-loss harvesting needs this."
+        )
+
+    # Always inject the synthetic CASH_MANUAL row for schema
+    # consistency, same as CSV path. If fetch_positions already
+    # returned a CASH_MANUAL row (the 2026-04-10 cash aggregation
+    # patch), skip the injection — don't duplicate.
+    if not (df["ticker"] == "CASH_MANUAL").any():
+        cash_row = {
+            "ticker": "CASH_MANUAL",
+            "description": "Manual Cash Entry",
+            "quantity": 1.0,
+            "price": float(cash_manual),
+            "market_value": float(cash_manual),
+            "cost_basis": float(cash_manual),
+            "asset_class": "Cash",
+            "asset_strategy": "Cash",
+            "is_cash": True,
+            "price_source": "manual",
+            "tax_treatment": "unknown",
+        }
+        df = pd.concat([df, pd.DataFrame([cash_row])], ignore_index=True)
+
+    # Compute data_source_fingerprint from account hash(es).
+    # For MVP, use the single SCHWAB_ACCOUNT_HASH from config.
+    import hashlib
+    import config as _config
+    account_hash = getattr(_config, "SCHWAB_ACCOUNT_HASH", "")
+    source_fingerprint = hashlib.sha256(
+        account_hash.encode("utf-8")
+    ).hexdigest()[:16]
+
+    return df, source_fingerprint, enrichment_errors
+
+def _build_from_csv(
+    csv_path: Path,
+    cash_manual: float,
+) -> tuple[pd.DataFrame, str, list[str]]:
+    """
+    Parse a Schwab CSV export into the same DataFrame shape as
+    _build_from_schwab(). Used for disaster recovery and for users
+    without Schwab API access.
     """
     # a. Read and parse CSV
     with open(csv_path, "rb") as f:
@@ -147,13 +280,11 @@ def build_bundle(csv_path: Path, cash_manual: float) -> ContextBundle:
     enrichment_errors = []
     
     # b. Enrich with yfinance
-    # CASH_TICKERS are handled separately or skip enrichment
-    CASH_TICKERS = {'CASH_MANUAL', 'QACDS', 'CASH & CASH INVESTMENTS'}
-    
     unique_tickers = [t for t in df['ticker'].unique() if t.upper() not in CASH_TICKERS]
     
     # Default every row to csv_fallback; flip to yfinance_live only on success.
     df['price_source'] = 'csv_fallback'
+    df['tax_treatment'] = 'unknown' # CSV doesn't carry this info
 
     live_prices: dict[str, float] = {}
     for ticker in unique_tickers:
@@ -178,57 +309,139 @@ def build_bundle(csv_path: Path, cash_manual: float) -> ContextBundle:
     # c. Compute value
     df['market_value'] = df['quantity'] * df['price']
     
-    # d. Always inject synthetic CASH_MANUAL row so bundle schema is
-    # consistent across zero-cash and nonzero-cash snapshots.
+    # d. Always inject synthetic CASH_MANUAL row
     cash_row = {
         'ticker': 'CASH_MANUAL',
         'description': 'Manual Cash Entry',
-        'quantity': float(cash_manual),
-        'price': 1.0,
+        'quantity': 1.0,
+        'price': float(cash_manual),
         'market_value': float(cash_manual),
         'cost_basis': float(cash_manual),
         'asset_class': 'Cash',
         'asset_strategy': 'Cash',
         'is_cash': True,
         'price_source': 'manual',
+        'tax_treatment': 'taxable',
     }
     df = pd.concat([df, pd.DataFrame([cash_row])], ignore_index=True)
 
-    # e. Compute totals
-    total_value = df['market_value'].sum()
-    position_count = len(df)
-    
-    # weight_pct
-    if total_value > 0:
-        df['weight_pct'] = (df['market_value'] / total_value) * 100
-    else:
-        df['weight_pct'] = 0.0
+    return df, csv_sha256, enrichment_errors
 
-    # Convert positions to list of dicts
+def build_bundle(
+    source: str = SOURCE_AUTO,
+    csv_path: Path | None = None,
+    cash_manual: float = 0.0,
+) -> ContextBundle:
+    """
+    Build an immutable context bundle from the requested data source.
+
+    Args:
+        source: "schwab" | "csv" | "auto" (default)
+        csv_path: required if source == "csv" or as fallback for "auto"
+        cash_manual: manual cash balance (used if source doesn't
+            provide one itself)
+
+    Raises:
+        ValueError: on invalid source or missing csv_path when required
+        RuntimeError: on source-specific failure with no fallback available
+    """
+    if source not in VALID_SOURCES:
+        raise ValueError(
+            f"Invalid source '{source}'. Must be one of {VALID_SOURCES}."
+        )
+
+    if source == SOURCE_CSV:
+        if csv_path is None:
+            raise ValueError(
+                "source='csv' requires csv_path. "
+                "Pass --csv PATH or use --source auto."
+            )
+        df, source_fingerprint, enrichment_errors = _build_from_csv(
+            csv_path=csv_path, cash_manual=cash_manual
+        )
+        resolved_source = SOURCE_CSV
+        source_path_repr = str(csv_path)
+
+    elif source == SOURCE_SCHWAB:
+        df, source_fingerprint, enrichment_errors = _build_from_schwab(
+            cash_manual=cash_manual
+        )
+        resolved_source = SOURCE_SCHWAB
+        source_path_repr = "schwab_api"
+
+    elif source == SOURCE_AUTO:
+        try:
+            df, source_fingerprint, enrichment_errors = (
+                _build_from_schwab(cash_manual=cash_manual)
+            )
+            resolved_source = SOURCE_SCHWAB
+            source_path_repr = "schwab_api"
+        except RuntimeError as schwab_err:
+            if csv_path is None:
+                raise RuntimeError(
+                    f"Schwab source failed and no csv_path provided "
+                    f"as fallback. Schwab error: {schwab_err}. "
+                    f"Either provide --csv PATH or debug the Schwab "
+                    f"client."
+                )
+            # Fall back to CSV with a loud warning
+            enrichment_errors = [
+                f"Schwab source failed — fell back to CSV. "
+                f"Schwab error: {schwab_err}"
+            ]
+            df2, source_fingerprint, csv_errors = _build_from_csv(
+                csv_path=csv_path, cash_manual=cash_manual
+            )
+            df = df2
+            enrichment_errors.extend(csv_errors)
+            resolved_source = SOURCE_CSV
+            source_path_repr = str(csv_path)
+    else:
+        raise ValueError(f"Unreachable source branch: {source}")
+
+    # Compute totals (market_value already computed in builders, but re-ensure)
+    df["market_value"] = df["quantity"] * df["price"]
+    total_value = float(df["market_value"].sum())
+    position_count = len(df)
+    if total_value > 0:
+        df["weight_pct"] = (df["market_value"] / total_value) * 100
+    else:
+        df["weight_pct"] = 0.0
+
+    # Sort by market_value descending
+    df = df.sort_values(by="market_value", ascending=False)
+
     positions = _normalize_positions(df.to_dict(orient="records"))
-    
-    # f. Build payload
+    tax_treatment_available = any(
+        p.get("tax_treatment", "unknown") != "unknown"
+        for p in positions
+    )
+
     timestamp_utc = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    
+
+    # source_csv_path and source_csv_sha256 are kept for backward compatibility.
+    # Semantics broaden: identity and fingerprint regardless of source.
     payload = {
         "schema_version": BUNDLE_SCHEMA_VERSION,
         "timestamp_utc": timestamp_utc,
-        "source_csv_path": str(csv_path),
-        "source_csv_sha256": csv_sha256,
+        "source_csv_path": source_path_repr,
+        "source_csv_sha256": source_fingerprint,
+        "data_source": resolved_source,
+        "data_source_fingerprint": source_fingerprint,
+        "tax_treatment_available": tax_treatment_available,
         "positions": positions,
         "cash_manual": float(cash_manual),
         "total_value": float(total_value),
         "position_count": int(position_count),
         "environment": _capture_environment(),
-        "enrichment_errors": enrichment_errors
+        "enrichment_errors": enrichment_errors,
     }
-    
-    # g. Compute hash via the single source of truth helper
+
     bundle_hash = _sha256_canonical(_hashable_payload(payload))
-    
+
     return ContextBundle(
         bundle_hash=bundle_hash,
-        **payload
+        **payload,
     )
 
 def write_bundle(bundle: ContextBundle) -> Path:
@@ -273,5 +486,6 @@ def load_bundle(path: Path) -> dict:
 
 __all__ = [
     "ContextBundle", "build_bundle", "write_bundle", "load_bundle",
-    "BUNDLE_DIR", "BUNDLE_SCHEMA_VERSION"
+    "BUNDLE_DIR", "BUNDLE_SCHEMA_VERSION",
+    "SOURCE_SCHWAB", "SOURCE_CSV", "SOURCE_AUTO", "VALID_SOURCES"
 ]

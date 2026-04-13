@@ -7,7 +7,8 @@ Streamlit web app for tracking, analyzing, and managing a ~$480K liquid investme
 - **Frontend:** Streamlit (Multi-page)
 - **Database:** Google Sheets (via `gspread`)
 - **Market Data:** yfinance, Financial Modeling Prep (FMP), Finnhub, FRED
-- **AI:** Gemini 2.5 Pro (via `google-genai` SDK)
+- **AI:** Gemini 2.5 Flash (via `google-genai` SDK + Vertex ADC)
+- **Model Isolation:** Python app → `gemini-2.5-flash` via `google-genai` + Vertex ADC. Dev assist → Gemini CLI with Code Assist free tier, auto-routed to Gemini 3. These are independent.
 - **Guardrails:** Pydantic (Schema), Python-only Math, PII stripping
 
 ## Project Structure
@@ -97,3 +98,10 @@ Repo additions:
 - **Performance:** Use `ws.col_values()` for fingerprint checks instead of full sheet reads.
 - **Visuals:** Prefer Treemaps for allocation; use `st.toast` for transient notifications.
 - **Pricing:** Trust ingested CSV/API price during ingestion; avoid redundant yfinance refreshes in `enrich_positions`.
+
+## CLI Migration Status
+- **Phase 1: Immutable Data Spine** — COMPLETE. `manager.py snapshot` freezes market state to SHA256-hashed bundles.
+- **Phase 2: Vault Bundling** — COMPLETE. `manager.py vault snapshot` freezes qualitative context (theses).
+- **Phase 3: Re-Buy Analyst** — COMPLETE. First agent ported to bundle interface; Peter Lynch GARP framework integrated.
+- **Phase 4: Schwab API Source** — COMPLETE. Schwab API wired as pluggable data source; `auto` mode defaults to API with CSV fallback.
+- **Phase 5: Agent Kit Completion** — NEXT. Porting remaining agents to the bundle spine.

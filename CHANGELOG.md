@@ -1,5 +1,35 @@
 # Changelog
 
+## [Unreleased] — CLI Migration Phase 4: Schwab API as Bundle Data Source
+
+### Added
+- `core/bundle.py` — pluggable data sources via `source` parameter (`schwab` | `csv` | `auto`).
+- `_build_from_schwab()` helper that calls the existing `utils/schwab_client.fetch_positions()` and wraps it in the same bundle contract as the CSV path.
+- `_build_from_csv()` helper — refactor of the Phase 1b CSV logic into a named helper with a stable return signature.
+- `manager.py snapshot --source` flag with 'auto' as the new default; `--csv` is now optional.
+- Five new smoke tests covering invalid source, required csv_path, auto fallback, auto failure without fallback, and Schwab path data_source propagation.
+- ContextBundle fields: `data_source`, `data_source_fingerprint`, `tax_treatment_available`.
+- Per-position `tax_treatment` field (populated on Schwab path, "unknown" on CSV path).
+- `price_source` vocabulary extended to include "schwab_quote".
+
+### Architecture Decision
+The Schwab API integration was already complete (Phase 5-S, April 2026). Phase 4's actual work was WIRING that existing client into the CLI bundle pipeline, not rebuilding it. `core/bundle.py` now dispatches on a `source` parameter and calls either `_build_from_schwab()` or `_build_from_csv()`, producing the same ContextBundle shape either way. Agents downstream see no difference — they consume the bundle, not the source.
+
+`auto` mode is the new default: it tries Schwab first and falls back to CSV if Schwab fails, emitting a loud enrichment_error recording the fallback. `auto` mode raises if Schwab fails AND no csv_path was provided.
+
+The zero-price yfinance fallback from the 2026-04-10 bug patch is now inside `_build_from_schwab()` rather than `app.py`, so the CLI benefits from the same fix.
+
+The existing Schwab client module, token store, Cloud Function, and OAuth setup are UNCHANGED. Phase 4 is pure integration work.
+
+### Unchanged
+- `utils/schwab_client.py`, `utils/schwab_token_store.py`
+- `cloud_functions/token_refresh/`
+- `scripts/schwab_initial_auth.py`, `scripts/schwab_manual_reauth.py`
+- All Phase 1-3c bundle, vault, composite, and agent logic
+- The Streamlit app (still runs in parallel; Phase 7 retires it)
+
+**Status:** `manager.py snapshot` defaults to --source auto. Schwab is the primary data path; CSV is retained for disaster recovery and explicit fallback. All Phase 3+ agents work unchanged against Schwab-sourced bundles.
+
 ## [Unreleased] — CLI Migration Phase 2: Vault Bundling
 
 ### Added
