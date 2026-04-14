@@ -1,3 +1,11 @@
+---
+ticker: ET
+style: 
+framework_preference: 
+entry_date:
+last_reviewed:
+---
+
 # ET — Investment Thesis
 
 ## Style
@@ -7,7 +15,7 @@ High-Yield Midstream / Master Limited Partnership (MLP) / Value
 Buying the physical "toll roads" of American energy infrastructure at a discount. Upside is driven by massive, fee-based cash flows that are largely insulated from the day-to-day price swings of crude oil and natural gas. Energy Transfer operates one of the largest, most impossible-to-replicate pipeline and export terminal networks in North America. The key question is whether management has permanently abandoned its historically reckless M&A empire-building in favor of disciplined debt reduction and steady distribution growth. Judgment: yes.
 
 ## Entry Context
-Cost basis: $16.93. At entry, ET was trading at a very attractive distributable cash flow (DCF) multiple, offering a hefty, well-covered distribution (yield). Buying in the mid-to-high teens means you are paying a fair price for a deleveraging asset base. The total return profile here is heavily weighted toward cash income rather than explosive multiple expansion. 
+Cost basis: $19.34. At entry, ET was trading at a very attractive distributable cash flow (DCF) multiple, offering a hefty, well-covered distribution (yield). Buying in the mid-to-high teens means you are paying a fair price for a deleveraging asset base. The total return profile here is heavily weighted toward cash income rather than explosive multiple expansion. 
 
 ## Bull Case
 - **Fee-Based Cash Flow:** The vast majority of ET's revenue comes from long-term, fee-based contracts (take-or-pay). They get paid based on the volume of hydrocarbons moving through their pipes, not the spot price of the commodity, making cash flows highly predictable.

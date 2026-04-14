@@ -1,0 +1,85 @@
+{
+  "framework_id": "van_tharp_position_sizing",
+  "framework_version": "1.0",
+  "framework_type": "position_sizing",
+  "author": "Van K. Tharp",
+  "source": "Trade Your Way to Financial Freedom (Van K. Tharp, 1998)",
+  "reviewed_by_bill": true,
+  "applies_to_asset_classes": ["equity", "etf"],
+  "applies_to_styles": ["GARP", "THEME", "FUND", "ETF"],
+  "description": "ATR-based R-multiple position sizing. 1R = ATR × 3.0 (volatility stop). Position size = (equity × risk_pct) / 1R. Expectancy over accuracy.",
+
+  "python_pre_computation_required": true,
+  "pre_computation_note": "All sizing math MUST be computed in Python before any LLM call. Call agents.framework_selector.compute_van_tharp_sizing() with ATR from calculated_technical_stops. Gemini never computes position sizes, 1R, or R-multiples.",
+
+  "parameters": {
+    "atr_multiplier": 3.0,
+    "risk_pct_per_trade": 0.01,
+    "note": "atr_multiplier=3.0 (Tharp's volatility stop). risk_pct_per_trade=1% of portfolio equity per position. Distinct from enrich_atr.py's 2.5x multiplier which is a protective stop, not 1R."
+  },
+
+  "core_philosophy": [
+    "Expectancy over Accuracy: The percentage of winning trades is largely irrelevant. A system that is right only 30% of the time can be highly profitable if the winning trades (rewards) are significantly larger than the losing trades (risks).",
+    "The Holy Grail is Position Sizing: Success comes from psychological discipline, strict risk management, and mathematically defined position sizing, not from a magic entry or 'stock picking' signal."
+  ],
+
+  "quantitative_trading_rules": {
+    "rule_1_initialization_of_base_risk_1R": {
+      "definition": "The system must predefine the initial risk (1R) for every trade, which represents the maximum worst-case capital loss allowed per unit traded, excluding slippage and gap openings.",
+      "mathematical_formula": "1R = |Entry_Price - Initial_Stop_Loss_Price|",
+      "execution_constraint": "The algorithm MUST establish an initial stop-loss price prior to entry. 1R serves as the absolute baseline benchmark against which all subsequent potential gains and losses are measured."
+    },
+    "rule_2_computation_of_trade_outcomes": {
+      "definition": "All projected and realized trade outcomes must be calculated strictly as multiples of the initial risk (R-Multiples), completely disregarding raw percentage price gains or absolute asset values.",
+      "mathematical_formula": "R-Multiple = (Exit_Price - Entry_Price) / 1R (adjust sign for short positions to ensure profit is positive)",
+      "execution_constraint": "Winning trades yield positive R-multiples (e.g., generating $1,000 on a trade with a $500 1R yields a 2-R multiple), and losing trades yield negative R-multiples."
+    },
+    "rule_3_calculation_of_system_expectancy": {
+      "definition": "The agent must continuously calculate Expectancy to mathematically determine the average amount of money the system will generate per dollar risked over a series of trades.",
+      "mathematical_formula_basic": "Expectancy = (PW * AW) - (PL * AL)",
+      "mathematical_formula_matrix": "Expectancy = Sum(PW_i * AW_i) - Sum(PL_i * AL_i)",
+      "variables": "PW = Probability of a winning trade, AW = Average gain as positive R-multiple, PL = Probability of a losing trade, AL = Average loss as positive R-multiple.",
+      "execution_constraint": "The agent must only deploy capital into systems and setups where Expectancy > 0."
+    },
+    "rule_4_evaluation_via_asymmetric_payoffs": {
+      "definition": "The algorithmic agent must evaluate and optimize for trades that yield large, asymmetric R-multiple profits (e.g., 10-R or 20-R), explicitly overriding the percentage win rate (reliability) and percentage price returns.",
+      "logic": "A trade profile with a low win rate (e.g., 36%) but high asymmetric R-multiples MUST be mathematically prioritized over a system with a high win rate (e.g., 90%) but negative or low R-multiples.",
+      "execution_constraint": "The agent must define the tightness of the 1R stop; a tighter 1R stop makes the same target price movement yield an exponentially larger R-multiple. The agent must strictly abort trades at 1R to cut losses short, while using trailing stops to let profits run."
+    },
+    "rule_5_normalization_of_position_sizing": {
+      "definition": "The agent must utilize 1R to normalize position sizing across diverse asset classes, ensuring strict risk parity regardless of the underlying asset's price or percentage volatility.",
+      "mathematical_formula": "Position_Size (Units) = (Total_Account_Equity * Target_Risk_Percentage) / 1R_Dollar_Value",
+      "execution_constraint": "The agent must equate a 1R risk to the exact same percentage of total account equity (e.g., 1%) across all positions. This mathematically isolates the algorithm from the raw percentage price changes of the underlying assets."
+    }
+  },
+
+  "position_sizing_algorithm": {
+    "step_1_system_equity_and_risk_limit": {
+      "objective": "Calculate the maximum absolute dollar amount of capital that can be lost on a single trade based on current equity.",
+      "logic": "The Percent Risk Model mandates risking only a constant percentage of current total account equity on any given position.",
+      "formula": "Total_Allowable_Risk = Total_Portfolio_Equity * Risk_Percentage"
+    },
+    "step_2_market_volatility_atr": {
+      "objective": "Quantify the daily price fluctuation (noise) of the underlying asset to ensure protective stops are placed objectively.",
+      "logic": "Determine the Average True Range (ATR), which factors in gap openings.",
+      "formula": "ATR = Moving_Average(True_Range, Time_Period)"
+    },
+    "step_3_establish_volatility_stop_1R": {
+      "objective": "Define the worst-case exit point, establishing the initial risk (1R) on a per-share basis.",
+      "logic": "Multiply the calculated ATR by a constant multiplier (3.0x ATR) to keep the stop safely outside of normal daily market noise.",
+      "formula": "Per_Share_Risk_1R = ATR * 3.0",
+      "stop_price_calculation_long": "Initial_Stop_Loss = Entry_Price - Per_Share_Risk_1R",
+      "stop_price_calculation_short": "Initial_Stop_Loss = Entry_Price + Per_Share_Risk_1R"
+    },
+    "step_4_execute_position_sizing": {
+      "objective": "Determine the exact number of shares to purchase by equating the per-share risk to the total allowable portfolio risk.",
+      "logic": "Divide the total allowable dollar risk by the per-share dollar risk.",
+      "formula": "Number_of_Shares = Total_Allowable_Risk / Per_Share_Risk_1R"
+    },
+    "step_5_implement_volatility_trailing_stops": {
+      "objective": "Lock in profits as the market moves in favor of the trade while strictly limiting downside.",
+      "logic": "Recalculate the volatility stop daily based on the asset's closing price. The trailing stop must only move in the direction of the trade.",
+      "formula_long": "Current_Trailing_Stop = MAX(Previous_Stop_Price, Current_Close - (ATR * 3.0))"
+    }
+  }
+}

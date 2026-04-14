@@ -1,3 +1,11 @@
+---
+ticker: SGOV
+style: 
+framework_preference: 
+entry_date:
+last_reviewed:
+---
+
 # SGOV — Investment Thesis
 
 ## Style
@@ -7,7 +15,7 @@ Cash Management / Capital Preservation / Risk-Free Yield
 Buying supreme liquidity and absolute capital preservation while getting paid the risk-free rate to wait. SGOV (iShares 0-3 Month Treasury Bond ETF) is not an investment for capital appreciation; it is a strategic cash proxy. The upside is entirely tied to earning the prevailing short-term Treasury yield without taking on duration risk or corporate credit risk. It serves as "dry powder," providing the psychological and financial flexibility to aggressively buy equities when market drawdowns occur. The key question is simply whether the current yield justifies the opportunity cost of not being fully invested in risk assets. Judgment: yes, as a tactical portfolio buffer.
 
 ## Entry Context
-Cost basis: ~$100. SGOV trades in a tight band around par, oscillating slightly as interest accrues and is paid out monthly. Buying at this level is entirely agnostic to market timing—it is simply a vehicle to park capital. The entry reflects a conscious decision to secure a high-quality, short-term yield rather than holding zero-interest cash or reaching for yield in riskier corporate paper.
+Cost basis: ~$100.50. SGOV trades in a tight band around par, oscillating slightly as interest accrues and is paid out monthly. Buying at this level is entirely agnostic to market timing—it is simply a vehicle to park capital. The entry reflects a conscious decision to secure a high-quality, short-term yield rather than holding zero-interest cash or reaching for yield in riskier corporate paper.
 
 ## Bull Case
 - **Absolute Safety:** The underlying assets are ultra-short-term US Treasury bills (0-3 months), meaning credit risk is virtually zero. It is as close to a risk-free asset as exists in the financial system.

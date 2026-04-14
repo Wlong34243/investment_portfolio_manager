@@ -1,3 +1,11 @@
+---
+ticker: NFLX
+style: 
+framework_preference: 
+entry_date:
+last_reviewed:
+---
+
 # NFLX — Investment Thesis
 
 ## Style

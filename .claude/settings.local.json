@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python scripts/schwab_initial_auth.py)",
+      "Bash(python:*)",
+      "Bash(PYTHONIOENCODING=utf-8 python smoke_test.py)",
+      "Bash(taskkill /F /IM streamlit.exe)",
+      "Bash(taskkill /F /IM python.exe /FI \"WINDOWTITLE eq streamlit*\")",
+      "WebFetch(domain:www.youtube.com)",
+      "Bash(pip show:*)",
+      "Bash(gh secret:*)",
+      "Bash(gh run:*)",
+      "Bash(ls *.csv)",
+      "Bash(pip install:*)",
+      "Bash(ls /c/Users/WLong/Investment_Portfolio/bundles/composite_bundle_*.json)",
+      "Bash(ls bundles/composite_bundle_*.json)",
+      "Bash(ls vault/theses/*.md)",
+      "Bash(ls:*)"
+    ]
+  }
+}

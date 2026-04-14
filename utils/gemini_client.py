@@ -40,30 +40,32 @@ SAFETY_PREAMBLE = "You must NEVER recommend executing specific trades. You provi
 
 def _build_genai_client():
     """
-    Build a google-genai client using Application Default Credentials (ADC).
-    Works automatically when `gcloud auth application-default login` has been run.
-    No API key or service account JSON required for local CLI use.
+    Two-path credential resolver.
 
-    Falls back to GEMINI_API_KEY env var / Streamlit secrets so the
-    Streamlit Cloud deployment is not broken.
+    Path 1 — ADC / Vertex AI (CLI, local dev):
+      genai.Client(vertexai=True, ...) lets the SDK discover ADC automatically.
+      No explicit credentials object needed; gcloud auth application-default
+      login is sufficient. Model strings must use Vertex AI naming convention
+      (e.g. "gemini-2.5-flash", NOT "gemini-2.5-flash-latest").
 
-    NOTE: When using vertexai=True the model name must be a valid Vertex AI
-    model string (e.g. "gemini-2.0-flash", "gemini-2.5-pro-preview-03-25").
-    config.GEMINI_MODEL is passed through as-is — verify it matches the model
-    name used by your Gemini CLI if you change it.
+    Path 2 — API key / AI Studio (Streamlit Cloud):
+      Falls back to GEMINI_API_KEY from env var or Streamlit secrets when ADC
+      is not present (Streamlit Cloud has no gcloud installation).
+
+    Setup once for local CLI:
+      gcloud auth application-default login
+      gcloud auth application-default set-quota-project re-property-manager-487122
     """
     project_id = getattr(config, 'GCP_PROJECT_ID', 're-property-manager-487122')
+    location = getattr(config, 'GCP_LOCATION', 'us-central1')
 
-    # Path 1: ADC — preferred for local CLI use
+    # Path 1: ADC — SDK discovers credentials automatically (no explicit object needed)
     try:
-        credentials, _ = google.auth.default(
-            scopes=["https://www.googleapis.com/auth/cloud-platform"]
-        )
+        google.auth.default()  # raises DefaultCredentialsError if ADC absent
         return genai.Client(
             vertexai=True,
             project=project_id,
-            location="us-central1",
-            credentials=credentials,
+            location=location,
         )
     except google.auth.exceptions.DefaultCredentialsError:
         pass
@@ -71,7 +73,14 @@ def _build_genai_client():
         pass
 
     # Path 2: API key from environment or Streamlit secrets
-    api_key = getattr(config, 'GEMINI_API_KEY', None) or os.environ.get('GEMINI_API_KEY')
+    api_key = os.environ.get('GEMINI_API_KEY')
+    if not api_key:
+        try:
+            import streamlit as st
+            api_key = st.secrets.get("GEMINI_API_KEY")
+        except (ImportError, Exception):
+            pass
+
     if api_key:
         return genai.Client(api_key=api_key)
 
@@ -79,7 +88,7 @@ def _build_genai_client():
         "No Gemini credentials found. Run:\n"
         "  gcloud auth application-default login\n"
         "  gcloud auth application-default set-quota-project re-property-manager-487122\n"
-        "Or set GEMINI_API_KEY in your environment."
+        "Or set GEMINI_API_KEY in Streamlit secrets for cloud deployment."
     )
     return None
 
@@ -235,5 +244,104 @@ def ask_gemini_bundled(
             f"but expected {bundle['bundle_hash']!r}. Overwriting with correct hash."
         )
         result.bundle_hash = bundle["bundle_hash"]
+
+    return result
+
+
+def ask_gemini_composite(
+    prompt: str,
+    composite_bundle_path: Union[Path, str],
+    response_schema: Type[T],
+    ticker: str | None = None,
+    system_instruction: str | None = None,
+    max_tokens: int = 4000,
+) -> T | None:
+    """
+    Composite-bundle-aware Gemini call.
+
+    Loads the composite bundle, verifies hashes on both sub-bundles,
+    and builds a structured context prompt that includes:
+      - Full market bundle positions (from market sub-bundle)
+      - Relevant thesis content (from vault sub-bundle)
+        If ticker is provided: include only that position's thesis.
+        If ticker is None: include all available theses.
+      - theses_missing list so the agent can note coverage gaps.
+
+    The response_schema MUST include a `bundle_hash: str` field.
+    bundle_hash will be populated with composite_hash, not the
+    individual sub-bundle hashes.
+
+    SAFETY_PREAMBLE is still auto-prepended by the underlying ask_gemini()
+    call — do NOT add it here.
+    """
+    from core.composite_bundle import load_composite_bundle
+    from core.bundle import load_bundle
+    from core.vault_bundle import load_vault_bundle
+
+    # 1. Enforce schema contract
+    if "bundle_hash" not in response_schema.model_fields:
+        raise ValueError(
+            f"{response_schema.__name__} must include a 'bundle_hash: str' field "
+            "to be used with ask_gemini_composite()"
+        )
+
+    # 2. Load and verify composite bundle
+    composite = load_composite_bundle(Path(composite_bundle_path))
+    
+    # 3. Load sub-bundles (load_ functions verify their own hashes)
+    market = load_bundle(Path(composite["market_bundle_path"]))
+    vault = load_vault_bundle(Path(composite["vault_bundle_path"]))
+
+    # 4. Filter vault documents (only theses for V2)
+    thesis_docs = []
+    if ticker:
+        ticker_upper = ticker.upper()
+        # Find matching thesis
+        for doc in vault["documents"]:
+            if doc["doc_type"] == "thesis" and doc["ticker"] == ticker_upper:
+                thesis_docs.append(doc)
+                break
+    else:
+        # Include all theses
+        thesis_docs = [doc for doc in vault["documents"] if doc["doc_type"] == "thesis"]
+
+    # 5. Build composite preamble
+    bundle_preamble = (
+        f"COMPOSITE CONTEXT BUNDLE (immutable snapshot):\n"
+        f"  composite_hash: {composite['composite_hash']}\n"
+        f"  market_bundle_hash: {composite['market_bundle_hash']}\n"
+        f"  vault_bundle_hash: {composite['vault_bundle_hash']}\n"
+        f"  timestamp_utc: {composite['timestamp_utc']}\n\n"
+        f"MARKET STATE:\n"
+        f"  total_value: {market['total_value']}\n"
+        f"  position_count: {market['position_count']}\n"
+        f"  positions: {json.dumps(market['positions'], default=str)}\n\n"
+        f"VAULT STATE:\n"
+        f"  theses_present: {composite['theses_present']}\n"
+        f"  theses_missing: {composite['theses_missing']}\n"
+        f"  thesis_context: {json.dumps(thesis_docs, default=str)}\n\n"
+        f"You MUST include bundle_hash='{composite['composite_hash']}' "
+        f"in your response.\n\n"
+        f"USER PROMPT:\n{prompt}"
+    )
+
+    # 6. Call LLM
+    result = ask_gemini(
+        bundle_preamble,
+        system_instruction=system_instruction,
+        response_schema=response_schema,
+        max_tokens=max_tokens,
+    )
+
+    if result is None:
+        return None
+
+    # 7. Verify/Overwrite hash
+    if result.bundle_hash != composite["composite_hash"]:
+        logging.warning(
+            f"ask_gemini_composite: LLM returned bundle_hash={result.bundle_hash!r} "
+            f"but expected {composite['composite_hash']!r}. Overwriting."
+        )
+        result.bundle_hash = composite["composite_hash"]
 
     return result

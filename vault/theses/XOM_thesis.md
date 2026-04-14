@@ -1,3 +1,11 @@
+---
+ticker: XOM
+style: 
+framework_preference: 
+entry_date:
+last_reviewed:
+---
+
 # XOM — Investment Thesis
 
 ## Style
@@ -7,7 +15,7 @@ Value / Free Cash Flow Compounder
 Buying a structurally transformed, highly disciplined energy behemoth at a sensible valuation. Upside is driven by industry-leading, low-cost production growth (Guyana, Permian), massive cash returns to shareholders, and a fortress balance sheet, rather than relying on hyper-elevated oil prices. ExxonMobil is no longer just a proxy for the commodity; it is a capital allocation machine operating with a deep structural cost advantage. The key question is whether management maintains its strict capital discipline through the commodity cycle without overspending. Judgment: yes.
 
 ## Entry Context
-Cost basis: $108. At entry, XOM was trading at an attractive free cash flow yield, effectively pricing in a normalized mid-cycle oil environment (e.g., $70–$80/bbl) rather than a perpetual super-cycle. Buying at this level provides a strong margin of safety. The combination of a robust dividend yield and aggressive share repurchases means investors are paid well to hold the stock through standard commodity volatility, while the low-cost asset base drives intrinsic value growth.
+Cost basis: $108.05. At entry, XOM was trading at an attractive free cash flow yield, effectively pricing in a normalized mid-cycle oil environment (e.g., $70–$80/bbl) rather than a perpetual super-cycle. Buying at this level provides a strong margin of safety. The combination of a robust dividend yield and aggressive share repurchases means investors are paid well to hold the stock through standard commodity volatility, while the low-cost asset base drives intrinsic value growth.
 
 ## Bull Case
 - Advantaged Asset Base: Unmatched scale and incredibly low breakevens in the Permian Basin (bolstered by the Pioneer Natural Resources acquisition) and massive, highly profitable offshore developments in Guyana. These assets ensure strong free cash flow generation even if oil drops to $60/bbl.

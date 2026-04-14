@@ -1,0 +1,126 @@
+{
+  "framework_id": "100_bagger_mayer",
+  "framework_version": "1.0",
+  "author": "Christopher Mayer",
+  "source": "100 Baggers: Stocks That Return 100-to-1 and How To Find Them (2015)",
+  "reviewed_by_bill": true,
+  "applies_to_asset_classes": ["equity"],
+  "applies_to_styles": ["GARP", "THEME"],
+  "description": "Quantitative gate and qualitative overlay for identifying extreme compounders capable of returning 100x over 15-25 years. Pre-computed metrics are passed as facts; Gemini writes narrative rationale only.",
+
+  "quantitative_gate": {
+    "description": "Hard filters evaluated in Python before any LLM call. Gemini receives pass/fail per rule and the raw metric — it does NOT re-evaluate thresholds.",
+    "rules": [
+      {
+        "rule_id": "acorn",
+        "name": "Acorn Principle — Market Cap",
+        "description": "Companies must be small enough to multiply 100-fold. Large companies cannot achieve this geometrically.",
+        "threshold_usd": 1000000000,
+        "threshold_label": "< $1B ideally; < $2B hard ceiling",
+        "ideal_target_usd": 500000000,
+        "python_field": "market_cap_usd",
+        "pass_condition": "market_cap_usd < 2_000_000_000",
+        "reject_condition": "market_cap_usd >= 2_000_000_000",
+        "note": "Most portfolio holdings will fail this gate — that is expected and informative."
+      },
+      {
+        "rule_id": "roic",
+        "name": "Compounding Efficiency — ROIC",
+        "description": "Return on Invested Capital measures how efficiently the business converts capital into earnings. Sustained high ROIC is mathematical proof of a durable moat.",
+        "threshold_pct": 18.0,
+        "minimum_years": 4,
+        "python_field": "roic_pct",
+        "pass_condition": "roic_pct >= 18.0",
+        "soft_pass_condition": "roic_pct >= 15.0",
+        "reject_condition": "roic_pct < 15.0",
+        "note": "Use key-metrics TTM endpoint. If ROIC unavailable, use ROE as a proxy."
+      },
+      {
+        "rule_id": "revenue_growth",
+        "name": "Top-Line Revenue Growth",
+        "description": "High ROIC without growth produces no compounding. Organic revenue growth is required.",
+        "threshold_pct": 10.0,
+        "python_field": "revenue_growth_3yr_cagr_pct",
+        "pass_condition": "revenue_growth_3yr_cagr_pct >= 10.0",
+        "reject_condition": "revenue_growth_3yr_cagr_pct < 10.0",
+        "note": "Computed as 3-year CAGR from income statement. Prefer 3yr over 1yr to smooth volatility."
+      },
+      {
+        "rule_id": "gross_margin",
+        "name": "Gross Margin — Moat Indicator",
+        "description": "Structural gross margins above 50% are mathematical proof of pricing power and competitive advantage competitors cannot undercut.",
+        "threshold_pct": 50.0,
+        "soft_threshold_pct": 30.0,
+        "python_field": "gross_margin_pct",
+        "pass_condition": "gross_margin_pct >= 50.0",
+        "soft_pass_condition": "gross_margin_pct >= 30.0",
+        "reject_condition": "gross_margin_pct < 30.0",
+        "note": "For capital-intensive sectors (energy, mining, industrials), apply the soft threshold."
+      },
+      {
+        "rule_id": "dividend_payout",
+        "name": "Dividend Leak — Capital Allocation",
+        "description": "Dividends are a leak. A 100-bagger candidate must reinvest all free cash flow internally or via buybacks.",
+        "target_pct": 0.0,
+        "threshold_pct": 20.0,
+        "python_field": "dividend_payout_ratio_pct",
+        "pass_condition": "dividend_payout_ratio_pct <= 20.0",
+        "penalty_condition": "dividend_payout_ratio_pct > 40.0",
+        "note": "A 0% payout is ideal. Penalize, do not hard-reject, on this rule alone."
+      }
+    ],
+    "overall_pass_logic": "MUST pass acorn, roic, and revenue_growth. gross_margin soft pass acceptable for capital-intensive sectors. dividend_payout is a soft penalty, not a hard reject."
+  },
+
+  "qualitative_overlay": {
+    "description": "Evaluated by Gemini from thesis file and market context — only if quantitative gate passed or is borderline.",
+    "pillars": [
+      {
+        "name": "Skin in the Game",
+        "description": "Insider ownership ideally > 10%. Founder-led businesses with founder still active are heavily favored.",
+        "signals": [
+          "Founder still active in CEO / Executive Chair role",
+          "Insider ownership > 10% of shares outstanding",
+          "Open-market insider buys (not option grants)",
+          "Low executive base salary relative to equity comp"
+        ]
+      },
+      {
+        "name": "The Twin Engines",
+        "description": "100-bagger requires BOTH earnings growth AND multiple expansion. Evaluate current valuation relative to growth rate.",
+        "signals": [
+          "Current P/E or EV/EBITDA is reasonable relative to growth rate (PEG < 1.5)",
+          "Revenue growth accelerating (not decelerating)",
+          "Expanding gross margins signal operating leverage ahead",
+          "Market does not yet fully recognize the compounding potential"
+        ]
+      },
+      {
+        "name": "Coffee-Can Holding Mindset",
+        "description": "Would you be comfortable putting this in a coffee can and forgetting about it for 10+ years?",
+        "signals": [
+          "Business model understandable and durable",
+          "Not dependent on a single customer or contract",
+          "Competitive position strengthening, not eroding",
+          "Management communicates clearly with shareholders (Baid candor test)"
+        ]
+      }
+    ]
+  },
+
+  "recommendation_levels": {
+    "STRONG_BUY": "Passes all quantitative gates. Strong qualitative overlay. Conviction compounder — coffee-can candidate.",
+    "WATCHLIST": "Passes most quantitative gates but fails 1-2 (often market cap, which will shrink as position matures). Worth monitoring for entry timing.",
+    "REJECT": "Fails core quantitative gate (ROIC < 15%, revenue growth < 10%, or market cap > $5B). Cannot achieve 100x from current base."
+  },
+
+  "scoring_guidance": {
+    "note": "Gemini writes narrative for each evaluation field. Python provides the raw metric and pass/fail — Gemini explains WHY it matters in context.",
+    "acorn_evaluation": "State whether market cap passes the gate. For large-cap holdings (NVDA, GOOG etc.), explain why they cannot achieve 100x but may still be excellent GARP holds.",
+    "roic_evaluation": "Compare ROIC to the 18% threshold. If using ROE as proxy, note it.",
+    "growth_evaluation": "Comment on revenue growth trajectory — accelerating, decelerating, or stable.",
+    "margin_evaluation": "Comment on gross margin level and trend — is the moat widening or compressing?",
+    "dividend_evaluation": "For 0% payout: reward. For high payout: flag as capital allocation concern.",
+    "fundamental_reason": "One sentence summary: 'NVDA has grown beyond the Acorn threshold but remains a GARP compounder with unmatched ROIC.'"
+  }
+}

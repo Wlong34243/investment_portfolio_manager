@@ -1,3 +1,11 @@
+---
+ticker: IREN
+style: 
+framework_preference: 
+entry_date:
+last_reviewed:
+---
+
 # IREN — Investment Thesis
 
 ## Style
@@ -7,7 +15,7 @@ Hyper-Growth / Speculative Tech / Green AI Compute
 Buying a highly volatile, next-generation infrastructure company leveraging 100% renewable energy to power the two most energy-intensive industries on earth: Bitcoin mining and AI cloud compute. Upside is driven by the aggressive buildout of data centers specifically designed for Nvidia H100/B200 GPUs, funded by cash flows from their Bitcoin mining fleet. Iris Energy is a bet that hyperscalers will pay a massive premium for green, immediately available megawatt capacity. The key question is whether they can secure enough high-margin AI cloud contracts to justify the staggering capital expenditures required for the hardware. Judgment: yes, as a high-risk growth allocation.
 
 ## Entry Context
-Cost basis: $39.31. Buying at this level reflects extreme optimism regarding the company's AI pivot. At nearly $40, IREN is being priced as a legitimate AI cloud provider, not just a crypto miner. This entry requires management to flawlessly execute their GPU deployment strategy and secure massive, long-term cloud service agreements to prevent the valuation from collapsing.
+Cost basis: $33.22. Buying at this level reflects extreme optimism regarding the company's AI pivot. At nearly $40, IREN is being priced as a legitimate AI cloud provider, not just a crypto miner. This entry requires management to flawlessly execute their GPU deployment strategy and secure massive, long-term cloud service agreements to prevent the valuation from collapsing.
 
 ## Bull Case
 - **The "Green" Premium:** Big Tech companies have massive ESG (Environmental, Social, and Governance) mandates. They are desperate for compute, but they cannot afford to ruin their carbon-neutral pledges by using coal-powered data centers. IREN’s 100% renewable power sites offer a highly attractive, premium solution.

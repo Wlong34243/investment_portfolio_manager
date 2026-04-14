@@ -1,3 +1,11 @@
+---
+ticker: CNQ
+style: 
+framework_preference: 
+entry_date:
+last_reviewed:
+---
+
 # CNQ — Investment Thesis
 
 ## Style
@@ -7,7 +15,7 @@ Value / Energy Compounder / Free Cash Flow Machine
 Buying a premium, wide-moat oil and gas producer that operates more like a high-yield utility than a cyclical wildcatter. Upside is driven by their incredibly long-life, low-decline oil sands assets which require minimal sustaining capital expenditures. This allows Canadian Natural Resources to return massive amounts of free cash flow to shareholders across almost any commodity price environment. The key question is whether the Canadian political and regulatory environment will remain stable enough to let them extract and export their reserves without punitive taxation. Judgment: yes.
 
 ## Entry Context
-Cost basis: ~$30. This is a fantastic, deep-in-the-money entry point. Buying CNQ at this level captures a massive margin of safety against the volatility of the global oil market. At $30, you are sitting on a massive yield-on-cost and significant capital appreciation, allowing you to confidently hold the asset through standard commodity cycles without fear of permanent capital impairment.
+Cost basis: ~$30.88. This is a fantastic, deep-in-the-money entry point. Buying CNQ at this level captures a massive margin of safety against the volatility of the global oil market. At $30, you are sitting on a massive yield-on-cost and significant capital appreciation, allowing you to confidently hold the asset through standard commodity cycles without fear of permanent capital impairment.
 
 ## Bull Case
 - **The "Low Decline" Advantage:** Unlike US shale companies that have to constantly drill new wells just to keep their production flat, CNQ's oil sands mining operations have a near-zero decline rate. Once the facility is built, it produces steady oil for decades with minimal maintenance costs.

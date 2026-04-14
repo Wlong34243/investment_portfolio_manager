@@ -1,3 +1,11 @@
+---
+ticker: BBJP
+style: 
+framework_preference: 
+entry_date:
+last_reviewed:
+---
+
 # BBJP — Investment Thesis
 
 ## Style
@@ -7,7 +15,7 @@ Developed International / Macro Turnaround / Low-Cost Indexing
 Buying the structural, generational turnaround of the Japanese economy at a rock-bottom expense ratio (0.19%). Upside is driven by the end of a 30-year deflationary spiral, rising domestic wage growth, and a relentless push by the Tokyo Stock Exchange to force lazy, cash-hoarding corporations to buy back stock and improve return on equity (ROE). BBJP is a bet that Japan is finally transitioning from a value-trap into a shareholder-friendly compounder. The key question is whether the Bank of Japan can successfully normalize interest rates without breaking the domestic bond market. Judgment: yes.
 
 ## Entry Context
-Cost basis: ~$72 (Assumed). Buying at this level means capturing the Japanese market after its historic breakout above the 1989 bubble highs. The market is no longer a hidden secret; you are paying for confirmed momentum and structural corporate reform. At ~$72, the total return relies on continued earnings growth fueled by a weak Yen and massive share buybacks.
+Cost basis: ~$71.75 (Assumed). Buying at this level means capturing the Japanese market after its historic breakout above the 1989 bubble highs. The market is no longer a hidden secret; you are paying for confirmed momentum and structural corporate reform. At ~$72, the total return relies on continued earnings growth fueled by a weak Yen and massive share buybacks.
 
 ## Bull Case
 - **Corporate Governance Revolution:** The Tokyo Stock Exchange is actively "naming and shaming" companies that trade below book value. This is forcing Japanese management—historically indifferent to shareholders—to aggressively raise dividends and buy back massive amounts of stock.

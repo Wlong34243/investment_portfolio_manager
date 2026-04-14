@@ -1,3 +1,11 @@
+---
+ticker: DELL
+style: 
+framework_preference: 
+entry_date:
+last_reviewed:
+---
+
 # DELL — Investment Thesis
 
 ## Style
@@ -7,7 +15,7 @@ GARP (Growth at a Reasonable Price) / AI Enterprise Adopter / Cash Compounder
 Buying an incredibly well-managed, shareholder-friendly hardware powerhouse transitioning into the premier enterprise AI server provider. Upside is driven by the explosive demand for high-margin AI servers, a cyclical enterprise PC refresh (fueled by local "AI PCs"), and disciplined capital allocation. Dell is the vital middleman: they take raw Nvidia silicon and engineer the complex cooling, power, and networking systems required for enterprises to actually use them. The key question is whether AI servers will prove structurally accretive to Dell's overall margins, or simply act as low-margin pass-through revenue. Judgment: yes.
 
 ## Entry Context
-Cost basis: $126. Buying at this level means paying a premium over its historical, cyclical-hardware valuation, but accurately pricing in Dell's transformation into an AI-infrastructure player. The market recognizes Dell's execution, so this entry relies on sustained enterprise AI adoption and consistent capital return (dividends/buybacks) to drive total return, rather than deep multiple expansion.
+Cost basis: $126.57. Buying at this level means paying a premium over its historical, cyclical-hardware valuation, but accurately pricing in Dell's transformation into an AI-infrastructure player. The market recognizes Dell's execution, so this entry relies on sustained enterprise AI adoption and consistent capital return (dividends/buybacks) to drive total return, rather than deep multiple expansion.
 
 ## Bull Case
 - **AI Server Dominance:** Dell has secured a massive and rapidly growing backlog for AI servers (ISG segment). They are the vendor of choice for enterprises and tier-2 cloud providers who want to deploy AI but lack the internal engineering teams to build custom racks.

@@ -1,3 +1,11 @@
+---
+ticker: JPIE
+style: 
+framework_preference: 
+entry_date:
+last_reviewed:
+---
+
 # JPIE — Investment Thesis
 
 ## Style
@@ -7,7 +15,7 @@ Active Fixed Income / Monthly Yield / Risk-Adjusted Credit
 Buying an actively managed, low-duration credit portfolio designed to maximize monthly income without taking on the severe interest rate risk of traditional bond funds or the extreme default risk of pure junk bonds. The upside is entirely driven by capturing a high, reliable yield (currently around 5.6%) through a diversified mix of securitized assets (agency and non-agency mortgage-backed securities) and corporate credit. JPIE is a structural middle-ground: it pays out significantly more than aggregate bond indices (like BND) while maintaining much lower volatility than high-yield corporate ETFs (like HYG). The key question is whether the yield premium justifies the added credit risk over risk-free Treasuries (SGOV). Judgment: yes, as a high-income portfolio stabilizer.
 
 ## Entry Context
-Cost basis: ~$46. (Assuming current market NAV, as JPIE trades in a very tight, bounded range—historically between $45 and $47—due to its underlying short-duration bonds). Buying at this level is not about catching a mispriced asset for capital appreciation; it is a strategic yield-capture play. The entry reflects a conscious decision to lock in a ~5.6% annualized yield distributed monthly, capitalizing on current credit spreads without taking on the long-end duration risk that crushed bond investors in 2022.
+Cost basis: ~$46.34. (Assuming current market NAV, as JPIE trades in a very tight, bounded range—historically between $45 and $47—due to its underlying short-duration bonds). Buying at this level is not about catching a mispriced asset for capital appreciation; it is a strategic yield-capture play. The entry reflects a conscious decision to lock in a ~5.6% annualized yield distributed monthly, capitalizing on current credit spreads without taking on the long-end duration risk that crushed bond investors in 2022.
 
 ## Bull Case
 - **Securitized Credit Advantage:** The portfolio is heavily weighted (over 70%) toward securitized assets, particularly mortgage-backed securities (MBS). These offer an attractive yield premium over standard corporate bonds of similar credit quality, providing a strong income floor.

@@ -1,0 +1,89 @@
+{
+  "framework_id": "lynch_garp_v1",
+  "framework_version": "1.0.0",
+  "name": "Peter Lynch GARP (Growth at a Reasonable Price)",
+  "source": "One Up On Wall Street (Peter Lynch, 1989) + extracted rules from Bill's NotebookLM analysis",
+  "extracted_by": "Claude Opus via NotebookLM Lynch framework",
+  "extraction_date": "2026-04-12",
+  "reviewed_by_bill": true,
+  "applies_to_styles": ["garp", "boring"],
+  "applies_to_asset_classes": ["Equities", "Equity"],
+  "excludes_conditions": [
+    "no_earnings",
+    "new_ipo_under_3_years",
+    "asset_class_is_etf"
+  ],
+  "philosophy": "Don't overpay for growth. A P/E ratio is only meaningful relative to the company's growth rate. The sweet spot is sustainable 15-25% growth at a PEG below 1.0, funded by a strong balance sheet.",
+  "rules": [
+    {
+      "rule_id": "peg_in_buy_zone",
+      "description": "PEG ratio is in the buy zone",
+      "required_fields": ["peg_ratio"],
+      "severity": "required",
+      "check_type": "range",
+      "target_min": 0.5,
+      "target_max": 1.0,
+      "interpretation": {
+        "pass": "PEG between 0.5 and 1.0 — undervalued relative to growth",
+        "fail_high": "PEG above 1.0 — paying too much for growth",
+        "fail_low": "PEG below 0.5 — check for earnings cliff or one-time boost"
+      }
+    },
+    {
+      "rule_id": "peg_not_overvalued",
+      "description": "PEG ratio is not in the avoid zone",
+      "required_fields": ["peg_ratio"],
+      "severity": "required",
+      "check_type": "threshold_max",
+      "target_max": 2.0,
+      "interpretation": {
+        "pass": "PEG below 2.0 — not in Lynch's avoid zone",
+        "fail": "PEG above 2.0 — overvalued in Lynch framework, high risk of multiple compression"
+      }
+    },
+    {
+      "rule_id": "earnings_growth_sweet_spot",
+      "description": "Earnings growth is in the 15-25% sustainable sweet spot",
+      "required_fields": ["earnings_growth_rate_3yr"],
+      "severity": "required",
+      "check_type": "range",
+      "target_min": 0.15,
+      "target_max": 0.25,
+      "interpretation": {
+        "pass": "Growth in Lynch's sustainable sweet spot",
+        "fail_low": "Growth under 15% — stalwart territory, limited upside",
+        "fail_high": "Growth above 25% — high deceleration risk, attracts competition"
+      }
+    },
+    {
+      "rule_id": "pe_not_priced_for_perfection",
+      "description": "P/E ratio is below 20 (not priced for perfection)",
+      "required_fields": ["trailing_pe"],
+      "severity": "preferred",
+      "check_type": "threshold_max",
+      "target_max": 20.0,
+      "interpretation": {
+        "pass": "P/E below 20 — reasonable absolute valuation",
+        "fail": "P/E above 20 — may still qualify if PEG is favorable, but elevated risk"
+      }
+    },
+    {
+      "rule_id": "debt_to_equity_conservative",
+      "description": "Debt-to-equity ratio is below 0.30 (strong balance sheet)",
+      "required_fields": ["debt_to_equity"],
+      "severity": "preferred",
+      "check_type": "threshold_max",
+      "target_max": 0.30,
+      "interpretation": {
+        "pass": "Balance sheet meets Lynch's conservative threshold",
+        "fail": "Debt load may amplify downside in a downturn"
+      }
+    }
+  ],
+  "passing_threshold": {
+    "required_rules_passed_minimum": 3,
+    "preferred_rules_passed_minimum": 1,
+    "total_rules": 5
+  },
+  "notes": "v1 is deliberately strict on PEG (two separate rules) because PEG is the mathematical anchor of the framework. The inventory/receivables check from Lynch's book is not included in v1 because it requires line-item balance sheet access that FMP's free tier doesn't expose. Add in v2 if the data source is upgraded."
+}

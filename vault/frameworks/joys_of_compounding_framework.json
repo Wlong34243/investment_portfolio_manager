@@ -1,0 +1,157 @@
+{
+  "framework_id": "joys_of_compounding",
+  "framework_version": "1.0",
+  "author": "Gautam Baid",
+  "source": "The Joys of Compounding (2020)",
+  "reviewed_by_bill": true,
+  "applies_to_asset_classes": ["equity"],
+  "applies_to_styles": ["GARP", "THEME"],
+  "description": "Management quality scoring rubric and behavioral guardrails for thesis maintenance decisions. Evaluates corporate candor, capital stewardship, and alignment between management incentives and shareholder outcomes.",
+
+  "management_scoring_pillars": {
+    "linguistic_candor": {
+      "description": "Does leadership communicate with clarity, precision, and intellectual honesty?",
+      "reward_signals": [
+        "Quantifying mistakes explicitly (e.g., 'We missed our EBITDA target by X due to Y')",
+        "Acknowledging headwinds without euphemism",
+        "Straightforward guidance with clear assumptions",
+        "Owning operational misses rather than blaming macro"
+      ],
+      "penalty_signals": [
+        "FOG language: vague platitudes, meaningless buzzwords",
+        "Abuse of restructuring charges to obscure recurring costs",
+        "Adjusted/non-GAAP metrics that consistently flatter vs. GAAP",
+        "Blame-shifting: macro, competitors, weather, supply chain excuses without data",
+        "Excessive 'synergy', 'ecosystem', 'transformation' without definition"
+      ]
+    },
+    "capital_stewardship": {
+      "description": "Is capital allocation disciplined and shareholder-focused?",
+      "reward_signals": [
+        "Explicit ROIC hurdle rate discussions",
+        "Buybacks only below intrinsic value (not EPS management)",
+        "M&A with clear strategic rationale and integration plan",
+        "Willingness to return cash when no high-ROIC opportunities exist",
+        "Dividend policy tied to earnings, not as a signaling mechanism"
+      ],
+      "penalty_signals": [
+        "Empire-building M&A (scale for scale's sake, diversification without discipline)",
+        "Buybacks at stretched valuations to offset dilution",
+        "Repeated goodwill impairments indicating poor acquisition pricing",
+        "Heavy reliance on adjusted EBITDA to mask capital intensity",
+        "Dividend cuts framed as 'strategic reinvestment'"
+      ]
+    },
+    "skin_in_the_game": {
+      "description": "Is management financially aligned with long-term shareholders?",
+      "reward_signals": [
+        "CEO/founder with meaningful stock ownership (>1% of shares outstanding)",
+        "Low base salary relative to total comp, heavy equity weighting",
+        "Insider cluster-buys on open market (not just option grants)",
+        "Long vesting periods (4+ years) on equity compensation",
+        "Compensation tied to ROIC or book value per share, not revenue growth"
+      ],
+      "penalty_signals": [
+        "Excessive base salary relative to market cap",
+        "Option grants at depressed prices with repricing history",
+        "Insider selling concentrated in leadership (CEO + CFO selling simultaneously)",
+        "Compensation benchmarked to peer revenue, not per-share value creation",
+        "Stock repurchases coinciding with leadership equity liquidation"
+      ]
+    },
+    "red_flags": {
+      "description": "Behavioral or governance patterns that signal thesis deterioration.",
+      "examples": [
+        "Obsession with stock price and short-term EPS optics",
+        "Fad-chasing: sudden pivots to AI, blockchain, or other hype themes with no prior capability",
+        "Related-party transactions not at arm's length",
+        "Revolving door in CFO or auditor without explanation",
+        "Regulatory or accounting restatements",
+        "Aggressive revenue recognition (bill-and-hold, channel stuffing signals)",
+        "Guidance withdrawn repeatedly without clear cause"
+      ]
+    }
+  },
+
+  "inner_vs_outer_scorecard": {
+    "description": "Buffett/Baid framework for evaluating CEO character orientation.",
+    "inner_scorecard": {
+      "definition": "CEO sets standards internally; acts on principles regardless of Wall Street reaction.",
+      "indicators": [
+        "Makes painful short-term decisions for long-term health",
+        "Disagrees with analyst consensus publicly with data",
+        "Communicates bad news promptly and clearly",
+        "Accepts below-consensus earnings when reinvestment payoff horizon is long"
+      ]
+    },
+    "outer_scorecard": {
+      "definition": "CEO optimizes for appearances, external validation, and Wall Street approval.",
+      "indicators": [
+        "Guidance management (sandbag and beat quarter after quarter)",
+        "Heavy investor relations activity, frequent conferences without operational news",
+        "EPS management via buybacks and adjusted metrics",
+        "Strategy announcements timed to boost price before lock-up expirations"
+      ]
+    }
+  },
+
+  "thesis_alignment_check": {
+    "description": "Cross-reference management behavior against original thesis exit conditions.",
+    "questions": [
+      "Does current management behavior invalidate the core_thesis stated in the vault file?",
+      "Has a predefined exit_condition been triggered by management actions?",
+      "Is the original 'edge' (moat, pricing power, capital return) still intact?",
+      "Are margin trends consistent with the thesis narrative (expansion, stability, or acceptable investment phase)?"
+    ],
+    "recommendation_levels": {
+      "MAINTAIN_CONVICTION": "Management behavior consistent with thesis; behavioral guardrails block any downgrade impulse.",
+      "WATCHLIST_DOWNGRADE": "Soft signals of thesis strain; monitor for 1-2 more quarters before acting.",
+      "THESIS_VIOLATED": "Clear management behavior change or exit condition triggered; scale-down warranted."
+    }
+  },
+
+  "behavioral_guardrails": {
+    "description": "Pre-mortem checklist. MUST run before any WATCHLIST_DOWNGRADE or THESIS_VIOLATED recommendation. If a guardrail is triggered, default to MAINTAIN_CONVICTION.",
+    "guardrails": [
+      {
+        "name": "WYSIATI",
+        "full_name": "What You See Is All There Is",
+        "question": "Am I overreacting to a vivid short-term miss while the long-term base rate is still intact?",
+        "block_condition": "One quarter of earnings miss with intact long-term moat = insufficient to downgrade."
+      },
+      {
+        "name": "Disposition Effect",
+        "question": "Am I recommending a trim just to lock in a mental profit — cutting the flowers?",
+        "block_condition": "Selling a compounder simply because it has gained significantly, without thesis change, is emotional, not analytical."
+      },
+      {
+        "name": "Action Bias",
+        "question": "Is this downgrade 'action for action's sake' during market volatility?",
+        "block_condition": "Portfolio volatility or short-term price decline is not a thesis event."
+      },
+      {
+        "name": "Anchoring Bias",
+        "question": "Am I anchoring to the purchase price rather than future earning power?",
+        "block_condition": "Cost basis is irrelevant to forward opportunity. Evaluate on current fundamentals."
+      },
+      {
+        "name": "Envy / Social Proof",
+        "question": "Am I rotating out of a boring compounder to chase a fad or a more exciting narrative?",
+        "block_condition": "Recency bias toward high-momentum names while the original compounder is intact = guardrail triggered."
+      },
+      {
+        "name": "Hyperbolic Discounting",
+        "question": "Am I penalizing the company for depressing short-term earnings to build long-term moat (R&D, capex, market expansion)?",
+        "block_condition": "Deliberate moat-building investments that suppress near-term EPS should be rewarded, not penalized."
+      }
+    ]
+  },
+
+  "scoring_guidance": {
+    "note": "Scores are qualitative narratives, not numeric. Gemini writes descriptive text for each pillar.",
+    "linguistic_candor_score": "Describe candor level: HIGH, MODERATE, or LOW with 1-2 concrete examples.",
+    "capital_stewardship_score": "Describe stewardship quality: DISCIPLINED, ADEQUATE, or QUESTIONABLE with evidence.",
+    "alignment_score": "Describe alignment: STRONG, MODERATE, or WEAK with ownership/comp evidence.",
+    "inner_scorecard_assessment": "ONE sentence: 'Management exhibits an [INNER / OUTER] scorecard orientation because...'"
+  }
+}

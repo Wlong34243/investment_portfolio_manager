@@ -1,3 +1,11 @@
+---
+ticker: ETN
+style: 
+framework_preference: 
+entry_date:
+last_reviewed:
+---
+
 # ETN — Investment Thesis
 
 ## Style
@@ -7,7 +15,7 @@ GARP (Growth at a Reasonable Price) / Industrial Infrastructure / "Picks and Sho
 Buying the premier "picks and shovels" infrastructure provider for the AI data center and electrification supercycles. The upside is driven by an unprecedented surge in data center power density requirements, massive grid modernization efforts, and the reshoring of U.S. manufacturing. Eaton is transforming from a traditional, cyclical industrial components manufacturer into a high-margin, integrated "grid-to-chip" power management behemoth. The key question is whether hyperscaler demand and mega-projects can sustain this elevated growth long enough to justify its premium industrial valuation. Judgment: yes.
 
 ## Entry Context
-Cost basis: $322. With the stock currently trading north of $400 in early 2026, the $322 entry point provided a solid margin of safety before the market fully priced in the sheer velocity of AI infrastructure demand (highlighted by a recent 200% year-over-year surge in data center orders). Buying at that level captured the inflection point of their aggressive expansion—such as the recent $9.5 billion Boyd Thermal acquisition and the new Omaha switchgear plant—turning this from a value-add industrial play into a high-conviction, high-momentum hold.
+Cost basis: $347.30. With the stock currently trading north of $400 in early 2026, the $322 entry point provided a solid margin of safety before the market fully priced in the sheer velocity of AI infrastructure demand (highlighted by a recent 200% year-over-year surge in data center orders). Buying at that level captured the inflection point of their aggressive expansion—such as the recent $9.5 billion Boyd Thermal acquisition and the new Omaha switchgear plant—turning this from a value-add industrial play into a high-conviction, high-momentum hold.
 
 ## Bull Case
 - **The AI Power Bottleneck:** The shift from standard cloud computing racks (10-15 kW) to next-generation AI processors (80-100 kW) requires entirely new electrical and infrastructure. Eaton is perfectly positioned as the dominant provider of switchgear, power distribution units, and uninterruptible power supplies (UPS).

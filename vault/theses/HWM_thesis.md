@@ -1,3 +1,11 @@
+---
+ticker: HWM
+style: 
+framework_preference: 
+entry_date:
+last_reviewed:
+---
+
 # HWM — Investment Thesis
 
 ## Style

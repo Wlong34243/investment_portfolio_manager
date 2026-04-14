@@ -1,0 +1,64 @@
+{
+  "framework_id": "kaeppel_options_v1",
+  "framework_name": "Jay Kaeppel - Probability, Volatility, and Timing",
+  "source": "The Option Trader’s Guide to Probability, Volatility, and Timing (Jay Kaeppel)",
+  "core_philosophy": [
+    "Trade Volatility, Not Direction: Professional options trading is about determining if the market's expectation of future volatility (Implied Volatility) is overpriced or underpriced relative to actual historical movement.",
+    "Theoretical Value vs. Market Price: A trader's edge exists only when they sell an option for more than its theoretical value, or buy it for less, based on statistical volatility ranks."
+  ],
+  "expected_value_probability_analysis": {
+    "objective": "Evaluate if a trade's mathematical expectation is positive by generating a risk curve before execution.",
+    "steps": [
+      {
+        "task": "Identify Break-Even and Max Risk",
+        "logic": "Calculate the exact break-even point (Strike Price minus Premium Collected) and acknowledge the worst-case scenario (unlimited loss down to a stock price of zero)."
+      },
+      {
+        "task": "Statistical Probability",
+        "logic": "Calculate the probability of the underlying security remaining above the break-even price at expiration, using the security's historical volatility."
+      },
+      {
+        "task": "Standard Deviation Testing",
+        "logic": "Map the expected return if the underlying stock makes an extreme two-standard-deviation move against the position. Compare the distance to the break-even points against the probability of closing outside those points."
+      }
+    ]
+  },
+  "tail_risk_justification_naked_puts": {
+    "objective": "Mathematically justify assuming catastrophic tail risk when selling naked OTM puts where maximum profit is limited to premium collected.",
+    "rules": [
+      {
+        "rule_id": "relative_volatility_filter",
+        "description": "Only write naked puts when IV is extremely high.",
+        "parameter": "Relative Volatility Rank of 10",
+        "rationale": "Ensures premium collected is historically 'expensive' enough to warrant the risk."
+      },
+      {
+        "rule_id": "delta_probability_proxy",
+        "description": "Establish a baseline mathematical probability of expiring worthless.",
+        "parameter": "Delta between 0 and -50",
+        "rationale": "Guarantees a greater than 50% theoretical probability of profit at initiation."
+      },
+      {
+        "rule_id": "reward_to_risk_stop_loss",
+        "description": "Strict exit strategy to prevent full tail risk realization.",
+        "logic": "Calculate the price drop required to generate an open loss equal to the maximum profit potential. Place a strict stop-loss near major support levels."
+      }
+    ]
+  },
+  "volatility_skew_strike_selection": {
+    "objective": "Scan the shape of the volatility skew to pinpoint relative mispricing and select optimal strikes.",
+    "mapping_the_skew": "Determine if there is an upward-sloping or downward-sloping skew (e.g., lower strike prices trading at higher volatilities than ATM or higher strikes).",
+    "targeting_strike_disparities": {
+      "strategy": "Vertical Put Spread",
+      "execution": "Sell an option trading at a significantly higher implied volatility (expensive) and buy a further OTM option trading at a lower implied volatility (cheap).",
+      "outcome": "Systematically places mathematical odds further in the trader's favor by spreading cheap options against expensive ones."
+    }
+  },
+  "quantitative_greeks_parameters": {
+    "theta_time_decay": {
+      "optimal_dte_window": "60 days or fewer until expiration to capitalize on accelerating decay.",
+      "risk_management": "Track the 14-DTE threshold for extreme Gamma risk and assignment potential."
+    },
+    "vega_premium_pricing": "Sell premium only when Relative Volatility Rank is 10 to maximize collected time premium."
+  }
+}

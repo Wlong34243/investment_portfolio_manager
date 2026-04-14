@@ -1,3 +1,11 @@
+---
+ticker: DIS
+style: 
+framework_preference: 
+entry_date:
+last_reviewed:
+---
+
 # DIS — Investment Thesis
 
 ## Style

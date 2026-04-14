@@ -1,3 +1,11 @@
+---
+ticker: XLF
+style: 
+framework_preference: 
+entry_date:
+last_reviewed:
+---
+
 # XLF — Investment Thesis
 
 ## Style
@@ -7,7 +15,7 @@ Sector Value / Macro Rate Play / Financial Dividend Compounder
 Buying the foundational bedrock of the US economy—the mega-banks, asset managers, and insurance companies. Upside is driven by the normalization of the yield curve, highly resilient consumer spending, and the structural dominance of the "Too Big To Fail" banks (JPMorgan, BofA) which capture deposits anytime smaller regional banks falter. XLF is a classic value play that provides a solid dividend yield and acts as a counterweight to heavy tech/growth exposure. The key question is whether a looming macroeconomic recession will trigger massive loan defaults before the banks can fully release their massive cash reserves. Judgment: yes, as a portfolio anchor.
 
 ## Entry Context
-Cost basis: ~$40 (Assumed). Buying XLF at this level means acquiring the financial sector at a highly reasonable valuation compared to the S&P 500. The entry prices in a "soft landing" for the US economy, relying on steady net interest income and a rebound in investment banking/M&A fees to drive total returns, alongside aggressive stock buybacks.
+Cost basis: ~$48.39 (Assumed). Buying XLF at this level means acquiring the financial sector at a highly reasonable valuation compared to the S&P 500. The entry prices in a "soft landing" for the US economy, relying on steady net interest income and a rebound in investment banking/M&A fees to drive total returns, alongside aggressive stock buybacks.
 
 ## Bull Case
 - **The Yield Curve Normalization:** An inverted yield curve suppresses bank profits (borrowing short, lending long). As the Fed normalizes rates and the curve steepens, Net Interest Margins (NIM) structurally expand across the entire ETF.

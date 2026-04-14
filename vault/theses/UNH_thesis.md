@@ -1,3 +1,11 @@
+---
+ticker: UNH
+style: garp
+framework_preference: lynch_garp_v1
+entry_date:
+last_reviewed:
+---
+
 # UNH — Investment Thesis
 
 ## Style
@@ -12,7 +20,7 @@ question is whether the regulatory noise and operational issues are temporary
 enough to justify owning it before the recovery is obvious. Judgment: yes.
 
 ## Entry Context
-Cost basis: $307. Stock fell from near $650. At entry, UNH was trading around
+Cost basis: $296.97. Stock fell from near $650. At entry, UNH was trading around
 15x trailing earnings — cheap versus its own historical multiple. The drawdown
 was driven by DOJ scrutiny, political/regulatory overhang, and one-off
 operational headwinds, not by a structural break in the business.

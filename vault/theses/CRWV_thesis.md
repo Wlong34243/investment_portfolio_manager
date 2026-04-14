@@ -1,3 +1,11 @@
+---
+ticker: CRWV
+style: 
+framework_preference: 
+entry_date:
+last_reviewed:
+---
+
 # CRWV — Investment Thesis
 
 ## Style
@@ -7,7 +15,7 @@ Hyper-Growth / AI Infrastructure Pure-Play
 Buying the fastest-growing, pure-play AI cloud infrastructure provider aggressively capturing market share from legacy hyperscalers (AWS, Google, Azure). Upside is driven by their massive backlog, specialized GPU cluster expertise, and tight strategic partnerships with AI heavyweights. CoreWeave is the ultimate "picks and shovels" leverage play on the AI boom. The key question is whether their hyper-growth and massive multi-billion-dollar backlog can outpace the immense capital costs and debt load required to build out these data centers. Judgment: yes, as a high-octane growth satellite.
 
 ## Entry Context
-Cost basis: $76. At entry, CRWV was navigating its post-IPO (March 2025) volatility. Buying at $76 captures the stock well below its 52-week highs, offering an attractive entry point before the market fully digests the sheer scale of their multi-year capacity deals (like the recent Anthropic and Meta agreements). The entry embraces high volatility in exchange for explosive top-line growth.
+Cost basis: $75.25. At entry, CRWV was navigating its post-IPO (March 2025) volatility. Buying at $76 captures the stock well below its 52-week highs, offering an attractive entry point before the market fully digests the sheer scale of their multi-year capacity deals (like the recent Anthropic and Meta agreements). The entry embraces high volatility in exchange for explosive top-line growth.
 
 ## Bull Case
 - **Explosive Revenue & Backlog:** CoreWeave's growth is unprecedented (revenue up 168% YoY in 2025 to over $5B), supported by a staggering backlog of nearly $67 billion. This provides deep visibility into future revenue streams.

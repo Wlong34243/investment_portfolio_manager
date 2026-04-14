@@ -1,3 +1,11 @@
+---
+ticker: PPA
+style: 
+framework_preference: 
+entry_date:
+last_reviewed:
+---
+
 # PPA — Investment Thesis
 
 ## Style
@@ -7,7 +15,7 @@ Thematic ETF / Aerospace & Defense / Geopolitical Hedge
 Buying a diversified, pure-play basket of the companies responsible for national security and global defense. Upside is driven by the structural, unavoidable reality of rising global geopolitical tensions, the replenishing of depleted Western munitions stockpiles, and increased defense spending across NATO. PPA is not a high-growth tech play; it is a defensive, slow-and-steady necessity trade. The key question is whether the notoriously slow, bureaucratic nature of government contracting can translate elevated defense budgets into actual free cash flow for these companies. Judgment: yes, as a portfolio stabilizer.
 
 ## Entry Context
-Cost basis: $138.41. At this level, you are capturing a sector that has been structurally re-rated due to global conflicts. The entry reflects a long-term view that the "peace dividend" of the last 30 years is over, and elevated defense spending is a permanent fixture of the global economy, providing a massive, inelastic floor for these companies.
+Cost basis: $162.19. At this level, you are capturing a sector that has been structurally re-rated due to global conflicts. The entry reflects a long-term view that the "peace dividend" of the last 30 years is over, and elevated defense spending is a permanent fixture of the global economy, providing a massive, inelastic floor for these companies.
 
 ## Bull Case
 - **The Geopolitical Reality:** Between the ongoing war in Eastern Europe, tensions in the Middle East, and the strategic pivot toward deterring China in the Indo-Pacific, global defense budgets are structurally locked in to increase for the next decade.

@@ -1,3 +1,11 @@
+---
+ticker: RSP
+style: 
+framework_preference: 
+entry_date:
+last_reviewed:
+---
+
 # RSP — Investment Thesis
 
 ## Style
@@ -7,7 +15,7 @@ Passive Core / Smart Beta / Anti-Concentration
 Buying the underlying earnings power of the top 500 American companies without taking on the extreme, top-heavy concentration risk of the traditional market-cap-weighted S&P 500. Upside is driven by the broader market participating in economic growth—particularly value, industrials, and mid-cap stocks—rather than relying solely on the "Magnificent Seven" tech monopolies. The key question is whether the average American mega-cap can consistently grow earnings without being entirely eclipsed by the sheer scale of Big Tech. Judgment: yes, as a structural diversifier.
 
 ## Entry Context
-Cost basis: ~$170 (Assumed). Buying RSP is a strategic asset allocation decision to de-risk a portfolio. If your portfolio already holds massive individual allocations to mega-cap tech (like your MSFT, META, and QQQM positions), buying RSP acts as a perfect counterweight. You are intentionally trading some top-heavy tech momentum for structural, broad-market safety. 
+Cost basis: ~$189.32 (Assumed). Buying RSP is a strategic asset allocation decision to de-risk a portfolio. If your portfolio already holds massive individual allocations to mega-cap tech (like your MSFT, META, and QQQM positions), buying RSP acts as a perfect counterweight. You are intentionally trading some top-heavy tech momentum for structural, broad-market safety. 
 
 ## Bull Case
 - **Anti-Fragility:** In the traditional S&P 500 (SPY), a 10% drop in Apple or Microsoft drags the entire index down with it. In RSP, Apple is given the exact same 0.20% weighting as Ralph Lauren or Campbell Soup. This completely insulates the fund from a targeted mega-cap tech crash.

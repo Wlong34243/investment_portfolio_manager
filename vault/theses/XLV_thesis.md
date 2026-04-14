@@ -1,3 +1,11 @@
+---
+ticker: XLV
+style: 
+framework_preference: 
+entry_date:
+last_reviewed:
+---
+
 # XLV — Investment Thesis
 
 ## Style
@@ -7,7 +15,7 @@ Defensive Core / Demographic Tailwind / Sector ETF
 Buying the aging demographic of the developed world and the inelastic, non-discretionary demand for healthcare. XLV provides diversified, massive-scale exposure to the entire US healthcare system: pharmaceutical giants, managed care (insurance), and medical devices. This is a foundational portfolio anchor that provides steady dividend growth and acts as a massive shock absorber during macroeconomic recessions. The key question is whether the relentless innovation in biotech and pharma can continue to outpace the political pressure to cap drug prices and insurance premiums. Judgment: yes, as a core defensive stabilizer.
 
 ## Entry Context
-Cost basis: ~$150 (Assumed). Buying a mature, defensive sector ETF at this level is a strategic asset allocation decision. You are not buying XLV to double your money in 12 months; you are buying it to ensure that when the broader tech market drops 20%, your portfolio doesn't completely crater. The entry relies on a fair valuation relative to the S&P 500 and a historically reliable dividend yield.
+Cost basis: ~$144.21 (Assumed). Buying a mature, defensive sector ETF at this level is a strategic asset allocation decision. You are not buying XLV to double your money in 12 months; you are buying it to ensure that when the broader tech market drops 20%, your portfolio doesn't completely crater. The entry relies on a fair valuation relative to the S&P 500 and a historically reliable dividend yield.
 
 ## Bull Case
 - **The Silver Tsunami:** 10,000 Baby Boomers turn 65 every single day in the US. The structural, guaranteed demographic demand for joint replacements, cardiovascular drugs, and managed Medicare plans provides an unshakeable floor for the sector.

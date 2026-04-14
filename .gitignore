@@ -28,3 +28,9 @@ token_market.json
 # OS files
 .DS_Store
 Thumbs.db
+
+# CLI bundle artifacts — immutable snapshots, regenerable, do not commit
+bundles/
+
+# FMP local cache — regenerable, do not commit
+data/fmp_cache/

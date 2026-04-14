@@ -1,3 +1,11 @@
+---
+ticker: EMXC
+style: 
+framework_preference: 
+entry_date:
+last_reviewed:
+---
+
 # EMXC — Investment Thesis
 
 ## Style
@@ -7,7 +15,7 @@ Geopolitical De-risking / Emerging Markets / Thematic Growth
 Buying the structural growth of emerging markets while explicitly amputating the severe, uninvestable risks of the Chinese Communist Party. Upside is driven by massive demographic tailwinds in India, the dominance of Taiwanese semiconductors (TSMC), and the resurgence of Latin American commodities. EMXC is a direct play on "friend-shoring" and the restructuring of the global supply chain away from China. The key question is whether these ex-China markets possess enough domestic consumption and manufacturing capacity to thrive without relying on a booming Chinese economy. Judgment: yes.
 
 ## Entry Context
-Cost basis: ~$85 (Assumed). At this level, you are paying a premium compared to traditional Emerging Market indexes (like EEM), but that premium is the exact cost of avoiding China's deflationary, heavily regulated, and geopolitically toxic market. Buying here reflects a conviction that the "China discount" is permanent, and capital will structurally flow into the hands of its regional neighbors.
+Cost basis: ~$82.50 (Assumed). At this level, you are paying a premium compared to traditional Emerging Market indexes (like EEM), but that premium is the exact cost of avoiding China's deflationary, heavily regulated, and geopolitically toxic market. Buying here reflects a conviction that the "China discount" is permanent, and capital will structurally flow into the hands of its regional neighbors.
 
 ## Bull Case
 - **The India Engine:** With China stripped out, India becomes a dominant weighting in this ETF. India offers the hyper-growth, expanding middle class, and business-friendly demographics that China offered 20 years ago.

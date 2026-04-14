@@ -1,3 +1,11 @@
+---
+ticker: CFG
+style: 
+framework_preference: 
+entry_date:
+last_reviewed:
+---
+
 # CFG — Investment Thesis
 
 ## Style
@@ -7,7 +15,7 @@ Regional Bank Value / Dividend / Rate-Normalization Play
 Buying a high-quality, super-regional bank that has successfully navigated the commercial real estate (CRE) panic and interest rate shocks. Upside is driven by the normalization of Net Interest Margins (NIM), steady loan growth in the middle-market corporate sector, and a return to aggressive share buybacks. Citizens Financial Group is a well-capitalized survivor in a consolidated banking landscape. The key question is whether they can control deposit costs while avoiding severe credit losses in their legacy office loan portfolio. Judgment: yes, as a value and income stabilizer.
 
 ## Entry Context
-Cost basis: $61.74. At this basis, you are not buying a distressed regional bank at the bottom of a panic; you are paying a fair premium for a normalized, highly profitable institution. This entry implies that the worst of the regional banking crisis is firmly in the rearview mirror, and total return will be driven by capturing the dividend yield and steady compounding as the yield curve normalizes.
+Cost basis: $61.34. At this basis, you are not buying a distressed regional bank at the bottom of a panic; you are paying a fair premium for a normalized, highly profitable institution. This entry implies that the worst of the regional banking crisis is firmly in the rearview mirror, and total return will be driven by capturing the dividend yield and steady compounding as the yield curve normalizes.
 
 ## Bull Case
 - **NIM Expansion:** As the Federal Reserve normalizes interest rates (or the yield curve un-inverts), CFG's Net Interest Margin naturally expands. The pressure of paying high yields to retain depositors eases, allowing more profit to drop to the bottom line.

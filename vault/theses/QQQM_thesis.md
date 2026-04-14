@@ -1,3 +1,11 @@
+---
+ticker: QQQM
+style: 
+framework_preference: 
+entry_date:
+last_reviewed:
+---
+
 # QQQM — Investment Thesis
 
 ## Style
@@ -7,7 +15,7 @@ Passive Growth / Large-Cap Tech Proxy
 Buying the secular, unstoppable growth of the top 100 non-financial companies on the NASDAQ at a lower expense ratio than the legacy QQQ. Upside is driven by the structural dominance of mega-cap technology, the ongoing AI infrastructure and software super-cycle, and the relentless innovation of US-based market leaders. QQQM is a core portfolio growth engine that removes single-stock execution risk while maintaining heavy exposure to the world's most profitable monopolies. The key question is whether the massive valuation premium of the tech sector is justified by its cash flow generation in a normalized interest rate environment. Judgment: yes.
 
 ## Entry Context
-Cost basis: ~$200 (Assumed). At this level, you are paying a premium for the best-performing index of the last decade. Buying here is not a value trade; it is a long-term compounding strategy. The entry assumes that technology will continue to eat the broader economy and that market-cap weighting will naturally trim the losers and ride the winners.
+Cost basis: ~$253.68 (Assumed). At this level, you are paying a premium for the best-performing index of the last decade. Buying here is not a value trade; it is a long-term compounding strategy. The entry assumes that technology will continue to eat the broader economy and that market-cap weighting will naturally trim the losers and ride the winners.
 
 ## Bull Case
 - **The "Magnificent" Moat:** The top holdings (Apple, Microsoft, Nvidia, Amazon, Meta, Google) possess impenetrable economic moats, pristine balance sheets, and pricing power that traditional industrial companies simply cannot match.

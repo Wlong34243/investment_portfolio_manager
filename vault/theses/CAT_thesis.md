@@ -1,3 +1,11 @@
+---
+ticker: CAT
+style: 
+framework_preference: 
+entry_date:
+last_reviewed:
+---
+
 # CAT — Investment Thesis
 
 ## Style
@@ -7,7 +15,7 @@ Cyclical Value / Dividend Compounder / Global Infrastructure
 Buying the undisputed global heavyweight champion of heavy machinery. Upside is driven by a massive, multi-year pipeline of global infrastructure spending, a structural need to mine the metals required for the energy transition (copper, lithium), and aggressive shareholder capital returns. Caterpillar is a highly cyclical business, but its dealer network and service revenue provide a surprisingly stable cash flow floor. The key question is whether global macroeconomic health and infrastructure bills can sustain equipment demand before the standard cyclical downturn hits. Judgment: yes.
 
 ## Entry Context
-Cost basis: $682.95. Buying at this elevated level means you are paying a premium for peak execution and massive momentum. At this price point, the market has fully priced in the infrastructure super-cycle. Your total return here relies on management continuing their massive share buybacks and protecting operating margins during the inevitable macro fluctuations.
+Cost basis: $682.24. Buying at this elevated level means you are paying a premium for peak execution and massive momentum. At this price point, the market has fully priced in the infrastructure super-cycle. Your total return here relies on management continuing their massive share buybacks and protecting operating margins during the inevitable macro fluctuations.
 
 ## Bull Case
 - **The Mining Supercycle:** The global transition to renewable energy and EVs requires an unprecedented amount of mined metals. Mining companies are being forced to upgrade aging fleets with Caterpillar’s autonomous, high-efficiency equipment.

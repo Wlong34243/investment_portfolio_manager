@@ -1,3 +1,11 @@
+---
+ticker: VEA
+style: 
+framework_preference: 
+entry_date:
+last_reviewed:
+---
+
 # VEA — Investment Thesis
 
 ## Style
@@ -7,7 +15,7 @@ Passive Core / Developed International Diversification / Value
 Buying the entire developed world outside of the United States. Upside is driven by a structural reversion to the mean in valuation: international stocks (Europe, Japan, Australia) trade at massive, historic discounts to US equities. VEA captures world-class, multinational compounders (Novo Nordisk, ASML, Toyota, Nestle) that are deeply entrenched in the global economy. The key question is whether a weakening US Dollar and corporate governance reforms in Japan/Europe can finally trigger a sustained period of international outperformance after a decade of US dominance. Judgment: yes, as a core diversification tool.
 
 ## Entry Context
-Cost basis: ~$50 (Assumed). Buying VEA is the definition of a long-term, passive asset allocation decision. You are not timing a breakout; you are securing cheap exposure to global GDP growth with an attractive dividend yield, protecting your portfolio from the risk of the US market suffering a "lost decade" of flat returns due to its high current valuation.
+Cost basis: ~$58.37 (Assumed). Buying VEA is the definition of a long-term, passive asset allocation decision. You are not timing a breakout; you are securing cheap exposure to global GDP growth with an attractive dividend yield, protecting your portfolio from the risk of the US market suffering a "lost decade" of flat returns due to its high current valuation.
 
 ## Bull Case
 - **Historic Valuation Discount:** The gap between US P/E multiples and International P/E multiples is near all-time highs. If global growth normalizes, capital will naturally rotate out of expensive US tech and into cheap European and Japanese value stocks.

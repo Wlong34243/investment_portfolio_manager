@@ -1,3 +1,11 @@
+---
+ticker: CRWD
+style: 
+framework_preference: 
+entry_date:
+last_reviewed:
+---
+
 # CRWD — Investment Thesis
 
 ## Style
@@ -7,7 +15,7 @@ Hyper-Growth / SaaS / Cybersecurity Monopoly
 Buying the undisputed, global apex predator of endpoint and cloud security. Upside is driven by the structural reality of modern cyber warfare: legacy antivirus is dead, and CrowdStrike’s AI-native Falcon platform is an absolute necessity for any Fortune 500 company or government agency. They leverage a massive data advantage ("crowdsourcing" threat data globally) to stop breaches before they happen. The key question is whether their hyper-growth and aggressive module upselling can justify a historically astronomical valuation multiple. Judgment: yes.
 
 ## Entry Context
-Cost basis: ~$320 (Assumed). At this level, you are paying for absolute perfection. CrowdStrike commands one of the highest revenue multiples in the software sector. Buying here means you believe they will successfully transition from just "protecting laptops" to becoming the centralized, all-encompassing security operating system for the global enterprise, heavily mitigating any temporary setbacks (like the infamous July 2024 update glitch).
+Cost basis: ~$499.14 (Assumed). At this level, you are paying for absolute perfection. CrowdStrike commands one of the highest revenue multiples in the software sector. Buying here means you believe they will successfully transition from just "protecting laptops" to becoming the centralized, all-encompassing security operating system for the global enterprise, heavily mitigating any temporary setbacks (like the infamous July 2024 update glitch).
 
 ## Bull Case
 - **The Falcon Platform (Vendor Consolidation):** CISOs are exhausted by managing 20 different security vendors. CrowdStrike allows them to rip out legacy software and consolidate everything (endpoint, cloud, identity, SIEM log management) onto one single, lightweight software agent.

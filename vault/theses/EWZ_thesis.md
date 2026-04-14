@@ -1,3 +1,11 @@
+---
+ticker: EWZ
+style: 
+framework_preference: 
+entry_date:
+last_reviewed:
+---
+
 # EWZ — Investment Thesis
 
 ## Style
@@ -7,7 +15,7 @@ Emerging Market Value / High Yield / Commodity Proxy
 Buying a highly volatile, deep-value emerging market index that acts as a levered play on global commodities and high domestic interest rates. Upside is driven by the sheer cash generation of its top holdings (Vale, Petrobras, Itaú) and structural undervaluation compared to US equities. Brazil is a resource-rich powerhouse that constantly battles its own political instability. The key question is whether the massive dividend yields and low earnings multiples offer a sufficient margin of safety against currency depreciation and government interference. Judgment: yes, as a tactical, high-yield satellite position.
 
 ## Entry Context
-Cost basis: $37.70. Buying at this level reflects a classic emerging market value trade. The valuation is dirt cheap relative to global peers, but accurately prices in the "Brazil discount" (political noise, inflation). This entry relies heavily on the underlying companies distributing massive cash dividends to drive total return while you wait for a favorable commodity cycle or a weakening US Dollar to push the capital appreciation higher.
+Cost basis: $36.99. Buying at this level reflects a classic emerging market value trade. The valuation is dirt cheap relative to global peers, but accurately prices in the "Brazil discount" (political noise, inflation). This entry relies heavily on the underlying companies distributing massive cash dividends to drive total return while you wait for a favorable commodity cycle or a weakening US Dollar to push the capital appreciation higher.
 
 ## Bull Case
 - **Commodity Supercycle:** Brazil is an absolute powerhouse in iron ore, agriculture, and offshore oil. If global inflation remains sticky or if China successfully stimulates its economy, Brazilian exporters will print cash.

@@ -1,3 +1,11 @@
+---
+ticker: CORZ
+style: 
+framework_preference: 
+entry_date:
+last_reviewed:
+---
+
 # CORZ — Investment Thesis
 
 ## Style

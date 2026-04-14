@@ -1,3 +1,11 @@
+---
+ticker: BABA
+style: 
+framework_preference: 
+entry_date:
+last_reviewed:
+---
+
 # BABA — Investment Thesis
 
 ## Style
@@ -7,7 +15,7 @@ Deep Value / Contrarian Turnaround
 Buying a highly profitable, dominant Chinese technology and e-commerce giant at a distressed valuation, driven by extreme geopolitical and macroeconomic pessimism. The upside is not reliant on returning to historical hyper-growth, but rather on immense free cash flow generation, aggressive shareholder capital returns (buybacks/dividends), and a potential stabilization of the Chinese consumer. Alibaba is a wide-moat cash machine priced like a dying business. The key question is whether management can defend its core market share while the CCP and broader Chinese economy allow the underlying intrinsic value to be realized. Judgment: yes, as a calculated contrarian bet.
 
 ## Entry Context
-Cost basis: $117. Buying at this level means catching the stock well below its historical highs, but slightly above its absolute distressed bottom. The entry reflects a belief that the worst of the CCP tech crackdowns are in the rearview mirror and that the valuation (trading at a very low multiple of free cash flow) offers a sufficient margin of safety against the ongoing structural risks in the Chinese economy. 
+Cost basis: $117.43. Buying at this level means catching the stock well below its historical highs, but slightly above its absolute distressed bottom. The entry reflects a belief that the worst of the CCP tech crackdowns are in the rearview mirror and that the valuation (trading at a very low multiple of free cash flow) offers a sufficient margin of safety against the ongoing structural risks in the Chinese economy. 
 
 ## Bull Case
 - **Massive Capital Returns:** Realizing its growth has slowed, management has aggressively pivoted to returning value to shareholders through massive, multi-billion-dollar share repurchase programs and dividends, effectively putting a floor under the stock and boosting per-share metrics.

@@ -1,3 +1,11 @@
+---
+ticker: GOOG
+style: 
+framework_preference: 
+entry_date:
+last_reviewed:
+---
+
 # GOOG — Investment Thesis
 
 ## Style
@@ -7,7 +15,7 @@ GARP (Growth at a Reasonable Price) / Tech Compounder
 Buying a dominant, cash-gushing technology monopoly transitioning through an AI super-cycle. Upside is driven by the sheer resilience of the core Search business, accelerating Cloud profitability, and deep AI (Gemini) integration across an ecosystem of billions of users. Google is a quintessential wide-moat franchise facing perceived existential threats (AI chatbots) and regulatory headwinds. The key question is whether its structural advantages—data, compute, distribution, and capital—are enough to make it an AI winner rather than a victim of disruption. Judgment: yes.
 
 ## Entry Context
-Cost basis: $212. At entry, GOOG was trading at a reasonable forward multiple compared to its mega-cap tech peers. The valuation reflects a "wall of worry" regarding DOJ antitrust rulings and AI-driven search disruption. Rather than pricing in massive premium growth, the entry multiple offers a margin of safety for a business with arguably the strongest underlying unit economics in the world.
+Cost basis: $210.64. At entry, GOOG was trading at a reasonable forward multiple compared to its mega-cap tech peers. The valuation reflects a "wall of worry" regarding DOJ antitrust rulings and AI-driven search disruption. Rather than pricing in massive premium growth, the entry multiple offers a margin of safety for a business with arguably the strongest underlying unit economics in the world.
 
 ## Bull Case
 - Scale and distribution: Ownership of multiple platforms with over 2 billion users (Search, YouTube, Android, Chrome) gives an insurmountable distribution advantage for rolling out new AI products.

@@ -1,3 +1,11 @@
+---
+ticker: INTC
+style: 
+framework_preference: 
+entry_date:
+last_reviewed:
+---
+
 # INTC — Investment Thesis
 
 ## Style
@@ -7,7 +15,7 @@ Deep Value / Turnaround / Geopolitical Foundry Play
 Buying a bruised American semiconductor icon attempting the most difficult manufacturing turnaround in modern tech history. Upside is entirely driven by the successful execution of CEO Pat Gelsinger’s "5 nodes in 4 years" strategy and the structural profitability of Intel Foundry Services (IFS). Intel is a bet that the US government and Western tech giants simply will not allow Taiwan (TSMC) to be the single point of failure for the global silicon supply chain. The key question is whether Intel can fix its manufacturing yields and actually deliver leading-edge chips before its massive capital expenditures bleed the balance sheet dry. Judgment: yes, as a high-risk, geopolitical turnaround.
 
 ## Entry Context
-Cost basis: $45.61. Buying at this level means you bought into the turnaround narrative before the massive, brutal restructuring and dividend cut that occurred when the stock plummeted into the $20s. At a $45 basis, you are holding a legacy position that requires Intel to completely stick the landing on its 18A node and secure massive third-party foundry customers to break even on your entry.
+Cost basis: $41.96. Buying at this level means you bought into the turnaround narrative before the massive, brutal restructuring and dividend cut that occurred when the stock plummeted into the $20s. At a $45 basis, you are holding a legacy position that requires Intel to completely stick the landing on its 18A node and secure massive third-party foundry customers to break even on your entry.
 
 ## Bull Case
 - **The "Western TSMC" Option:** The CHIPS Act and geopolitical anxiety surrounding China and Taiwan make Intel a national security asset. The US government is heavily subsidizing Intel's foundry buildouts in Ohio and Arizona to ensure chips are made on American soil.

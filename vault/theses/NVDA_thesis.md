@@ -1,3 +1,11 @@
+---
+ticker: NVDA
+style: 
+framework_preference: 
+entry_date:
+last_reviewed:
+---
+
 # NVDA — Investment Thesis
 
 ## Style
@@ -7,7 +15,7 @@ Hyper-Growth / AI Monopoly / "Picks and Shovels" Leader
 Buying the undisputed, monopolistic provider of the underlying compute infrastructure for the artificial intelligence revolution. Upside is driven by the structural transition of global data centers from general-purpose computing (CPUs) to accelerated computing (GPUs), where Nvidia owns both the hardware and the software ecosystem. Nvidia is not just a chip designer; it is a full-stack data center platform. The key question is whether hyperscaler capital expenditure can sustain its current hyper-growth trajectory long enough to justify the premium valuation, and whether the CUDA software moat is truly impenetrable. Judgment: yes.
 
 ## Entry Context
-Cost basis: $115 (Post-Split). At entry, NVDA was trading at a high but arguably reasonable forward earnings multiple given its sheer fundamental earnings explosion. The valuation reflects total dominance in AI training and inferencing, meaning you are paying for flawless execution and sustained margin power.
+Cost basis: $166.96 (Post-Split). At entry, NVDA was trading at a high but arguably reasonable forward earnings multiple given its sheer fundamental earnings explosion. The valuation reflects total dominance in AI training and inferencing, meaning you are paying for flawless execution and sustained margin power.
 
 ## Bull Case
 - **The CUDA Moat:** Nvidia’s true advantage isn’t just fast silicon; it’s the CUDA software platform that millions of AI developers are locked into. This creates extremely high switching costs for customers looking at cheaper hardware alternatives.

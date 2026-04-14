@@ -1,3 +1,11 @@
+---
+ticker: PANW
+style: 
+framework_preference: 
+entry_date:
+last_reviewed:
+---
+
 # PANW — Investment Thesis
 
 ## Style
@@ -7,7 +15,7 @@ GARP (Growth at a Reasonable Price) / Cybersecurity Compounder
 Buying the undisputed, end-to-end platform leader in enterprise cybersecurity. Upside is driven by the structural reality that corporate networks are becoming too complex to defend with 50 different "best-of-breed" point solutions. Palo Alto's "platformization" strategy allows them to aggressively bundle network security, cloud security (Prisma), and AI-driven security operations (Cortex), forcing Chief Information Security Officers (CISOs) to consolidate their spend with PANW. The key question is whether they can sustain top-line growth while giving away free software trials to crush smaller competitors. Judgment: yes.
 
 ## Entry Context
-Cost basis: ~$300 (Assumed). At this level, PANW commands a premium multiple, reflecting its status as the "Microsoft of Cybersecurity." The market fully recognizes the platformization strategy. Your return relies on management successfully converting their massive pipeline of deferred revenue and free-trial users into high-margin, multi-year contracts.
+Cost basis: ~$189.64 (Assumed). At this level, PANW commands a premium multiple, reflecting its status as the "Microsoft of Cybersecurity." The market fully recognizes the platformization strategy. Your return relies on management successfully converting their massive pipeline of deferred revenue and free-trial users into high-margin, multi-year contracts.
 
 ## Bull Case
 - **The Consolidation Mandate:** CISOs are fatigued by managing dozens of disparate security vendors. PANW offers a single pane of glass. By offering aggressive upfront discounts, they are ruthlessly ripping out competitors (like Zscaler or CrowdStrike) and capturing the entire enterprise budget.

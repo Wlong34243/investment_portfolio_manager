@@ -32,6 +32,14 @@ from core.composite_bundle import (
     load_composite_bundle, resolve_latest_bundles,
 )
 from agents.rebuy_analyst import app as rebuy_app
+from agents.add_candidate_analyst import app as add_candidate_app
+from agents.new_idea_screener import app as new_idea_app
+from agents.tax_agent import app as tax_app
+from agents.valuation_agent import app as valuation_app
+from agents.concentration_hedger import app as concentration_app
+from agents.macro_cycle_agent import app as macro_app
+from agents.thesis_screener import app as thesis_app
+from agents.bagger_screener import app as bagger_app
 
 app = typer.Typer(help="Investment Portfolio Manager CLI", no_args_is_help=True)
 console = Console()
@@ -40,7 +48,21 @@ console = Console()
 agent_app = typer.Typer(help="AI agents — run over composite bundles.")
 app.add_typer(agent_app, name="agent")
 agent_app.add_typer(rebuy_app, name="rebuy")
+agent_app.add_typer(add_candidate_app, name="add-candidate")
+agent_app.add_typer(new_idea_app, name="new-idea")
+agent_app.add_typer(tax_app, name="tax")
+agent_app.add_typer(valuation_app, name="valuation")
+agent_app.add_typer(concentration_app, name="concentration")
+agent_app.add_typer(macro_app, name="macro")
+agent_app.add_typer(thesis_app, name="thesis")
+agent_app.add_typer(bagger_app, name="bagger")
 # Usage: python manager.py agent rebuy analyze --bundle latest
+# Usage: python manager.py agent tax analyze --bundle latest
+# Usage: python manager.py agent valuation analyze --bundle latest
+# Usage: python manager.py agent concentration analyze --bundle latest
+# Usage: python manager.py agent macro analyze --bundle latest
+# Usage: python manager.py agent thesis analyze --bundle latest
+# Usage: python manager.py agent bagger analyze --bundle latest
 
 
 @app.command()
@@ -59,6 +81,11 @@ def snapshot(
     cash: float = typer.Option(
         0.0, "--cash",
         help="Manual cash position (USD). Ignored on Schwab path if fetch_positions returns cash from account balances."
+    ),
+    enrich_atr: bool = typer.Option(
+        False, "--enrich-atr",
+        help="After building the snapshot, find the latest composite bundle and inject ATR stops. "
+             "Requires a composite bundle to already exist (run 'manager.py bundle composite' first).",
     ),
     live: bool = typer.Option(False, "--live", help="Enable live mode. Default is DRY RUN."),
 ):
@@ -126,6 +153,39 @@ def snapshot(
         console.print(f"\n[yellow]⚠ {len(bundle.enrichment_errors)} enrichment warning(s):[/]")
         for err in bundle.enrichment_errors[:10]:
             console.print(f"  [yellow]•[/] {err}")
+
+    # ATR enrichment — optional post-snapshot step
+    if enrich_atr:
+        from tasks.enrich_atr import enrich_composite_bundle as _enrich_atr
+        composite_candidates = sorted(
+            Path("bundles").glob("composite_bundle_*.json"),
+            key=lambda p: p.stat().st_mtime,
+        )
+        if not composite_candidates:
+            console.print(
+                "[yellow]! --enrich-atr: No composite bundles found. "
+                "Run 'manager.py bundle composite' first, then re-run with --enrich-atr.[/]"
+            )
+        else:
+            composite_path = composite_candidates[-1]
+            console.print(f"\n[cyan]ATR Enrichment — {composite_path.name}[/]")
+            with console.status("[cyan]Computing ATR stops (yfinance 1mo daily)..."):
+                try:
+                    enriched = _enrich_atr(composite_path)
+                    stops = enriched.get("calculated_technical_stops", [])
+                    triggered = [
+                        s["ticker"] for s in stops
+                        if s.get("current_price", 0) < s.get("stop_loss_level", 0)
+                    ]
+                    console.print(
+                        f"[green]ATR stops computed for {len(stops)} position(s).[/]"
+                    )
+                    if triggered:
+                        console.print(f"[bold red]! ATR TRIGGERED: {triggered}[/]")
+                    else:
+                        console.print("[dim]No ATR stops triggered.[/]")
+                except Exception as e:
+                    console.print(f"[red]ATR enrichment failed: {e}[/]")
 
 
 # --- VAULT GROUP ---
@@ -316,6 +376,35 @@ def bundle_verify(
     except ValueError as ve:
         console.print(f"[red]FAIL Hash verification failed: {ve}[/]")
         raise typer.Exit(code=1)
+
+
+@app.command("analyze-all")
+def analyze_all(
+    fresh_bundle: bool = typer.Option(
+        False, "--fresh-bundle",
+        help="Regenerate market + vault + composite bundles before running agents.",
+    ),
+    agents: str = typer.Option(
+        "rebuy,tax,valuation,concentration,macro,thesis,bagger",
+        "--agents",
+        help="Comma-separated list of agents to run. Default: all.",
+    ),
+    live: bool = typer.Option(
+        False, "--live",
+        help="Write all agent outputs to Agent_Outputs in a single batch. Default: dry run.",
+    ),
+):
+    """
+    Run all portfolio agents in sequence and write outputs in one batch transaction.
+
+    Agent execution is fault-tolerant — one agent failure does not abort the others.
+    Rebuy agent is included in the manifest but uses a legacy write schema (not in
+    the standard Agent_Outputs batch write).
+
+    Run manifest is always written to bundles/runs/ regardless of --live.
+    """
+    from agents.analyze_all import run_analyze_all
+    run_analyze_all(agents_str=agents, fresh_bundle=fresh_bundle, live=live)
 
 
 if __name__ == "__main__":

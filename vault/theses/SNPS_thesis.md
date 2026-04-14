@@ -1,3 +1,11 @@
+---
+ticker: SNPS
+style: 
+framework_preference: 
+entry_date:
+last_reviewed:
+---
+
 # SNPS — Investment Thesis
 
 ## Style
@@ -7,7 +15,7 @@ Wide Moat SaaS / AI Infrastructure Derivative / "Picks and Shovels"
 Buying an impenetrable, duopolistic software moat that is the absolute prerequisite for the artificial intelligence boom. Synopsys provides the Electronic Design Automation (EDA) software required to physically engineer and test complex microchips. Upside is driven by the exponential complexity of AI silicon; you physically cannot design a modern Nvidia GPU, Apple Silicon, or custom Google TPU without paying Synopsys (or its only real rival, Cadence). The key question is whether they can successfully integrate their massive Ansys acquisition without crushing margins. Judgment: yes.
 
 ## Entry Context
-Cost basis: ~$392 (Assumed). At this level, SNPS experienced a recent pullback from its 52-week highs (north of $650). Buying in the $390s means acquiring a historically expensive, ultra-high-quality compounder at a significant discount, likely driven by market fears over the Ansys acquisition debt or temporary semiconductor cycle digestion. The entry offers a rare margin of safety for a near-monopoly.
+Cost basis: ~$385.79 (Assumed). At this level, SNPS experienced a recent pullback from its 52-week highs (north of $650). Buying in the $390s means acquiring a historically expensive, ultra-high-quality compounder at a significant discount, likely driven by market fears over the Ansys acquisition debt or temporary semiconductor cycle digestion. The entry offers a rare margin of safety for a near-monopoly.
 
 ## Bull Case
 - **The Ultimate Chokepoint:** Every major tech company is trying to design their own custom AI chips (ASICs) to escape Nvidia's pricing power. Every single one of them *must* buy Synopsys software to do it. SNPS is agnostic to who wins the chip war; they tax the entire ecosystem.

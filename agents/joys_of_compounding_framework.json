@@ -1,0 +1,72 @@
+{
+  "framework_name": "Gautam Baid - The Joys of Compounding",
+  "version": "1.0.0",
+  "pillars_of_management_evaluation": {
+    "candor": {
+      "metric": "Linguistic Candor",
+      "positive_indicators": ["Explicitly quantifying mistakes", "Clear communication", "High signal-to-noise ratio"],
+      "negative_indicators": ["FOG (meaningless platitudes)", "Abuse of 'restructuring' charges", "Blaming external factors for internal failures"]
+    },
+    "stewardship": {
+      "metric": "Capital Stewardship",
+      "positive_indicators": ["Focus on ROIC/ROI", "Prudent share buybacks at discounts to intrinsic value", "Dividends from surplus cash"],
+      "negative_indicators": ["Empire-building M&A", "Diworsification", "High capex with low returns"]
+    },
+    "alignment": {
+      "metric": "Skin in the Game",
+      "positive_indicators": ["High insider ownership", "Cluster-buys by management", "Low base salary with high performance-based stock hurdles"],
+      "negative_indicators": ["Aggressive insider selling", "Excessive executive compensation unrelated to performance"]
+    },
+    "red_flags": {
+      "metric": "Governance & Behavior",
+      "indicators": ["Stock price obsession", "Fad-chasing buzzwords", "Frequent guidance changes", "Questionable accounting adjustments"]
+    }
+  },
+  "business_moat_rules": {
+    "financial_tests": {
+      "one_dollar_test": "For every dollar of retained earnings, has the company created at least one dollar of market value?",
+      "owner_earnings": "Net Income + Depreciation/Amortization - Maintenance Capex. Does the business generate true distributable cash?",
+      "capex_efficiency": "Distinction between Growth Capex (moat widening) and Maintenance Capex (running to stay in place)."
+    },
+    "qualitative_factors": {
+      "pricing_power": "Ability to raise prices without significant loss of market share (Consumer Monopolies).",
+      "durability": ["High switching costs", "Network effects", "Cost advantages", "Intangible assets/Brand equity"]
+    }
+  },
+  "scorecard_type": {
+    "inner_scorecard": "Focus on internal standards, long-term value creation, and integrity.",
+    "outer_scorecard": "Focus on Wall Street validation, short-term earnings beats, and public image."
+  },
+  "behavioral_guardrails": [
+    {
+      "bias": "WYSIATI & Availability Bias",
+      "description": "Overweighting vivid, recent info like a single bad earnings report.",
+      "guardrail": "Perform 'outside view' analysis; check historical base rates; block trade if the long-term thesis is intact despite short-term noise."
+    },
+    {
+      "bias": "Disposition Effect & Loss Aversion",
+      "description": "Cutting the flowers and watering the weeds (selling winners too early).",
+      "guardrail": "Evaluate portfolio on total wealth %; force hold if intrinsic value is growing regardless of mental profit status."
+    },
+    {
+      "bias": "Action Bias (Do-Something Syndrome)",
+      "description": "Churning the portfolio during volatility just to feel in control.",
+      "guardrail": "Mandatory 'cooling-off period'; verify if action is fundamental or emotional; default to inactivity."
+    },
+    {
+      "bias": "Anchoring Bias",
+      "description": "Focusing on the original purchase price rather than current earning power.",
+      "guardrail": "Mentally 'liquidate' daily; ask: 'Would I buy this at today's price?'; use reverse DCF to ignore cost basis."
+    },
+    {
+      "bias": "Envy and Social Proof",
+      "description": "Rotating from boring compounders to chase hot fads (FOMO).",
+      "guardrail": "Isolate decision from peer performance; flag trades for 'Envy/FOMO' if selling quality for unverified momentum."
+    },
+    {
+      "bias": "Hyperbolic Discounting",
+      "description": "Punishing a company for short-term earnings hits taken to build long-term moats.",
+      "guardrail": "Assess 'Capacity to Suffer'; if earnings are depressed due to high-ROI R&D/Capex, extend evaluation horizon to 5–7 years."
+    }
+  ]
+}

@@ -1,3 +1,11 @@
+---
+ticker: NOW
+style: 
+framework_preference: 
+entry_date:
+last_reviewed:
+---
+
 # NOW — Investment Thesis
 
 ## Style
@@ -7,7 +15,7 @@ Hyper-Growth SaaS / Enterprise Workflow / Legacy Compounder
 Holding the "operating system" for the modern enterprise. Upside is driven by near-zero churn, massive land-and-expand revenue models, and the aggressive monetization of AI tools (Now Assist) embedded directly into white-collar workflows. ServiceNow started as an IT ticketing system and has successfully expanded into HR, customer service, and creator workflows. The key question is whether corporate IT budgets can absorb the premium pricing of their new AI-enabled tiers without forcing vendor consolidation. Judgment: yes.
 
 ## Entry Context
-Cost basis: $116.16. Like Netflix, this is a phenomenal legacy entry. You bought a best-in-class software compounder early in its growth curve. At this basis, you are virtually immune to the daily multiple-contraction volatility that plagues the SaaS sector. The thesis is to hold the asset as it scales into a generational tech behemoth alongside Microsoft and Salesforce.
+Cost basis: $103.13. Like Netflix, this is a phenomenal legacy entry. You bought a best-in-class software compounder early in its growth curve. At this basis, you are virtually immune to the daily multiple-contraction volatility that plagues the SaaS sector. The thesis is to hold the asset as it scales into a generational tech behemoth alongside Microsoft and Salesforce.
 
 ## Bull Case
 - **Incredible Stickiness:** Once an enterprise integrates ServiceNow to manage its internal IT and employee onboarding, it is practically impossible to rip out. This results in renewal rates consistently sitting around 98-99%.

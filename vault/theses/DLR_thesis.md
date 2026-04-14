@@ -1,3 +1,11 @@
+---
+ticker: DLR
+style: 
+framework_preference: 
+entry_date:
+last_reviewed:
+---
+
 # DLR — Investment Thesis
 
 ## Style
@@ -7,7 +15,7 @@ Real Estate Investment Trust (REIT) / Digital Infrastructure / Dividend
 Buying the physical, concrete-and-steel real estate that houses the cloud and the AI revolution. Digital Realty is one of the largest data center REITs in the world. The upside is driven by the insatiable, structural demand for server space, power, and cooling from hyperscalers (Amazon, Microsoft, Google) and enterprises. You cannot build the Metaverse or train AI without a physical building plugged into a massive power grid. The key question is whether DLR can fund the massive capital expenditures required for liquid-cooled AI data centers without over-leveraging its balance sheet. Judgment: yes.
 
 ## Entry Context
-Cost basis: ~$145 (Assumed). Buying at this level reflects paying a fair premium for a REIT that offers both a steady dividend yield and secular tech growth tailwinds. The entry relies on the assumption that AI data center demand is not a temporary bubble, but a multi-decade infrastructure supercycle, allowing DLR to steadily raise its rental lease rates.
+Cost basis: ~$183.34 (Assumed). Buying at this level reflects paying a fair premium for a REIT that offers both a steady dividend yield and secular tech growth tailwinds. The entry relies on the assumption that AI data center demand is not a temporary bubble, but a multi-decade infrastructure supercycle, allowing DLR to steadily raise its rental lease rates.
 
 ## Bull Case
 - **The Interconnection Moat:** DLR doesn’t just rent empty warehouses; it owns "interconnection" hubs. These are the physical buildings where different telecom networks and cloud providers physically connect their fiber optic cables. This ecosystem is incredibly sticky and commands premium, high-margin pricing.

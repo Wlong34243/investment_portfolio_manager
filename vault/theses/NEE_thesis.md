@@ -1,3 +1,11 @@
+---
+ticker: NEE
+style: 
+framework_preference: 
+entry_date:
+last_reviewed:
+---
+
 # NEE — Investment Thesis
 
 ## Style
@@ -7,7 +15,7 @@ Dividend Growth / Defensive Growth / Regulated Utility + Renewables
 Buying the premier, "best-of-both-worlds" hybrid utility company. The upside is driven by a unique dual engine: Florida Power & Light (FPL), a highly profitable, regulated monopoly operating in a booming demographic state, and NextEra Energy Resources (NEER), the world's absolute largest generator of renewable energy from the wind and sun. NextEra offers the downside protection of a regulated utility combined with the long-term growth runway of the clean energy transition. The key question is whether they can continue to finance and build their massive renewable backlog in a higher-interest-rate environment. Judgment: yes.
 
 ## Entry Context
-Cost basis: $75.37. Buying at this level means acquiring a historically premium-valued utility after it took a haircut due to the spike in global interest rates (which crushed all yield-sensitive stocks). At $75.37, the valuation reflects a reasonable multiple for a utility that can consistently grow its earnings and dividend at 6–8% annually, offering a much better entry point than its euphoric 2021 highs.
+Cost basis: $92.51. Buying at this level means acquiring a historically premium-valued utility after it took a haircut due to the spike in global interest rates (which crushed all yield-sensitive stocks). At $75.37, the valuation reflects a reasonable multiple for a utility that can consistently grow its earnings and dividend at 6–8% annually, offering a much better entry point than its euphoric 2021 highs.
 
 ## Bull Case
 - **The Florida Demographic Boom:** FPL operates in one of the fastest-growing states in the country. A constant influx of new residents and businesses guarantees structural, organic load growth that most midwestern or northeastern utilities can only dream of.

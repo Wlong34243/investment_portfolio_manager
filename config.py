@@ -40,6 +40,7 @@ PORTFOLIO_SHEET_ID = _secret(
 # GCP Project Context
 GCP_PROJECT_ID = "re-property-manager-487122"
 GCP_REGION     = "us-central1"
+GCP_LOCATION   = "us-central1"
 
 # Cross-reference to RE Property Manager (READ ONLY — never write from this app)
 RE_DASHBOARD_SHEET_ID = "1DXuY1iBo2GqZCCSZ7OrUa4iaunb5s8Kf1Rms8Z237rQ"
@@ -101,6 +102,7 @@ TAB_INCOME_TRACKING = "Income_Tracking"
 TAB_REALIZED_GL = "Realized_GL"
 TAB_CONFIG = "Config"
 TAB_LOGS = "Logs"
+TAB_AGENT_OUTPUTS = "Agent_Outputs"
 TAB_AI_SUGGESTED_ALLOCATION = "AI_Suggested_Allocation"
 TAB_DECISION_LOG = "Decision_Log"
 
@@ -417,3 +419,37 @@ TICKER_OVERRIDES = {
     }
 }
 DRY_RUN = _secret("dry_run", False)  # Set to False only when ready to write to live Sheet
+
+# ---------------------------------------------------------------------------
+# Phase 5: Agent Squad — Thresholds & Tab Names
+# ---------------------------------------------------------------------------
+# Concentration thresholds (used by concentration_hedger)
+CONCENTRATION_SINGLE_THRESHOLD = 0.08    # 8% single-position flag
+CONCENTRATION_SECTOR_THRESHOLD = 0.30    # 30% sector flag
+CORRELATION_FLAG_THRESHOLD = 0.50        # |r| above this = high-correlation pair (lowered from 0.85 — current market intra-sector tech correlations are 0.50-0.75; output capped at top-25 pairs)
+
+# TLH threshold (used by tax_agent)
+TLH_LOSS_THRESHOLD_USD = -500.0          # minimum unrealized loss to surface as TLH candidate
+
+# Rebalancing threshold (used by tax_agent)
+REBALANCE_THRESHOLD_PCT = 5.0            # drift % to trigger rebalance action
+
+# Phase 5: Agent_Outputs tab names
+TAB_AGENT_OUTPUTS_ARCHIVE = "Agent_Outputs_Archive"
+
+# Phase 5-J: Add-Candidate sizing
+ADD_CANDIDATE_STYLE_PCT = {
+    "GARP":  0.030,   # 3% of dry powder as starter add
+    "FUND":  0.025,
+    "THEME": 0.015,
+    "ETF":   0.015,
+}
+ADD_CANDIDATE_MAX_STARTER_PCT = 0.05   # hard cap: never exceed 5% of dry powder
+ADD_CANDIDATE_MAX_CANDIDATES = 15      # rank more strictly if list would be longer
+ADD_CANDIDATE_STALE_THRESHOLD_DAYS = 120
+
+# Phase 5-K: New Idea Screener
+NEW_IDEA_MAX_CANDIDATES_PER_RUN = 10   # hard cap on --tickers list length
+NEW_IDEA_STARTER_SIZE_PCT = 0.015      # 1.5% of dry powder as default starter
+NEW_IDEA_MAX_STARTER_PCT = 0.025       # hard cap: 2.5% of dry powder for new ideas
+

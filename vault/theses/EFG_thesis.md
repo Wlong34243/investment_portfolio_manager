@@ -1,3 +1,11 @@
+---
+ticker: EFG
+style: 
+framework_preference: 
+entry_date:
+last_reviewed:
+---
+
 # EFG — Investment Thesis
 
 ## Style
@@ -7,7 +15,7 @@ International Factor / Developed Market Growth
 Buying a highly targeted basket of the fastest-growing, highest-quality companies in Europe, Japan, and Australia, while explicitly filtering out the slow-moving, value-trap banks and legacy energy companies that typically drag down broad international indices (like VEA). Upside is driven by the structural dominance of European luxury goods (LVMH, Hermes), world-class healthcare, and specialized industrial tech. EFG is a bet that international growth can rival US growth if you simply strip out the dead weight. The key question is whether these premium international compounders can justify their higher valuations in a sluggish Eurozone economy. Judgment: yes, as an international alpha-generator.
 
 ## Entry Context
-Cost basis: ~$110 (Assumed). At this level, EFG trades at a premium multiple compared to broad international indexes, reflecting the high ROIC (Return on Invested Capital) and deep economic moats of its underlying holdings. Buying here means you are actively choosing to pay up for quality abroad rather than simply buying a cheap, passive index.
+Cost basis: ~$113.81 (Assumed). At this level, EFG trades at a premium multiple compared to broad international indexes, reflecting the high ROIC (Return on Invested Capital) and deep economic moats of its underlying holdings. Buying here means you are actively choosing to pay up for quality abroad rather than simply buying a cheap, passive index.
 
 ## Bull Case
 - **Quality Over Quantity:** EFG purposefully screens for earnings growth. This means you skip the struggling, highly regulated European telecom and utility sectors, and instead heavily concentrate in global juggernauts like ASML, Novo Nordisk, SAP, and L'Oréal.

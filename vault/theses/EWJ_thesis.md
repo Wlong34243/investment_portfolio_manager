@@ -1,3 +1,11 @@
+---
+ticker: EWJ
+style: 
+framework_preference: 
+entry_date:
+last_reviewed:
+---
+
 # EWJ — Investment Thesis
 
 ## Style

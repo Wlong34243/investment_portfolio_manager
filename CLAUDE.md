@@ -71,9 +71,10 @@ Repo additions:
 ## Critical Guardrails (CRITICAL)
 1. **No LLM Math:** All yields, drift %, tax dollar estimates, and projections MUST be calculated in Python. Pass facts to Gemini for narrative ONLY.
 2. **Pydantic Schemas:** Every `ask_gemini` call must use a Pydantic `BaseModel` passed via `response_schema`. Never trust raw JSON strings.
-3. **Column Guard:** All DataFrames consumed by the UI or agents must pass through `utils.column_guard.ensure_display_columns`.
-4. **PII Privacy:** Strip account numbers and specific account labels from all DataFrames before passing to LLM context.
-5. **Dry Run Pattern:** All writes to Google Sheets must be gated by `config.DRY_RUN`.
+3. **Style Short Codes:** Style fields always use short_code values from `styles.json` — `GARP`, `THEME`, `FUND`, `ETF`. Never use long-form names in code or schemas.
+4. **Column Guard:** All DataFrames consumed by the UI or agents must pass through `utils.column_guard.ensure_display_columns`.
+5. **PII Privacy:** Strip account numbers and specific account labels from all DataFrames before passing to LLM context.
+6. **Dry Run Pattern:** All writes to Google Sheets must be gated by `config.DRY_RUN`.
 
 ## Data Standard: Fingerprints
 | Tab | Format |
@@ -91,6 +92,20 @@ Repo additions:
 - **Macro Monitor:** Connects FRED/VIX data to portfolio triggers.
 - **Options Agent:** Covered call strategies (OTM 5-15%).
 - ... (and 5 others covering Earnings, Concentration, Correlation, Cash, and Technicals)
+
+## Vault Frameworks
+Structured investment frameworks live in `vault/frameworks/`. Every file has `reviewed_by_bill: true` to be loadable by `agents/framework_selector.py`. Three framework types:
+
+| File | Type | Used by |
+|---|---|---|
+| `lynch_garp_v1.json` | `screening` | Re-buy Analyst — GARP rule evaluation |
+| `joys_of_compounding_framework.json` | `screening` | Thesis Screener — Baid management scoring |
+| `100_bagger_framework.json` | `screening` | Bagger Screener — Mayer quantitative gate |
+| `van_tharp_position_sizing.json` | `position_sizing` | All agents — ATR-based 1R sizing |
+
+**Van Tharp position sizing framework lives in `vault/frameworks/van_tharp_position_sizing.json`.** Agents pre-compute 1R, position_size_units, stop_loss_price, and trailing_stop by calling `agents.framework_selector.compute_van_tharp_sizing(atr_14, entry_price, portfolio_equity)`. Gemini NEVER computes position sizes, R-multiples, or stop levels. ATR data comes from `composite["calculated_technical_stops"]` (populated by `tasks/enrich_atr.py`). Note: `enrich_atr.py` uses a 2.5x ATR multiplier for protective stops; Van Tharp uses 3.0x for 1R (different concepts — do not conflate).
+
+**Van Tharp sizing is pre-computed in `rebuy_analyst.py` before any LLM call.** The sizing is stored in `RebuyAnalystResponse.van_tharp_sizing_map` (dict keyed by ticker) and overwritten post-LLM to enforce Python-computed values. Agents cite sizing values from the bundle — they never calculate position sizes themselves. Run `tasks/enrich_atr.py` before any agent run that uses Van Tharp sizing.
 
 ## Workflow Rules
 - **Standard:** Use `git status` before committing.

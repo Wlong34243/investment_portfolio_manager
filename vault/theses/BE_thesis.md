@@ -1,3 +1,11 @@
+---
+ticker: BE
+style: 
+framework_preference: 
+entry_date:
+last_reviewed:
+---
+
 # BE — Investment Thesis
 
 ## Style
@@ -7,7 +15,7 @@ Speculative Clean Energy / Infrastructure / "Picks and Shovels" Power
 Buying the decentralized power generation transition. Bloom Energy manufactures solid oxide fuel cells that provide "always-on," localized microgrid power, allowing corporations to bypass the aging, unreliable, and capacity-constrained public utility grid. With the AI data center boom requiring gigawatts of power that the public grid simply cannot provide in time, Bloom acts as a speculative, backdoor AI infrastructure play. The key question is whether they can achieve consistent GAAP profitability before their heavy capital requirements force massive shareholder dilution. Judgment: yes, as a high-beta satellite position.
 
 ## Entry Context
-Cost basis: ~$15 (Assumed). Bloom is a highly volatile, heavily shorted stock. Buying in the mid-teens captures the company at a reasonable multiple of sales while recognizing the massive risks regarding its cash burn. At this basis, you are making a venture-capital-style bet that the sheer desperation for data center power will force hyperscalers to sign massive, multi-megawatt contracts with Bloom, triggering a massive re-rating of the stock.
+Cost basis: ~$148.05. Bloom is a highly volatile, heavily shorted stock. Buying in the mid-teens captures the company at a reasonable multiple of sales while recognizing the massive risks regarding its cash burn. At this basis, you are making a venture-capital-style bet that the sheer desperation for data center power will force hyperscalers to sign massive, multi-megawatt contracts with Bloom, triggering a massive re-rating of the stock.
 
 ## Bull Case
 - **The AI Power Bottleneck:** Hyperscalers (Amazon, Microsoft) have the AI chips, but they cannot get enough power from local utilities to turn them on. Bloom servers can be deployed in months, offering immediate, on-site, reliable power for massive data centers.

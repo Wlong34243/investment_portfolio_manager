@@ -1,3 +1,11 @@
+---
+ticker: COF
+style: 
+framework_preference: 
+entry_date:
+last_reviewed:
+---
+
 # COF — Investment Thesis
 
 ## Style
@@ -7,7 +15,7 @@ GARP (Growth at a Reasonable Price) / Financial Compounder
 Buying a tech-forward financial institution undergoing a massive structural transformation from a pure credit card issuer into a vertically integrated, global payments network. The upside is driven by the successful integration of the Discover acquisition (owning the network rails to capture interchange fees), best-in-class data underwriting, and a strategic expansion into business and startup finance via the recent Brex acquisition. Capital One is no longer just a bank; it is positioning itself as a legitimate challenger to the Visa/Mastercard duopoly. The key question is whether management can execute a flawless multi-year integration of Discover and Brex while successfully navigating the consumer credit cycle. Judgment: yes.
 
 ## Entry Context
-Cost basis: $219. At entry, COF was trading at a premium to its historical price-to-tangible-book metrics, reflecting the market's validation of the Discover merger completion (May 2025) and the strategic network pivot. Buying at this level means paying for the anticipated network synergies and tech platform scale rather than catching a deep cyclical bottom. The valuation requires management to deliver on projected cost savings and revenue synergies without faltering on core underwriting quality.
+Cost basis: $220.37. At entry, COF was trading at a premium to its historical price-to-tangible-book metrics, reflecting the market's validation of the Discover merger completion (May 2025) and the strategic network pivot. Buying at this level means paying for the anticipated network synergies and tech platform scale rather than catching a deep cyclical bottom. The valuation requires management to deliver on projected cost savings and revenue synergies without faltering on core underwriting quality.
 
 ## Bull Case
 - The Network Pivot (Vertical Integration): Owning the Discover network rails allows Capital One to capture the interchange fees it previously paid to third parties (Visa/Mastercard). This fundamentally changes the unit economics and profitability of their massive card portfolio.

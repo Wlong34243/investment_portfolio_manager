@@ -1,3 +1,11 @@
+---
+ticker: META
+style: 
+framework_preference: 
+entry_date:
+last_reviewed:
+---
+
 # META — Investment Thesis
 
 ## Style
@@ -7,7 +15,7 @@ Mega-Cap Compounder / AI Integrator / Cash Flow Machine
 Buying the most ruthlessly efficient digital advertising engine in the world, supercharged by an AI-driven turnaround. Upside is driven by the continuous improvement of their AI targeting algorithms (Advantage+), massive engagement across Instagram Reels, and aggressive cost discipline. Meta has effectively neutralized the Apple iOS privacy changes and is using open-source AI (Llama) to commoditize the foundation model layer while protecting its core ad business. The key question is whether Mark Zuckerberg can restrain his multi-billion-dollar cash burn on the Reality Labs (Metaverse) division. Judgment: yes.
 
 ## Entry Context
-Cost basis: $379. At this level, you caught the stock during its massive "Year of Efficiency" recovery rally, but well before it reached its euphoric all-time highs. Buying in the high-$300s means you captured a highly reasonable valuation relative to its explosive free cash flow growth and the initiation of its new dividend program. You are sitting on a comfortable gain that allows you to ride out normal tech volatility.
+Cost basis: $379.72. At this level, you caught the stock during its massive "Year of Efficiency" recovery rally, but well before it reached its euphoric all-time highs. Buying in the high-$300s means you captured a highly reasonable valuation relative to its explosive free cash flow growth and the initiation of its new dividend program. You are sitting on a comfortable gain that allows you to ride out normal tech volatility.
 
 ## Bull Case
 - **Unrivaled Distribution:** With over 3 billion daily active users across Facebook, Instagram, and WhatsApp, Meta owns the attention of half the planet. Advertisers simply have no other platform (besides Google) that offers this scale and return on ad spend (ROAS).

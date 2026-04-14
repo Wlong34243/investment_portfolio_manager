@@ -1,0 +1,66 @@
+```json
+[
+  {
+    "ticker": "Not specified",
+    "moat_rating": "Narrow",
+    "fair_value_estimate": "$80.00",
+    "uncertainty_rating": "Not specified",
+    "thesis_summary": "2026 will be a transition year for PayPal as management focuses on cost control and product innovation under a new CEO. Despite facing headwinds from reversing pandemic trends and new competition, PayPal's two-sided platform maintains a strong competitive position in online payments. The company is expected to return to mid-single-digit revenue growth over the long haul.",
+    "key_risks": [
+      "Competition from new online-focused acquirers and services like Apple Pay.",
+      "Government favoritism toward local players like Alipay and WeChat in emerging market opportunities.",
+      "A worsening macroeconomic picture could pressure online discretionary purchases.",
+      "Limited opportunities to monetize Venmo."
+    ],
+    "valuation_context": "The fair value estimate is $80 per share, equating to 15.3 times the projected 2026 adjusted EPS. While margins will be pressured in 2026 due to growth investments, they are expected to stabilize at an adjusted 18% at the end of the 5-year projection period."
+  },
+  {
+    "ticker": "BF.B",
+    "moat_rating": "Wide",
+    "fair_value_estimate": "$37.00",
+    "uncertainty_rating": "High",
+    "thesis_summary": "Brown-Forman shares have rallied following reported acquisition interest from Sazerac and Pernod Ricard, confirming Morningstar's view that the stock is undervalued. Even without a deal, the company is fundamentally sound with an expected 10-year average annual sales growth of 3%. A competitive sales process increases the likelihood of an offer price near its intrinsic value.",
+    "key_risks": [
+      "Challenging economic conditions for consumers.",
+      "Headwinds in alcohol consumption.",
+      "Potential regulatory review due to increased market concentration if combined with Sazerac."
+    ],
+    "valuation_context": "Shares trade at an 18% discount to the $37 fair value estimate. The valuation implies a 16 times EV/2026 EBITDA multiple, which is within the historical range of deal valuations."
+  },
+  {
+    "ticker": "ICLR",
+    "moat_rating": "None",
+    "fair_value_estimate": "$155.00",
+    "uncertainty_rating": "High",
+    "thesis_summary": "Icon's economic moat has been downgraded to none due to its 2021 value-destructive acquisition of PRA Health Sciences, which diluted economic returns. The company's adjusted returns on invested capital have fallen below its cost of capital, reflecting a cyclical demand environment and rising cancellations. An ongoing accounting probe and withdrawn guidance have further intensified concerns regarding the firm's growth.",
+    "key_risks": [
+      "Cyclical demand environment with rising cancellations.",
+      "Internal control and reputational risks stemming from a 2026 accounting probe.",
+      "Market share pressure requiring discounted and lower-margin contracts."
+    ],
+    "valuation_context": "Despite the moat downgrade, shares appear undervalued, trading at a 30% discount to the $155 fair value estimate following a significant 43% year-to-date pullback."
+  },
+  {
+    "ticker": "META",
+    "moat_rating": "Wide",
+    "fair_value_estimate": "$850.00",
+    "uncertainty_rating": "High",
+    "thesis_summary": "Meta's launch of the Muse Spark multimodal reasoning model is a major success, proving it can compete with leading AI labs. The advanced model is expected to significantly improve Meta's ad targeting capabilities and drive higher user engagement across its platforms. Its compute efficiency also allows Meta to run agentic ad optimization at a lower marginal cost per ad served.",
+    "key_risks": [
+      "A key bear case that despite massive spending, Meta's AI models have historically lagged those of leading-edge AI labs."
+    ],
+    "valuation_context": "Shares are viewed as materially undervalued at the $850 fair value estimate, maintaining upside even after the stock's rally following the Muse Spark model launch."
+  },
+  {
+    "ticker": "NVDA",
+    "moat_rating": "Wide",
+    "fair_value_estimate": "$260.00",
+    "uncertainty_rating": "Very High",
+    "thesis_summary": "Nvidia remains at the center of the AI infrastructure boom, capturing roughly one-third of all AI capital expenditures from hyperscalers. The company is experiencing unprecedented demand for its data center compute business and rack-scale solutions like Blackwell and Rubin. Strong pricing power and a quasi-acquisition of Groq further solidify its wide economic moat.",
+    "key_risks": [
+      "Potential geopolitical headwinds, such as the impact of government bans on AI chip sales to China."
+    ],
+    "valuation_context": "With the current price around $183.91, Nvidia trades at an attractive price/fair value ratio of 0.71 against its $260 fair value estimate, indicating an attractive margin of safety despite AI bubble concerns."
+  }
+]
+```

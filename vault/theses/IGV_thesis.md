@@ -1,3 +1,11 @@
+---
+ticker: IGV
+style: 
+framework_preference: 
+entry_date:
+last_reviewed:
+---
+
 # IGV — Investment Thesis
 
 ## Style

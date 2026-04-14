@@ -1,3 +1,11 @@
+---
+ticker: VEU
+style: 
+framework_preference: 
+entry_date:
+last_reviewed:
+---
+
 # VEU — Investment Thesis
 
 ## Style
@@ -7,7 +15,7 @@ Passive Core / Global Ex-US / Total International Diversification
 *(Note: VEU is essentially VEA + Emerging Markets).* Buying the absolute entirety of the global equity market outside of the United States in a single ticker. Upside is driven by the cheap valuations of developed Europe and Japan, combined with the explosive demographic and consumption growth of emerging markets like India, Taiwan, and Brazil. VEU is the ultimate "set it and forget it" hedge against US market concentration. The key question is whether the inclusion of volatile emerging markets provides enough growth to offset their geopolitical risks. Judgment: yes, for total global coverage.
 
 ## Entry Context
-Cost basis: ~$55 (Assumed). Like VEA, buying VEU is a purely passive, asset-allocation play. At this level, you are capturing a massive, global dividend yield and securing exposure to the rising middle class in the developing world, while mitigating the extreme concentration risk of the top 5 tech stocks in the S&P 500.
+Cost basis: ~$73.07 (Assumed). Like VEA, buying VEU is a purely passive, asset-allocation play. At this level, you are capturing a massive, global dividend yield and securing exposure to the rising middle class in the developing world, while mitigating the extreme concentration risk of the top 5 tech stocks in the S&P 500.
 
 ## Bull Case
 - **Total Coverage:** With nearly 4,000 holdings, VEU guarantees you own every successful company outside the US borders, from Swiss pharmaceuticals to Taiwanese semiconductor foundries to Indian banks.

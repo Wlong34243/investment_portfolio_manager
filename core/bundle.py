@@ -306,8 +306,21 @@ def _build_from_csv(
         df.loc[mask, 'price'] = df.loc[mask, 'ticker'].map(live_prices)
         df.loc[mask, 'price_source'] = 'yfinance_live'
     
-    # c. Compute value
+    # c. Compute value and unrealized G/L
     df['market_value'] = df['quantity'] * df['price']
+    
+    # Compute unrealized G/L if cost_basis is present
+    if 'cost_basis' in df.columns:
+        if 'unrealized_gl' not in df.columns:
+            df['unrealized_gl'] = 0.0
+        
+        # Always re-compute based on current market_value (which uses live prices)
+        mask = (df['cost_basis'] > 0)
+        df.loc[mask, 'unrealized_gl'] = df.loc[mask, 'market_value'] - df.loc[mask, 'cost_basis']
+        
+        if 'unrealized_gl_pct' not in df.columns:
+            df['unrealized_gl_pct'] = 0.0
+        df.loc[mask, 'unrealized_gl_pct'] = (df.loc[mask, 'unrealized_gl'] / df.loc[mask, 'cost_basis']) * 100
     
     # d. Always inject synthetic CASH_MANUAL row
     cash_row = {

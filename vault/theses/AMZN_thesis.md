@@ -1,3 +1,11 @@
+---
+ticker: AMZN
+style: 
+framework_preference: 
+entry_date:
+last_reviewed:
+---
+
 # AMZN — Investment Thesis
 
 ## Style
@@ -7,7 +15,7 @@ GARP (Growth at a Reasonable Price) / Cash Flow Compounder
 Buying a multi-headed monopoly transitioning from a historic, capital-intensive investment cycle into a massive cash flow harvesting phase. Upside is driven by expanding retail margins (regionalization), the hyper-growth of the high-margin Advertising business, and AWS serving as the foundational infrastructure layer for the AI boom. Amazon is a free cash flow machine. The key question is whether retail margins can sustainably expand while they fund the next generation of AI compute, justifying the premium paid for the stock. Judgment: yes.
 
 ## Entry Context
-Cost basis: $222. At entry, AMZN was trading near highs, reflecting a market that has already validated the initial stages of its retail margin turnaround and AWS's AI-driven re-acceleration. Buying at this level means paying for confirmed execution rather than catching a bottom. The valuation is supported by explosive free cash flow generation, but leaves less room for multiple expansion, making this a pure earnings and cash flow compounding play.
+Cost basis: $225.01. At entry, AMZN was trading near highs, reflecting a market that has already validated the initial stages of its retail margin turnaround and AWS's AI-driven re-acceleration. Buying at this level means paying for confirmed execution rather than catching a bottom. The valuation is supported by explosive free cash flow generation, but leaves less room for multiple expansion, making this a pure earnings and cash flow compounding play.
 
 ## Bull Case
 - The High-Margin Engines: The mix shift in Amazon's business is highly favorable. The fastest-growing segments—AWS (cloud) and Advertising (monetizing high-intent shoppers at the point of sale)—are also the highest margin, structurally lifting the company's overall profitability.

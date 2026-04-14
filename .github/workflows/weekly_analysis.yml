@@ -1,0 +1,63 @@
+name: Weekly Portfolio Analysis
+
+on:
+  schedule:
+    # 11:00 PM UTC every Sunday = 7:00 PM EDT / 6:00 PM EST
+    - cron: '0 23 * * 0'
+  workflow_dispatch:
+    # Manual trigger from GitHub UI for testing or on-demand runs
+    inputs:
+      agents:
+        description: 'Comma-separated agent list (default: all)'
+        required: false
+        default: 'rebuy,tax,valuation,concentration,macro,thesis,bagger'
+      fresh_bundle:
+        description: 'Regenerate market + vault + composite bundles before running'
+        required: false
+        default: 'true'
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Write GCP credentials
+        env:
+          GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.GCP_SERVICE_ACCOUNT_JSON }}
+        run: echo "$GCP_SERVICE_ACCOUNT_JSON" > /tmp/gcp_creds.json
+
+      - name: Run weekly analysis (LIVE)
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: /tmp/gcp_creds.json
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          python manager.py analyze-all \
+            --fresh-bundle \
+            --agents "${{ github.event.inputs.agents || 'rebuy,tax,valuation,concentration,macro,thesis,bagger' }}" \
+            --live
+
+      - name: Upload run manifest
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: run-manifest-${{ github.run_id }}
+          path: bundles/runs/
+          retention-days: 30
+          if-no-files-found: warn

@@ -1,3 +1,11 @@
+---
+ticker: XLE
+style: 
+framework_preference: 
+entry_date:
+last_reviewed:
+---
+
 # XLE — Investment Thesis
 
 ## Style
@@ -7,7 +15,7 @@ Thematic Value / Sector ETF / Inflation Hedge
 Buying the broad, cash-gushing resurgence of the American energy sector without taking on single-company drilling or execution risk. Upside is driven by structural underinvestment in global oil supply, relentless share buybacks across the sector, and the ETF acting as a necessary portfolio hedge against sticky inflation. XLE is heavily concentrated in wide-moat giants (ExxonMobil, Chevron), making it a play on major-oil capital discipline. The key question is whether the energy sector can maintain its newfound financial discipline and refuse the urge to "drill baby drill" when prices spike. Judgment: yes.
 
 ## Entry Context
-Cost basis: ~$56. This is an incredible legacy entry, likely captured during a severe sector pullback or before the post-pandemic energy super-cycle truly began. Buying XLE in the mid-$50s means you are sitting on massive capital gains and collecting a tremendous yield-on-cost. The entry perfectly insulates you from current macroeconomic volatility and transforms this position into a permanent portfolio stabilizer.
+Cost basis: ~$56.94. This is an incredible legacy entry, likely captured during a severe sector pullback or before the post-pandemic energy super-cycle truly began. Buying XLE in the mid-$50s means you are sitting on massive capital gains and collecting a tremendous yield-on-cost. The entry perfectly insulates you from current macroeconomic volatility and transforms this position into a permanent portfolio stabilizer.
 
 ## Bull Case
 - **Capital Discipline:** The energy sector has fundamentally changed. Instead of taking on massive debt to drill unprofitable wells for the sake of volume growth, companies in XLE are focused entirely on Return on Invested Capital (ROIC), paying down debt, and rewarding shareholders.

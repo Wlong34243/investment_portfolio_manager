@@ -1,3 +1,11 @@
+---
+ticker: CSCO
+style: 
+framework_preference: 
+entry_date:
+last_reviewed:
+---
+
 # CSCO — Investment Thesis
 
 ## Style

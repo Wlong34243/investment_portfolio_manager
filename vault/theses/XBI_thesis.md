@@ -1,3 +1,11 @@
+---
+ticker: XBI
+style: 
+framework_preference: 
+entry_date:
+last_reviewed:
+---
+
 # XBI — Investment Thesis
 
 ## Style
@@ -7,7 +15,7 @@ High Beta / Speculative Growth / M&A Target Play
 Buying a pure play on medical innovation and demographic tailwinds. Because XBI is an *equal-weight* index, it avoids being dominated by massive, slow-moving pharma giants (unlike IBB) and instead provides heavy, concentrated exposure to small- and mid-cap biotechnology companies. Upside is driven by a constant stream of binary events: FDA approvals, clinical data breakouts, and a perpetual wave of M&A as big pharma uses its massive cash piles to buy these smaller companies to replenish patent cliffs. The key question is whether the pace of scientific breakthrough (like gene editing and AI drug discovery) can outrun the drag of high capital costs and drug pricing politics. Judgment: yes, as a high-octane growth satellite.
 
 ## Entry Context
-Cost basis: $108.45. Buying XBI requires an iron stomach. The biotech sector is notoriously boom-and-bust, driven heavily by the cost of capital. At $108.45, the entry reflects a calculated bet that interest rates have peaked or are normalizing, which fundamentally lowers the discount rate applied to these long-duration, often pre-revenue companies, allowing their clinical successes to be properly rewarded by the market.
+Cost basis: $119.56. Buying XBI requires an iron stomach. The biotech sector is notoriously boom-and-bust, driven heavily by the cost of capital. At $108.45, the entry reflects a calculated bet that interest rates have peaked or are normalizing, which fundamentally lowers the discount rate applied to these long-duration, often pre-revenue companies, allowing their clinical successes to be properly rewarded by the market.
 
 ## Bull Case
 - **The M&A Engine:** Large pharmaceutical companies face massive patent expirations later in the decade. They *must* acquire smaller biotechs to survive. XBI’s equal-weight structure means when a small holding gets acquired at a 50-100% premium, it actually moves the needle for the ETF.

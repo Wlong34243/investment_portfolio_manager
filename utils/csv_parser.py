@@ -244,10 +244,14 @@ def parse_schwab_csv(file_bytes: bytes) -> pd.DataFrame:
             }
             
             # Add other columns if they exist
-            if 'gain/loss $' in col_indices:
-                pos['unrealized_gl'] = clean_numeric(row.iloc[col_indices['gain/loss $']])
-            if 'gain/loss %' in col_indices:
-                pos['unrealized_gl_pct'] = clean_numeric(row.iloc[col_indices['gain/loss %']])
+            # Find gain/loss columns with more flexible matching
+            gain_val_col = next((c for c in col_indices if 'gain' in c and '$' in c), None)
+            gain_pct_col = next((c for c in col_indices if 'gain' in c and '%' in c), None)
+            
+            if gain_val_col:
+                pos['unrealized_gl'] = clean_numeric(row.iloc[col_indices[gain_val_col]])
+            if gain_pct_col:
+                pos['unrealized_gl_pct'] = clean_numeric(row.iloc[col_indices[gain_pct_col]])
             if 'est annual income' in col_indices:
                 pos['est_annual_income'] = clean_numeric(row.iloc[col_indices['est annual income']])
             if 'dividend yield' in col_indices:

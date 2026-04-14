@@ -1,3 +1,11 @@
+---
+ticker: IFRA
+style: 
+framework_preference: 
+entry_date:
+last_reviewed:
+---
+
 # IFRA — Investment Thesis
 
 ## Style
@@ -7,7 +15,7 @@ Thematic Value / Policy Tailwinds / Tangible Assets
 Playing the unglamorous, physical rebuild of America. Upside is driven by trillions of dollars in guaranteed federal spending (the Infrastructure Investment and Jobs Act, the CHIPS Act, the IRA) and the structural reshoring of domestic manufacturing supply chains. IFRA provides pure-play exposure to the companies actually doing the heavy lifting: heavy construction, engineering, railroads, utility grid operators, and basic materials. This is a highly defensive, tangible asset play. The key question is whether these companies can convert government mega-projects into high-margin earnings without being crushed by labor shortages and inflation. Judgment: yes.
 
 ## Entry Context
-Cost basis: $51.92. Buying IFRA at this level is a bet on a multi-year, secular super-cycle in capital expenditure. The market often underprices the "boring" industrial and materials sectors compared to tech. This entry captures a steady, dividend-paying basket of companies with incredibly deep order backlogs, effectively front-running the deployment of federal funds that will trickle down over the next decade.
+Cost basis: $56.69. Buying IFRA at this level is a bet on a multi-year, secular super-cycle in capital expenditure. The market often underprices the "boring" industrial and materials sectors compared to tech. This entry captures a steady, dividend-paying basket of companies with incredibly deep order backlogs, effectively front-running the deployment of federal funds that will trickle down over the next decade.
 
 ## Bull Case
 - **Legislative Tailwinds:** The federal government has legally committed over $1 trillion to rebuild roads, bridges, broadband, and the electrical grid. This creates an inelastic, guaranteed pipeline of revenue for the companies in this ETF that is largely immune to the standard economic cycle.
