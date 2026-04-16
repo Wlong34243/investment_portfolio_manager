@@ -13,27 +13,34 @@ from pydantic import BaseModel, Field
 from typing import Literal
 
 
+class CorrelationPair(BaseModel):
+    """A pair of highly correlated tickers."""
+    ticker_1: str = Field(..., description="First ticker in the pair.")
+    ticker_2: str = Field(..., description="Second ticker in the pair.")
+    correlation_coefficient: float = Field(..., description="Correlation between -1 and 1.")
+
+
 class ConcentrationFlag(BaseModel):
     """A single concentration or correlation risk flag."""
-    flag_type: Literal["single_position", "sector", "correlation_pair"] = Field(
+    type: Literal["SINGLE_POSITION", "SECTOR", "CORRELATION_PAIR"] = Field(
         ...,
         description="Category of risk: over-weight single position, sector bloat, or highly-correlated pair.",
     )
-    tickers_involved: list[str] = Field(
+    target: str = Field(
         ...,
-        description="Ticker(s) driving this flag. For sector flags, lists the top contributors.",
+        description="The position or sector flagged (e.g., 'AAPL' or 'Healthcare').",
     )
     current_weight_pct: float = Field(
         ...,
-        description="Current portfolio weight % of the flagged position or sector. Pre-computed in Python.",
+        description="Current portfolio weight % of the flagged position or sector.",
     )
     threshold_pct: float = Field(
         ...,
-        description="Threshold that was breached (e.g. 8.0 for single_position, 30.0 for sector). Pre-computed.",
+        description="Threshold that was breached.",
     )
-    severity: Literal["watch", "action"] = Field(
+    status: Literal["VIOLATION", "WARNING"] = Field(
         ...,
-        description="'action' if breaching threshold by > 3 ppts; 'watch' if within 3 ppts of threshold.",
+        description="'VIOLATION' if severe breach; 'WARNING' if moderate.",
     )
     hedge_suggestion: str = Field(
         ..., min_length=20,
@@ -70,6 +77,10 @@ class ConcentrationAgentOutput(BaseModel):
         default_factory=list,
         description="All concentration and correlation flags, ordered by severity then weight.",
     )
+    high_correlations: list[CorrelationPair] = Field(
+        default_factory=list,
+        description="Analyzed pairs with high correlation coefficients (|r| > threshold).",
+    )
     summary_narrative: str = Field(
         ..., min_length=50,
         description="3-5 sentence overall risk narrative for the portfolio.",
@@ -80,4 +91,4 @@ class ConcentrationAgentOutput(BaseModel):
     )
 
 
-__all__ = ["ConcentrationFlag", "ConcentrationAgentOutput"]
+__all__ = ["CorrelationPair", "ConcentrationFlag", "ConcentrationAgentOutput"]

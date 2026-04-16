@@ -8,18 +8,8 @@ import os
 import sys
 import gspread
 import pandas as pd
+from functools import lru_cache
 from google.oauth2.service_account import Credentials
-
-# Streamlit Cache Fallback
-try:
-    import streamlit as st
-    CACHE = st.cache_data
-except ImportError:
-    st = None
-    def CACHE(ttl=None, **kwargs):
-        def decorator(func):
-            return func
-        return decorator
 
 # Add project root to path
 _HERE = os.path.dirname(os.path.abspath(__file__))
@@ -46,9 +36,8 @@ def get_gspread_client() -> gspread.Client:
 
     Credential resolution order:
     1. Local service_account.json file                ← most reliable for specific scopes
-    2. st.secrets["gcp_service_account"]              ← Streamlit Cloud
-    3. GCP_SERVICE_ACCOUNT_JSON env var               ← GitHub Actions
-    4. ADC via gcloud auth application-default login  ← local CLI fallback
+    2. GCP_SERVICE_ACCOUNT_JSON env var               ← GitHub Actions
+    3. ADC via gcloud auth application-default login  ← local CLI fallback
     """
     import json
 
@@ -61,28 +50,19 @@ def get_gspread_client() -> gspread.Client:
         except Exception as e:
             print(f"Warning: Failed to load service_account.json: {e}")
 
-    # Option 2: Streamlit secrets
-    if st and hasattr(st, "secrets") and "gcp_service_account" in st.secrets:
-        try:
-            creds = Credentials.from_service_account_info(
-                dict(st.secrets["gcp_service_account"]),
-                scopes=SCOPES,
-            )
-            return gspread.authorize(creds)
-        except Exception:
-            pass
-
-    # Option 3: Environment variable (GitHub Actions)
-    env_json = os.environ.get("GCP_SERVICE_ACCOUNT_JSON")
+    # Option 2: Environment variable (standard .env loading)
+    env_json = os.getenv("GCP_SERVICE_ACCOUNT_JSON")
     if env_json:
         try:
             info = json.loads(env_json)
             creds = Credentials.from_service_account_info(info, scopes=SCOPES)
             return gspread.authorize(creds)
         except Exception as e:
-            print(f"Warning: Failed to load credentials from env var: {e}")
+            print(f"Warning: Failed to load GCP_SERVICE_ACCOUNT_JSON from .env: {e}")
 
-    # Option 4: ADC — works after gcloud auth application-default login
+    # Option 3: Environment variable (GitHub Actions)
+
+    # Option 3: ADC — works after gcloud auth application-default login
     try:
         import google.auth
         credentials, _ = google.auth.default(scopes=SCOPES)
@@ -154,7 +134,7 @@ def read_gsheet_robust(ws: gspread.Worksheet) -> pd.DataFrame:
         
     return df
 
-@CACHE(ttl=300)
+@lru_cache(maxsize=32)
 def get_holdings_current() -> pd.DataFrame:
     """Reads Holdings_Current tab."""
     from utils.column_guard import ensure_display_columns
@@ -168,7 +148,7 @@ def get_holdings_current() -> pd.DataFrame:
         print(f"Error reading Holdings_Current: {e}")
         return pd.DataFrame()
 
-@CACHE(ttl=300)
+@lru_cache(maxsize=32)
 def get_risk_metrics() -> pd.DataFrame:
     """Reads Risk_Metrics tab."""
     try:
@@ -179,7 +159,7 @@ def get_risk_metrics() -> pd.DataFrame:
     except Exception:
         return pd.DataFrame()
 
-@CACHE(ttl=300)
+@lru_cache(maxsize=32)
 def get_income_history() -> pd.DataFrame:
     """Reads Income_Tracking tab."""
     try:
@@ -190,7 +170,7 @@ def get_income_history() -> pd.DataFrame:
     except Exception:
         return pd.DataFrame()
 
-@CACHE(ttl=300)
+@lru_cache(maxsize=32)
 def get_realized_gl() -> pd.DataFrame:
     """Reads Realized_GL tab."""
     try:
@@ -201,7 +181,7 @@ def get_realized_gl() -> pd.DataFrame:
     except Exception:
         return pd.DataFrame()
 
-@CACHE(ttl=300)
+@lru_cache(maxsize=32)
 def get_daily_snapshots() -> pd.DataFrame:
     """Reads Daily_Snapshots tab."""
     try:
@@ -212,7 +192,7 @@ def get_daily_snapshots() -> pd.DataFrame:
     except Exception:
         return pd.DataFrame()
 
-@CACHE(ttl=300)
+@lru_cache(maxsize=32)
 def get_target_allocation() -> pd.DataFrame:
     """Reads Target_Allocation tab."""
     try:
@@ -223,7 +203,7 @@ def get_target_allocation() -> pd.DataFrame:
     except Exception:
         return pd.DataFrame()
 
-@CACHE(ttl=300)
+@lru_cache(maxsize=32)
 def get_ai_suggested_allocation() -> pd.DataFrame:
     """Reads AI_Suggested_Allocation tab."""
     try:
@@ -234,7 +214,7 @@ def get_ai_suggested_allocation() -> pd.DataFrame:
     except Exception:
         return pd.DataFrame()
 
-@CACHE(ttl=300)
+@lru_cache(maxsize=32)
 def get_trade_log() -> pd.DataFrame:
     """Reads Trade_Log tab."""
     try:

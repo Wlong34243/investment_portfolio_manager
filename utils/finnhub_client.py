@@ -2,20 +2,12 @@ import os
 import logging
 from typing import List, Dict
 from datetime import datetime, timedelta
+from functools import lru_cache
 
 try:
     import finnhub
 except ImportError:
     finnhub = None
-
-try:
-    import streamlit as st
-    CACHE = st.cache_data
-except ImportError:
-    def CACHE(**kwargs):
-        def decorator(func):
-            return func
-        return decorator
 
 try:
     import config
@@ -31,7 +23,7 @@ def get_finnhub_client():
         return None
     return finnhub.Client(api_key=api_key)
 
-@CACHE(ttl=1800)
+@lru_cache(maxsize=128)
 def get_company_news(ticker: str, days_back: int = 7) -> List[Dict]:
     client = get_finnhub_client()
     if not client:
@@ -56,7 +48,7 @@ def get_company_news(ticker: str, days_back: int = 7) -> List[Dict]:
         logging.warning(f"Finnhub news error for {ticker}: {e}")
         return []
 
-@CACHE(ttl=3600)
+@lru_cache(maxsize=128)
 def get_basic_financials(ticker: str) -> dict:
     client = get_finnhub_client()
     if not client:
@@ -78,7 +70,7 @@ def get_basic_financials(ticker: str) -> dict:
         logging.warning(f"Finnhub financials error for {ticker}: {e}")
         return {}
 
-@CACHE(ttl=3600)
+@lru_cache(maxsize=128)
 def get_earnings_surprises(ticker: str) -> List[Dict]:
     client = get_finnhub_client()
     if not client:

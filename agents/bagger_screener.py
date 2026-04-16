@@ -3,26 +3,6 @@
 
 Phase 5-F port. Evaluates each portfolio position against the Christopher Mayer
 quantitative gate for extreme compounder potential (100x over 15-25 years).
-
-Pre-computation in Python (never delegated to LLM):
-  - market_cap_usd: yfinance fast_info → FMP cache fallback
-  - sector: yfinance info["sector"] → FMP profile fallback
-  - roic_pct: yfinance returnOnEquity (ROE proxy) → FMP cache fallback
-  - revenue_growth_3yr_cagr_pct: yfinance financials (3yr CAGR) → FMP income-statement cache
-  - gross_margin_pct: yfinance grossMargins → FMP income-statement cache
-  - dividend_payout_ratio_pct: yfinance payoutRatio → FMP cache fallback
-  - gate pass/fail per rule (acorn, roic, revenue_growth, gross_margin, dividend_payout)
-
-All FMP calls go through utils.fmp_client shared layer:
-  rate limiter (1.2s/call) + 7-day file cache — no more 429s on full portfolio runs.
-
-Gemini receives pre-computed metrics + pass/fail flags and writes narrative only.
-
-CLI:
-    python manager.py agent bagger analyze
-    python manager.py agent bagger analyze --ticker CORZ,IREN
-    python manager.py agent bagger analyze --bundle bundles/composite_20260413_....json
-    python manager.py agent bagger analyze --live
 """
 
 import json
@@ -48,6 +28,9 @@ from core.composite_bundle import load_composite_bundle
 from core.bundle import load_bundle
 from core.vault_bundle import load_vault_bundle
 from utils.gemini_client import ask_gemini_composite
+from utils.sheet_readers import get_gspread_client
+from utils.sheet_writers import archive_and_overwrite_agent_outputs
+from utils.formatters import dicts_to_markdown_table
 
 logger = logging.getLogger(__name__)
 
@@ -89,14 +72,8 @@ _DIVIDEND_PENALTY_PCT   = 40.0             # not a hard reject
 
 
 # ---------------------------------------------------------------------------
-# FMP fetch helpers removed — now routed through utils.fmp_client shared
-# layer (rate limiter + 7-day file cache + yfinance-first tier).
-# get_fundamentals()           → market_cap, sector, roic, gross_margin,
-#                                payout_ratio, revenue_growth_3yr
-# get_income_statements_cached() → raw annual statements for CAGR / margin
-#                                  fallback when yfinance financials empty
+# Python pre-computation helpers
 # ---------------------------------------------------------------------------
-
 
 def _safe_pct(value) -> float | None:
     """Convert a raw fraction (0.22) to percentage (22.0). None if unavailable."""
@@ -142,165 +119,103 @@ def _gross_margin_latest(income_stmts: list[dict]) -> float | None:
         return None
 
 
-# ---------------------------------------------------------------------------
-# Gate evaluation
-# ---------------------------------------------------------------------------
-
 def _evaluate_gates(
     market_cap_usd: float | None,
     roic_pct: float | None,
-    revenue_growth_pct: float | None,
+    revenue_growth_3yr_cagr_pct: float | None,
     gross_margin_pct: float | None,
-    dividend_payout_pct: float | None,
-    sector: str,
-) -> tuple[list[str], list[str]]:
-    """
-    Evaluate the 5 Christopher Mayer gates.
-    Returns (gates_passed, gates_failed).
-    """
-    passed = []
-    failed = []
+    dividend_payout_ratio_pct: float | None,
+) -> dict:
+    """Return dict of pass/fail flags for each 100-bagger rule."""
+    flags = {
+        "is_acorn": False,
+        "is_roic_pass": False,
+        "is_growth_pass": False,
+        "is_margin_pass": False,
+        "is_dividend_pass": True, # default pass
+        "is_hard_reject": False
+    }
 
-    # Acorn
-    if market_cap_usd is not None:
-        if market_cap_usd < _ACORN_HARD_CEILING_USD:
-            passed.append("acorn")
-        else:
-            failed.append("acorn")
+    if market_cap_usd and market_cap_usd < _ACORN_HARD_CEILING_USD:
+        flags["is_acorn"] = True
+    elif market_cap_usd and market_cap_usd > _ACORN_HARD_CEILING_USD * 10:
+        flags["is_hard_reject"] = True # too big to 100x
 
-    # ROIC
-    if roic_pct is not None:
+    if roic_pct:
         if roic_pct >= _ROIC_THRESHOLD_PCT:
-            passed.append("roic")
-        elif roic_pct >= _ROIC_MIN_PCT:
-            passed.append("roic")   # soft pass — Gemini notes "marginal"
-        else:
-            failed.append("roic")
+            flags["is_roic_pass"] = True
+        elif roic_pct < _ROIC_MIN_PCT:
+            flags["is_hard_reject"] = True
 
-    # Revenue growth
-    if revenue_growth_pct is not None:
-        if revenue_growth_pct >= _GROWTH_THRESHOLD_PCT:
-            passed.append("revenue_growth")
-        else:
-            failed.append("revenue_growth")
+    if revenue_growth_3yr_cagr_pct and revenue_growth_3yr_cagr_pct >= _GROWTH_THRESHOLD_PCT:
+        flags["is_growth_pass"] = True
 
-    # Gross margin — capital-intensive sectors use soft threshold
-    capital_intensive = any(
-        s.lower() in (sector or "").lower()
-        for s in ["energy", "mining", "utilities", "industrial", "material"]
-    )
-    margin_threshold = _MARGIN_SOFT_PCT if capital_intensive else _MARGIN_THRESHOLD_PCT
-    if gross_margin_pct is not None:
-        if gross_margin_pct >= margin_threshold:
-            passed.append("gross_margin")
-        else:
-            failed.append("gross_margin")
+    if gross_margin_pct and gross_margin_pct >= _MARGIN_THRESHOLD_PCT:
+        flags["is_margin_pass"] = True
 
-    # Dividend payout (soft penalty only)
-    if dividend_payout_pct is not None:
-        if dividend_payout_pct <= 20.0:
-            passed.append("dividend_payout")
-        else:
-            passed.append("dividend_payout")   # penalted not hard-failed; Gemini flags narrative
+    if dividend_payout_ratio_pct and dividend_payout_ratio_pct > _DIVIDEND_PENALTY_PCT:
+        flags["is_dividend_pass"] = False
 
-    return passed, failed
+    return flags
 
-
-# ---------------------------------------------------------------------------
-# Pre-computation pipeline
-# ---------------------------------------------------------------------------
 
 def _compute_bagger_facts(
     positions: list[dict],
-    ticker_filter: Optional[list[str]],
+    ticker_filter: set[str] | None = None,
 ) -> tuple[list[dict], list[str]]:
     """
-    For each investable position (non-cash, optionally filtered), fetch data
-    and compute the 5 Mayer gate metrics.
-
-    Data source priority (via utils.fmp_client):
-      Tier 0 — Schwab bundle_quote (market_cap, PE — empty for CSV bundles)
-      Tier 1 — yfinance info/fast_info (market_cap, sector, ROE, gross_margin,
-                payout_ratio, revenue_growth_3yr CAGR)
-      Tier 2 — FMP key-metrics-ttm cache (7-day TTL, rate-limited at 1.2s/call)
-      Tier 3 — FMP income-statement cache (fallback for CAGR/margin when
-                yfinance financials are empty — ETFs, foreign tickers)
-
-    Returns (positions_with_facts, data_gaps).
+    For each position, compute 100-bagger gate facts.
     """
     facts = []
     data_gaps = []
 
     for pos in positions:
         ticker = pos.get("ticker", "")
+        if ticker in config.CASH_TICKERS or ticker in config.VALUATION_SKIP_TICKERS:
+            continue
         if ticker_filter and ticker not in ticker_filter:
             continue
 
-        # --- Tiered fundamentals fetch ---
+        # Fetch pre-computed metrics
         fundamentals = get_fundamentals(ticker)
+        income_stmts = get_income_statements_cached(ticker)
 
-        market_cap = fundamentals.get("market_cap")
-        sector     = fundamentals.get("sector", "")
+        if not fundamentals:
+            data_gaps.append(f"{ticker}: fundamentals unavailable")
+            continue
 
-        # ROIC: yfinance returnOnEquity is the best available proxy (raw fraction → %)
-        roic_pct    = _safe_pct(fundamentals.get("roic"))
-        roic_source = "ROE (yfinance proxy)"
+        # 3yr CAGR and gross margin fallback to income statements if fundamentals missing them
+        roic = _safe_pct(fundamentals.get("returnOnEquity")) # ROE proxy
+        rev_growth = _safe_pct(fundamentals.get("revenueGrowth"))
+        if rev_growth is None and income_stmts:
+             rev_growth = _revenue_cagr_3yr(income_stmts)
+        
+        gm = _safe_pct(fundamentals.get("grossMargin"))
+        if gm is None and income_stmts:
+            gm = _gross_margin_latest(income_stmts)
 
-        # Payout ratio: raw fraction → %
-        payout_pct = _safe_pct(fundamentals.get("payout_ratio"))
+        payout = _safe_pct(fundamentals.get("payoutRatio"))
+        mkt_cap = fundamentals.get("marketCap")
 
-        # Revenue growth 3yr CAGR: stored as raw fraction in get_fundamentals → %
-        revenue_growth_pct = _safe_pct(fundamentals.get("revenue_growth_3yr"))
-
-        # Gross margin: raw fraction from yfinance grossMargins → %
-        gross_margin_pct = _safe_pct(fundamentals.get("gross_margin"))
-
-        # FMP income-statement fallback (for ETFs / foreign tickers where
-        # yfinance.financials is empty).  _revenue_cagr_3yr / _gross_margin_latest
-        # already return percentages — do NOT apply _safe_pct() a second time.
-        if revenue_growth_pct is None or gross_margin_pct is None:
-            income = get_income_statements_cached(ticker, limit=4)
-            if income:
-                if revenue_growth_pct is None:
-                    revenue_growth_pct = _revenue_cagr_3yr(income)
-                if gross_margin_pct is None:
-                    gross_margin_pct = _gross_margin_latest(income)
-
-        # If we have nothing useful, mark as data gap
-        if all(v is None for v in [market_cap, roic_pct, revenue_growth_pct, gross_margin_pct]):
-            data_gaps.append(ticker)
-
-        gates_passed, gates_failed = _evaluate_gates(
-            market_cap, roic_pct, revenue_growth_pct, gross_margin_pct, payout_pct, sector
-        )
+        gates = _evaluate_gates(mkt_cap, roic, rev_growth, gm, payout)
 
         facts.append({
-            "ticker":                    ticker,
-            "market_cap_usd":            round(market_cap, 0) if market_cap else None,
-            "market_cap_label":          (
-                f"${market_cap / 1e9:.1f}B" if market_cap and market_cap >= 1e9
-                else (f"${market_cap / 1e6:.0f}M" if market_cap else "N/A")
-            ),
-            "roic_pct":                  roic_pct,
-            "roic_source":               roic_source,
-            "revenue_growth_3yr_cagr_pct": revenue_growth_pct,
-            "gross_margin_pct":          gross_margin_pct,
-            "dividend_payout_ratio_pct": payout_pct,
-            "sector":                    sector,
-            "weight_pct":                round(
-                float(pos.get("market_value", 0) or 0) /
-                float(pos.get("_total_value", 1) or 1) * 100, 2
-            ),
-            "gates_passed":              gates_passed,
-            "gates_failed":              gates_failed,
+            "ticker": ticker,
+            "market_cap_usd": mkt_cap,
+            "roic_pct": roic,
+            "revenue_growth_3yr_pct": rev_growth,
+            "gross_margin_pct": gm,
+            "dividend_payout_pct": payout,
+            "is_acorn": gates["is_acorn"],
+            "is_roic_pass": gates["is_roic_pass"],
+            "is_growth_pass": gates["is_growth_pass"],
+            "is_margin_pass": gates["is_margin_pass"],
+            "is_dividend_pass": gates["is_dividend_pass"],
+            "is_hard_reject": gates["is_hard_reject"],
         })
 
     return facts, data_gaps
 
-
-# ---------------------------------------------------------------------------
-# Sheet write helpers
-# ---------------------------------------------------------------------------
 
 def _result_to_sheet_rows(
     result: BaggerScreenerResponse,
@@ -308,385 +223,157 @@ def _result_to_sheet_rows(
     run_ts: str,
     dry_run: bool,
 ) -> list[list]:
+    """Serialize BaggerScreenerResponse to Agent_Outputs tab rows."""
     rows = []
     composite_hash_short = result.bundle_hash[:16]
     dry_str = "TRUE" if dry_run else "FALSE"
 
-    for c in result.candidates_analyzed:
-        action   = _REC_TO_ACTION.get(c.final_recommendation, c.final_recommendation)
+    for c in result.candidates:
+        action = _REC_TO_ACTION.get(c.final_recommendation, c.final_recommendation)
         severity = _REC_TO_SEVERITY.get(c.final_recommendation, "info")
-        rationale = f"{c.fundamental_reason[:200]} | {c.roic_evaluation[:100]}"
+        rationale = f"{c.final_recommendation}: {c.fundamental_reason}"
+        
         rows.append([
             run_id, run_ts, composite_hash_short, AGENT_NAME,
-            "bagger_screen",
-            c.ticker,
-            action,
-            rationale[:300],
-            action[:120],
-            severity,
-            dry_str,
+            "bagger_signal", c.ticker, action[:120],
+            rationale[:800],
+            c.final_recommendation, severity, dry_str,
         ])
 
-    rows.append([
-        run_id, run_ts, composite_hash_short, AGENT_NAME,
-        "portfolio_summary", "PORTFOLIO",
-        f"Strong buys: {', '.join(result.strong_buy_candidates[:5]) or 'none'}",
-        result.summary_narrative[:300],
-        "", "info", dry_str,
-    ])
+    if result.summary_narrative:
+        rows.append([
+            run_id, run_ts, composite_hash_short, AGENT_NAME,
+            "portfolio_summary", "PORTFOLIO",
+            f"Strong buys: {', '.join(result.strong_buy_candidates[:5]) or 'none'}",
+            result.summary_narrative[:800],
+            "", "info", dry_str,
+        ])
 
     return rows
 
 
-def _archive_and_overwrite(ss, new_rows: list[list], run_ts: str) -> None:
-    existing_tabs = {ws.title for ws in ss.worksheets()}
-
-    if config.TAB_AGENT_OUTPUTS not in existing_tabs:
-        ws_out = ss.add_worksheet(
-            title=config.TAB_AGENT_OUTPUTS, rows=2000, cols=len(_AGENT_OUTPUTS_HEADERS) + 1
-        )
-        time.sleep(1.0)
-        existing_rows = []
-    else:
-        ws_out = ss.worksheet(config.TAB_AGENT_OUTPUTS)
-        existing_rows = ws_out.get_all_values()
-
-    if len(existing_rows) > 1:
-        if config.TAB_AGENT_OUTPUTS_ARCHIVE not in existing_tabs:
-            ws_arc = ss.add_worksheet(
-                title=config.TAB_AGENT_OUTPUTS_ARCHIVE,
-                rows=10000, cols=len(_AGENT_OUTPUTS_HEADERS) + 2,
-            )
-            time.sleep(1.0)
-            ws_arc.update(
-                range_name="A1",
-                values=[["archived_at"] + existing_rows[0]],
-                value_input_option="USER_ENTERED",
-            )
-            time.sleep(0.5)
-        else:
-            ws_arc = ss.worksheet(config.TAB_AGENT_OUTPUTS_ARCHIVE)
-
-        archive_rows = [[run_ts] + row for row in existing_rows[1:]]
-        if archive_rows:
-            ws_arc.append_rows(archive_rows, value_input_option="USER_ENTERED")
-            time.sleep(1.0)
-        console.print(
-            f"[dim]Archived {len(archive_rows)} row(s) to {config.TAB_AGENT_OUTPUTS_ARCHIVE}.[/]"
-        )
-
-    ws_out.clear()
-    time.sleep(0.5)
-    ws_out.update(
-        range_name="A1",
-        values=[_AGENT_OUTPUTS_HEADERS] + new_rows,
-        value_input_option="USER_ENTERED",
-    )
-    time.sleep(1.0)
-    console.print(
-        f"[green]LIVE — wrote {len(new_rows)} row(s) to {config.TAB_AGENT_OUTPUTS} (single batch).[/]"
-    )
-
-
 # ---------------------------------------------------------------------------
-# Chunked prompt builder
+# Runner & CLI
 # ---------------------------------------------------------------------------
 
-def _build_bagger_chunk_prompt(chunk_facts: list[dict], ctx: dict) -> str:
-    """Builds the user prompt for a single chunk of pre-computed bagger facts."""
-    framework_context = ctx["framework_context"]
-    composite_hash = ctx["composite_hash"]
-    chunk_data_gaps = [f["ticker"] for f in chunk_facts if f.get("roic_pct") is None
-                       and f.get("revenue_growth_3yr_cagr_pct") is None]
-    return (
-        f"Screen {len(chunk_facts)} portfolio position(s) against Christopher Mayer's "
-        f"100-Bagger quantitative gate framework.\n\n"
-        f"## Christopher Mayer Framework Reference\n"
-        f"{framework_context}\n\n"
-        f"## Pre-Computed Quantitative Gate Results (Python — use exact values)\n"
-        f"{json.dumps(chunk_facts, indent=2, default=str)}\n\n"
+def run_bagger_agent(
+    bundle_path: Path,
+    run_id: str,
+    run_ts: str,
+    ticker_filter: set[str] | None = None,
+    dry_run: bool = True,
+) -> tuple[BaggerScreenerResponse, list[list]]:
+    """
+    Orchestrates the 100-Bagger Screener analysis.
+    Returns (result_object, list_of_sheet_rows).
+    """
+    composite = load_composite_bundle(bundle_path)
+    market = load_bundle(Path(composite["market_bundle_path"]))
+
+    # --- Pre-computation ---
+    with console.status("[cyan]Computing 100-bagger gates..."):
+        bagger_facts, data_gaps = _compute_bagger_facts(market["positions"], ticker_filter)
+
+    if not bagger_facts:
+        raise RuntimeError("No positions to analyze. Check FMP API and tickers.")
+
+    # --- Build user prompt ---
+    system_prompt_text = _SYSTEM_PROMPT_PATH.read_text(encoding="utf-8")
+    framework_text = _FRAMEWORK_PATH.read_text(encoding="utf-8")
+    
+    # Markdown optimization
+    facts_table = dicts_to_markdown_table(bagger_facts)
+
+    user_prompt = (
+        f"Evaluate the following portfolio positions against the 100-Bagger Framework.\n\n"
+        f"## Christopher Mayer 100-Bagger Framework\n"
+        f"{framework_text}\n\n"
+        f"## Pre-Computed Gate Facts\n"
+        f"{facts_table}\n\n"
+        f"## Data Gaps\n"
+        f"{json.dumps(data_gaps)}\n\n"
         f"## Instructions\n"
-        "For each position, write the narrative evaluation fields. "
-        "gates_passed and gates_failed are already computed — echo them exactly.\n\n"
-        "Key rule: most large-cap holdings will REJECT on the Acorn gate. "
-        "That is expected. Be clear but not dismissive — REJECT ≠ 'bad investment'.\n\n"
-        "Write summary_narrative (3-5 sentences) on portfolio-level 100-bagger potential.\n"
-        "Return strong_buy_candidates and watchlist_candidates as ordered ticker lists.\n"
-        f"data_gaps (Python-detected, missing FMP data): {chunk_data_gaps}\n\n"
-        f"bundle_hash (MUST echo in your response): {composite_hash}\n\n"
+        "1. For each ticker: analyze ROIC, Moat (Gross Margin), Growth, and Size (Acorn).\n"
+        "2. Provide a 'fundamental_reason' and a 'final_recommendation' (STRONG_BUY, WATCHLIST, REJECT).\n"
+        "3. Write a global summary_narrative.\n"
+        "4. bundle_hash (echo it): {composite['composite_hash']}\n"
         "Produce a BaggerScreenerResponse JSON object."
     )
 
+    # --- Call Gemini ---
+    result: BaggerScreenerResponse | None = ask_gemini_composite(
+        prompt=user_prompt,
+        composite_bundle_path=bundle_path,
+        response_schema=BaggerScreenerResponse,
+        system_instruction=system_prompt_text,
+        max_tokens=config.GEMINI_MAX_TOKENS_BAGGER,
+    )
 
-# ---------------------------------------------------------------------------
-# CLI command
-# ---------------------------------------------------------------------------
+    if result is None:
+        raise RuntimeError("Gemini returned no result.")
 
-@app.command()
-def analyze(
-    bundle: Optional[str] = typer.Option(
-        "latest",
-        "--bundle",
-        help="Composite bundle path or 'latest' to use most recent.",
-    ),
-    ticker: Optional[str] = typer.Option(
-        None, "--ticker",
-        help="Screen specific tickers (comma-separated). Omit for all positions.",
-    ),
-    live: bool = typer.Option(
-        False, "--live",
-        help="Write output to Agent_Outputs Sheet tab. Default: dry run.",
-    ),
+    sheet_rows = _result_to_sheet_rows(result, run_id, run_ts, dry_run)
+    return result, sheet_rows
+
+
+@app.command("analyze")
+def main(
+    bundle: Optional[str] = typer.Option("latest", "--bundle", help="Composite bundle path or 'latest'."),
+    tickers: Optional[str] = typer.Option(None, "--tickers", help="Comma-separated tickers."),
+    live: bool = typer.Option(False, "--live", help="Write output to Agent_Outputs."),
 ):
-    """
-    100-Bagger screener — Christopher Mayer quantitative gate on all holdings.
+    """Evaluate portfolio positions against the 100-bagger framework."""
+    run_id = str(uuid.uuid4())[:8]
+    run_ts = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
-    Pre-computes ROIC, revenue CAGR, gross margin, and market cap per position
-    via FMP. Gemini writes narrative rationale; Python determines gate pass/fail.
-
-    Note: most large-cap holdings will REJECT on the Acorn gate — that is expected
-    and informative. The screener surfaces which positions still have 100x math.
-    """
-
-    # --- Banner ---
-    if live:
-        console.print(Panel.fit(
-            "[bold white on red] LIVE MODE — Sheet writes enabled [/]",
-            border_style="red",
-        ))
-    else:
-        console.print(Panel.fit(
-            "[bold black on yellow] DRY RUN — No Sheet writes. Use --live to enable. [/]",
-            border_style="yellow",
-        ))
-
-    # --- Resolve bundle ---
     if bundle == "latest":
-        composite_candidates = sorted(
-            Path("bundles").glob("composite_bundle_*.json"),
-            key=lambda p: p.stat().st_mtime,
-        )
-        if not composite_candidates:
-            console.print(
-                "[red]ERROR: No composite bundles found. Run: python manager.py bundle composite[/]"
-            )
+        candidates = sorted(Path("bundles").glob("composite_bundle_*.json"), key=lambda p: p.stat().st_mtime)
+        if not candidates:
+            console.print("[red]ERROR: No composite bundles found.[/]")
             raise typer.Exit(1)
-        bundle_path = composite_candidates[-1]
-        console.print(f"[dim]Using latest composite bundle: {bundle_path.name}[/]")
+        bundle_path = candidates[-1]
     else:
         bundle_path = Path(bundle)
-        if not bundle_path.exists():
-            console.print(f"[red]ERROR: Bundle not found: {bundle_path}[/]")
-            raise typer.Exit(1)
 
-    # --- Load composite bundle ---
-    composite = load_composite_bundle(bundle_path)
-    console.print(f"[dim]Composite hash: {composite['composite_hash'][:16]}...[/]")
+    ticker_filter = {t.strip().upper() for t in tickers.split(",")} if tickers else None
 
-    # --- Load market sub-bundle ---
-    market = load_bundle(Path(composite["market_bundle_path"]))
-    investable = [
-        p for p in market["positions"]
-        if p.get("ticker") not in config.CASH_TICKERS
-    ]
-    total_value = market.get("total_value", 0.0)
-
-    # Inject total_value into each pos so _compute_bagger_facts can compute weight_pct
-    for p in investable:
-        p["_total_value"] = total_value
-
-    console.print(f"[dim]{len(investable)} investable positions | portfolio ${total_value:,.0f}[/]")
-
-    # --- Apply ticker filter ---
-    ticker_filter: Optional[list[str]] = None
-    if ticker:
-        ticker_filter = [t.strip().upper() for t in ticker.split(",")]
-        console.print(f"[dim]Ticker filter: {ticker_filter}[/]")
-
-    # --- Python pre-computation: FMP data + gate evaluation ---
-    console.print("[cyan]Fetching FMP data and evaluating Mayer quantitative gates...[/]")
-    with console.status("[cyan]Computing ROIC, revenue CAGR, gross margin, market cap..."):
-        positions_facts, data_gaps = _compute_bagger_facts(investable, ticker_filter)
-
-    if not positions_facts:
-        console.print("[yellow]No positions after filter / FMP fetch. Check --ticker or FMP key.[/]")
-        raise typer.Exit(0)
-
-    # Quick gate summary to console before Gemini call
-    n_acorn_pass  = sum(1 for p in positions_facts if "acorn" in p["gates_passed"])
-    n_roic_pass   = sum(1 for p in positions_facts if "roic" in p["gates_passed"])
-    console.print(
-        f"[dim]Gate summary: {n_acorn_pass}/{len(positions_facts)} pass Acorn "
-        f"| {n_roic_pass}/{len(positions_facts)} pass ROIC[/]"
-    )
-    if data_gaps:
-        console.print(f"[yellow]! FMP data unavailable for: {data_gaps[:10]}[/]")
-
-    # --- Load Mayer framework JSON ---
-    framework_context = ""
-    if _FRAMEWORK_PATH.exists():
-        try:
-            framework_context = _FRAMEWORK_PATH.read_text(encoding="utf-8")
-        except Exception:
-            pass
-
-    # --- System prompt ---
-    system_prompt_text = (
-        _SYSTEM_PROMPT_PATH.read_text(encoding="utf-8")
-        if _SYSTEM_PROMPT_PATH.exists()
-        else ""
-    )
-
-    # --- Call Gemini — CHUNKED EXECUTION ---
-    chunks = [
-        positions_facts[i : i + CHUNK_SIZE]
-        for i in range(0, len(positions_facts), CHUNK_SIZE)
-    ]
-    console.print(
-        f"[cyan]Calling Gemini on {len(positions_facts)} position(s) "
-        f"(chunked, {CHUNK_SIZE} per batch)...[/]"
-    )
-
-    prompt_ctx = {
-        "framework_context": framework_context,
-        "composite_hash": composite["composite_hash"],
-    }
-
-    all_candidates_analyzed: list = []
-    all_strong_buys: list = []
-    all_watchlist: list = []
-    first_summary_narrative: str | None = None
-    chunk_errors: list[str] = []
-
-    with console.status("[cyan]Evaluating 100-bagger potential in chunks..."):
-        for idx, chunk in enumerate(chunks):
-            tickers_in_chunk = [p["ticker"] for p in chunk]
-            logger.info("Chunk %d/%d: %s", idx + 1, len(chunks), tickers_in_chunk)
-            try:
-                chunk_prompt = _build_bagger_chunk_prompt(chunk, prompt_ctx)
-                chunk_result: BaggerScreenerResponse | None = ask_gemini_composite(
-                    prompt=chunk_prompt,
-                    composite_bundle_path=bundle_path,
-                    response_schema=BaggerScreenerResponse,
-                    system_instruction=system_prompt_text,
-                    max_tokens=8000,
-                )
-                if chunk_result is None:
-                    msg = f"Chunk {idx + 1}/{len(chunks)} ({tickers_in_chunk}): Gemini returned None"
-                    logger.warning(msg)
-                    chunk_errors.append(msg)
-                else:
-                    all_candidates_analyzed.extend(chunk_result.candidates_analyzed)
-                    all_strong_buys.extend(chunk_result.strong_buy_candidates)
-                    all_watchlist.extend(chunk_result.watchlist_candidates)
-                    if first_summary_narrative is None and chunk_result.summary_narrative:
-                        first_summary_narrative = chunk_result.summary_narrative
-            except Exception as e:
-                msg = f"Chunk {idx + 1}/{len(chunks)} failed: {e}"
-                logger.error(msg, exc_info=True)
-                chunk_errors.append(msg)
-
-            if idx < len(chunks) - 1:
-                time.sleep(INTER_CHUNK_SLEEP)
-
-    if not all_candidates_analyzed and chunk_errors:
-        console.print("[red]ERROR: All chunks failed. Check API logs.[/]")
-        for err in chunk_errors:
-            console.print(f"  [red]• {err}[/]")
+    try:
+        result, sheet_rows = run_bagger_agent(bundle_path, run_id, run_ts, ticker_filter, dry_run=not live)
+    except Exception as e:
+        console.print(f"[red]ERROR: {e}[/]")
         raise typer.Exit(1)
 
-    # Reconstruct result with ORIGINAL composite hash (never from a chunk response)
-    result = BaggerScreenerResponse(
-        bundle_hash=composite["composite_hash"],
-        analysis_timestamp_utc=datetime.now(timezone.utc).isoformat(),
-        candidates_analyzed=all_candidates_analyzed,
-        strong_buy_candidates=list(dict.fromkeys(all_strong_buys)),
-        watchlist_candidates=list(dict.fromkeys(all_watchlist)),
-        summary_narrative=first_summary_narrative or "See individual position analyses.",
-        data_gaps=data_gaps,  # Python-computed — always authoritative
-    )
-    if chunk_errors:
-        console.print(f"[yellow]! {len(chunk_errors)} chunk error(s): {chunk_errors}[/]")
-    # --- END CHUNKED EXECUTION ---
-
-    # Overwrite data_gaps with Python-computed list (authoritative)
-    result.data_gaps = data_gaps
-
-    # Overwrite gates_passed / gates_failed on each candidate with Python truth
-    facts_map = {f["ticker"]: f for f in positions_facts}
-    for cand in result.candidates_analyzed:
-        fact = facts_map.get(cand.ticker)
-        if fact:
-            cand.gates_passed = fact["gates_passed"]
-            cand.gates_failed = fact["gates_failed"]
-
-    # --- Rich summary ---
+    # --- Rich Summary ---
     summary = Table(title="100-Bagger Screener — Summary", show_header=False, box=None)
-    summary.add_column("Field", style="cyan", no_wrap=True)
+    summary.add_column("Field", style="cyan")
     summary.add_column("Value", style="white")
     summary.add_row("Bundle Hash", result.bundle_hash[:16] + "...")
-    summary.add_row("Analyzed At", result.analysis_timestamp_utc)
-    summary.add_row("Positions Screened", str(len(result.candidates_analyzed)))
-    summary.add_row("Strong Buys", f"[bold green]{len(result.strong_buy_candidates)}[/]" if result.strong_buy_candidates else "0")
-    summary.add_row("Watchlist", f"[yellow]{len(result.watchlist_candidates)}[/]" if result.watchlist_candidates else "0")
-    summary.add_row("Data Gaps", str(len(result.data_gaps)))
+    summary.add_row("Candidates", str(len(result.candidates)))
+    summary.add_row("Strong Buys", str(len(result.strong_buy_candidates)))
     console.print(summary)
 
-    if result.candidates_analyzed:
-        rec_colors = {
-            "STRONG_BUY": "bold green",
-            "WATCHLIST":  "yellow",
-            "REJECT":     "dim",
-        }
-        screen_table = Table(title="Gate Results", show_header=True)
-        screen_table.add_column("Ticker", style="bold")
-        screen_table.add_column("Mkt Cap")
-        screen_table.add_column("ROIC %")
-        screen_table.add_column("Rev CAGR %")
-        screen_table.add_column("Gross Margin %")
-        screen_table.add_column("Gates Passed")
-        screen_table.add_column("Verdict")
-        for cand in result.candidates_analyzed:
-            fact = facts_map.get(cand.ticker, {})
-            color = rec_colors.get(cand.final_recommendation, "white")
-            screen_table.add_row(
-                cand.ticker,
-                fact.get("market_cap_label", "N/A"),
-                f"{fact.get('roic_pct', 0) or 0:.1f}%" if fact.get("roic_pct") else "N/A",
-                f"{fact.get('revenue_growth_3yr_cagr_pct', 0) or 0:.1f}%" if fact.get("revenue_growth_3yr_cagr_pct") else "N/A",
-                f"{fact.get('gross_margin_pct', 0) or 0:.1f}%" if fact.get("gross_margin_pct") else "N/A",
-                f"{len(cand.gates_passed)}/5",
-                f"[{color}]{cand.final_recommendation}[/]",
-            )
-        console.print(screen_table)
+    if result.candidates:
+        colors = {"STRONG_BUY": "bold green", "WATCHLIST": "yellow", "REJECT": "dim red"}
+        table = Table(title="Bagger Candidates", show_header=True)
+        table.add_column("Ticker")
+        table.add_column("Rec")
+        table.add_column("Reason")
+        for c in result.candidates:
+            table.add_row(c.ticker, f"[{colors.get(c.final_recommendation)}]{c.final_recommendation}[/]", c.fundamental_reason[:80])
+        console.print(table)
 
-    if result.strong_buy_candidates:
-        console.print(f"\n[bold green]STRONG BUY:[/] {', '.join(result.strong_buy_candidates)}")
-    if result.watchlist_candidates:
-        console.print(f"[yellow]WATCHLIST:[/] {', '.join(result.watchlist_candidates)}")
-    if result.summary_narrative:
-        console.print(f"\n[dim]Portfolio summary:[/] {result.summary_narrative}")
-
-    # --- Write local audit files ---
+    # --- Audit files ---
     AGENT_OUTPUT_DIR.mkdir(exist_ok=True)
-    run_ts = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-    run_id = str(uuid.uuid4())
+    json_path = Path("bundles/runs") / f"bagger_analysis_{run_ts.replace(':', '')}_{run_id}.json"
+    json_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(json_path, "w") as f:
+        f.write(result.model_dump_json(indent=2))
 
-    json_path = AGENT_OUTPUT_DIR / f"bagger_output_{result.bundle_hash[:12]}.json"
-    json_path.write_text(json.dumps(result.model_dump(), indent=2))
-
-    if not live:
-        console.print(f"\n[dim]DRY RUN — output written to:[/]")
-        console.print(f"  {json_path}")
-        return
-
-    # --- Live: write to Agent_Outputs tab ---
-    from utils.sheet_readers import get_gspread_client
-
-    sheet_rows = _result_to_sheet_rows(result, run_id, run_ts, dry_run=False)
-    client = get_gspread_client()
-    ss = client.open_by_key(config.PORTFOLIO_SHEET_ID)
-    _archive_and_overwrite(ss, sheet_rows, run_ts)
+    if live:
+        client = get_gspread_client()
+        ss = client.open_by_key(config.PORTFOLIO_SHEET_ID)
+        archive_and_overwrite_agent_outputs(ss, sheet_rows, run_ts, _AGENT_OUTPUTS_HEADERS)
+    
     console.print(f"[dim]Local audit file:[/] {json_path}")
 
 

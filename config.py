@@ -1,40 +1,20 @@
 """
 Investment Portfolio Manager — Configuration
-All settings centralized here. Reads from Streamlit secrets in production,
-falls back to environment variables or defaults for local dev.
-
-Mirrors the config.py pattern from RE Property Manager.
+All settings centralized here. Reads from .env file for development and production CLI usage.
 """
 
 import os
+from dotenv import load_dotenv
 
-# ---------------------------------------------------------------------------
-# Try to import Streamlit secrets; fall back gracefully for testing/CLI use
-# ---------------------------------------------------------------------------
-def _secret(key, default=None):
-    """
-    Safely retrieves a secret.
-    1. Tries st.secrets (if in a Streamlit app).
-    2. Falls back to an environment variable.
-    3. Falls back to a provided default.
-    """
-    try:
-        import streamlit as st
-        if hasattr(st, 'secrets') and key in st.secrets:
-            return st.secrets[key]
-    except (ImportError, Exception):
-        # This will catch both missing streamlit and other streamlit-related errors
-        # when not running in a streamlit context.
-        pass
-    
-    return os.getenv(key.upper(), default)
+# Load environment variables from .env
+load_dotenv()
 
 # ---------------------------------------------------------------------------
 # Google Sheets IDs
 # ---------------------------------------------------------------------------
-PORTFOLIO_SHEET_ID = _secret(
-    "portfolio_sheet_id",
-    "1DuY68xVvyHq-0dyb7XUQgcoK7fqcVS0fv7UoGdTnfxA"  # TBD — create during Phase 1 setup, share with service account
+PORTFOLIO_SHEET_ID = os.getenv(
+    "PORTFOLIO_SHEET_ID",
+    "1DuY68xVvyHq-0dyb7XUQgcoK7fqcVS0fv7UoGdTnfxA"
 )
 
 # GCP Project Context
@@ -48,23 +28,23 @@ RE_DASHBOARD_SHEET_ID = "1DXuY1iBo2GqZCCSZ7OrUa4iaunb5s8Kf1Rms8Z237rQ"
 # ---------------------------------------------------------------------------
 # API Keys (Phase 2+)
 # ---------------------------------------------------------------------------
-FINNHUB_API_KEY = _secret("finnhub_api_key", "")
-FMP_API_KEY = _secret("fmp_api_key", "")        # Financial Modeling Prep (Phase 4)
-FRED_API_KEY = _secret("fred_api_key", "")      # Federal Reserve Economic Data (Phase 2)
-AI_SECONDARY_API_KEY = _secret("ai_secondary_api_key", "")  # Reserved for future secondary AI
-# GEMINI_API_KEY removed — using ADC auth via gcloud auth application-default login
+FINNHUB_API_KEY = os.getenv("FINNHUB_API_KEY", "")
+FMP_API_KEY = os.getenv("FMP_API_KEY", "")        # Financial Modeling Prep (Phase 4)
+FRED_API_KEY = os.getenv("FRED_API_KEY", "")      # Federal Reserve Economic Data (Phase 2)
+AI_SECONDARY_API_KEY = os.getenv("AI_SECONDARY_API_KEY", "")  # Reserved for future secondary AI
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")  # Now explicitly using GEMINI_API_KEY for CLI tools
 
 # ---------------------------------------------------------------------------
 # Schwab API (Phase 5-S)
 # ---------------------------------------------------------------------------
-SCHWAB_ACCOUNTS_APP_KEY    = _secret("schwab_accounts_app_key", "")
-SCHWAB_ACCOUNTS_APP_SECRET = _secret("schwab_accounts_app_secret", "")
-SCHWAB_MARKET_APP_KEY      = _secret("schwab_market_app_key", "")
-SCHWAB_MARKET_APP_SECRET   = _secret("schwab_market_app_secret", "")
+SCHWAB_ACCOUNTS_APP_KEY    = os.getenv("SCHWAB_ACCOUNTS_APP_KEY", "")
+SCHWAB_ACCOUNTS_APP_SECRET = os.getenv("SCHWAB_ACCOUNTS_APP_SECRET", "")
+SCHWAB_MARKET_APP_KEY      = os.getenv("SCHWAB_MARKET_APP_KEY", "")
+SCHWAB_MARKET_APP_SECRET   = os.getenv("SCHWAB_MARKET_APP_SECRET", "")
 
-SCHWAB_TOKEN_BUCKET   = _secret("schwab_token_bucket", "portfolio-manager-tokens")
-SCHWAB_ACCOUNT_HASH   = _secret("schwab_account_hash", "")
-SCHWAB_CALLBACK_URL   = _secret("schwab_callback_url", "https://127.0.0.1")
+SCHWAB_TOKEN_BUCKET   = os.getenv("SCHWAB_TOKEN_BUCKET", "portfolio-manager-tokens")
+SCHWAB_ACCOUNT_HASH   = os.getenv("SCHWAB_ACCOUNT_HASH", "")
+SCHWAB_CALLBACK_URL   = os.getenv("SCHWAB_CALLBACK_URL", "https://127.0.0.1")
 
 # Token blob names in GCS (one per app — Market Data client cannot read accounts blob)
 SCHWAB_TOKEN_BLOB_ACCOUNTS = "token_accounts.json"
@@ -77,29 +57,48 @@ SCHWAB_CLIENT_CACHE_TTL = 1500   # 25 min
 # ---------------------------------------------------------------------------
 # AI Model Configuration
 # ---------------------------------------------------------------------------
-GEMINI_MODEL = _secret("gemini_model", "gemini-2.5-flash")  # Vertex AI confirmed accessible on re-property-manager-487122
-GEMINI_MAX_TOKENS = _secret("gemini_max_tokens", 2000)  # default for lightweight agents
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")  # Vertex AI confirmed accessible on re-property-manager-487122
+GEMINI_MAX_TOKENS = int(os.getenv("GEMINI_MAX_TOKENS", "2000"))  # default for lightweight agents
 
 # Per-agent token budgets — overrides for agents that return large structured JSON.
 # Gemini 2.5 Flash output cap is 65,536 tokens; these are well within bounds.
 # Root cause of "EOF while parsing" errors: output truncated at the global 2000-token default.
 GEMINI_MAX_TOKENS_VALUATION     = 24000   # 53 positions × ~350 tokens each + narrative overhead
 GEMINI_MAX_TOKENS_CONCENTRATION = 10000   # 24 flags × hedge_suggestion + correlation table
-GEMINI_MAX_TOKENS_MACRO         = 8000    # chunked (15 pos/chunk) — per-chunk budget
-GEMINI_MAX_TOKENS_REBUY         = 6000    # chunked (15 pos/chunk) — per-chunk budget
+GEMINI_MAX_TOKENS_MACRO         = 16000   # Increased from 8000 due to truncation
+GEMINI_MAX_TOKENS_REBUY         = 8000    # Increased from 6000
+GEMINI_MAX_TOKENS_BAGGER        = 16000   # 50+ tickers × compounder gate narrative
+GEMINI_MAX_TOKENS_THESIS        = 16000   # 50+ tickers × management candor analysis
 
 # ---------------------------------------------------------------------------
 # Cash / Non-Investment Tickers
 # ---------------------------------------------------------------------------
 # These are cash sweep or money market positions — track as cash, not investments
 CASH_TICKERS = {'CASH_MANUAL', 'QACDS', 'CASH & CASH INVESTMENTS', 'SGOV'}
+CASH_EQUIVALENT_TICKERS = CASH_TICKERS  # Alias for consistency across agents
 
 # Default cash yield for money market / sweep (editable in Sheet Config tab)
 DEFAULT_CASH_YIELD_PCT = 4.50
 
 # ---------------------------------------------------------------------------
+# Valuation Agent Skips
+# ---------------------------------------------------------------------------
+# Asset classes and tickers to exclude from valuation analysis (ETFs, Funds, etc. have no P/E)
+VALUATION_SKIP_ASSET_CLASSES = {
+    "ETF", "FUND", "MUTUAL_FUND", "FIXED_INCOME", "CASH_EQUIVALENT",
+    "INDEX", "BOND", "MMMF",
+}
+
+VALUATION_SKIP_TICKERS = {
+    'SGOV', 'JPIE', 'QQQM', 'VEA', 'VTI', 'XBI', 'XOM_skip', 'IGV', 'EWZ', 'IFRA',
+    'XLV', 'XLE', 'XLF', 'RSP', 'EEM', 'VEU', 'EMXC', 'BBJP', 'EFG', 'PPA', 'EWJ',
+    'CASH_MANUAL', 'CASH & CASH INVESTMENTS', 'QACDS'
+}
+
+# ---------------------------------------------------------------------------
 # Portfolio Sheet Tab Names
 # ---------------------------------------------------------------------------
+TAB_DASHBOARD        = "0_DASHBOARD"        # index-0 tab; hard-value KPIs, no formulas
 TAB_HOLDINGS_CURRENT = "Holdings_Current"
 TAB_HOLDINGS_HISTORY = "Holdings_History"
 TAB_DAILY_SNAPSHOTS = "Daily_Snapshots"
@@ -132,8 +131,6 @@ KNOWN_NUMERIC_COLUMNS = [
 ]
 
 # ---------------------------------------------------------------------------
-# Normalized Position Columns (output schema for Holdings tabs)
-# ---------------------------------------------------------------------------
 # EXACT headers from PORTFOLIO_SHEET_SCHEMA.md
 POSITION_COLUMNS = [
     'Ticker',
@@ -158,144 +155,6 @@ POSITION_COLUMNS = [
     'Fingerprint',
 ]
 
-POSITION_COL_MAP = {
-    'ticker': 'Ticker',
-    'description': 'Description',
-    'asset_class': 'Asset Class',
-    'asset_strategy': 'Asset Strategy',
-    'quantity': 'Quantity',
-    'price': 'Price',
-    'market_value': 'Market Value',
-    'cost_basis': 'Cost Basis',
-    'unit_cost': 'Unit Cost',
-    'unrealized_gl': 'Unrealized G/L',
-    'unrealized_gl_pct': 'Unrealized G/L %',
-    'est_annual_income': 'Est Annual Income',
-    'dividend_yield': 'Dividend Yield',
-    'acquisition_date': 'Acquisition Date',
-    'wash_sale': 'Wash Sale',
-    'is_cash': 'Is Cash',
-    'daily_change_pct': 'Daily Change %',
-    'weight': 'Weight',
-    'import_date': 'Import Date',
-    'fingerprint': 'Fingerprint',
-}
-
-AI_SUGGESTED_ALLOCATION_COLUMNS = [
-    'Date',
-    'Source',
-    'Asset Class',
-    'Asset Strategy',
-    'Target %',
-    'Min %',
-    'Max %',
-    'Confidence',
-    'Notes',
-    'Executive Summary',
-    'Fingerprint',
-]
-
-AI_SUGGESTED_ALLOCATION_COL_MAP = {
-    'date': 'Date',
-    'source': 'Source',
-    'asset_class': 'Asset Class',
-    'asset_strategy': 'Asset Strategy',
-    'target_pct': 'Target %',
-    'min_pct': 'Min %',
-    'max_pct': 'Max %',
-    'confidence': 'Confidence',
-    'notes': 'Notes',
-    'executive_summary': 'Executive Summary',
-    'fingerprint': 'Fingerprint',
-}
-
-DECISION_LOG_COLUMNS = [
-    'Date',
-    'Timestamp',
-    'Tickers Involved',
-    'Action',
-    'Market Context',
-    'Rationale',
-    'Tags',
-    'Fingerprint',
-]
-
-TRADE_LOG_COLUMNS = [
-    'Date',
-    'Sell_Ticker',
-    'Sell_Proceeds',
-    'Buy_Ticker',
-    'Buy_Amount',
-    'Implicit_Bet',
-    'Thesis_Brief',
-    'Rotation_Type',
-    'Trade_Log_ID',
-    'Fingerprint',
-]
-
-# Staging area for rotation candidates awaiting review.
-# Bill edits Implicit_Bet and Thesis_Brief, then runs:
-#   python manager.py journal promote
-# to move approved rows → Trade_Log.
-TRADE_LOG_STAGING_COLUMNS = [
-    'Stage_ID',           # UUID — becomes Trade_Log_ID on promotion
-    'Date',               # earliest date in the cluster
-    'Sell_Tickers',       # comma-separated sell tickers
-    'Sell_Proceeds',      # total proceeds (abs value, USD)
-    'Buy_Tickers',        # comma-separated buy tickers, or "CASH"
-    'Buy_Amount',         # total deployed (abs value, USD); 0 if dry_powder
-    'Rotation_Type',      # dry_powder | upgrade | rebalance | cash_parking | unknown
-    'Implicit_Bet',       # BLANK — Bill fills in before promoting
-    'Thesis_Brief',       # BLANK — Bill fills in before promoting
-    'Status',             # pending | approved | rejected
-    'Cluster_Window_Days',# window used to detect the cluster
-    'Sell_Dates',         # pipe-separated raw sell dates for audit
-    'Buy_Dates',          # pipe-separated raw buy dates for audit
-    'Fingerprint',        # SHA256[:12] of date+sell_tickers+buy_tickers
-]
-
-GL_COL_MAP = {
-    'ticker': 'Ticker',
-    'description': 'Description',
-    'closed_date': 'Closed Date',
-    'opened_date': 'Opened Date',
-    'holding_days': 'Holding Days',
-    'quantity': 'Quantity',
-    'proceeds_per_share': 'Proceeds Per Share',
-    'cost_per_share': 'Cost Per Share',
-    'proceeds': 'Proceeds',
-    'cost_basis': 'Cost Basis',
-    'unadjusted_cost': 'Unadjusted Cost',
-    'gain_loss_dollars': 'Gain Loss $',
-    'gain_loss_pct': 'Gain Loss %',
-    'lt_gain_loss': 'LT Gain Loss',
-    'st_gain_loss': 'ST Gain Loss',
-    'term': 'Term',
-    'wash_sale': 'Wash Sale',
-    'disallowed_loss': 'Disallowed Loss',
-    'account': 'Account',
-    'is_primary_acct': 'Is Primary Acct',
-    'import_date': 'Import Date',
-    'fingerprint': 'Fingerprint',
-}
-
-TRANSACTION_COL_MAP = {
-    'Date': 'Trade Date',
-    'Action': 'Action',
-    'Symbol': 'Ticker',
-    'Description': 'Description',
-    'Quantity': 'Quantity',
-    'Price': 'Price',
-    'Fees & Comm': 'Fees',
-    'Amount': 'Net Amount',
-    'import_date': 'Import Date',
-    'Fingerprint': 'Fingerprint',
-}
-
-# ---------------------------------------------------------------------------
-# Daily Snapshot Columns
-# ---------------------------------------------------------------------------
-# EXACT headers from PORTFOLIO_SHEET_SCHEMA.md
 SNAPSHOT_COLUMNS = [
     'Date',
     'Total Value',
@@ -331,9 +190,6 @@ RISK_COLUMNS = [
     'Fingerprint',
 ]
 
-# ---------------------------------------------------------------------------
-# Transaction History Columns
-# ---------------------------------------------------------------------------
 TRANSACTION_COLUMNS = [
     'Trade Date',
     'Settlement Date',
@@ -349,10 +205,6 @@ TRANSACTION_COLUMNS = [
     'Fingerprint',
 ]
 
-# ---------------------------------------------------------------------------
-# Realized G/L Columns
-# ---------------------------------------------------------------------------
-# EXACT headers from REALIZED_GL_PARSER_SPEC.md
 GL_COLUMNS = [
     'Ticker',
     'Description',
@@ -378,78 +230,151 @@ GL_COLUMNS = [
     'Fingerprint',
 ]
 
-# ---------------------------------------------------------------------------
-# Asset Class Mapping
-# ---------------------------------------------------------------------------
-# Maps Schwab's verbose Asset Class values to simplified allocation categories
-ASSET_CLASS_MAP = {
-    'Equity': 'Equities',
-    'Fixed Income & Cash': 'Cash & Fixed Income',
-    'Alternative Assets': 'Alternatives',
-}
-
-# ---------------------------------------------------------------------------
-# Sector Classification (description-based, from Colab V3.2 get_sector_fast)
-# ---------------------------------------------------------------------------
-# Used for positions not in the top-20 enrichment tier (no yfinance call)
-ETF_KEYWORDS = {
-    'Fixed Income': ['BOND', 'INCOME', 'TREASURY', 'AGGREGATE'],
-    'Technology': ['TECH', 'SOFTWARE'],
-    'Healthcare': ['HEALTH'],
-    'Energy': ['ENERGY'],
-    'Broad Market': ['S&P', '500', 'TOTAL STOCK', 'TOTAL MARKET'],
-}
-
-# ---------------------------------------------------------------------------
-# Performance Benchmarks
-# ---------------------------------------------------------------------------
-BENCHMARK_TICKERS = ['SPY', 'VTI', 'QQQM']
-
-# ---------------------------------------------------------------------------
-# Risk Analytics (Phase 2 — from Colab V3.2)
-# ---------------------------------------------------------------------------
-# CAPM parameters (should eventually move to Sheet Config tab)
-RISK_FREE_RATE = 0.045        # ~4.5% (T-bill rate)
-MARKET_PREMIUM = 0.055        # ~5.5% equity risk premium
-BASE_VOLATILITY = 0.16        # ~16% annualized market volatility
-
-# Stress test scenarios: (name, market_change)
-STRESS_SCENARIOS = [
-    ("Nasdaq falls 2% (Correction)", -0.02),
-    ("Market rises 1.5% (Good Day)", 0.015),
-    ("Market falls 10% (Major Sell-off)", -0.10),
-    ("Market falls 20% (Bear Market)", -0.20),
-    ("Market rises 5% (Rally)", 0.05),
+AI_SUGGESTED_ALLOCATION_COLUMNS = [
+    'Date',
+    'Source',
+    'Asset Class',
+    'Asset Strategy',
+    'Target %',
+    'Min %',
+    'Max %',
+    'Confidence',
+    'Notes',
+    'Executive Summary',
+    'Fingerprint',
 ]
 
+DECISION_LOG_COLUMNS = [
+    'Date',
+    'Timestamp',
+    'Tickers Involved',
+    'Action',
+    'Market Context',
+    'Rationale',
+    'Tags',
+    'Fingerprint',
+]
+
+TRADE_LOG_COLUMNS = [
+    'Date',
+    'Sell_Ticker',
+    'Sell_Proceeds',
+    'Buy_Ticker',
+    'Buy_Amount',
+    'Implicit_Bet',
+    'Thesis_Brief',
+    'Rotation_Type',
+    'Trade_Log_ID',
+    'Fingerprint',
+]
+
+TRADE_LOG_STAGING_COLUMNS = [
+    'Stage_ID',
+    'Date',
+    'Sell_Tickers',
+    'Sell_Proceeds',
+    'Buy_Tickers',
+    'Buy_Amount',
+    'Rotation_Type',
+    'Implicit_Bet',
+    'Thesis_Brief',
+    'Status',
+    'Cluster_Window_Days',
+    'Sell_Dates',
+    'Buy_Dates',
+    'Fingerprint',
+]
+
+# ---------------------------------------------------------------------------
+# Column Name Mappings (Internal -> External)
+# ---------------------------------------------------------------------------
+
+POSITION_COL_MAP = {
+    'ticker': 'Ticker',
+    'description': 'Description',
+    'asset_class': 'Asset Class',
+    'asset_strategy': 'Asset Strategy',
+    'quantity': 'Quantity',
+    'price': 'Price',
+    'market_value': 'Market Value',
+    'cost_basis': 'Cost Basis',
+    'unit_cost': 'Unit Cost',
+    'unrealized_gl': 'Unrealized G/L',
+    'unrealized_gl_pct': 'Unrealized G/L %',
+    'est_annual_income': 'Est Annual Income',
+    'dividend_yield': 'Dividend Yield',
+    'acquisition_date': 'Acquisition Date',
+    'wash_sale': 'Wash Sale',
+    'is_cash': 'Is Cash',
+    'daily_change_pct': 'Daily Change %',
+    'weight': 'Weight',
+    'import_date': 'Import Date',
+    'fingerprint': 'Fingerprint',
+}
+
+AI_SUGGESTED_ALLOCATION_COL_MAP = {
+    'date': 'Date',
+    'source': 'Source',
+    'asset_class': 'Asset Class',
+    'asset_strategy': 'Asset Strategy',
+    'target_pct': 'Target %',
+    'min_pct': 'Min %',
+    'max_pct': 'Max %',
+    'confidence': 'Confidence',
+    'notes': 'Notes',
+    'executive_summary': 'Executive Summary',
+    'fingerprint': 'Fingerprint',
+}
+
+TRANSACTION_COL_MAP = {
+    'Date': 'Trade Date',
+    'Action': 'Action',
+    'Symbol': 'Ticker',
+    'Description': 'Description',
+    'Quantity': 'Quantity',
+    'Price': 'Price',
+    'Fees & Comm': 'Fees',
+    'Amount': 'Net Amount',
+    'import_date': 'Import Date',
+    'Fingerprint': 'Fingerprint',
+}
+
+GL_COL_MAP = {
+    'ticker': 'Ticker',
+    'description': 'Description',
+    'closed_date': 'Closed Date',
+    'opened_date': 'Opened Date',
+    'holding_days': 'Holding Days',
+    'quantity': 'Quantity',
+    'proceeds_per_share': 'Proceeds Per Share',
+    'cost_per_share': 'Cost Per Share',
+    'proceeds': 'Proceeds',
+    'cost_basis': 'Cost Basis',
+    'unadjusted_cost': 'Unadjusted Cost',
+    'gain_loss_dollars': 'Gain Loss $',
+    'gain_loss_pct': 'Gain Loss %',
+    'lt_gain_loss': 'LT Gain Loss',
+    'st_gain_loss': 'ST Gain Loss',
+    'term': 'Term',
+    'wash_sale': 'Wash Sale',
+    'disallowed_loss': 'Disallowed Loss',
+    'account': 'Account',
+    'is_primary_acct': 'Is Primary Acct',
+    'import_date': 'Import Date',
+    'fingerprint': 'Fingerprint',
+}
+
+# ---------------------------------------------------------------------------
+# Risk Analytics & Enrichment
+# ---------------------------------------------------------------------------
 # Minimum data points required for beta calculation
 MIN_BETA_DATA_POINTS = 30
 
+# Tickers to exclude from beta calculation (cash, money markets, etc.)
+BETA_EXCLUDE_TICKERS = {'CASH_MANUAL', 'QACDS', 'CASH & CASH INVESTMENTS', 'SGOV'}
+
 # Number of positions to enrich via yfinance (by market value, descending)
-TOP_N_ENRICH = 20
-
-# ---------------------------------------------------------------------------
-# Concentration Risk Thresholds
-# ---------------------------------------------------------------------------
-SINGLE_POSITION_WARN_PCT = 10.0   # Warn if any position > 10% of portfolio
-SECTOR_CONCENTRATION_WARN_PCT = 30.0  # Warn if any sector > 30% of portfolio
-
-# ---------------------------------------------------------------------------
-# Contribution Modeling
-# ---------------------------------------------------------------------------
-DEFAULT_MONTHLY_CONTRIBUTIONS = [2000, 5000]  # From Colab projection scenarios
-
-# ---------------------------------------------------------------------------
-# Cache Settings
-# ---------------------------------------------------------------------------
-CACHE_TTL_SECONDS = 300       # 5 minutes — same as RE project
-YFINANCE_CACHE_TTL = 300      # Minimum seconds between yfinance refreshes
-
-# ---------------------------------------------------------------------------
-# Rate Limiting
-# ---------------------------------------------------------------------------
-SHEETS_SLEEP_BETWEEN_TABS = 1.0   # seconds between Google Sheets tab operations
-SHEETS_RETRY_BACKOFF = 60         # seconds to wait on APIError before retry
+TOP_N_ENRICH = 50
 
 # ---------------------------------------------------------------------------
 # Ticker-specific Data Overrides (Manual Corrections)
@@ -462,7 +387,7 @@ TICKER_OVERRIDES = {
         'asset_class': 'International', # Ensure BABA isn't just 'Other' or 'Equity'
     }
 }
-DRY_RUN = _secret("dry_run", False)  # Set to False only when ready to write to live Sheet
+DRY_RUN = os.getenv("DRY_RUN", "False").lower() == "true"  # Set to False only when ready to write to live Sheet
 
 # ---------------------------------------------------------------------------
 # Phase 5: Agent Squad — Thresholds & Tab Names
@@ -470,16 +395,13 @@ DRY_RUN = _secret("dry_run", False)  # Set to False only when ready to write to 
 # Concentration thresholds (used by concentration_hedger)
 CONCENTRATION_SINGLE_THRESHOLD = 0.08    # 8% single-position flag
 CONCENTRATION_SECTOR_THRESHOLD = 0.30    # 30% sector flag
-CORRELATION_FLAG_THRESHOLD = 0.50        # |r| above this = high-correlation pair (lowered from 0.85 — current market intra-sector tech correlations are 0.50-0.75; output capped at top-25 pairs)
+CORRELATION_FLAG_THRESHOLD = 0.50        # |r| above this = high-correlation pair
 
 # TLH threshold (used by tax_agent)
 TLH_LOSS_THRESHOLD_USD = -500.0          # minimum unrealized loss to surface as TLH candidate
 
 # Rebalancing threshold (used by tax_agent)
 REBALANCE_THRESHOLD_PCT = 5.0            # drift % to trigger rebalance action
-
-# Phase 5: Agent_Outputs tab names
-TAB_AGENT_OUTPUTS_ARCHIVE = "Agent_Outputs_Archive"
 
 # Phase 5-J: Add-Candidate sizing
 ADD_CANDIDATE_STYLE_PCT = {
@@ -496,4 +418,3 @@ ADD_CANDIDATE_STALE_THRESHOLD_DAYS = 120
 NEW_IDEA_MAX_CANDIDATES_PER_RUN = 10   # hard cap on --tickers list length
 NEW_IDEA_STARTER_SIZE_PCT = 0.015      # 1.5% of dry powder as default starter
 NEW_IDEA_MAX_STARTER_PCT = 0.025       # hard cap: 2.5% of dry powder for new ideas
-

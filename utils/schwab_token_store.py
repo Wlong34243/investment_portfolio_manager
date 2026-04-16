@@ -10,44 +10,23 @@ from datetime import datetime
 from google.cloud import storage
 from google.oauth2 import service_account
 
-try:
-    import streamlit as st
-except ImportError:
-    st = None
-
 import config
 
 def _get_storage_client():
     """
     Authenticated GCS client using project-standard resolution.
     """
-    # 1. Environment variable (GitHub Actions)
-    env_json = os.environ.get("GCP_SERVICE_ACCOUNT_JSON")
+    # 1. Environment variable (GitHub Actions / .env)
+    env_json = os.getenv("GCP_SERVICE_ACCOUNT_JSON")
     if env_json:
         try:
             info = json.loads(env_json)
             creds = service_account.Credentials.from_service_account_info(info)
             return storage.Client(credentials=creds, project=config.GCP_PROJECT_ID)
         except Exception as e:
-            logging.warning(f"Failed to load GCS credentials from env var: {e}")
-
-    # 2. Streamlit secrets
-    if st and hasattr(st, "secrets") and "gcp_service_account" in st.secrets:
-        try:
-            info = dict(st.secrets["gcp_service_account"])
-            creds = service_account.Credentials.from_service_account_info(info)
-            return storage.Client(credentials=creds, project=config.GCP_PROJECT_ID)
-        except Exception as e:
-            logging.warning(f"Failed to load GCS credentials from Streamlit secrets: {e}")
+            logging.warning(f"Failed to load GCS credentials from GCP_SERVICE_ACCOUNT_JSON: {e}")
 
     # 3. local service_account.json
-    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    sa_path = os.path.join(root, "service_account.json")
-    if os.path.isfile(sa_path):
-        try:
-            return storage.Client.from_service_account_json(sa_path)
-        except Exception as e:
-            logging.warning(f"Failed to load GCS credentials from service_account.json: {e}")
 
     return None
 

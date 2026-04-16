@@ -130,10 +130,10 @@ def main(live: bool = typer.Option(False, "--live", help="Write to Google Sheets
             if matches.empty: return ''
             return matches.iloc[0].get('signal_type', '') or matches.iloc[0].get('action', '')
             
-        val_signal = get_agent_signal('valuation')
-        macro_signal = get_agent_signal('macro')
-        thesis_signal = get_agent_signal('thesis')
-        tax_signal = get_agent_signal('tax')
+        val_signal = get_agent_signal('valuation') or "Not Evaluated"
+        macro_signal = get_agent_signal('macro') or "Not Evaluated"
+        thesis_signal = get_agent_signal('thesis') or "Not Evaluated"
+        tax_signal = get_agent_signal('tax') or "Not Evaluated"
         
         # TLH Flag
         tlh_flag = ""

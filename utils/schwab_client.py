@@ -21,15 +21,9 @@ import schwab.client
 from utils import schwab_token_store
 import config
 
-try:
-    import streamlit as st
-except ImportError:
-    st = None
-
 def get_accounts_client() -> schwab.client.Client | None:
     """
     Builds Schwab client for the Accounts app with GCS token persistence.
-    Wrapped in Streamlit cache_resource to reuse the client object.
     """
     token = schwab_token_store.load_token(config.SCHWAB_TOKEN_BLOB_ACCOUNTS)
     if not token:
@@ -43,23 +37,12 @@ def get_accounts_client() -> schwab.client.Client | None:
         schwab_token_store.save_token(new_token, config.SCHWAB_TOKEN_BLOB_ACCOUNTS)
 
     try:
-        if st:
-            @st.cache_resource(ttl=config.SCHWAB_CLIENT_CACHE_TTL)
-            def _cached_accounts_client():
-                return schwab.auth.client_from_access_functions(
-                    config.SCHWAB_ACCOUNTS_APP_KEY,
-                    config.SCHWAB_ACCOUNTS_APP_SECRET,
-                    token_loader,
-                    token_saver
-                )
-            return _cached_accounts_client()
-        else:
-            return schwab.auth.client_from_access_functions(
-                config.SCHWAB_ACCOUNTS_APP_KEY,
-                config.SCHWAB_ACCOUNTS_APP_SECRET,
-                token_loader,
-                token_saver
-            )
+        return schwab.auth.client_from_access_functions(
+            config.SCHWAB_ACCOUNTS_APP_KEY,
+            config.SCHWAB_ACCOUNTS_APP_SECRET,
+            token_loader,
+            token_saver
+        )
     except Exception as e:
         logging.error(f"Failed to initialize Accounts client: {e}")
         return None
@@ -81,23 +64,12 @@ def get_market_client() -> schwab.client.Client | None:
         schwab_token_store.save_token(new_token, config.SCHWAB_TOKEN_BLOB_MARKET)
 
     try:
-        if st:
-            @st.cache_resource(ttl=config.SCHWAB_CLIENT_CACHE_TTL)
-            def _cached_market_client():
-                return schwab.auth.client_from_access_functions(
-                    config.SCHWAB_MARKET_APP_KEY,
-                    config.SCHWAB_MARKET_APP_SECRET,
-                    token_loader,
-                    token_saver
-                )
-            return _cached_market_client()
-        else:
-            return schwab.auth.client_from_access_functions(
-                config.SCHWAB_MARKET_APP_KEY,
-                config.SCHWAB_MARKET_APP_SECRET,
-                token_loader,
-                token_saver
-            )
+        return schwab.auth.client_from_access_functions(
+            config.SCHWAB_MARKET_APP_KEY,
+            config.SCHWAB_MARKET_APP_SECRET,
+            token_loader,
+            token_saver
+        )
     except Exception as e:
         logging.error(f"Failed to initialize Market client: {e}")
         return None
@@ -105,9 +77,16 @@ def get_market_client() -> schwab.client.Client | None:
 def fetch_positions(client: schwab.client.Client) -> pd.DataFrame:
     """
     Fetch and aggregate positions from ALL linked Schwab accounts.
-    Uses get_accounts() so no single account hash is required.
-    Positions with the same ticker across accounts are summed so the
-    portfolio view is unified (e.g. AMZN in brokerage + IRA = one row).
+    Uses get_accounts() — no single account hash required.
+
+    Multi-account aggregation:
+    - Positions with the same ticker are summed (e.g. VTI in brokerage + IRA = one row).
+    - Net quantity = longQuantity - shortQuantity (handles margin short positions).
+    - Positions where net qty == 0 are skipped (fully netted out across accounts).
+    - Tax treatment: if the same ticker exists in accounts with different tax treatment
+      (e.g. VTI in taxable + IRA), it is flagged as 'mixed' for TLH safety.
+    - Per-account breakdown is logged at DEBUG level with masked account numbers.
+
     Returns empty DataFrame on error or if no invested positions found.
     """
     try:
@@ -119,18 +98,29 @@ def fetch_positions(client: schwab.client.Client) -> pd.DataFrame:
             logging.info("No accounts returned from Schwab API.")
             return pd.DataFrame()
 
-        # Collect every position row across all accounts; sum cash from balances
-        all_rows = []
+        # Collect every position row across all accounts; accumulate cash from balances
+        all_rows: list[dict] = []
         total_cash = 0.0
+        # Audit trail: ticker → set of (masked_acct_id, tax_treatment) tuples
+        _acct_sources: dict[str, list[str]] = {}
 
-        for acc in accounts:
+        # Pure sweep tickers that are usually reflected in cashBalance.
+        # SGOV is an ETF and should be captured as a position even if it's "cash equivalent".
+        PURE_CASH_SWEEP_TICKERS = {'QACDS', 'CASH & CASH INVESTMENTS'}
+
+        for acct_idx, acc in enumerate(accounts):
             sa = acc.get('securitiesAccount', {})
 
-            # Sum cash from account-level balances (most reliable source)
-            balances = sa.get('currentBalances', {})
-            total_cash += float(balances.get('cashBalance', 0) or 0)
+            # Mask account number to last 4 digits for audit logging (never log full hash)
+            raw_acct_num  = sa.get('accountNumber', '') or sa.get('accountId', '')
+            masked_acct   = f"...{str(raw_acct_num)[-4:]}" if raw_acct_num else f"acct_{acct_idx}"
 
-            # Derive tax treatment from account type
+            # Cash from account-level balances (more reliable than sweep positions)
+            balances    = sa.get('currentBalances', {})
+            acct_cash   = float(balances.get('cashBalance', 0) or 0)
+            total_cash += acct_cash
+
+            # Derive tax treatment from Schwab account type field
             acct_type = sa.get('type', '').upper()
             if 'ROTH' in acct_type:
                 tax_treatment = 'tax_exempt'
@@ -140,73 +130,91 @@ def fetch_positions(client: schwab.client.Client) -> pd.DataFrame:
                 tax_treatment = 'taxable'
 
             positions = sa.get('positions', [])
+            logging.debug(
+                "fetch_positions: %s (%s) — %d positions, cash $%.2f",
+                masked_acct, acct_type or 'UNKNOWN', len(positions), acct_cash,
+            )
+
             for p in positions:
-                instr = p.get('instrument', {})
+                instr  = p.get('instrument', {})
                 ticker = instr.get('symbol', 'UNKNOWN')
 
-                # Skip cash sweep positions — cash is captured from account balances above
-                if ticker in config.CASH_TICKERS or instr.get('assetClass') == 'CASH_EQUIVALENT':
+                # Skip ONLY pure cash sweep tickers already reflected in balances.
+                # SGOV is an ETF and should stay as a position even if it's "cash equivalent".
+                if ticker in PURE_CASH_SWEEP_TICKERS:
                     continue
 
-                qty = p.get('longQuantity', 0)
-                market_value = p.get('marketValue', 0)
-                unit_cost = p.get('averagePrice', 0)
-                cost_basis = unit_cost * qty
-                unrealized_gl = p.get('unrealizedProfitLoss', 0)
-                current_price = market_value / qty if qty > 0 else 0
+                # Net quantity: long minus short (handles margin short positions).
+                # Positions that are fully netted (qty == 0) are skipped.
+                long_qty  = float(p.get('longQuantity',  0) or 0)
+                short_qty = float(p.get('shortQuantity', 0) or 0)
+                qty       = long_qty - short_qty
+                if qty == 0:
+                    logging.debug("fetch_positions: %s qty nets to zero in %s — skipped", ticker, masked_acct)
+                    continue
+
+                # Robust extraction from Schwab payload
+                market_value  = float(p.get('marketValue', 0) or 0)
+                # AveragePrice in Schwab API is cost per share
+                avg_price     = float(p.get('averagePrice', 0) or 0)
+                # Total cost basis
+                cost_basis    = avg_price * abs(qty)
+                # Unrealized Profit/Loss
+                unrealized_gl = float(p.get('unrealizedProfitLoss', 0) or 0)
+                
+                # Extraction of Price (usually under 'price' or 'lastPrice')
+                current_price = float(p.get('price', 0) or 0)
+                if current_price == 0 and qty != 0:
+                    current_price = market_value / qty
+
+                # Track account sources for post-aggregation tax-treatment merge audit
+                _acct_sources.setdefault(ticker, []).append(f"{masked_acct}/{tax_treatment}")
 
                 all_rows.append({
-                    'Ticker': ticker,
-                    'Description': instr.get('description', ''),
-                    'Asset Class': instr.get('assetClass', 'Equity'),
-                    'Asset Strategy': '',  # Filled by downstream enrichment
-                    'Quantity': qty,
-                    'Price': current_price,
-                    'Market Value': market_value,
-                    'Cost Basis': cost_basis,
-                    'Unit Cost': unit_cost,
+                    'Ticker':         ticker,
+                    'Description':    instr.get('description', ''),
+                    'Asset Class':    instr.get('assetClass', 'Equity'),
+                    'Asset Strategy': '',       # Filled by downstream enrichment
+                    'Quantity':       qty,
+                    'Price':          current_price,
+                    'Market Value':   market_value,
+                    'Cost Basis':     cost_basis,
+                    'Unit Cost':      avg_price,
                     'Unrealized G/L': unrealized_gl,
-                    'Unrealized G/L %': (unrealized_gl / cost_basis * 100) if cost_basis > 0 else 0,
-                    'Est Annual Income': 0.0,  # Filled by enrichment/yfinance
-                    'Dividend Yield': 0.0,     # Filled by enrichment
-                    'Acquisition Date': '',    # Not provided in positions summary
-                    'Wash Sale': False,
-                    'Is Cash': False,
-                    'Daily Change %': 0.0,
-                    'Weight': 0.0,             # Computed by pipeline.normalize_positions
+                    'Unrealized G/L %': (unrealized_gl / cost_basis) if cost_basis > 0 else 0,
+                    'Est Annual Income': float(p.get('estimatedAnnualIncome', 0) or 0),
+                    'Dividend Yield':    0.0,   # Filled by enrichment
+                    'Acquisition Date':  '',    # Not in positions summary endpoint
+                    'Wash Sale':   False,
+                    'Is Cash':     False,
+                    'Daily Change %': float(p.get('dailyChange', 0) or 0) / 100.0,
+                    'Weight':      0.0,         # Computed by normalize_positions
                     'Tax Treatment': tax_treatment,
+                    '_acct_idx':   acct_idx,    # Internal only — dropped before return
                 })
 
-        if not all_rows:
+        if not all_rows and total_cash <= 0:
             logging.info("No invested positions found across all accounts.")
             return pd.DataFrame()
 
-        # Append a single consolidated cash row if cash > 0
+        # Append consolidated cash row if we have ANY cash balance
         if total_cash > 0:
             all_rows.append({
-                'Ticker': 'CASH_MANUAL',
-                'Description': 'Cash & Cash Investments',
-                'Asset Class': 'Cash',
-                'Asset Strategy': 'Cash',
-                'Quantity': 1.0,
-                'Price': total_cash,
-                'Market Value': total_cash,
-                'Cost Basis': total_cash,
-                'Unit Cost': total_cash,
-                'Unrealized G/L': 0.0,
-                'Unrealized G/L %': 0.0,
-                'Est Annual Income': 0.0,
-                'Dividend Yield': 0.0,
-                'Acquisition Date': '',
-                'Wash Sale': False,
-                'Is Cash': True,
-                'Daily Change %': 0.0,
-                'Weight': 0.0,
-                'Tax Treatment': 'taxable',
+                'Ticker': 'CASH_MANUAL', 'Description': 'Cash & Cash Investments',
+                'Asset Class': 'Cash', 'Asset Strategy': 'Cash',
+                'Quantity': 1.0, 'Price': total_cash, 'Market Value': total_cash,
+                'Cost Basis': total_cash, 'Unit Cost': total_cash,
+                'Unrealized G/L': 0.0, 'Unrealized G/L %': 0.0,
+                'Est Annual Income': 0.0, 'Dividend Yield': 0.0,
+                'Acquisition Date': '', 'Wash Sale': False, 'Is Cash': True,
+                'Daily Change %': 0.0, 'Weight': 0.0, 'Tax Treatment': 'taxable',
+                '_acct_idx': -1,
             })
-            logging.info(f"fetch_positions: added cash row ${total_cash:,.2f} from account balances")
+            logging.info("fetch_positions: added cash row $%.2f from account balances", total_cash)
 
-        # Aggregate duplicate tickers (same stock held in multiple accounts)
+        # -----------------------------------------------------------------------
+        # Aggregate duplicate tickers (same ticker held across multiple accounts)
+        # -----------------------------------------------------------------------
         agg: dict = {}
         for row in all_rows:
             t = row['Ticker']
@@ -221,23 +229,38 @@ def fetch_positions(client: schwab.client.Client) -> pd.DataFrame:
                 qty = e['Quantity']
                 mv  = e['Market Value']
                 cb  = e['Cost Basis']
-                e['Price']            = mv / qty if qty > 0 else 0
-                e['Unit Cost']        = cb / qty if qty > 0 else 0
-                e['Unrealized G/L %'] = (e['Unrealized G/L'] / cb * 100) if cb > 0 else 0
-                # Keep the best (non-empty) description across accounts
+                e['Price']            = mv / qty if qty != 0 else 0
+                e['Unit Cost']        = cb / abs(qty) if qty != 0 else 0
+                e['Unrealized G/L %'] = (e['Unrealized G/L'] / cb) if cb > 0 else 0
+                # Tax treatment: if accounts disagree, flag 'mixed' (TLH-safe default)
+                if row['Tax Treatment'] != e['Tax Treatment']:
+                    e['Tax Treatment'] = 'mixed'
+                # Keep the best (non-empty) description
                 if not e['Description'] and row['Description']:
                     e['Description'] = row['Description']
 
+        # Log any tickers that span multiple accounts (DEBUG for audit trail)
+        for ticker, sources in _acct_sources.items():
+            if len(sources) > 1:
+                logging.info(
+                    "fetch_positions: %s spans %d accounts — %s",
+                    ticker, len(sources), ", ".join(sources),
+                )
+
         df = pd.DataFrame(list(agg.values()))
-        
-        # Fallback: If description is still empty/UNKNOWN, use the ticker symbol 
-        # as a placeholder so enrichment has something to work with.
+        # Drop internal tracking column before schema enforcement
+        df = df.drop(columns=['_acct_idx'], errors='ignore')
+
+        # Fallback: empty/UNKNOWN description → use ticker symbol
         df['Description'] = df.apply(
             lambda x: x['Description'] if x['Description'] and x['Description'] != 'UNKNOWN' else x['Ticker'],
             axis=1
         )
 
-        logging.info(f"fetch_positions: {len(df)} unique tickers from {len(accounts)} accounts")
+        logging.info(
+            "fetch_positions: %d unique tickers aggregated from %d accounts",
+            len(df), len(accounts),
+        )
 
         # Add Import Date and Fingerprint (Title Case names still active here)
         import_date = datetime.utcnow().strftime("%Y-%m-%d")
@@ -290,8 +313,8 @@ def fetch_positions(client: schwab.client.Client) -> pd.DataFrame:
 
 def fetch_transactions(client: schwab.client.Client, start_date=None, end_date=None) -> pd.DataFrame:
     """
-    Fetch transaction history for the configured account.
-    Filters to: TRADE, DIVIDEND_OR_INTEREST, RECEIVE_AND_DELIVER.
+    Fetch transaction history for ALL linked Schwab accounts.
+    Loops through all account hashes and aggregates results.
     """
     if not start_date:
         start_date = datetime.now() - timedelta(days=30)
@@ -299,49 +322,83 @@ def fetch_transactions(client: schwab.client.Client, start_date=None, end_date=N
         end_date = datetime.now()
         
     try:
-        r = client.get_transactions(config.SCHWAB_ACCOUNT_HASH, start_date=start_date, end_date=end_date)
-        r.raise_for_status()
-        txns = r.json()
+        # 1. Get all account hashes
+        r_accounts = client.get_accounts()
+        r_accounts.raise_for_status()
+        accounts = r_accounts.json()
         
-        rows = []
-        for t in txns:
-            t_type = t.get('type', '')
-            if t_type not in ['TRADE', 'DIVIDEND_OR_INTEREST', 'RECEIVE_AND_DELIVER']:
+        all_transactions = []
+        
+        for acc in accounts:
+            sa = acc.get('securitiesAccount', {})
+            acct_hash = acc.get('hashValue')
+            if not acct_hash:
                 continue
             
-            # Extract instrument details from the first item
-            items = t.get('transferItems', [])
-            ticker = ""
-            qty = 0
-            price = 0
-            if items:
-                ticker = items[0].get('instrument', {}).get('symbol', '')
-                qty = items[0].get('amount', 0)
-                price = items[0].get('price', 0)
+            # 2. Fetch transactions for this specific account
+            # schwab-py expects datetime objects for start_datetime and end_datetime
+            r_tx = client.get_transactions(
+                acct_hash, 
+                start_datetime=start_date, 
+                end_datetime=end_date
+            )
+            r_tx.raise_for_status()
+            txns = r_tx.json()
             
-            trade_date = t.get('transactionDate', '')[:10]
-            net_amount = t.get('netAmount', 0)
+            if not isinstance(txns, list):
+                continue
+                
+            for t in txns:
+                # Filter for relevant types
+                t_type = t.get('type', '')
+                # Note: Schwab API often uses 'TRADE', 'DIVIDEND_OR_INTEREST', etc.
+                
+                # Extract activity details
+                # The structure varies by transaction type
+                transfer_items = t.get('transferItems', [])
+                
+                ticker = ""
+                qty = 0.0
+                price = 0.0
+                
+                if transfer_items:
+                    item = transfer_items[0]
+                    instr = item.get('instrument', {})
+                    ticker = instr.get('symbol', '')
+                    qty = float(item.get('amount', 0) or 0)
+                    price = float(item.get('price', 0) or 0)
+                
+                # Fallback for ticker if not in transferItems (e.g. some dividends)
+                if not ticker:
+                    ticker = t.get('description', '').split(' ')[0] # Very crude fallback
+
+                trade_date = t.get('transactionDate', '')[:10]
+                net_amount = float(t.get('netAmount', 0) or 0)
+                
+                row = {
+                    'Trade Date': trade_date,
+                    'Settlement Date': t.get('settlementDate', '')[:10],
+                    'Ticker': ticker,
+                    'Description': t.get('description', ''),
+                    'Action': t_type,
+                    'Quantity': qty,
+                    'Price': price,
+                    'Amount': net_amount,
+                    'Fees': 0.0,
+                    'Net Amount': net_amount,
+                    'Account': f"Schwab...{acct_hash[-4:]}",
+                }
+                all_transactions.append(row)
             
-            row = {
-                'Trade Date': trade_date,
-                'Settlement Date': t.get('settlementDate', '')[:10],
-                'Ticker': ticker,
-                'Description': t.get('description', ''),
-                'Action': t_type,
-                'Quantity': qty,
-                'Price': price,
-                'Amount': net_amount,
-                'Fees': 0,
-                'Net Amount': net_amount,
-                'Account': 'Schwab Primary',
-            }
-            rows.append(row)
+            # Rate limiting safety
+            time.sleep(0.5)
             
-        df = pd.DataFrame(rows)
-        if df.empty: return df
+        df = pd.DataFrame(all_transactions)
+        if df.empty:
+            return pd.DataFrame(columns=config.TRANSACTION_COLUMNS)
 
         # Nuclear type enforcement
-        txn_numeric_cols = ['Quantity', 'Price', 'Amount', 'Fees']
+        txn_numeric_cols = ['Quantity', 'Price', 'Amount', 'Fees', 'Net Amount']
         for col in txn_numeric_cols:
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0.0)
@@ -360,20 +417,28 @@ def fetch_transactions(client: schwab.client.Client, start_date=None, end_date=N
         return df[config.TRANSACTION_COLUMNS]
     except Exception as e:
         logging.error(f"fetch_transactions failed: {e}")
-        return pd.DataFrame()
+        return pd.DataFrame(columns=config.TRANSACTION_COLUMNS)
 
 def fetch_balances(client: schwab.client.Client) -> dict:
-    """Fetch current account balances."""
+    """Fetch aggregated account balances across all accounts."""
     try:
-        r = client.get_account(config.SCHWAB_ACCOUNT_HASH)
+        r = client.get_accounts(fields=client.Account.Fields.POSITIONS)
         r.raise_for_status()
-        acc = r.json().get('securitiesAccount', {})
-        bal = acc.get('currentBalances', {})
+        accounts = r.json()
+        
+        total_liq = 0.0
+        total_cash = 0.0
+        
+        for acc in accounts:
+            bal = acc.get('securitiesAccount', {}).get('currentBalances', {})
+            total_liq += float(bal.get('liquidationValue', 0) or 0)
+            total_cash += float(bal.get('cashBalance', 0) or 0)
+            
         return {
-            "total_value": bal.get('liquidationValue', 0),
-            "cash_value": bal.get('cashBalance', 0),
-            "buying_power": bal.get('buyingPower', 0),
-            "day_trading_buying_power": bal.get('dayTradingBuyingPower', 0)
+            "total_value": total_liq,
+            "cash_value": total_cash,
+            "buying_power": 0.0, # Aggregated BP is complex
+            "day_trading_buying_power": 0.0
         }
     except Exception as e:
         logging.error(f"fetch_balances failed: {e}")

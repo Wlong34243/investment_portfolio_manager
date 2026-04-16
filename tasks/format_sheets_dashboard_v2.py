@@ -19,12 +19,11 @@ from utils.sheet_readers import get_gspread_client
 
 try:
     from gspread_formatting import (
-        CellFormat, Color, TextFormat, borders, Border, Borders,
+        CellFormat, Color, TextFormat, Border, Borders,
         format_cell_range, set_frozen, NumberFormat,
         set_column_width, set_row_height, ConditionalFormatRule, BooleanRule,
         BooleanCondition, GradientRule, InterpolationPoint,
-        get_conditional_format_rules,
-        GridRange
+        get_conditional_format_rules, GridRange
     )
     HAS_FORMATTING = True
 except ImportError:
@@ -59,27 +58,38 @@ def safe_format(ws, range_name, fmt, retries=3):
                 raise e
     return False
 
+def save_rules(ws, rules):
+    """Robustly saves conditional format rules to the worksheet."""
+    try:
+        rules.save()
+        # Add a sleep after every rule update as it is a heavy API call
+        time.sleep(3)
+    except Exception as e:
+        if "429" in str(e):
+            print("  ⚠ Quota exceeded on rules save, skipping.")
+        else:
+            raise e
+
 def apply_alternating_banding(ws, start_row, end_row):
     """Applies alternating row banding."""
     rules = get_conditional_format_rules(ws)
     # Remove existing banding rules to prevent duplication
     new_rules = [r for r in rules if not (isinstance(r.booleanRule, BooleanRule) and "ISEVEN(ROW())" in str(r.booleanRule.condition.values))]
     
-    new_rules.append(ConditionalFormatRule(
+    # We must append the rule and clear the old ones safely in the rules object
+    rules.clear()
+    for r in new_rules:
+        rules.append(r)
+        
+    rules.append(ConditionalFormatRule(
         ranges=[GridRange.from_a1_range(f"A{start_row}:Z{end_row}", ws)],
         booleanRule=BooleanRule(
             condition=BooleanCondition("CUSTOM_FORMULA", [f"=ISEVEN(ROW())"]),
             format=CellFormat(backgroundColor=COLOR_GREY_LIGHT)
         )
     ))
-    ws.conditional_format_rules = new_rules
-    try:
-        ws.conditional_format_rules.save()
-    except Exception as e:
-        if "429" in str(e):
-            print("  ⚠ Quota exceeded on rules.save(), skipping banding.")
-        else:
-            raise e
+    
+    save_rules(ws, rules)
 
 def format_valuation_card(spreadsheet):
     """Part 1: Valuation_Card formatting"""
@@ -104,6 +114,8 @@ def format_valuation_card(spreadsheet):
         format_cell_range(ws, "A1:R1", header_fmt)
         
         rules = get_conditional_format_rules(ws)
+        rules.clear()
+        
         # 52w Position % color scale: 0=red, 50=white, 100=green
         rules.append(ConditionalFormatRule(
             ranges=[GridRange.from_a1_range("K2:K200", ws)],
@@ -140,7 +152,7 @@ def format_valuation_card(spreadsheet):
             ranges=[GridRange.from_a1_range("H2:H200", ws)],
             booleanRule=BooleanRule(condition=BooleanCondition("NUMBER_LESS", ["1"]), format=CellFormat(backgroundColor=COLOR_GREEN_LIGHT))
         ))
-        rules.save()
+        save_rules(ws, rules)
         
         apply_alternating_banding(ws, 2, 200)
         print(f"  ✓ formatted {tab_name}")
@@ -174,6 +186,8 @@ def format_decision_view(spreadsheet):
         format_cell_range(ws, "A2:M200", wrap_fmt)
         
         rules = get_conditional_format_rules(ws)
+        rules.clear()
+        
         # TLH Flag: red bg, white bold
         rules.append(ConditionalFormatRule(
             ranges=[GridRange.from_a1_range("L2:L200", ws)],
@@ -209,7 +223,7 @@ def format_decision_view(spreadsheet):
                 maxpoint=InterpolationPoint(color=COLOR_RED_DARK, type="NUMBER", value="100")
             )
         ))
-        rules.save()
+        save_rules(ws, rules)
         
         apply_alternating_banding(ws, 2, 200)
         print(f"  ✓ formatted {tab_name}")
@@ -279,6 +293,7 @@ def format_agent_outputs_v2(spreadsheet):
         
         # Note in Summary Narrative (Col K) for valuation noise
         rules = get_conditional_format_rules(ws)
+        rules.clear()
         rules.append(ConditionalFormatRule(
             ranges=[GridRange.from_a1_range("I3:K1000", ws)],
             booleanRule=BooleanRule(condition=BooleanCondition("TEXT_CONTAINS", ["Insufficient data"]), format=CellFormat(textFormat=TextFormat(italic=True, foregroundColor=Color(0.5, 0.5, 0.5))))
@@ -288,7 +303,7 @@ def format_agent_outputs_v2(spreadsheet):
             ranges=[GridRange.from_a1_range("A3:K1000", ws)],
             booleanRule=BooleanRule(condition=BooleanCondition("CUSTOM_FORMULA", [f'=AND(${col_agent_let}3="tax", ${col_action_let}3="Rebalance")']), format=CellFormat(backgroundColor=COLOR_YELLOW_LIGHT, textFormat=TextFormat(bold=True)))
         ))
-        rules.save()
+        save_rules(ws, rules)
         
         # Visual grouping by agent (thick top border for first row of new agent)
         # Read Agent column
@@ -398,6 +413,8 @@ def format_realized_gl_v2(spreadsheet):
         set_frozen(ws, rows=3, cols=0)
         
         rules = get_conditional_format_rules(ws)
+        rules.clear()
+        
         # Flag rows where Disallowed Loss > 0 (Col R)
         rules.append(ConditionalFormatRule(
             ranges=[GridRange.from_a1_range("A4:S500", ws)],
@@ -410,7 +427,7 @@ def format_realized_gl_v2(spreadsheet):
             ranges=[GridRange.from_a1_range("R4:R500", ws)],
             booleanRule=BooleanRule(condition=BooleanCondition("NUMBER_GREATER", ["0"]), format=CellFormat(backgroundColor=COLOR_RED_LIGHT, textFormat=TextFormat(bold=True, foregroundColor=COLOR_RED_DARK)))
         ))
-        rules.save()
+        save_rules(ws, rules)
         
         print(f"  ✓ formatted {tab_name}")
     except Exception as e:

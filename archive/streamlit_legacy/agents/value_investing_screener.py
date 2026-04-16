@@ -281,7 +281,7 @@ def _result_to_sheet_rows(
             "value_screen",
             c.ticker,
             action,
-            rationale[:800],
+            rationale[:300],
             action[:120],
             severity,
             dry_str,
@@ -291,7 +291,7 @@ def _result_to_sheet_rows(
         run_id, run_ts, composite_hash_short, AGENT_NAME,
         "portfolio_summary", "PORTFOLIO",
         f"Deep value: {', '.join(result.deep_value_candidates[:5]) or 'none'}",
-        result.summary_narrative[:800],
+        result.summary_narrative[:300],
         "", "info", dry_str,
     ])
 

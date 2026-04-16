@@ -5,18 +5,9 @@ import requests
 import logging
 import pandas as pd
 from pathlib import Path
+from functools import lru_cache
 from typing import List
 from datetime import datetime, timedelta
-
-try:
-    import streamlit as st
-    CACHE = st.cache_data
-except ImportError:
-    # Dummy decorator for CLI / testing contexts
-    def CACHE(**kwargs):
-        def decorator(func):
-            return func
-        return decorator
 
 try:
     import config
@@ -118,14 +109,14 @@ def _fetch_yf_fallback(ticker: str) -> dict:
             'forward_pe':               _safe_float(info.get('forwardPE')),
             'pb_ratio':                 _safe_float(info.get('priceToBook')),
             'peg_ratio':                _safe_float(info.get('pegRatio')),
-            'dividend_yield':           _safe_float(info.get('dividendYield', 0.0)) * 100.0 if info.get('dividendYield') else None,
+            'dividend_yield':           _safe_float(info.get('dividendYield')),  # Pass as raw decimal (e.g. 0.02 for 2%)
             'roe':                      _safe_float(info.get('returnOnEquity')),
             'debt_to_equity':           _safe_float(info.get('debtToEquity')),
             'beta':                     _safe_float(info.get('beta')),
             'sector':                   info.get('sector'),
             'industry':                 info.get('industry'),
             'description':              info.get('description'),
-            'market_cap':               _safe_float(info.get('marketCap')),
+            'market_cap':               _safe_float(info.get('marketCap')) / 1_000_000_000 if info.get('marketCap') else None,
             'yearHigh':                 _safe_float(getattr(yt.fast_info, 'year_high', None)),
             'yearLow':                  _safe_float(getattr(yt.fast_info, 'year_low', None)),
             'eps':                      _safe_float(info.get('trailingEps')),
@@ -233,7 +224,7 @@ def get_income_statements_cached(ticker: str, limit: int = 4) -> list[dict]:
 # All live HTTP calls go through _fmp_rate_limit() to stay under free tier.
 # ---------------------------------------------------------------------------
 
-@CACHE(ttl=86400)
+@lru_cache(maxsize=128)
 def get_earnings_calendar(tickers: List[str], days_ahead: int = 14) -> pd.DataFrame:
     api_key = get_fmp_api_key()
     if not api_key:
@@ -268,7 +259,7 @@ def get_earnings_calendar(tickers: List[str], days_ahead: int = 14) -> pd.DataFr
         return pd.DataFrame()
 
 
-@CACHE(ttl=86400)
+@lru_cache(maxsize=128)
 def get_earnings_transcript(ticker: str, year: int = None, quarter: int = None) -> str:
     api_key = get_fmp_api_key()
     if not api_key:
@@ -294,7 +285,7 @@ def get_earnings_transcript(ticker: str, year: int = None, quarter: int = None) 
         return ""
 
 
-@CACHE(ttl=86400)
+@lru_cache(maxsize=128)
 def get_key_metrics(ticker: str) -> dict:
     api_key = get_fmp_api_key()
     if not api_key:
@@ -315,23 +306,30 @@ def get_key_metrics(ticker: str) -> dict:
             if not pe and m.get('earningsYieldTTM'):
                 ey = float(m.get('earningsYieldTTM'))
                 pe = 1.0 / ey if ey != 0 else None
+            
+            # FMP 'dividendYieldPercentageTTM' is a whole number (e.g. 2.5 for 2.5%)
+            # Task 1: Pass as raw decimal (0.025)
+            div_yield_raw = _safe_float(m.get('dividendYieldPercentageTTM'))
+            div_yield = div_yield_raw / 100.0 if div_yield_raw is not None else None
+
             return {
                 'pe_ratio':                 pe,
                 'pb_ratio':                 m.get('pbRatioTTM'),
-                'dividend_yield':           m.get('dividendYieldPercentageTTM'),
+                'dividend_yield':           div_yield,
                 'roe':                      m.get('returnOnEquityTTM'),
                 'debt_to_equity':           m.get('debtToEquityTTM'),
                 'revenue_per_share':        m.get('revenuePerShareTTM'),
                 'free_cash_flow_per_share': m.get('freeCashFlowPerShareTTM'),
                 'peg_ratio':                m.get('pegRatioTTM'),
             }
+
         return _fetch_yf_fallback(ticker)
     except Exception as e:
         logging.warning("FMP key metrics error for %s: %s", ticker, e)
         return _fetch_yf_fallback(ticker)
 
 
-@CACHE(ttl=86400)
+@lru_cache(maxsize=128)
 def get_earnings_surprises_cached(ticker: str) -> list[dict]:
     """
     Fetch last 2 quarters of earnings surprises from FMP.
@@ -363,22 +361,23 @@ def get_earnings_surprises_cached(ticker: str) -> list[dict]:
             if actual is None or est is None:
                 continue
             try:
-                surprise_pct = ((float(actual) - float(est)) / abs(float(est))) * 100 if est != 0 else 0.0
+                # Task 1: Pass as raw decimal (remove * 100)
+                surprise_pct = ((float(actual) - float(est)) / abs(float(est))) if est != 0 else 0.0
             except (TypeError, ZeroDivisionError):
                 surprise_pct = 0.0
             surprises.append({
                 "date": row.get("date", ""),
                 "actual_eps": actual,
                 "estimated_eps": est,
-                "surprise_pct": round(surprise_pct, 1),
+                "surprise_pct": round(surprise_pct, 4),
             })
         return surprises
     except Exception as e:
-        logging.warning("FMP earnings surprises failed for %s: %s", ticker, e)
+        logging.warning("FMP earnings surprises error for %s: %s", ticker, e)
         return []
 
 
-@CACHE(ttl=86400)
+@lru_cache(maxsize=128)
 def get_historical_pe(ticker: str, years: int = 5) -> pd.DataFrame:
     api_key = get_fmp_api_key()
     if not api_key:
@@ -406,7 +405,7 @@ def get_historical_pe(ticker: str, years: int = 5) -> pd.DataFrame:
         return pd.DataFrame()
 
 
-@CACHE(ttl=86400)
+@lru_cache(maxsize=128)
 def get_company_profile(ticker: str) -> dict:
     api_key = get_fmp_api_key()
     if not api_key:
@@ -436,7 +435,7 @@ def get_company_profile(ticker: str) -> dict:
         return _fetch_yf_fallback(ticker)
 
 
-@CACHE(ttl=86400)
+@lru_cache(maxsize=128)
 def screen_by_metrics(criteria: dict) -> pd.DataFrame:
     """Screen stocks by metric thresholds (marketCapMoreThan, peRatioLowerThan, etc.)."""
     api_key = get_fmp_api_key()
@@ -471,7 +470,7 @@ def screen_by_metrics(criteria: dict) -> pd.DataFrame:
         return pd.DataFrame()
 
 
-@CACHE(ttl=86400)
+@lru_cache(maxsize=128)
 def get_financial_statements(ticker: str) -> dict:
     """
     Fetches annual income statement + cash flow to extract R&D, CapEx, ROIC.

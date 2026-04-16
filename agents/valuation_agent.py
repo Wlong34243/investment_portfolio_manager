@@ -5,23 +5,6 @@ Reads the composite bundle (market + vault), pre-computes all valuation metrics
 in Python via FMP, passes summarized facts to Gemini for signals and narrative,
 and writes the structured result to Agent_Outputs Sheet tab (--live) or local
 files (dry run).
-
-Pre-computation in Python (never delegated to LLM):
-  - Forward P/E:                current_price / forward_eps (FMP quote endpoint)
-  - Trailing P/E:               from FMP key-metrics TTM
-  - PEG ratio:                  trailing_pe / earnings_growth_pct (FMP, where available)
-  - 52-week range position:     (price - low_52w) / (high_52w - low_52w)
-  - Discount from 52w high:     (high_52w - price) / high_52w as %
-  - Earnings surprise history:  last 2 quarters via FMP earnings calendar
-
-Gemini writes: signal ("accumulate" | "hold" | "trim" | "monitor"), accumulation_plan,
-rationale, style_alignment, summary_narrative, top_accumulation_candidates.
-
-CLI:
-    python manager.py agent valuation analyze
-    python manager.py agent valuation analyze --tickers UNH,GOOG,AMZN
-    python manager.py agent valuation analyze --bundle bundles/composite_20260413_....json
-    python manager.py agent valuation analyze --live
 """
 
 import json
@@ -33,7 +16,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-import requests
 import typer
 from rich.console import Console
 from rich.panel import Panel
@@ -47,6 +29,9 @@ from core.bundle import load_bundle
 from core.vault_bundle import load_vault_bundle
 from utils.gemini_client import ask_gemini_composite
 from utils.fmp_client import get_fmp_quote, get_earnings_surprises_cached
+from utils.sheet_readers import get_gspread_client
+from utils.sheet_writers import archive_and_overwrite_agent_outputs
+from utils.formatters import dicts_to_markdown_table
 
 logger = logging.getLogger(__name__)
 
@@ -57,18 +42,6 @@ AGENT_OUTPUT_DIR = Path("bundles")
 AGENT_NAME = "valuation"
 
 _SYSTEM_PROMPT_PATH = Path(__file__).parent / "prompts" / "valuation_agent_system.txt"
-
-# Asset classes and tickers to exclude from valuation analysis (ETFs, Funds, etc. have no P/E)
-VALUATION_SKIP_ASSET_CLASSES = {
-    "ETF", "FUND", "MUTUAL_FUND", "FIXED_INCOME", "CASH_EQUIVALENT",
-    "INDEX", "BOND", "MMMF",
-}
-
-VALUATION_SKIP_TICKERS = {
-    'SGOV', 'JPIE', 'QQQM', 'VEA', 'VTI', 'XBI', 'XOM_skip', 'IGV', 'EWZ', 'IFRA',
-    'XLV', 'XLE', 'XLF', 'RSP', 'EEM', 'VEU', 'EMXC', 'BBJP', 'EFG', 'PPA', 'EWJ',
-    'CASH_MANUAL', 'CASH & CASH INVESTMENTS', 'QACDS'
-}
 
 # Column headers for Agent_Outputs tab (Appendix A schema)
 _AGENT_OUTPUTS_HEADERS = [
@@ -81,6 +54,18 @@ _AGENT_OUTPUTS_HEADERS = [
 # ---------------------------------------------------------------------------
 # Python pre-computation helpers
 # ---------------------------------------------------------------------------
+
+def _safe_float(v) -> float:
+    try:
+        return float(v) if v is not None else 0.0
+    except (TypeError, ValueError):
+        return 0.0
+
+def _safe_float_or_none(v) -> float | None:
+    try:
+        return float(v) if v is not None else None
+    except (TypeError, ValueError):
+        return None
 
 def _compute_valuation_facts(
     positions: list[dict],
@@ -99,13 +84,13 @@ def _compute_valuation_facts(
 
     for pos in positions:
         ticker = pos.get("ticker", "")
-        if ticker in config.CASH_TICKERS or ticker in VALUATION_SKIP_TICKERS:
+        if ticker in config.CASH_TICKERS or ticker in config.VALUATION_SKIP_TICKERS:
             continue
         if ticker_filter and ticker not in ticker_filter:
             continue
 
         asset_class = (pos.get("asset_class") or pos.get("Asset Class") or "").upper().replace(" ", "_")
-        if asset_class in VALUATION_SKIP_ASSET_CLASSES:
+        if asset_class in config.VALUATION_SKIP_ASSET_CLASSES:
             continue
 
         price = _safe_float(pos.get("price"))
@@ -119,13 +104,12 @@ def _compute_valuation_facts(
         frontmatter = parse_thesis_frontmatter(thesis_text)
         style_tag = (frontmatter.style or "Unknown").title()
 
-        # FMP data (with yfinance fallbacks in fmp_client)
+        # FMP data
         quote = get_fmp_quote(ticker)
         surprises = get_earnings_surprises_cached(ticker)
 
         if not quote:
             data_gaps.append(f"{ticker}: FMP quote unavailable")
-            # Still include in facts with None metrics — agent can signal "monitor"
             facts.append({
                 "ticker": ticker,
                 "price": price,
@@ -145,34 +129,27 @@ def _compute_valuation_facts(
             continue
 
         pe_trailing = _safe_float_or_none(quote.get("pe"))
-        pe_fwd_raw = _safe_float_or_none(quote.get("forwardPE"))
-
-        # Forward P/E: use FMP's forwardPE field
-        pe_fwd = pe_fwd_raw
-
-        # PEG: FMP quote doesn't provide EPS growth; check key metrics if available
-        # (For now, we leave as None as requested in original logic, 
-        # but fmp_client now has it in get_key_metrics if we wanted to call it)
-        peg = None
+        pe_fwd = _safe_float_or_none(quote.get("forwardPE"))
+        peg = None # Future: pull from key metrics
 
         # 52-week range
         high_52w = _safe_float_or_none(quote.get("yearHigh"))
         low_52w = _safe_float_or_none(quote.get("yearLow"))
+        price_vs_52w = None
+        disc_52w_high = 0.0
 
         if high_52w and low_52w and high_52w > low_52w:
-            price_vs_range = round((price - low_52w) / (high_52w - low_52w), 4)
-        else:
-            price_vs_range = None
+            price_vs_52w = (price - low_52w) / (high_52w - low_52w)
+            disc_52w_high = (high_52w - price) / high_52w * 100
 
-        if high_52w and high_52w > 0:
-            discount_from_high = round((high_52w - price) / high_52w * 100, 2)
-        else:
-            discount_from_high = 0.0
-
-        # Average earnings surprise over last 2 quarters
-        avg_surprise = None
+        # Last 2 surprises
+        surp_list = []
         if surprises:
-            avg_surprise = round(sum(s["surprise_pct"] for s in surprises) / len(surprises), 1)
+            for s in surprises[:2]:
+                surp_list.append({
+                    "date": s.get("date"),
+                    "pct": s.get("actualEpsSurprisePercentage")
+                })
 
         facts.append({
             "ticker": ticker,
@@ -182,10 +159,9 @@ def _compute_valuation_facts(
             "peg": peg,
             "high_52w": high_52w,
             "low_52w": low_52w,
-            "price_vs_52w_range": price_vs_range,
-            "discount_from_52w_high_pct": discount_from_high,
-            "earnings_surprise_avg_pct": avg_surprise,
-            "earnings_surprises": surprises,
+            "price_vs_52w_range": round(price_vs_52w, 3) if price_vs_52w is not None else None,
+            "discount_from_52w_high_pct": round(disc_52w_high, 2),
+            "earnings_surprises": surp_list,
             "style_tag": style_tag,
             "thesis_present": thesis_doc is not None,
             "current_weight_pct": round(_safe_float(pos.get("weight")) * 100, 2),
@@ -194,29 +170,6 @@ def _compute_valuation_facts(
 
     return facts, data_gaps
 
-
-def _safe_float(v, default: float = 0.0) -> float:
-    if v is None:
-        return default
-    try:
-        return float(v)
-    except (TypeError, ValueError):
-        return default
-
-
-def _safe_float_or_none(v) -> float | None:
-    if v is None:
-        return None
-    try:
-        f = float(v)
-        return f if f != 0.0 else None
-    except (TypeError, ValueError):
-        return None
-
-
-# ---------------------------------------------------------------------------
-# Sheet write helpers (same archive-before-overwrite pattern as tax_agent)
-# ---------------------------------------------------------------------------
 
 def _result_to_sheet_rows(
     result: ValuationAgentOutput,
@@ -230,137 +183,39 @@ def _result_to_sheet_rows(
     dry_str = "TRUE" if dry_run else "FALSE"
 
     for p in result.positions:
-        severity_map = {"accumulate": "action", "trim": "action", "hold": "info", "monitor": "watch"}
-        severity = severity_map.get(p.signal, "info")
-        action = p.accumulation_plan or p.signal.upper()
-        scale_step = p.accumulation_plan or ""
+        action = p.accumulation_plan if p.signal == "accumulate" else p.signal.title()
+        severity = "action" if p.signal == "accumulate" else ("watch" if p.signal == "trim" else "info")
+        scale_step = p.accumulation_plan if p.signal == "accumulate" else "No action"
+        
         rows.append([
             run_id, run_ts, composite_hash_short, AGENT_NAME,
-            "accumulate" if p.signal == "accumulate" else p.signal,
-            p.ticker, action[:120],
-            p.rationale[:300],
+            p.signal, p.ticker, action[:120],
+            p.rationale[:800],
             scale_step[:120], severity, dry_str,
         ])
 
     return rows
 
 
-def _archive_and_overwrite(ss, new_rows: list[list], run_ts: str) -> None:
-    """Archive existing Agent_Outputs rows, then overwrite with new_rows."""
-    from utils.sheet_readers import get_gspread_client
-
-    existing_tabs = {ws.title for ws in ss.worksheets()}
-
-    if config.TAB_AGENT_OUTPUTS not in existing_tabs:
-        ws_out = ss.add_worksheet(title=config.TAB_AGENT_OUTPUTS, rows=2000, cols=len(_AGENT_OUTPUTS_HEADERS) + 1)
-        time.sleep(1.0)
-        existing_rows = []
-    else:
-        ws_out = ss.worksheet(config.TAB_AGENT_OUTPUTS)
-        existing_rows = ws_out.get_all_values()
-
-    if len(existing_rows) > 1:
-        if config.TAB_AGENT_OUTPUTS_ARCHIVE not in existing_tabs:
-            ws_arc = ss.add_worksheet(
-                title=config.TAB_AGENT_OUTPUTS_ARCHIVE,
-                rows=10000, cols=len(_AGENT_OUTPUTS_HEADERS) + 2,
-            )
-            time.sleep(1.0)
-            ws_arc.update(
-                range_name="A1",
-                values=[["archived_at"] + existing_rows[0]],
-                value_input_option="USER_ENTERED",
-            )
-            time.sleep(0.5)
-        else:
-            ws_arc = ss.worksheet(config.TAB_AGENT_OUTPUTS_ARCHIVE)
-
-        archive_rows = [[run_ts] + row for row in existing_rows[1:]]
-        if archive_rows:
-            ws_arc.append_rows(archive_rows, value_input_option="USER_ENTERED")
-            time.sleep(1.0)
-        console.print(f"[dim]Archived {len(archive_rows)} existing row(s) to {config.TAB_AGENT_OUTPUTS_ARCHIVE}.[/]")
-
-    ws_out.clear()
-    time.sleep(0.5)
-    ws_out.update(
-        range_name="A1",
-        values=[_AGENT_OUTPUTS_HEADERS] + new_rows,
-        value_input_option="USER_ENTERED",
-    )
-    time.sleep(1.0)
-    console.print(f"[green]LIVE — wrote {len(new_rows)} row(s) to {config.TAB_AGENT_OUTPUTS} (single batch).[/]")
-
-
 # ---------------------------------------------------------------------------
-# CLI command
+# Runner & CLI
 # ---------------------------------------------------------------------------
 
-@app.command()
-def analyze(
-    bundle: Optional[str] = typer.Option(
-        "latest",
-        "--bundle",
-        help="Composite bundle path or 'latest' to use most recent.",
-    ),
-    tickers: Optional[str] = typer.Option(
-        None,
-        "--tickers",
-        help="Comma-separated subset of tickers to analyze. Omit to analyze all positions.",
-    ),
-    live: bool = typer.Option(
-        False, "--live",
-        help="Write output to Agent_Outputs Sheet tab. Default: dry run.",
-    ),
-):
-    """Pre-compute valuation metrics per position; Gemini assigns signals and plans."""
-
-    # --- Banner ---
-    if live:
-        console.print(Panel.fit(
-            "[bold white on red] LIVE MODE — Sheet writes enabled [/]",
-            border_style="red",
-        ))
-    else:
-        console.print(Panel.fit(
-            "[bold black on yellow] DRY RUN — No Sheet writes. Use --live to enable. [/]",
-            border_style="yellow",
-        ))
-
-    # --- Ticker filter ---
-    ticker_filter: set[str] | None = None
-    if tickers:
-        ticker_filter = {t.strip().upper() for t in tickers.split(",") if t.strip()}
-        console.print(f"[dim]Ticker subset mode: {sorted(ticker_filter)}[/]")
-
-    # --- Resolve bundle path ---
-    if bundle == "latest":
-        try:
-            composite_candidates = sorted(
-                Path("bundles").glob("composite_bundle_*.json"),
-                key=lambda p: p.stat().st_mtime,
-            )
-            if not composite_candidates:
-                console.print("[red]ERROR: No composite bundles found. Run: python manager.py bundle composite[/]")
-                raise typer.Exit(1)
-            bundle_path = composite_candidates[-1]
-            console.print(f"[dim]Using latest composite bundle: {bundle_path.name}[/]")
-        except FileNotFoundError as e:
-            console.print(f"[red]ERROR: {e}[/]")
-            raise typer.Exit(1)
-    else:
-        bundle_path = Path(bundle)
-        if not bundle_path.exists():
-            console.print(f"[red]ERROR: Bundle not found: {bundle_path}[/]")
-            raise typer.Exit(1)
-
+def run_valuation_agent(
+    bundle_path: Path,
+    run_id: str,
+    run_ts: str,
+    ticker_filter: set[str] | None = None,
+    dry_run: bool = True,
+) -> tuple[ValuationAgentOutput, list[list]]:
+    """
+    Orchestrates the Valuation Agent analysis.
+    Returns (result_object, list_of_sheet_rows).
+    """
     # --- Load bundles ---
     composite = load_composite_bundle(bundle_path)
-    console.print(f"[dim]Composite hash: {composite['composite_hash'][:16]}...[/]")
-
     market = load_bundle(Path(composite["market_bundle_path"]))
     vault = load_vault_bundle(Path(composite["vault_bundle_path"]))
-
     total_value = market.get("total_value", 0.0)
 
     investable = [
@@ -376,19 +231,11 @@ def analyze(
     }
 
     # --- Pre-compute valuation facts ---
-    console.print(f"[cyan]Pre-computing valuation metrics via FMP for {len(investable)} position(s)...[/]")
-    console.print("[dim](This calls FMP once per ticker — expect ~1-2 seconds per position.)[/]")
-
     with console.status("[cyan]Fetching FMP data..."):
         val_facts, data_gaps = _compute_valuation_facts(investable, thesis_map, ticker_filter)
 
-    console.print(f"[dim]{len(val_facts)} position(s) ready | {len(data_gaps)} data gap(s).[/]")
-    if data_gaps:
-        console.print(f"[yellow]! Data gaps: {data_gaps}[/]")
-
     if not val_facts:
-        console.print("[red]ERROR: No positions to analyze after FMP fetch. Check FMP_API_KEY.[/]")
-        raise typer.Exit(1)
+        raise RuntimeError("No positions to analyze after FMP fetch. Check FMP_API_KEY.")
 
     # --- Build user prompt ---
     system_prompt_text = (
@@ -396,8 +243,9 @@ def analyze(
         if _SYSTEM_PROMPT_PATH.exists()
         else ""
     )
-
-    valuation_table_str = json.dumps(val_facts, indent=2)
+    
+    # Markdown optimization for flat data
+    valuation_table_str = dicts_to_markdown_table(val_facts)
 
     user_prompt = (
         f"Analyze the following {len(val_facts)} position(s) for valuation signals.\n\n"
@@ -421,18 +269,70 @@ def analyze(
     )
 
     # --- Call Gemini ---
-    console.print(f"[cyan]Calling Gemini on {len(val_facts)} positions...[/]")
-    with console.status("[cyan]Analyzing..."):
-        result: ValuationAgentOutput | None = ask_gemini_composite(
-            prompt=user_prompt,
-            composite_bundle_path=bundle_path,
-            response_schema=ValuationAgentOutput,
-            system_instruction=system_prompt_text,
-            max_tokens=config.GEMINI_MAX_TOKENS_VALUATION,
-        )
+    result: ValuationAgentOutput | None = ask_gemini_composite(
+        prompt=user_prompt,
+        composite_bundle_path=bundle_path,
+        response_schema=ValuationAgentOutput,
+        system_instruction=system_prompt_text,
+        max_tokens=config.GEMINI_MAX_TOKENS_VALUATION,
+    )
 
     if result is None:
-        console.print("[red]ERROR: Gemini returned no result. Check API logs.[/]")
+        raise RuntimeError("Gemini returned no result.")
+
+    sheet_rows = _result_to_sheet_rows(result, run_id, run_ts, dry_run)
+    return result, sheet_rows
+
+
+@app.command("analyze")
+def main(
+    bundle: Optional[str] = typer.Option(
+        "latest",
+        "--bundle",
+        help="Composite bundle path or 'latest' to use most recent.",
+    ),
+    tickers: Optional[str] = typer.Option(
+        None,
+        "--tickers",
+        help="Comma-separated subset of tickers to analyze. Omit to analyze all positions.",
+    ),
+    live: bool = typer.Option(
+        False, "--live",
+        help="Write output to Agent_Outputs Sheet tab. Default: dry run.",
+    ),
+):
+    """Pre-compute valuation metrics per position; Gemini assigns signals and plans."""
+    run_id = str(uuid.uuid4())[:8]
+    run_ts = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+    # --- Banner ---
+    if live:
+        console.print(Panel.fit("[bold white on red] LIVE MODE — Sheet writes enabled [/]", border_style="red"))
+    else:
+        console.print(Panel.fit("[bold black on yellow] DRY RUN — No Sheet writes. [/]", border_style="yellow"))
+
+    # --- Resolve bundle path ---
+    if bundle == "latest":
+        composite_candidates = sorted(Path("bundles").glob("composite_bundle_*.json"), key=lambda p: p.stat().st_mtime)
+        if not composite_candidates:
+            console.print("[red]ERROR: No composite bundles found.[/]")
+            raise typer.Exit(1)
+        bundle_path = composite_candidates[-1]
+    else:
+        bundle_path = Path(bundle)
+        if not bundle_path.exists():
+            console.print(f"[red]ERROR: Bundle not found: {bundle_path}[/]")
+            raise typer.Exit(1)
+
+    ticker_filter = {t.strip().upper() for t in tickers.split(",") if t.strip()} if tickers else None
+
+    console.print(f"[bold]Valuation Agent[/] | Run ID: {run_id} | Live: {live}")
+    console.print(f"[dim]Bundle: {bundle_path.name}[/]")
+
+    try:
+        result, sheet_rows = run_valuation_agent(bundle_path, run_id, run_ts, ticker_filter, dry_run=not live)
+    except Exception as e:
+        console.print(f"[red]ERROR: {e}[/]")
         raise typer.Exit(1)
 
     # --- Rich summary table ---
@@ -446,58 +346,18 @@ def analyze(
     summary.add_row("Accumulate Candidates", str(len(result.top_accumulation_candidates)))
     console.print(summary)
 
-    if result.positions:
-        signal_colors = {
-            "accumulate": "bold green",
-            "hold": "yellow",
-            "trim": "bold red",
-            "monitor": "dim",
-        }
-        pos_table = Table(title="Position Signals", show_header=True)
-        pos_table.add_column("Ticker", style="bold")
-        pos_table.add_column("PE Fwd")
-        pos_table.add_column("PE Trail")
-        pos_table.add_column("Disc 52w%")
-        pos_table.add_column("Signal")
-        pos_table.add_column("Style")
-        for p in result.positions:
-            color = signal_colors.get(p.signal, "white")
-            pos_table.add_row(
-                p.ticker,
-                f"{p.pe_fwd:.1f}" if p.pe_fwd else "—",
-                f"{p.pe_trailing:.1f}" if p.pe_trailing else "—",
-                f"{p.discount_from_52w_high_pct:.1f}%",
-                f"[{color}]{p.signal}[/]",
-                p.style_alignment[:12],
-            )
-        console.print(pos_table)
-
-    if result.top_accumulation_candidates:
-        console.print(f"\n[green]Top accumulation candidates:[/] {', '.join(result.top_accumulation_candidates)}")
-
-    if result.summary_narrative:
-        console.print(f"\n[dim]Summary:[/] {result.summary_narrative}")
-
-    # --- Write local audit files (always) ---
+    # --- Local audit file ---
     AGENT_OUTPUT_DIR.mkdir(exist_ok=True)
-    run_ts = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-    run_id = str(uuid.uuid4())
+    json_path = Path("bundles/runs") / f"valuation_analysis_{run_ts.replace(':', '')}_{run_id}.json"
+    json_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(json_path, "w") as f:
+        f.write(result.model_dump_json(indent=2))
 
-    json_path = AGENT_OUTPUT_DIR / f"valuation_output_{result.bundle_hash[:12]}.json"
-    json_path.write_text(json.dumps(result.model_dump(), indent=2))
-
-    if not live:
-        console.print(f"\n[dim]DRY RUN — output written to:[/]")
-        console.print(f"  {json_path}")
-        return
-
-    # --- Live: write to Agent_Outputs tab ---
-    from utils.sheet_readers import get_gspread_client
-
-    sheet_rows = _result_to_sheet_rows(result, run_id, run_ts, dry_run=False)
-    client = get_gspread_client()
-    ss = client.open_by_key(config.PORTFOLIO_SHEET_ID)
-    _archive_and_overwrite(ss, sheet_rows, run_ts)
+    if live:
+        client = get_gspread_client()
+        ss = client.open_by_key(config.PORTFOLIO_SHEET_ID)
+        archive_and_overwrite_agent_outputs(ss, sheet_rows, run_ts, _AGENT_OUTPUTS_HEADERS)
+    
     console.print(f"[dim]Local audit file:[/] {json_path}")
 
 

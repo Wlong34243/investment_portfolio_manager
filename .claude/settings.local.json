@@ -15,7 +15,10 @@
       "Bash(ls /c/Users/WLong/Investment_Portfolio/bundles/composite_bundle_*.json)",
       "Bash(ls bundles/composite_bundle_*.json)",
       "Bash(ls vault/theses/*.md)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(ls pages/)",
+      "Bash(ls utils/)",
+      "Bash(ls utils/agents/)"
     ]
   }
 }

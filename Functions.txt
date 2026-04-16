@@ -1,0 +1,99 @@
+I have conducted a comprehensive review of the Investment Portfolio Manager CLI (manager.py). The system is
+  designed as a headless, auditable toolkit that operates on immutable "bundles" of data.
+
+  Below is the inventory of available functions and the operational guide for deployment.
+
+  ---
+
+  1. Core Portfolio Commands
+  These commands manage the state of your portfolio data.
+
+  ┌─────────────┬───────────────────────────────────────┬───────────────────────────────────────────────┐
+  │ Command     │ Description                           │ Key Options                                   │
+  ├─────────────┼───────────────────────────────────────┼───────────────────────────────────────────────┤
+  │ snapshot    │ Captures current market state into an │ --source [schwab/csv/auto], --live (writes to │
+  │             │ immutable JSON bundle.                │ Sheet), --enrich-atr                          │
+  │ analyze-all │ Runs the full suite of AI agents in   │ --fresh-bundle (rebuilds data first), --live  │
+  │             │ sequence.                             │ (writes to Agent_Outputs)                     │
+  └─────────────┴───────────────────────────────────────┴───────────────────────────────────────────────┘
+  ---
+
+  2. AI Agent Commands (manager.py agent ...)
+  Each agent can be run individually for specific analysis. All agents support --ticker for subset analysis to
+  avoid LLM truncation.
+
+  ┌───────────────┬───────────────────────────────────────────┬───────────────────────────────────────────┐
+  │ Agent         │ Purpose                                   │ Command                                   │
+  ├───────────────┼───────────────────────────────────────────┼───────────────────────────────────────────┤
+  │ Re-buy        │ Evaluates holdings for scale-in           │ python manager.py agent rebuy analyze     │
+  │               │ opportunities.                            │                                           │
+  │ Tax           │ Identifies TLH candidates and rebalancing │ python manager.py agent tax analyze       │
+  │               │ drift.                                    │                                           │
+  │ Valuation     │ Performs P/E and accumulation analysis.   │ python manager.py agent valuation analyze │
+  │ Macro         │ Carlota Perez cycle analysis + ATR stops. │ python manager.py agent macro analyze     │
+  │ Thesis        │ Validates holdings against your written   │ python manager.py agent thesis analyze    │
+  │               │ theses.                                   │                                           │
+  │ Bagger        │ Screens for 100-bagger "Acorn" potential. │ python manager.py agent bagger analyze    │
+  │ Concentration │ Flags sector and correlation risks.       │ python manager.py agent concentration     │
+  │               │                                           │ analyze                                   │
+  └───────────────┴───────────────────────────────────────────┴───────────────────────────────────────────┘
+  ---
+
+  3. Data Sync Commands (manager.py sync ...)
+  Used to bridge the Schwab API and your Google Sheets.
+
+  ┌──────────────┬───────────────────────────────────────────┬─────────────────────────────────────┐
+  │ Command      │ Description                               │ Usage                               │
+  ├──────────────┼───────────────────────────────────────────┼─────────────────────────────────────┤
+  │ sync         │ Merges last N days of Schwab history into │ python manager.py sync transactions │
+  │ transactions │ the Sheet.                                │ --days 90 --live                    │
+  └──────────────┴───────────────────────────────────────────┴─────────────────────────────────────┘
+  ---
+
+  4. Vault & Bundle Management
+  Commands for managing the "Knowledge Vault" (theses, transcripts) and bundle integrity.
+
+  ┌────────┬────────────┬─────────────────────────────────────────────────────────┐
+  │ Group  │ Command    │ Description                                             │
+  ├────────┼────────────┼─────────────────────────────────────────────────────────┤
+  │ vault  │ snapshot   │ Freezes all .md theses and transcripts into a bundle.   │
+  │ vault  │ add-thesis │ Scaffolds a new thesis template for a ticker.           │
+  │ bundle │ composite  │ Merges Market + Vault data into a single AI-ready file. │
+  │ bundle │ verify     │ Validates the SHA256 hash of any bundle file.           │
+  └────────┴────────────┴─────────────────────────────────────────────────────────┘
+  ---
+
+  5. Deployment & Operational Workflow
+
+  To deploy this system into a weekly routine (e.g., "Sunday Night Review"), follow this sequence:
+
+  Step 1: Refresh Market Data
+  Fetch the latest positions and transactions from Schwab and update the Google Sheet.
+
+   1 python manager.py snapshot --source schwab --live
+   2 python manager.py sync transactions --days 30 --live
+
+  Step 2: Update the Vault
+  If you have written new theses in vault/theses/, freeze them into the system.
+   1 python manager.py vault snapshot
+
+  Step 3: Build the AI Context
+  Create the composite bundle that the agents will use.
+   1 python manager.py bundle composite
+
+  Step 4: Run Full Analysis
+  Execute all agents and write their findings to the Agent_Outputs tab for the Streamlit UI to display.
+
+   1 python manager.py analyze-all --live
+
+  ---
+
+  Technical Inventory (Files)
+   * Entry Point: manager.py
+   * Logic Engine: pipeline.py (Sheet writing and dedup)
+   * Data Models: core/bundle.py, core/vault_bundle.py
+   * Infrastructure: utils/schwab_client.py (API), utils/fmp_client.py (Fundamentals + Cache)
+   * Automation: .github/workflows/weekly_analysis.yml (Configured for GitHub Actions)
+
+  Recommendation: For daily use, I created scripts/live_update.py which combines the most common sync tasks into
+  a single command. You can run it via python scripts/live_update.py.

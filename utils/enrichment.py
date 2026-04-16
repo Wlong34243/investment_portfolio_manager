@@ -20,11 +20,6 @@ except ImportError:
     # Basic stubs if not importable
     def get_sector_fast(desc): return "Other"
 
-try:
-    import streamlit as st
-except ImportError:
-    st = None
-
 def get_live_price(ticker: str) -> float | None:
     """
     Single ticker price lookup via yf.Ticker(ticker).fast_info["last_price"]
@@ -49,7 +44,6 @@ def enrich_positions(df: pd.DataFrame) -> pd.DataFrame:
     - Bulk download 1yr daily closes in ONE call.
     - Extract: current_price, dividend_yield, sector, beta_raw.
     - Handle edge cases: CRWV, BABA, ET, SPY dust.
-    - Cache in st.session_state["enrichment_cache"].
     - Input/Output uses internal snake_case column names.
     """
     if df.empty:
@@ -57,23 +51,13 @@ def enrich_positions(df: pd.DataFrame) -> pd.DataFrame:
         
     df = df.copy()
     
-    # Ensure internal names are present (if called after normalization, this might need adjust)
-    # But we aim to call this BEFORE normalization
+    # Ensure internal names are present
     ticker_col = 'ticker' if 'ticker' in df.columns else 'Ticker'
     mv_col = 'market_value' if 'market_value' in df.columns else 'Market Value'
     qty_col = 'quantity' if 'quantity' in df.columns else 'Quantity'
     desc_col = 'description' if 'description' in df.columns else 'Description'
     
-    # 1. Check cache
-    now = time.time()
-    if st and "enrichment_cache" in st.session_state:
-        cache = st.session_state["enrichment_cache"]
-        if now - cache.get("timestamp", 0) < config.YFINANCE_CACHE_TTL:
-            cached_df = cache.get("df")
-            if cached_df is not None and set(df[ticker_col]) == set(cached_df[ticker_col]):
-                return cached_df
-
-    # 2. Identify top positions for enrichment
+    # 1. Identify top positions for enrichment
     invested_df = df[~df[ticker_col].isin(config.CASH_TICKERS)]
     significant_df = invested_df[invested_df[qty_col].fillna(0) > 0.001]
     
@@ -82,7 +66,7 @@ def enrich_positions(df: pd.DataFrame) -> pd.DataFrame:
     if not top_tickers:
         return df
 
-    # 3. Bulk download metadata
+    # 2. Bulk download metadata
     enriched_data = {}
     try:
         # Use a comma-separated list of tickers for one large fetch
@@ -116,11 +100,9 @@ def enrich_positions(df: pd.DataFrame) -> pd.DataFrame:
                 print(f"Failed to fetch metadata for {ticker}: {e}")
                 enriched_data[ticker] = None
     except Exception as e:
-        if st: st.warning(f"yfinance bulk fetch failed: {e}")
+        print(f"yfinance bulk fetch failed: {e}")
 
-    # 4. Apply enrichment to DataFrame
-    # Target columns (snake_case)
-    price_col_target = 'price' if 'price' in df.columns else 'Price'
+    # 3. Apply enrichment to DataFrame
     yield_col_target = 'dividend_yield' if 'dividend_yield' in df.columns else 'Dividend Yield'
     sector_col_target = 'asset_class' if 'asset_class' in df.columns else 'Asset Class'
     income_col_target = 'est_annual_income' if 'est_annual_income' in df.columns else 'Est Annual Income'
@@ -138,9 +120,10 @@ def enrich_positions(df: pd.DataFrame) -> pd.DataFrame:
 
             # Recalculate Est Annual Income
             if info['dividend_yield'] is not None:
-                df.loc[idx, income_col_target] = df.loc[idx, mv_col] * info['dividend_yield'] / 100
+                # info['dividend_yield'] is a raw decimal (e.g. 0.025 for 2.5%)
+                df.loc[idx, income_col_target] = df.loc[idx, mv_col] * info['dividend_yield']
 
-    # 4b. Name-only lookup for remaining invested tickers that still have empty descriptions
+    # 3b. Name-only lookup for remaining invested tickers that still have empty descriptions
     already_enriched = set(top_tickers)
     remaining_no_desc = [
         row[ticker_col] for _, row in df.iterrows()
@@ -163,7 +146,7 @@ def enrich_positions(df: pd.DataFrame) -> pd.DataFrame:
         except Exception as e:
             print(f"Name-only enrichment batch failed: {e}")
 
-    # 5. Fallback for ALL positions
+    # 4. Fallback for ALL positions
     for idx, row in df.iterrows():
         if row[ticker_col] not in config.CASH_TICKERS:
             # If description is still empty, use ticker symbol as minimum
@@ -173,13 +156,6 @@ def enrich_positions(df: pd.DataFrame) -> pd.DataFrame:
             if pd.isna(df.loc[idx, sector_col_target]) or df.loc[idx, sector_col_target] == "Other":
                 df.loc[idx, sector_col_target] = get_sector_fast(row[desc_col])
 
-    # 6. Update cache
-    if st:
-        st.session_state["enrichment_cache"] = {
-            "timestamp": now,
-            "df": df
-        }
-        
     return df
 
 def apply_smart_categorization(df: pd.DataFrame, mapping_file: str = "data/ticker_mapping.json") -> pd.DataFrame:

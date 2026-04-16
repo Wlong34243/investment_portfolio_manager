@@ -22,6 +22,7 @@ import yfinance
 
 # Import existing project parser
 from utils.csv_parser import parse_schwab_csv, clean_numeric
+import config
 
 BUNDLE_DIR = Path("bundles")
 BUNDLE_SCHEMA_VERSION = "1.0.0"
@@ -31,9 +32,6 @@ SOURCE_SCHWAB = "schwab"
 SOURCE_CSV = "csv"
 SOURCE_AUTO = "auto"
 VALID_SOURCES = {SOURCE_SCHWAB, SOURCE_CSV, SOURCE_AUTO}
-
-# Cash tickers constants
-CASH_TICKERS = {'CASH_MANUAL', 'QACDS', 'CASH & CASH INVESTMENTS'}
 
 @dataclass
 class ContextBundle:

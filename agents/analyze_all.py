@@ -42,6 +42,8 @@ from rich.table import Table
 
 import config
 from agents.schemas.run_manifest_schema import AgentRunManifest, AgentRunSummary
+from utils.sheet_readers import get_gspread_client
+from utils.sheet_writers import archive_and_overwrite_agent_outputs
 
 logger = logging.getLogger(__name__)
 console = Console()
@@ -137,85 +139,47 @@ def _get_rebuy_summary(result, run_id: str, run_ts: str) -> tuple[list, AgentRun
 
 def _run_one_agent(
     agent_name: str,
-    bundle_str: str,
-    composite_hash: str,
+    bundle_path: Path,
     run_id: str,
     run_ts: str,
     errors: list[str],
 ) -> tuple[list[list], AgentRunSummary]:
     """
-    Call one agent's analyze() with live=False, read its JSON output,
-    and return (sheet_rows, summary). On failure returns ([], failed_summary).
+    Call one agent's runner function directly.
+    Returns (sheet_rows, summary).
     """
-    hash12 = composite_hash[:12]
-    json_path = _output_json_path(agent_name, hash12)
-
     console.print(Rule(f"[bold cyan] {agent_name.upper()} agent ", style="cyan"))
 
     try:
         mod = _load_agent_module(agent_name)
-        analyze_fn = getattr(mod, "analyze")
         
-        # Typer workaround: if we call the function directly, we must provide 
-        # values for all arguments that default to typer.Option/Argument, 
-        # otherwise they will be passed as OptionInfo/ArgumentInfo objects.
-        kwargs = {"bundle": bundle_str, "live": False}
+        # Determine the runner function name
+        runner_name = f"run_{agent_name}_agent"
+        if agent_name == "rebuy": runner_name = "run_rebuy_analyst"
+        if agent_name == "valuation": runner_name = "run_valuation_agent"
+        if agent_name == "bagger": runner_name = "run_bagger_agent"
+        if agent_name == "macro": runner_name = "run_macro_agent"
+        if agent_name == "thesis": runner_name = "run_thesis_agent"
+        if agent_name == "tax": runner_name = "run_tax_agent"
+        if agent_name == "concentration": runner_name = "run_concentration_agent"
+        if agent_name == "behavioral": runner_name = "run_behavioral_agent"
         
-        # Check if agent supports --ticker or --tickers subset
-        import inspect
-        sig = inspect.signature(analyze_fn)
-        if "ticker" in sig.parameters:
-            kwargs["ticker"] = None
-        if "tickers" in sig.parameters:
-            kwargs["tickers"] = None
-            
-        analyze_fn(**kwargs)
-    except typer.Exit as e:
-        code = getattr(e, "exit_code", 1)
-        err = f"{agent_name}: exited with code {code}"
-        errors.append(err)
-        console.print(f"[red]! {agent_name} exited (code {code})[/]")
-        return [], AgentRunSummary(agent=agent_name, status="failed", error_msg=err)
-    except SystemExit as e:
-        err = f"{agent_name}: SystemExit({e.code})"
-        errors.append(err)
-        console.print(f"[red]! {agent_name} SystemExit({e.code})[/]")
-        return [], AgentRunSummary(agent=agent_name, status="failed", error_msg=err)
+        runner_fn = getattr(mod, runner_name)
+        
+        # Call runner (most standard agents use this signature)
+        # Note: dry_run=False here because analyze_all handles the live write
+        result, rows = runner_fn(bundle_path=bundle_path, run_id=run_id, run_ts=run_ts, dry_run=False)
+        
     except Exception as e:
-        err = f"{agent_name}: {type(e).__name__}: {str(e)[:300]}"
+        err = f"{agent_name}: {type(e).__name__}: {str(e)[:800]}"
         errors.append(err)
         console.print(f"[red]! {agent_name} failed: {err}[/]")
-        return [], AgentRunSummary(agent=agent_name, status="failed", error_msg=err)
-
-    # Read JSON output
-    if not json_path.exists():
-        err = f"{agent_name}: JSON output not found at {json_path}"
-        errors.append(err)
-        return [], AgentRunSummary(agent=agent_name, status="failed", error_msg=err)
-
-    try:
-        schema_cls = _load_schema_class(agent_name)
-        result = schema_cls.model_validate(json.loads(json_path.read_text()))
-    except Exception as e:
-        err = f"{agent_name}: failed to parse JSON output: {e}"
-        errors.append(err)
         return [], AgentRunSummary(agent=agent_name, status="failed", error_msg=err)
 
     # Rebuy uses legacy schema — no standard rows
     if agent_name == "rebuy":
         _, summary = _get_rebuy_summary(result, run_id, run_ts)
         return [], summary
-
-    # Standard agents: call _result_to_sheet_rows
-    try:
-        row_fn = getattr(_load_agent_module(agent_name), "_result_to_sheet_rows")
-        rows = row_fn(result, run_id, run_ts, dry_run=False)
-    except Exception as e:
-        err = f"{agent_name}: row generation failed: {e}"
-        errors.append(err)
-        return [], AgentRunSummary(agent=agent_name, status="failed",
-                                   error_msg=err,
-                                   output_json_path=str(json_path))
 
     # Count non-portfolio-summary rows
     non_summary_rows = [r for r in rows if len(r) > 5 and r[5] != "PORTFOLIO"]
@@ -227,7 +191,7 @@ def _run_one_agent(
         findings_count=len(non_summary_rows),
         top_action=top_action,
         sheet_rows=len(rows),
-        output_json_path=str(json_path),
+        output_json_path="", # In-memory now
     )
     return rows, summary
 
@@ -235,59 +199,6 @@ def _run_one_agent(
 # ---------------------------------------------------------------------------
 # Sheet write (single batch, archive-before-overwrite)
 # ---------------------------------------------------------------------------
-
-def _batch_write(ss, all_rows: list[list], run_ts: str) -> None:
-    existing_tabs = {ws.title for ws in ss.worksheets()}
-
-    if config.TAB_AGENT_OUTPUTS not in existing_tabs:
-        ws_out = ss.add_worksheet(
-            title=config.TAB_AGENT_OUTPUTS, rows=5000, cols=len(_AGENT_OUTPUTS_HEADERS) + 1
-        )
-        time.sleep(1.0)
-        existing_rows = []
-    else:
-        ws_out = ss.worksheet(config.TAB_AGENT_OUTPUTS)
-        existing_rows = ws_out.get_all_values()
-
-    # Archive existing rows
-    if len(existing_rows) > 1:
-        if config.TAB_AGENT_OUTPUTS_ARCHIVE not in existing_tabs:
-            ws_arc = ss.add_worksheet(
-                title=config.TAB_AGENT_OUTPUTS_ARCHIVE,
-                rows=20000, cols=len(_AGENT_OUTPUTS_HEADERS) + 2,
-            )
-            time.sleep(1.0)
-            ws_arc.update(
-                range_name="A1",
-                values=[["archived_at"] + existing_rows[0]],
-                value_input_option="USER_ENTERED",
-            )
-            time.sleep(0.5)
-        else:
-            ws_arc = ss.worksheet(config.TAB_AGENT_OUTPUTS_ARCHIVE)
-
-        archive_rows = [[run_ts] + row for row in existing_rows[1:]]
-        if archive_rows:
-            ws_arc.append_rows(archive_rows, value_input_option="USER_ENTERED")
-            time.sleep(1.0)
-        console.print(
-            f"[dim]Archived {len(archive_rows)} row(s) to {config.TAB_AGENT_OUTPUTS_ARCHIVE}.[/]"
-        )
-
-    # Single batch overwrite
-    ws_out.clear()
-    time.sleep(0.5)
-    ws_out.update(
-        range_name="A1",
-        values=[_AGENT_OUTPUTS_HEADERS] + all_rows,
-        value_input_option="USER_ENTERED",
-    )
-    time.sleep(1.0)
-    console.print(
-        f"[green]LIVE — wrote {len(all_rows)} total row(s) to {config.TAB_AGENT_OUTPUTS} "
-        f"(single batch, {len(all_rows)} rows across all agents).[/]"
-    )
-
 
 # ---------------------------------------------------------------------------
 # Fresh bundle builder
@@ -400,8 +311,7 @@ def run_analyze_all(
     for agent_name in requested_agents:
         rows, summary = _run_one_agent(
             agent_name=agent_name,
-            bundle_str=bundle_str,
-            composite_hash=composite_hash,
+            bundle_path=composite_path,
             run_id=run_id,
             run_ts=run_ts,
             errors=errors,
@@ -425,7 +335,7 @@ def run_analyze_all(
         from utils.sheet_readers import get_gspread_client
         client = get_gspread_client()
         ss = client.open_by_key(config.PORTFOLIO_SHEET_ID)
-        _batch_write(ss, all_standard_rows, run_ts)
+        archive_and_overwrite_agent_outputs(ss, all_standard_rows, run_ts, _AGENT_OUTPUTS_HEADERS)
     elif live and not all_standard_rows:
         console.print("[yellow]LIVE: no standard rows to write (all agents failed or produced no output).[/]")
     else:

@@ -14,11 +14,10 @@ sys.path.insert(0, os.getcwd())
 def test_imports():
     print("--- Testing Critical Imports ---")
     try:
-        import app
         import pipeline
         from utils.sheet_readers import get_holdings_current
-        from utils.agents.tax_intelligence_agent import scan_harvest_opportunities
-        from utils.agents.valuation_agent import get_valuation_snapshot
+        from agents.tax_agent import app as tax_app
+        from agents.valuation_agent import app as valuation_app
         print("✅ All critical modules imported successfully.")
     except Exception as e:
         print(f"❌ Import failed: {e}")

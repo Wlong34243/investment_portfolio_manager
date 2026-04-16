@@ -72,14 +72,8 @@ def _build_genai_client():
     except Exception:
         pass
 
-    # Path 2: API key from environment or Streamlit secrets
+    # Path 2: API key from environment
     api_key = os.environ.get('GEMINI_API_KEY')
-    if not api_key:
-        try:
-            import streamlit as st
-            api_key = st.secrets.get("GEMINI_API_KEY")
-        except (ImportError, Exception):
-            pass
 
     if api_key:
         return genai.Client(api_key=api_key)
@@ -88,7 +82,7 @@ def _build_genai_client():
         "No Gemini credentials found. Run:\n"
         "  gcloud auth application-default login\n"
         "  gcloud auth application-default set-quota-project re-property-manager-487122\n"
-        "Or set GEMINI_API_KEY in Streamlit secrets for cloud deployment."
+        "Or set GEMINI_API_KEY environment variable."
     )
     return None
 
@@ -134,6 +128,7 @@ def ask_gemini(prompt: str, system_instruction: str = None, json_mode: bool = Fa
         )
         
         # DEBUG
+        print(f"DEBUG: Gemini Response Finish Reason: {response.candidates[0].finish_reason if response.candidates else 'Unknown'}")
         print(f"DEBUG: Gemini Raw Response: {response.text[:200]}...")
         
         if response_schema:

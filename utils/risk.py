@@ -4,7 +4,7 @@ import yfinance as yf
 import scipy.stats
 import os
 import sys
-import streamlit as st
+from functools import lru_cache
 from typing import Optional
 
 # Add project root to path so config is importable
@@ -18,7 +18,7 @@ try:
 except ImportError:
     pass
 
-@st.cache_data(ttl=config.YFINANCE_CACHE_TTL)
+@lru_cache(maxsize=128)
 def get_ticker_beta_fast(ticker: str) -> Optional[float]:
     """Fetch beta from yfinance info (fastest)."""
     if ticker in config.CASH_TICKERS: return 0.0
@@ -79,7 +79,7 @@ def calculate_portfolio_beta(df) -> float:
     df_calc[beta_col] = pd.to_numeric(df_calc[beta_col], errors='coerce').fillna(1.0)
     
     # 2. Force Beta=0 for cash tickers (dilution)
-    cash_mask = (df_calc[ticker_col].isin(config.CASH_TICKERS)) | (df_calc.get('Asset Class', '').astype(str).str.lower() == 'cash')
+    cash_mask = (df_calc[ticker_col].isin(config.BETA_EXCLUDE_TICKERS)) | (df_calc.get('Asset Class', '').astype(str).str.lower() == 'cash')
     df_calc.loc[cash_mask, beta_col] = 0.0
     
     total_mv = df_calc[mv_col].sum()
@@ -91,7 +91,7 @@ def calculate_portfolio_beta(df) -> float:
     
     return round(float(weighted_beta), 4)
 
-@st.cache_data(ttl=config.YFINANCE_CACHE_TTL)
+@lru_cache(maxsize=32)
 def build_price_histories(df) -> pd.DataFrame:
     """
     Bulk download price histories for risk analysis.
@@ -113,15 +113,58 @@ def build_price_histories(df) -> pd.DataFrame:
     tickers_to_download = list(set(top_tickers + ["SPY"]))
     
     try:
-        data = yf.download(tickers_to_download, period="1y", auto_adjust=True, progress=False)
+        # Task 2: Robust yfinance fetch
+        data = yf.download(tickers_to_download, period="1y", interval="1d", auto_adjust=True, progress=False)
+        if data.empty:
+            return pd.DataFrame()
+            
         if isinstance(data.columns, pd.MultiIndex):
+            # yfinance returns MultiIndex [Price, Ticker]
             if 'Close' in data.columns.levels[0]:
                 return data['Close']
-            elif 'Adj Close' in data.columns.levels[0]:
-                return data['Adj Close']
         return data
     except Exception:
         return pd.DataFrame()
+
+def calculate_var(df, price_histories, confidence=0.95) -> float:
+    """
+    Calculate Portfolio Value at Risk (VaR) using Historical Simulation.
+    Formula: Percentile of daily portfolio returns * portfolio_value
+    """
+    ticker_col = 'ticker' if 'ticker' in df.columns else 'Ticker'
+    mv_col = 'market_value' if 'market_value' in df.columns else 'Market Value'
+    
+    invested_df = df[~df[ticker_col].isin(config.CASH_TICKERS)].copy()
+    if invested_df.empty or price_histories.empty:
+        return 0.0
+        
+    total_value = float(df[mv_col].sum())
+    if total_value <= 0: return 0.0
+    
+    # Map weights
+    invested_df['weight'] = invested_df[mv_col] / total_value
+    
+    # Calculate daily returns for all tickers in history
+    returns = price_histories.pct_change().dropna()
+    
+    # Align weights with available tickers in returns
+    available_tickers = [t for t in invested_df[ticker_col].tolist() if t in returns.columns]
+    if not available_tickers:
+        return 0.0
+        
+    weights = invested_df.set_index(ticker_col).loc[available_tickers, 'weight']
+    
+    # Portfolio daily returns = Dot product of returns and weights
+    port_returns = returns[available_tickers].dot(weights)
+    
+    if port_returns.empty:
+        return 0.0
+        
+    # Task 2: Calculate percentile (VaR is usually the loss, so 1-confidence)
+    var_percentile = np.percentile(port_returns, (1 - confidence) * 100)
+    
+    # Result in absolute dollars
+    return float(abs(var_percentile * total_value))
 
 def calculate_correlation_matrix(df, price_histories) -> pd.DataFrame:
     """
