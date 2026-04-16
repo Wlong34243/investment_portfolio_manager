@@ -78,6 +78,12 @@ def ensure_display_columns(df: pd.DataFrame) -> pd.DataFrame:
         
         # Type Casting
         if col in ['Market Value', 'Cost Basis', 'Quantity', 'Price', 'Weight', 'Dividend Yield', 'Est Annual Income', 'Daily Change %']:
+            if df[col].dtype == object:
+                # Strip $, %, and , before numeric conversion
+                df[col] = df[col].astype(str).str.replace('$', '', regex=False)\
+                                           .str.replace('%', '', regex=False)\
+                                           .str.replace(',', '', regex=False)\
+                                           .str.strip()
             df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0.0)
         elif col in ['Is Cash', 'Wash Sale']:
             if df[col].dtype == object:

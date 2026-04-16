@@ -59,9 +59,13 @@ SCHEMA = {
         "Date", "Timestamp", "Tickers Involved", "Action",
         "Market Context", "Rationale", "Tags", "Fingerprint"
     ],
+    "Trade_Log": [
+        "Date", "Sell_Ticker", "Sell_Proceeds", "Buy_Ticker", "Buy_Amount",
+        "Implicit_Bet", "Thesis_Brief", "Rotation_Type", "Trade_Log_ID", "Fingerprint"
+    ],
 }
 
-TABS_TO_FREEZE = ["Holdings_Current", "Holdings_History", "Daily_Snapshots", "Realized_GL", "AI_Suggested_Allocation", "Decision_Log"]
+TABS_TO_FREEZE = ["Holdings_Current", "Holdings_History", "Daily_Snapshots", "Realized_GL", "AI_Suggested_Allocation", "Decision_Log", "Trade_Log"]
 
 def create_sheets():
     print(f"Opening spreadsheet: {config.PORTFOLIO_SHEET_ID}")

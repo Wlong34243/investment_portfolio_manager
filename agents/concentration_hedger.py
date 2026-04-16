@@ -671,7 +671,7 @@ def analyze(
             composite_bundle_path=bundle_path,
             response_schema=ConcentrationAgentOutput,
             system_instruction=system_prompt_text,
-            max_tokens=8000,
+            max_tokens=config.GEMINI_MAX_TOKENS_CONCENTRATION,
         )
 
     if result is None:

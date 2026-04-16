@@ -234,6 +234,17 @@ def get_ai_suggested_allocation() -> pd.DataFrame:
     except Exception:
         return pd.DataFrame()
 
+@CACHE(ttl=300)
+def get_trade_log() -> pd.DataFrame:
+    """Reads Trade_Log tab."""
+    try:
+        client = get_gspread_client()
+        spreadsheet = client.open_by_key(config.PORTFOLIO_SHEET_ID)
+        ws = spreadsheet.worksheet(config.TAB_TRADE_LOG)
+        return read_gsheet_robust(ws)
+    except Exception:
+        return pd.DataFrame()
+
 def smoke_test() -> bool:
     """Verify connectivity."""
     try:

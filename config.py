@@ -78,13 +78,21 @@ SCHWAB_CLIENT_CACHE_TTL = 1500   # 25 min
 # AI Model Configuration
 # ---------------------------------------------------------------------------
 GEMINI_MODEL = _secret("gemini_model", "gemini-2.5-flash")  # Vertex AI confirmed accessible on re-property-manager-487122
-GEMINI_MAX_TOKENS = _secret("gemini_max_tokens", 2000)
+GEMINI_MAX_TOKENS = _secret("gemini_max_tokens", 2000)  # default for lightweight agents
+
+# Per-agent token budgets — overrides for agents that return large structured JSON.
+# Gemini 2.5 Flash output cap is 65,536 tokens; these are well within bounds.
+# Root cause of "EOF while parsing" errors: output truncated at the global 2000-token default.
+GEMINI_MAX_TOKENS_VALUATION     = 24000   # 53 positions × ~350 tokens each + narrative overhead
+GEMINI_MAX_TOKENS_CONCENTRATION = 10000   # 24 flags × hedge_suggestion + correlation table
+GEMINI_MAX_TOKENS_MACRO         = 8000    # chunked (15 pos/chunk) — per-chunk budget
+GEMINI_MAX_TOKENS_REBUY         = 6000    # chunked (15 pos/chunk) — per-chunk budget
 
 # ---------------------------------------------------------------------------
 # Cash / Non-Investment Tickers
 # ---------------------------------------------------------------------------
 # These are cash sweep or money market positions — track as cash, not investments
-CASH_TICKERS = {'CASH_MANUAL', 'QACDS', 'CASH & CASH INVESTMENTS'}
+CASH_TICKERS = {'CASH_MANUAL', 'QACDS', 'CASH & CASH INVESTMENTS', 'SGOV'}
 
 # Default cash yield for money market / sweep (editable in Sheet Config tab)
 DEFAULT_CASH_YIELD_PCT = 4.50
@@ -105,6 +113,8 @@ TAB_LOGS = "Logs"
 TAB_AGENT_OUTPUTS = "Agent_Outputs"
 TAB_AI_SUGGESTED_ALLOCATION = "AI_Suggested_Allocation"
 TAB_DECISION_LOG = "Decision_Log"
+TAB_TRADE_LOG = "Trade_Log"
+TAB_TRADE_LOG_STAGING = "Trade_Log_Staging"
 
 # ---------------------------------------------------------------------------
 # Schwab CSV Parsing
@@ -208,6 +218,40 @@ DECISION_LOG_COLUMNS = [
     'Rationale',
     'Tags',
     'Fingerprint',
+]
+
+TRADE_LOG_COLUMNS = [
+    'Date',
+    'Sell_Ticker',
+    'Sell_Proceeds',
+    'Buy_Ticker',
+    'Buy_Amount',
+    'Implicit_Bet',
+    'Thesis_Brief',
+    'Rotation_Type',
+    'Trade_Log_ID',
+    'Fingerprint',
+]
+
+# Staging area for rotation candidates awaiting review.
+# Bill edits Implicit_Bet and Thesis_Brief, then runs:
+#   python manager.py journal promote
+# to move approved rows → Trade_Log.
+TRADE_LOG_STAGING_COLUMNS = [
+    'Stage_ID',           # UUID — becomes Trade_Log_ID on promotion
+    'Date',               # earliest date in the cluster
+    'Sell_Tickers',       # comma-separated sell tickers
+    'Sell_Proceeds',      # total proceeds (abs value, USD)
+    'Buy_Tickers',        # comma-separated buy tickers, or "CASH"
+    'Buy_Amount',         # total deployed (abs value, USD); 0 if dry_powder
+    'Rotation_Type',      # dry_powder | upgrade | rebalance | cash_parking | unknown
+    'Implicit_Bet',       # BLANK — Bill fills in before promoting
+    'Thesis_Brief',       # BLANK — Bill fills in before promoting
+    'Status',             # pending | approved | rejected
+    'Cluster_Window_Days',# window used to detect the cluster
+    'Sell_Dates',         # pipe-separated raw sell dates for audit
+    'Buy_Dates',          # pipe-separated raw buy dates for audit
+    'Fingerprint',        # SHA256[:12] of date+sell_tickers+buy_tickers
 ]
 
 GL_COL_MAP = {

@@ -72,13 +72,16 @@ def sanitize_dataframe_for_sheets(df: pd.DataFrame, columns: list[str], col_map:
                     clean_row.append('=IF(H{ROW}<>0, J{ROW}/H{ROW}, 0)')
                     continue
 
+            if isinstance(val, pd.Series):
+                val = val.iloc[0] if not val.empty else ""
+
             if isinstance(val, (np.float64, np.float32)):
                 clean_row.append(float(val))
             elif isinstance(val, (np.int64, np.int32)):
                 clean_row.append(int(val))
             elif isinstance(val, (np.bool_, bool)):
                 clean_row.append(bool(val))
-            elif pd.isna(val) or val is None or str(val).lower() == 'nat' or val == "":
+            elif pd.isna(val) is True or val is None or str(val).lower() == 'nat' or val == "":
                 clean_row.append("")
             else:
                 clean_row.append(val)
@@ -107,10 +110,10 @@ def normalize_positions(df: pd.DataFrame, import_date: str, source: str = "csv")
         else:
             df[col] = 0.0
 
-    # Calculate weights
+    # Calculate weights (as decimal for Sheets formatting)
     total_value = df['market_value'].sum()
     if total_value > 0:
-        df['weight'] = (df['market_value'] / total_value * 100)
+        df['weight'] = (df['market_value'] / total_value)
     else:
         df['weight'] = 0.0
         
@@ -119,9 +122,9 @@ def normalize_positions(df: pd.DataFrame, import_date: str, source: str = "csv")
     mask = (df['unrealized_gl'] == 0) & (df['cost_basis'] > 0)
     df.loc[mask, 'unrealized_gl'] = df.loc[mask, 'market_value'] - df.loc[mask, 'cost_basis']
     
-    # Calculate Unrealized G/L %
+    # Calculate Unrealized G/L % (as decimal for Sheets formatting)
     mask_pct = (df['unrealized_gl_pct'] == 0) & (df['cost_basis'] > 0)
-    df.loc[mask_pct, 'unrealized_gl_pct'] = (df.loc[mask_pct, 'unrealized_gl'] / df.loc[mask_pct, 'cost_basis']) * 100
+    df.loc[mask_pct, 'unrealized_gl_pct'] = (df.loc[mask_pct, 'unrealized_gl'] / df.loc[mask_pct, 'cost_basis'])
 
     # Build fingerprint = "{import_date}|{ticker}|{quantity}|{market_value}"
     df['fingerprint'] = df.apply(
@@ -136,33 +139,35 @@ def normalize_positions(df: pd.DataFrame, import_date: str, source: str = "csv")
 
 def write_holdings_current(ws, data: list[list]) -> None:
     """
-    Update Holdings_Current worksheet atomically.
+    Update Holdings_Current worksheet atomically, starting at row 3.
+    Preserves Row 1 (KPI Dashboard) and Row 2 (Headers).
     Injects correct row index for formulas.
     """
     if not data:
         print("Holdings_Current: No data to write.")
         return
 
-    # Replace {ROW} placeholder with actual row index (starting at 2 because row 1 is header)
+    # Replace {ROW} placeholder with actual row index (starting at 3 because row 1 is KPI, row 2 is header)
     processed_data = []
     for i, row in enumerate(data):
-        row_idx = i + 2
+        row_idx = i + 3
         new_row = [str(cell).replace("{ROW}", str(row_idx)) if "{ROW}" in str(cell) else cell for cell in row]
         processed_data.append(new_row)
 
-    # Prepare headers and data for a single update
+    # Prepare headers and data for a single update starting at A2
     full_data = [config.POSITION_COLUMNS] + processed_data
     
-    # Clear the entire sheet (up to a reasonable limit) to ensure no stale data remains
+    # Clear the data range starting from A2 (headers + positions) to ensure no stale data remains
+    # Row 1 is preserved for the KPI dashboard.
     num_cols = len(config.POSITION_COLUMNS)
     col_letter = chr(ord('A') + num_cols - 1)
-    ws.batch_clear([f"A1:{col_letter}2000"])
+    ws.batch_clear([f"A2:{col_letter}2000"])
     
-    # Write everything in one go starting at A1
-    ws.update(range_name="A1", values=full_data, value_input_option='USER_ENTERED')
+    # Write everything in one go starting at A2
+    ws.update(range_name="A2", values=full_data, value_input_option='USER_ENTERED')
         
     time.sleep(1.0)
-    print(f"Holdings_Current: Updated {len(data)} rows (plus headers).")
+    print(f"Holdings_Current: Updated {len(data)} rows (plus headers at A2).")
 
 def append_holdings_history(ws, data: list[list], existing_fps: set = None) -> int:
     """
@@ -184,6 +189,10 @@ def append_holdings_history(ws, data: list[list], existing_fps: set = None) -> i
         # append_rows goes to end of existing data
         # Let's get current row count to calculate formula indices
         current_rows = len(ws.col_values(1))
+        if current_rows == 0:
+            # If sheet is empty, first row will be header, data starts at row 2
+            # But normally we expect a header row already.
+            current_rows = 1 
         
         processed_rows = []
         for i, row in enumerate(new_rows_raw):
@@ -424,6 +433,69 @@ def ingest_realized_gl(uploaded_file, dry_run=True):
             write_pipeline_log("SUCCESS", source, f"Appended {len(data_to_write)} new lots.", f"Total parsed: {len(df)}, Skipped: {results['skipped']}", dry_run=dry_run)
         else:
             write_pipeline_log("INFO", source, "No new unique lots found.", f"Total parsed: {len(df)}", dry_run=dry_run)
+            
+    except Exception as e:
+        results["errors"].append(str(e))
+        write_pipeline_log("ERROR", source, f"Ingestion failed: {e}", dry_run=dry_run)
+        
+    return results
+
+def ingest_schwab_transactions(df: pd.DataFrame, dry_run=True):
+    """Dedup Schwab API transactions and append to Sheet."""
+    # Safety: ensure results dict exists early
+    results = {"parsed": 0, "new": 0, "skipped": 0, "errors": []}
+    source = "Schwab_API_Transactions"
+
+    try:
+        if df is None or len(df) == 0:
+            write_pipeline_log("INFO", source, "No transactions to ingest.", dry_run=dry_run)
+            return results
+            
+        results["parsed"] = len(df)
+        
+        if dry_run:
+            write_pipeline_log("INFO", source, f"DRY RUN: Would ingest {len(df)} transactions.", dry_run=dry_run)
+            results["new"] = len(df)
+            return results
+
+        from utils.sheet_readers import get_gspread_client
+        client = get_gspread_client()
+        spreadsheet = client.open_by_key(config.PORTFOLIO_SHEET_ID)
+        ws = spreadsheet.worksheet(config.TAB_TRANSACTIONS)
+        
+        fp_col_idx = len(config.TRANSACTION_COLUMNS)
+        raw_values = ws.col_values(fp_col_idx)
+        existing_fps = set(raw_values[1:])
+        
+        # Ensure Fingerprint column exists in df
+        if 'Fingerprint' not in df.columns:
+             raise ValueError("Fingerprint column missing from transactions dataframe")
+
+        # Force Fingerprint column to string Series
+        fps_series = df["Fingerprint"].astype(str)
+        is_existing = fps_series.apply(lambda x: x in existing_fps)
+        
+        # Build new_df carefully
+        new_df = df[~is_existing].copy()
+        
+        results["skipped"] = int(len(df) - len(new_df))
+        results["new"] = int(len(new_df))
+        
+        if len(new_df) > 0:
+            # Sort by Trade Date (which is what TRANSACTION_COL_MAP maps to)
+            if 'Trade Date' in new_df.columns:
+                new_df = new_df.sort_values(by="Trade Date")
+            elif 'trade_date' in new_df.columns:
+                new_df = new_df.sort_values(by="trade_date")
+            
+            data_to_write = sanitize_dataframe_for_sheets(new_df, config.TRANSACTION_COLUMNS, config.TRANSACTION_COL_MAP)
+            ws.append_rows(data_to_write, value_input_option='USER_ENTERED')
+            time.sleep(1.0)
+            msg = f"Appended {len(data_to_write)} new transactions."
+            details = f"Total fetched: {len(df)}, Skipped: {results['skipped']}"
+            write_pipeline_log("SUCCESS", source, msg, details, dry_run=dry_run)
+        else:
+            write_pipeline_log("INFO", source, "No new unique transactions found.", f"Total fetched: {len(df)}", dry_run=dry_run)
             
     except Exception as e:
         results["errors"].append(str(e))

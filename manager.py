@@ -40,9 +40,253 @@ from agents.concentration_hedger import app as concentration_app
 from agents.macro_cycle_agent import app as macro_app
 from agents.thesis_screener import app as thesis_app
 from agents.bagger_screener import app as bagger_app
+from agents.behavioral_auditor import app as behavioral_app
+from agents.Options_agent import app as options_app
+from agents.value_investing_screener import app as value_app
 
 app = typer.Typer(help="Investment Portfolio Manager CLI", no_args_is_help=True)
 console = Console()
+
+# --- JOURNAL GROUP ---
+journal_app = typer.Typer(help="Journaling commands — record manual decisions.")
+app.add_typer(journal_app, name="journal")
+
+@journal_app.command("promote")
+def journal_promote(
+    live: bool = typer.Option(False, "--live", help="Write to live Sheets. Default: DRY RUN."),
+    yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation prompt."),
+):
+    """Promote approved staging rows from Trade_Log_Staging to Trade_Log."""
+    import uuid
+    import config
+    from utils.sheet_readers import get_gspread_client
+
+    # Column indices in staging sheet (0-based within header row)
+    STAGING_COLS = config.TRADE_LOG_STAGING_COLUMNS  # ordered list
+
+    def _col(row: list, name: str) -> str:
+        """Return value from a staging data row by column name."""
+        try:
+            idx = STAGING_COLS.index(name)
+            return row[idx] if idx < len(row) else ""
+        except ValueError:
+            return ""
+
+    with console.status("[cyan]Reading Trade_Log_Staging..."):
+        try:
+            client = get_gspread_client()
+            ss = client.open_by_key(config.PORTFOLIO_SHEET_ID)
+            try:
+                staging_ws = ss.worksheet(config.TAB_TRADE_LOG_STAGING)
+            except Exception:
+                console.print(f"[red]ERROR: Tab '{config.TAB_TRADE_LOG_STAGING}' not found. Run derive_rotations first.[/]")
+                raise typer.Exit(code=1)
+
+            all_rows = staging_ws.get_all_values()
+        except typer.Exit:
+            raise
+        except Exception as e:
+            console.print(f"[red]ERROR reading staging: {e}[/]")
+            raise typer.Exit(code=1)
+
+    if len(all_rows) < 2:
+        console.print("[yellow]Trade_Log_Staging is empty — nothing to promote.[/]")
+        raise typer.Exit()
+
+    header = all_rows[0]
+    data_rows = all_rows[1:]  # 1-indexed row 2 onward in the sheet
+
+    # Find Status column index in actual sheet header (may differ from config if sheet drifted)
+    try:
+        status_col_idx = header.index("Status")
+    except ValueError:
+        console.print("[red]ERROR: 'Status' column not found in Trade_Log_Staging header.[/]")
+        raise typer.Exit(code=1)
+
+    # Build list of (sheet_row_number, data_row) for approved rows
+    approved: list[tuple[int, list]] = []
+    for i, row in enumerate(data_rows):
+        # Pad row to header length to avoid index errors
+        padded = row + [""] * (len(header) - len(row))
+        if padded[status_col_idx].strip().lower() == "approved":
+            approved.append((i + 2, padded))  # sheet row = data index + 2 (1-based + header)
+
+    if not approved:
+        console.print("[yellow]No rows with Status='approved' found in Trade_Log_Staging.[/]")
+        raise typer.Exit()
+
+    # Preview table
+    preview = Table(title=f"Rows to Promote ({len(approved)})", show_header=True)
+    preview.add_column("Stage_ID[:8]", style="dim")
+    preview.add_column("Date", style="cyan")
+    preview.add_column("Sell_Tickers")
+    preview.add_column("Buy_Tickers")
+    preview.add_column("Rotation_Type", style="yellow")
+    preview.add_column("Implicit_Bet")
+    for _, row in approved:
+        preview.add_row(
+            _col(row, "Stage_ID")[:8],
+            _col(row, "Date"),
+            _col(row, "Sell_Tickers"),
+            _col(row, "Buy_Tickers"),
+            _col(row, "Rotation_Type"),
+            _col(row, "Implicit_Bet") or "[dim]<blank>[/]",
+        )
+    console.print(preview)
+
+    # Warn on blank Implicit_Bet
+    blank_bets = [row for _, row in approved if not _col(row, "Implicit_Bet").strip()]
+    if blank_bets:
+        console.print(f"[yellow]! {len(blank_bets)} row(s) have a blank Implicit_Bet — fill them in the Sheet before promoting.[/]")
+        if not yes and not live:
+            console.print("[dim]Continuing in dry-run mode regardless.[/]")
+
+    if not live:
+        console.print(Panel.fit(
+            f"[bold black on yellow] DRY RUN — Would promote {len(approved)} row(s). Use --live to write. [/]",
+            border_style="yellow",
+        ))
+        return
+
+    # Confirm (skip with --yes)
+    if not yes:
+        console.print(f"\n[bold]About to promote {len(approved)} row(s) to Trade_Log and mark them 'promoted' in staging.[/]")
+        confirm = typer.confirm("Proceed?")
+        if not confirm:
+            console.print("[yellow]Aborted.[/]")
+            raise typer.Exit()
+
+    # Build Trade_Log rows
+    # Staging:   Stage_ID, Date, Sell_Tickers, Sell_Proceeds, Buy_Tickers, Buy_Amount,
+    #            Rotation_Type, Implicit_Bet, Thesis_Brief, Status, Cluster_Window_Days,
+    #            Sell_Dates, Buy_Dates, Fingerprint
+    # Trade_Log: Date, Sell_Ticker, Sell_Proceeds, Buy_Ticker, Buy_Amount,
+    #            Implicit_Bet, Thesis_Brief, Rotation_Type, Trade_Log_ID, Fingerprint
+    trade_log_rows = []
+    for _, row in approved:
+        trade_log_rows.append([
+            _col(row, "Date"),
+            _col(row, "Sell_Tickers"),   # Sell_Tickers -> Sell_Ticker
+            _col(row, "Sell_Proceeds"),
+            _col(row, "Buy_Tickers"),    # Buy_Tickers  -> Buy_Ticker
+            _col(row, "Buy_Amount"),
+            _col(row, "Implicit_Bet"),
+            _col(row, "Thesis_Brief"),
+            _col(row, "Rotation_Type"),
+            _col(row, "Stage_ID"),       # Stage_ID -> Trade_Log_ID
+            _col(row, "Fingerprint"),
+        ])
+
+    with console.status(f"[cyan]Writing {len(trade_log_rows)} row(s) to {config.TAB_TRADE_LOG}..."):
+        try:
+            try:
+                trade_ws = ss.worksheet(config.TAB_TRADE_LOG)
+            except Exception:
+                console.print(f"[yellow]Creating {config.TAB_TRADE_LOG} tab...[/]")
+                trade_ws = ss.add_worksheet(
+                    title=config.TAB_TRADE_LOG,
+                    rows="200",
+                    cols=len(config.TRADE_LOG_COLUMNS),
+                )
+                trade_ws.insert_row(config.TRADE_LOG_COLUMNS, 1)
+                trade_ws.freeze(rows=1)
+                time.sleep(1)
+
+            trade_ws.append_rows(trade_log_rows, value_input_option="USER_ENTERED")
+        except Exception as e:
+            console.print(f"[red]ERROR writing to {config.TAB_TRADE_LOG}: {e}[/]")
+            raise typer.Exit(code=1)
+
+    # Mark promoted rows in staging
+    new_status_col = status_col_idx + 1  # gspread uses 1-based column numbers
+    with console.status("[cyan]Marking staging rows as 'promoted'..."):
+        try:
+            for sheet_row_num, _ in approved:
+                staging_ws.update_cell(sheet_row_num, new_status_col, "promoted")
+                time.sleep(0.3)  # stay under Sheets API rate limit
+        except Exception as e:
+            console.print(f"[yellow]! WARNING: Could not update staging status: {e}[/]")
+            console.print("[yellow]  Trade_Log rows were written — update staging manually.[/]")
+
+    console.print(f"\n[bold green]SUCCESS:[/] Promoted {len(trade_log_rows)} row(s) to {config.TAB_TRADE_LOG}.")
+    console.print(f"[dim]Staging rows marked 'promoted'. Run derive_rotations.py again to find new candidates.[/]")
+
+
+@journal_app.command("rotation")
+def journal_rotation(
+    sold: str = typer.Option(..., "--sold", help="Comma-separated list of sell tickers."),
+    bought: str = typer.Option(..., "--bought", help="Comma-separated list of buy tickers (or 'CASH')."),
+    proceeds: float = typer.Option(..., "--proceeds", help="Total sell proceeds (USD)."),
+    type: str = typer.Option(..., "--type", help="Rotation type: dry_powder | upgrade | rebalance | tax_loss."),
+    bet: str = typer.Option(..., "--bet", help="Implicit bet / rationale for this rotation."),
+    thesis: str = typer.Option("", "--thesis", help="Brief thesis note."),
+    live: bool = typer.Option(False, "--live", help="Write to live Sheet. Default: DRY RUN."),
+):
+    """Record a portfolio rotation in the Trade_Log."""
+    import uuid
+    import config
+    from utils.sheet_readers import get_gspread_client
+
+    sell_tickers = [t.strip().upper() for t in sold.split(",")]
+    buy_tickers = [t.strip().upper() for t in bought.split(",")]
+    
+    if type not in ["dry_powder", "upgrade", "rebalance", "tax_loss"]:
+        console.print(f"[red]ERROR: Invalid type: {type}. Must be dry_powder | upgrade | rebalance | tax_loss[/]")
+        raise typer.Exit(code=1)
+
+    trade_id = str(uuid.uuid4())
+    today = datetime.now().strftime("%Y-%m-%d")
+    
+    # Calculate proceeds per sell ticker (simple average for log)
+    # If we have multiple sell tickers, we split the proceeds for the log
+    proceeds_per_ticker = proceeds / len(sell_tickers)
+    
+    rows = []
+    for ticker in sell_tickers:
+        fingerprint = f"{today}|{ticker}|{bought}|{proceeds_per_ticker:.2f}"
+        rows.append([
+            today,
+            ticker,
+            round(proceeds_per_ticker, 2),
+            bought.upper(),
+            0.0, # Buy amount unknown at this step if just recording rotation
+            bet,
+            thesis,
+            type,
+            trade_id,
+            fingerprint
+        ])
+
+    if not live:
+        console.print(Panel.fit(
+            f"[bold black on yellow] DRY RUN — Would write {len(rows)} row(s) to {config.TAB_TRADE_LOG} [/]",
+            border_style="yellow",
+        ))
+        for row in rows:
+            console.print(f"Row: {row}")
+        return
+
+    # LIVE write
+    with console.status(f"[cyan]Writing to {config.TAB_TRADE_LOG}..."):
+        try:
+            client = get_gspread_client()
+            ss = client.open_by_key(config.PORTFOLIO_SHEET_ID)
+            
+            # Ensure tab exists
+            try:
+                ws = ss.worksheet(config.TAB_TRADE_LOG)
+            except:
+                console.print(f"[yellow]Creating {config.TAB_TRADE_LOG} tab...[/]")
+                ws = ss.add_worksheet(title=config.TAB_TRADE_LOG, rows="100", cols=len(config.TRADE_LOG_COLUMNS))
+                ws.insert_row(config.TRADE_LOG_COLUMNS, 1)
+                ws.freeze(rows=1)
+                time.sleep(1)
+
+            ws.append_rows(rows, value_input_option="USER_ENTERED")
+            console.print(f"[bold green]SUCCESS:[/] Wrote {len(rows)} row(s) to {config.TAB_TRADE_LOG} (ID: {trade_id[:8]})")
+        except Exception as e:
+            console.print(f"[red]ERROR: Failed to write to Sheet: {e}[/]")
+            raise typer.Exit(code=1)
 
 # --- AGENT GROUP ---
 agent_app = typer.Typer(help="AI agents — run over composite bundles.")
@@ -56,6 +300,9 @@ agent_app.add_typer(concentration_app, name="concentration")
 agent_app.add_typer(macro_app, name="macro")
 agent_app.add_typer(thesis_app, name="thesis")
 agent_app.add_typer(bagger_app, name="bagger")
+agent_app.add_typer(behavioral_app, name="behavioral")
+agent_app.add_typer(options_app, name="options")
+agent_app.add_typer(value_app, name="value")
 # Usage: python manager.py agent rebuy analyze --bundle latest
 # Usage: python manager.py agent tax analyze --bundle latest
 # Usage: python manager.py agent valuation analyze --bundle latest
@@ -63,6 +310,11 @@ agent_app.add_typer(bagger_app, name="bagger")
 # Usage: python manager.py agent macro analyze --bundle latest
 # Usage: python manager.py agent thesis analyze --bundle latest
 # Usage: python manager.py agent bagger analyze --bundle latest
+# Usage: python manager.py agent behavioral analyze --bundle latest
+# Usage: python manager.py agent behavioral analyze --trade-days 60 --live
+# Usage: python manager.py agent options run-agent --live
+# Usage: python manager.py agent value analyze --bundle latest
+# Usage: python manager.py agent value analyze --ticker AAPL,BA --live
 
 
 @app.command()
@@ -147,6 +399,18 @@ def snapshot(
     table.add_row("Cash (manual)", f"${bundle.cash_manual:,.2f}")
     table.add_row("Bundle Path", str(path))
     console.print(table)
+
+    # 7. Post-snapshot enrichment
+    from tasks.enrich_fundamentals import enrich_bundle_fundamentals
+    with console.status("[cyan]Enriching with fundamentals (Tiered: Schwab -> yfinance -> FMP)..."):
+        try:
+            enriched = enrich_bundle_fundamentals(path)
+            # Update the displayed hash if it changed
+            new_hash = enriched.get("bundle_hash", "")
+            if new_hash and new_hash != bundle.bundle_hash:
+                console.print(f"[green]Bundle enriched and re-hashed:[/] [bold green]{new_hash}[/]")
+        except Exception as e:
+            console.print(f"[red]Fundamental enrichment failed: {e}[/]")
 
     # Enrichment errors — visible, not silent
     if getattr(bundle, "enrichment_errors", None):
@@ -376,6 +640,69 @@ def bundle_verify(
     except ValueError as ve:
         console.print(f"[red]FAIL Hash verification failed: {ve}[/]")
         raise typer.Exit(code=1)
+
+
+# --- SYNC GROUP ---
+sync_app = typer.Typer(help="Sync data from external sources.")
+app.add_typer(sync_app, name="sync")
+
+@sync_app.command("transactions")
+def sync_transactions_cmd(
+    days: int = typer.Option(90, "--days", help="Number of days to sync."),
+    live: bool = typer.Option(False, "--live", help="Perform live sheet write."),
+):
+    """Sync Schwab transaction history to Google Sheets (merged archive-overwrite)."""
+    from tasks.sync_transactions import sync_transactions
+    success = sync_transactions(days=days, live=live)
+    if not success:
+        raise typer.Exit(code=1)
+
+
+# --- DASHBOARD GROUP ---
+dashboard_app = typer.Typer(help="Dashboard maintenance commands.")
+app.add_typer(dashboard_app, name="dashboard")
+
+@dashboard_app.command("refresh")
+def dashboard_refresh(
+    live: bool = typer.Option(False, "--live", help="Perform live update/formatting."),
+    update: bool = typer.Option(False, "--update", help="Sync latest positions from Schwab before refreshing."),
+):
+    """Refreshes Valuation_Card, Decision_View, and all formatting."""
+    from tasks.build_valuation_card import main as build_val
+    from tasks.build_decision_view import main as build_dec
+    from tasks.format_sheets_dashboard_v2 import main as format_v2
+    
+    if update:
+        console.print("[cyan]Step 0: Running Live Update from Schwab...[/]")
+        import scripts.live_update as live_up
+        # Ensure config.DRY_RUN is set based on the --live flag for the script
+        import config as cfg
+        original_dry = cfg.DRY_RUN
+        cfg.DRY_RUN = not live
+        try:
+            live_up.update_portfolio()
+        finally:
+            cfg.DRY_RUN = original_dry
+        
+        if live:
+            time.sleep(2)
+
+    console.print("\n[cyan]Step 1: Building Valuation Card...[/]")
+    build_val(live=live)
+    
+    if live:
+        time.sleep(2)
+        
+    console.print("\n[cyan]Step 2: Building Decision View...[/]")
+    build_dec(live=live)
+    
+    if live:
+        time.sleep(2)
+        
+    console.print("\n[cyan]Step 3: Applying V2 Formatting...[/]")
+    format_v2(live=live)
+    
+    console.print("\n[bold green]✅ Dashboard refresh complete.[/]")
 
 
 @app.command("analyze-all")

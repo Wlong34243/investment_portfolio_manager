@@ -59,6 +59,7 @@ _STANDARD_AGENTS = [
     "macro",
     "thesis",
     "bagger",
+    "value",
 ]
 
 _ALL_AGENTS = ["rebuy"] + _STANDARD_AGENTS   # rebuy first (no external API calls)
@@ -87,6 +88,7 @@ def _load_agent_module(agent_name: str):
         "macro":         "agents.macro_cycle_agent",
         "thesis":        "agents.thesis_screener",
         "bagger":        "agents.bagger_screener",
+        "value":         "agents.value_investing_screener",
     }
     mod_path = module_map.get(agent_name)
     if not mod_path:
@@ -105,6 +107,7 @@ def _load_schema_class(agent_name: str):
         "macro":         ("agents.schemas.macro_cycle_schema",    "MacroCycleResponse"),
         "thesis":        ("agents.schemas.thesis_screener_schema","ThesisScreenerResponse"),
         "bagger":        ("agents.schemas.bagger_schema",         "BaggerScreenerResponse"),
+        "value":         ("agents.schemas.value_investing_schema", "ValueInvestingResponse"),
     }
     mod_path, class_name = schema_map[agent_name]
     mod = importlib.import_module(mod_path)
@@ -302,7 +305,7 @@ def _build_fresh_bundles() -> Path:
     console.print(f"[dim]Market bundle: {market_path.name}[/]")
 
     console.print("[cyan]--fresh-bundle: building vault snapshot...[/]")
-    tickers = [p["ticker"] for p in market_bundle.model_dump().get("positions", [])
+    tickers = [p["ticker"] for p in market_bundle.positions
                if not p.get("is_cash")]
     vault_bundle = build_vault_bundle(ticker_list=tickers, include_drive=False)
     vault_path = write_vault_bundle(vault_bundle)

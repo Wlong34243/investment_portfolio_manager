@@ -50,6 +50,10 @@ AGENT_NAME = "tax"
 
 _SYSTEM_PROMPT_PATH = Path(__file__).parent / "prompts" / "tax_agent_system.txt"
 
+# Tickers to treat as cash for position sizing and cash sufficiency checks.
+# SGOV is a 0-3 month Treasury ETF functioning as strategic dry powder.
+CASH_EQUIVALENT_TICKERS = {'CASH_MANUAL', 'QACDS', 'CASH & CASH INVESTMENTS', 'SGOV'}
+
 # Column headers for Agent_Outputs tab (Appendix A schema)
 _AGENT_OUTPUTS_HEADERS = [
     "run_id", "run_ts", "composite_hash", "agent",
@@ -99,7 +103,7 @@ def _compute_tlh_candidates(positions: list[dict], today: date) -> list[dict]:
     candidates = []
     for pos in positions:
         ticker = pos.get("ticker", "")
-        if ticker in config.CASH_TICKERS:
+        if ticker in CASH_EQUIVALENT_TICKERS:
             continue
 
         unrealized_gl = _get_float(pos, "unrealized_gl")
@@ -252,7 +256,7 @@ def _compute_drift(positions: list[dict], total_value: float) -> list[dict]:
 
     for pos in positions:
         ticker = pos.get("ticker", "")
-        if ticker in config.CASH_TICKERS:
+        if ticker in CASH_EQUIVALENT_TICKERS:
             continue
         ac = (pos.get("asset_class") or pos.get("Asset Class") or "Unallocated").strip()
         if not ac or ac.lower() in ("nan", "none", "n/a", ""):
@@ -457,10 +461,17 @@ def analyze(
     # --- Build investable position list ---
     investable = [
         p for p in market["positions"]
-        if p.get("ticker") not in config.CASH_TICKERS
+        if p.get("ticker") not in CASH_EQUIVALENT_TICKERS
     ]
     total_value = market.get("total_value", 0.0)
-    cash_manual = market.get("cash_manual", 0.0)
+    
+    # Calculate cash value from specific equivalent tickers (including SGOV)
+    cash_value = sum(
+        _get_float(p, "market_value") or _get_float(p, "value")
+        for p in market["positions"]
+        if p.get("ticker") in CASH_EQUIVALENT_TICKERS
+    )
+    
     today = date.today()
     tax_year = today.year
 
@@ -514,8 +525,8 @@ def analyze(
         f"{drift_section}\n\n"
         f"## Portfolio Context\n"
         f"Total portfolio value: ${total_value:,.2f}\n"
-        f"Cash (dry powder): ${cash_manual:,.2f} "
-        f"({cash_manual / total_value * 100:.1f}% of portfolio)\n"
+        f"Cash (dry powder): ${cash_value:,.2f} "
+        f"({cash_value / total_value * 100:.1f}% of portfolio)\n"
         f"bundle_hash (MUST echo in your response): {composite['composite_hash']}\n\n"
         "For each TLH candidate: write tlh_rationale, suggested_replacement, scale_step.\n"
         "For each drift action: the `ticker` field should name the best representative "

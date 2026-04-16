@@ -46,6 +46,7 @@ from core.composite_bundle import load_composite_bundle, resolve_latest_bundles
 from core.bundle import load_bundle
 from core.vault_bundle import load_vault_bundle
 from utils.gemini_client import ask_gemini_composite
+from utils.fmp_client import get_fmp_quote, get_earnings_surprises_cached
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +57,18 @@ AGENT_OUTPUT_DIR = Path("bundles")
 AGENT_NAME = "valuation"
 
 _SYSTEM_PROMPT_PATH = Path(__file__).parent / "prompts" / "valuation_agent_system.txt"
+
+# Asset classes and tickers to exclude from valuation analysis (ETFs, Funds, etc. have no P/E)
+VALUATION_SKIP_ASSET_CLASSES = {
+    "ETF", "FUND", "MUTUAL_FUND", "FIXED_INCOME", "CASH_EQUIVALENT",
+    "INDEX", "BOND", "MMMF",
+}
+
+VALUATION_SKIP_TICKERS = {
+    'SGOV', 'JPIE', 'QQQM', 'VEA', 'VTI', 'XBI', 'XOM_skip', 'IGV', 'EWZ', 'IFRA',
+    'XLV', 'XLE', 'XLF', 'RSP', 'EEM', 'VEU', 'EMXC', 'BBJP', 'EFG', 'PPA', 'EWJ',
+    'CASH_MANUAL', 'CASH & CASH INVESTMENTS', 'QACDS'
+}
 
 # Column headers for Agent_Outputs tab (Appendix A schema)
 _AGENT_OUTPUTS_HEADERS = [
@@ -69,79 +82,6 @@ _AGENT_OUTPUTS_HEADERS = [
 # Python pre-computation helpers
 # ---------------------------------------------------------------------------
 
-def _get_fmp_api_key() -> str:
-    return getattr(config, "FMP_API_KEY", os.environ.get("FMP_API_KEY", ""))
-
-
-def _fetch_fmp_quote(ticker: str) -> dict:
-    """
-    Call FMP /quote endpoint for a single ticker.
-    Returns dict with: price, pe, forwardPE, eps, yearHigh, yearLow,
-    earningsAnnouncement, priceAvg50, priceAvg200.
-    Returns {} on failure (logged as data_gap by caller).
-    """
-    api_key = _get_fmp_api_key()
-    if not api_key:
-        return {}
-    url = f"https://financialmodelingprep.com/stable/quote?symbol={ticker}&apikey={api_key}"
-    try:
-        resp = requests.get(url, timeout=10)
-        if resp.status_code == 402:
-            logger.warning("FMP 402 for %s — subscription limit.", ticker)
-            return {}
-        resp.raise_for_status()
-        data = resp.json()
-        if data and isinstance(data, list) and len(data) > 0:
-            return data[0]
-        return {}
-    except Exception as e:
-        logger.warning("FMP quote fetch failed for %s: %s", ticker, e)
-        return {}
-
-
-def _fetch_fmp_earnings_surprises(ticker: str) -> list[dict]:
-    """
-    Fetch last 2 quarters of earnings surprises from FMP.
-    Returns list of dicts with: date, actual, estimated, surprise%.
-    Returns [] on failure.
-    """
-    api_key = _get_fmp_api_key()
-    if not api_key:
-        return []
-    url = (
-        f"https://financialmodelingprep.com/stable/earnings-surprises"
-        f"?symbol={ticker}&limit=2&apikey={api_key}"
-    )
-    try:
-        resp = requests.get(url, timeout=10)
-        if resp.status_code in (402, 403):
-            return []
-        resp.raise_for_status()
-        data = resp.json()
-        if not isinstance(data, list):
-            return []
-        surprises = []
-        for row in data[:2]:
-            actual = row.get("actualEarningResult") or row.get("actual")
-            est = row.get("estimatedEarning") or row.get("estimated")
-            if actual is None or est is None:
-                continue
-            try:
-                surprise_pct = ((float(actual) - float(est)) / abs(float(est))) * 100 if est != 0 else 0.0
-            except (TypeError, ZeroDivisionError):
-                surprise_pct = 0.0
-            surprises.append({
-                "date": row.get("date", ""),
-                "actual_eps": actual,
-                "estimated_eps": est,
-                "surprise_pct": round(surprise_pct, 1),
-            })
-        return surprises
-    except Exception as e:
-        logger.warning("FMP earnings surprises failed for %s: %s", ticker, e)
-        return []
-
-
 def _compute_valuation_facts(
     positions: list[dict],
     thesis_map: dict[str, dict],
@@ -149,20 +89,23 @@ def _compute_valuation_facts(
 ) -> tuple[list[dict], list[str]]:
     """
     For each investable position, fetch FMP data and compute valuation metrics.
+    Excludes ETFs, Funds, and fixed income as they lack meaningful P/E.
 
     Returns:
         (valuation_facts: list[dict], data_gaps: list[str])
-        valuation_facts — one dict per position with all pre-computed numbers
-        data_gaps       — tickers skipped due to missing FMP data
     """
     facts: list[dict] = []
     data_gaps: list[str] = []
 
     for pos in positions:
         ticker = pos.get("ticker", "")
-        if ticker in config.CASH_TICKERS:
+        if ticker in config.CASH_TICKERS or ticker in VALUATION_SKIP_TICKERS:
             continue
         if ticker_filter and ticker not in ticker_filter:
+            continue
+
+        asset_class = (pos.get("asset_class") or pos.get("Asset Class") or "").upper().replace(" ", "_")
+        if asset_class in VALUATION_SKIP_ASSET_CLASSES:
             continue
 
         price = _safe_float(pos.get("price"))
@@ -176,9 +119,9 @@ def _compute_valuation_facts(
         frontmatter = parse_thesis_frontmatter(thesis_text)
         style_tag = (frontmatter.style or "Unknown").title()
 
-        # FMP data
-        quote = _fetch_fmp_quote(ticker)
-        surprises = _fetch_fmp_earnings_surprises(ticker)
+        # FMP data (with yfinance fallbacks in fmp_client)
+        quote = get_fmp_quote(ticker)
+        surprises = get_earnings_surprises_cached(ticker)
 
         if not quote:
             data_gaps.append(f"{ticker}: FMP quote unavailable")
@@ -203,13 +146,13 @@ def _compute_valuation_facts(
 
         pe_trailing = _safe_float_or_none(quote.get("pe"))
         pe_fwd_raw = _safe_float_or_none(quote.get("forwardPE"))
-        eps = _safe_float_or_none(quote.get("eps"))
 
-        # Forward P/E: use FMP's forwardPE field; if absent, compute from price/forwardEps
+        # Forward P/E: use FMP's forwardPE field
         pe_fwd = pe_fwd_raw
 
-        # PEG: FMP quote doesn't provide EPS growth; leave as None
-        # (would require a separate growth estimate endpoint)
+        # PEG: FMP quote doesn't provide EPS growth; check key metrics if available
+        # (For now, we leave as None as requested in original logic, 
+        # but fmp_client now has it in get_key_metrics if we wanted to call it)
         peg = None
 
         # 52-week range
@@ -485,7 +428,7 @@ def analyze(
             composite_bundle_path=bundle_path,
             response_schema=ValuationAgentOutput,
             system_instruction=system_prompt_text,
-            max_tokens=12000,
+            max_tokens=config.GEMINI_MAX_TOKENS_VALUATION,
         )
 
     if result is None:

@@ -58,6 +58,10 @@ def _build_rebuy_chunk_prompt(chunk: list[dict], ctx: dict) -> str:
     """Builds the user prompt for a single chunk of positions."""
     import json
     framework_section = ctx.get("framework_section", "")
+    recent_rotations_str = ""
+    if ctx.get("recent_rotations"):
+        recent_rotations_str = f"\nRecent portfolio rotations (from Trade_Log):\n{json.dumps(ctx['recent_rotations'], default=str, indent=2)}\n"
+
     return (
         f"Analyze the following {len(chunk)} position(s) "
         f"for re-buy / add candidates.\n\n"
@@ -65,13 +69,14 @@ def _build_rebuy_chunk_prompt(chunk: list[dict], ctx: dict) -> str:
         f"Cash (strategic dry powder): ${ctx['cash_manual']:,.2f}\n"
         f"Cash as % of portfolio: "
         f"{ctx['cash_manual'] / ctx['total_value'] * 100:.1f}%\n\n"
+        f"{recent_rotations_str}"
         f"Positions:\n{json.dumps(chunk, default=str, indent=2)}\n\n"
         f"Thesis files present for: {ctx['thesis_map_keys']}\n"
         f"Thesis files missing for: {ctx['coverage_warnings']}\n"
         f"{framework_section}\n"
-        "Evaluate each position against its thesis file (if present) "
-        "and the four investment styles. Produce a RebuyAnalystResponse "
-        "JSON object."
+        "Evaluate each position against its thesis file (if present), "
+        "recent rotations, and the four investment styles. "
+        "Produce a RebuyAnalystResponse JSON object."
     )
 
 
@@ -167,6 +172,9 @@ def analyze(
         p["ticker"] for p in investable
         if p["ticker"] not in thesis_map
     ]
+
+    # 7b. Recent rotations context from Trade_Log (baked into composite bundle)
+    recent_rotations = composite.get("recent_rotations", [])
 
     # 8. Read system prompt
     system_prompt_path = Path(__file__).parent / "prompts" / "rebuy_analyst_system.txt"
@@ -290,6 +298,7 @@ def analyze(
         "thesis_map_keys": list(thesis_map.keys()),
         "coverage_warnings": coverage_warnings,
         "framework_section": framework_section,
+        "recent_rotations": recent_rotations,
     }
 
     with console.status("[cyan]Analyzing in chunks..."):
@@ -302,6 +311,7 @@ def analyze(
             system_instruction=system_prompt_text,
             portfolio_context=portfolio_context,
             ask_gemini_fn=ask_gemini_composite,
+            max_tokens=config.GEMINI_MAX_TOKENS_REBUY,
         )
 
     if not all_candidates and chunk_errors:

@@ -5,12 +5,16 @@ Phase 5-F port. Evaluates each portfolio position against the Christopher Mayer
 quantitative gate for extreme compounder potential (100x over 15-25 years).
 
 Pre-computation in Python (never delegated to LLM):
-  - market_cap_usd: FMP /profile endpoint
-  - roic_pct: FMP /key-metrics-ttm (returnOnInvestedCapitalTTM; falls back to ROE)
-  - revenue_growth_3yr_cagr_pct: FMP /income-statement?limit=4 (3yr CAGR)
-  - gross_margin_pct: FMP /income-statement?limit=1 (grossProfit / revenue)
-  - dividend_payout_ratio_pct: FMP /key-metrics-ttm (payoutRatioTTM)
+  - market_cap_usd: yfinance fast_info → FMP cache fallback
+  - sector: yfinance info["sector"] → FMP profile fallback
+  - roic_pct: yfinance returnOnEquity (ROE proxy) → FMP cache fallback
+  - revenue_growth_3yr_cagr_pct: yfinance financials (3yr CAGR) → FMP income-statement cache
+  - gross_margin_pct: yfinance grossMargins → FMP income-statement cache
+  - dividend_payout_ratio_pct: yfinance payoutRatio → FMP cache fallback
   - gate pass/fail per rule (acorn, roic, revenue_growth, gross_margin, dividend_payout)
+
+All FMP calls go through utils.fmp_client shared layer:
+  rate limiter (1.2s/call) + 7-day file cache — no more 429s on full portfolio runs.
 
 Gemini receives pre-computed metrics + pass/fail flags and writes narrative only.
 
@@ -31,7 +35,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-import requests
 import typer
 from rich.console import Console
 from rich.panel import Panel
@@ -39,6 +42,7 @@ from rich.table import Table
 
 import config
 from agents.schemas.bagger_schema import BaggerCandidate, BaggerScreenerResponse
+from utils.fmp_client import get_fundamentals, get_income_statements_cached
 from agents.utils.chunked_analysis import CHUNK_SIZE, INTER_CHUNK_SLEEP
 from core.composite_bundle import load_composite_bundle
 from core.bundle import load_bundle
@@ -85,74 +89,13 @@ _DIVIDEND_PENALTY_PCT   = 40.0             # not a hard reject
 
 
 # ---------------------------------------------------------------------------
-# FMP fetch helpers
+# FMP fetch helpers removed — now routed through utils.fmp_client shared
+# layer (rate limiter + 7-day file cache + yfinance-first tier).
+# get_fundamentals()           → market_cap, sector, roic, gross_margin,
+#                                payout_ratio, revenue_growth_3yr
+# get_income_statements_cached() → raw annual statements for CAGR / margin
+#                                  fallback when yfinance financials empty
 # ---------------------------------------------------------------------------
-
-def _get_fmp_api_key() -> str:
-    return getattr(config, "FMP_API_KEY", os.environ.get("FMP_API_KEY", ""))
-
-
-def _fmp_get(url: str) -> list | dict:
-    """Raw FMP GET with 402 guard. Returns [] or {} on failure."""
-    api_key = _get_fmp_api_key()
-    if not api_key:
-        return []
-    try:
-        resp = requests.get(url, timeout=12)
-        if resp.status_code == 402:
-            logger.warning("FMP 402 (subscription limit): %s", url)
-            return []
-        resp.raise_for_status()
-        return resp.json()
-    except Exception as e:
-        logger.warning("FMP fetch failed (%s): %s", url, e)
-        return []
-
-
-def _fetch_fmp_profile(ticker: str) -> dict:
-    """FMP /profile — returns market_cap_usd, sector, beta."""
-    api_key = _get_fmp_api_key()
-    data = _fmp_get(
-        f"https://financialmodelingprep.com/stable/profile?symbol={ticker}&apikey={api_key}"
-    )
-    if data and isinstance(data, list) and len(data) > 0:
-        p = data[0]
-        return {
-            "market_cap_usd": float(p.get("mktCap") or 0.0),
-            "sector": p.get("sector", ""),
-        }
-    return {}
-
-
-def _fetch_fmp_key_metrics_ttm(ticker: str) -> dict:
-    """FMP /key-metrics-ttm — returns roic, roe, payoutRatio."""
-    api_key = _get_fmp_api_key()
-    data = _fmp_get(
-        f"https://financialmodelingprep.com/stable/key-metrics-ttm?symbol={ticker}&apikey={api_key}"
-    )
-    if data and isinstance(data, list) and len(data) > 0:
-        m = data[0]
-        roic_raw = m.get("returnOnInvestedCapitalTTM")
-        roe_raw  = m.get("returnOnEquityTTM")
-        payout   = m.get("payoutRatioTTM")
-        return {
-            "roic_raw": roic_raw,     # fraction (0.22 = 22%)
-            "roe_raw":  roe_raw,
-            "payout_ratio_raw": payout,
-        }
-    return {}
-
-
-def _fetch_fmp_income_statements(ticker: str, limit: int = 4) -> list[dict]:
-    """FMP /income-statement — annual, limit years. Returns list newest-first."""
-    api_key = _get_fmp_api_key()
-    data = _fmp_get(
-        f"https://financialmodelingprep.com/stable/income-statement"
-        f"?symbol={ticker}&period=annual&limit={limit}&apikey={api_key}"
-    )
-    if data and isinstance(data, list):
-        return data
-    return []
 
 
 def _safe_pct(value) -> float | None:
@@ -272,8 +215,16 @@ def _compute_bagger_facts(
     ticker_filter: Optional[list[str]],
 ) -> tuple[list[dict], list[str]]:
     """
-    For each investable position (non-cash, optionally filtered), fetch FMP data
+    For each investable position (non-cash, optionally filtered), fetch data
     and compute the 5 Mayer gate metrics.
+
+    Data source priority (via utils.fmp_client):
+      Tier 0 — Schwab bundle_quote (market_cap, PE — empty for CSV bundles)
+      Tier 1 — yfinance info/fast_info (market_cap, sector, ROE, gross_margin,
+                payout_ratio, revenue_growth_3yr CAGR)
+      Tier 2 — FMP key-metrics-ttm cache (7-day TTL, rate-limited at 1.2s/call)
+      Tier 3 — FMP income-statement cache (fallback for CAGR/margin when
+                yfinance financials are empty — ETFs, foreign tickers)
 
     Returns (positions_with_facts, data_gaps).
     """
@@ -285,27 +236,35 @@ def _compute_bagger_facts(
         if ticker_filter and ticker not in ticker_filter:
             continue
 
-        # Fetch FMP data
-        profile  = _fetch_fmp_profile(ticker)
-        km       = _fetch_fmp_key_metrics_ttm(ticker)
-        income   = _fetch_fmp_income_statements(ticker, limit=4)
+        # --- Tiered fundamentals fetch ---
+        fundamentals = get_fundamentals(ticker)
 
-        market_cap = profile.get("market_cap_usd")
-        sector     = profile.get("sector", "")
+        market_cap = fundamentals.get("market_cap")
+        sector     = fundamentals.get("sector", "")
 
-        # ROIC: prefer ROIC, fall back to ROE
-        roic_raw = km.get("roic_raw")
-        roe_raw  = km.get("roe_raw")
-        roic_pct = _safe_pct(roic_raw)
-        roe_pct  = _safe_pct(roe_raw)
-        roic_source = "ROIC"
-        if roic_pct is None and roe_pct is not None:
-            roic_pct = roe_pct
-            roic_source = "ROE (proxy)"
+        # ROIC: yfinance returnOnEquity is the best available proxy (raw fraction → %)
+        roic_pct    = _safe_pct(fundamentals.get("roic"))
+        roic_source = "ROE (yfinance proxy)"
 
-        revenue_growth_pct  = _revenue_cagr_3yr(income)
-        gross_margin_pct    = _gross_margin_latest(income)
-        payout_pct          = _safe_pct(km.get("payout_ratio_raw"))
+        # Payout ratio: raw fraction → %
+        payout_pct = _safe_pct(fundamentals.get("payout_ratio"))
+
+        # Revenue growth 3yr CAGR: stored as raw fraction in get_fundamentals → %
+        revenue_growth_pct = _safe_pct(fundamentals.get("revenue_growth_3yr"))
+
+        # Gross margin: raw fraction from yfinance grossMargins → %
+        gross_margin_pct = _safe_pct(fundamentals.get("gross_margin"))
+
+        # FMP income-statement fallback (for ETFs / foreign tickers where
+        # yfinance.financials is empty).  _revenue_cagr_3yr / _gross_margin_latest
+        # already return percentages — do NOT apply _safe_pct() a second time.
+        if revenue_growth_pct is None or gross_margin_pct is None:
+            income = get_income_statements_cached(ticker, limit=4)
+            if income:
+                if revenue_growth_pct is None:
+                    revenue_growth_pct = _revenue_cagr_3yr(income)
+                if gross_margin_pct is None:
+                    gross_margin_pct = _gross_margin_latest(income)
 
         # If we have nothing useful, mark as data gap
         if all(v is None for v in [market_cap, roic_pct, revenue_growth_pct, gross_margin_pct]):

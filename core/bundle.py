@@ -154,7 +154,10 @@ def _build_from_schwab(
     # Lazy import so core/bundle.py is importable even on machines
     # without schwab-py installed (unit tests, CI).
     try:
-        from utils.schwab_client import get_accounts_client, fetch_positions
+        from utils.schwab_client import (
+            get_accounts_client, get_market_client,
+            fetch_positions, fetch_quotes,
+        )
     except ImportError as e:
         raise RuntimeError(
             f"Schwab client not available: {e}. "
@@ -179,6 +182,26 @@ def _build_from_schwab(
         )
 
     enrichment_errors: list[str] = []
+
+    # Batch-quote enrichment: populate daily_change_pct from Schwab Market Data.
+    # fetch_positions() hardcodes 0.0 for daily_change_pct because the /positions
+    # endpoint doesn't carry day-change data. fetch_quotes() returns netPercentChange.
+    try:
+        market_client = get_market_client()
+        if market_client is not None:
+            non_cash_tickers = [
+                t for t in df["ticker"].unique()
+                if t not in CASH_TICKERS
+            ]
+            if non_cash_tickers:
+                quotes_df = fetch_quotes(market_client, non_cash_tickers)
+                if not quotes_df.empty:
+                    chg_map = quotes_df.set_index("ticker")["change_pct"].to_dict()
+                    df["daily_change_pct"] = df["ticker"].map(
+                        lambda t: chg_map.get(t, 0.0)
+                    )
+    except Exception as _qe:
+        enrichment_errors.append(f"Daily change % batch quote failed: {_qe}")
 
     # Mark every row with price_source="schwab_quote" unless the
     # 2026-04-10 zero-price patch fires (handled below)

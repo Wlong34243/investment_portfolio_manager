@@ -130,6 +130,15 @@ def fetch_positions(client: schwab.client.Client) -> pd.DataFrame:
             balances = sa.get('currentBalances', {})
             total_cash += float(balances.get('cashBalance', 0) or 0)
 
+            # Derive tax treatment from account type
+            acct_type = sa.get('type', '').upper()
+            if 'ROTH' in acct_type:
+                tax_treatment = 'tax_exempt'
+            elif 'IRA' in acct_type:
+                tax_treatment = 'tax_deferred'
+            else:
+                tax_treatment = 'taxable'
+
             positions = sa.get('positions', [])
             for p in positions:
                 instr = p.get('instrument', {})
@@ -165,6 +174,7 @@ def fetch_positions(client: schwab.client.Client) -> pd.DataFrame:
                     'Is Cash': False,
                     'Daily Change %': 0.0,
                     'Weight': 0.0,             # Computed by pipeline.normalize_positions
+                    'Tax Treatment': tax_treatment,
                 })
 
         if not all_rows:
@@ -192,6 +202,7 @@ def fetch_positions(client: schwab.client.Client) -> pd.DataFrame:
                 'Is Cash': True,
                 'Daily Change %': 0.0,
                 'Weight': 0.0,
+                'Tax Treatment': 'taxable',
             })
             logging.info(f"fetch_positions: added cash row ${total_cash:,.2f} from account balances")
 
@@ -259,7 +270,14 @@ def fetch_positions(client: schwab.client.Client) -> pd.DataFrame:
             if col not in df.columns:
                 df[col] = ""
 
-        return df[list(config.POSITION_COL_MAP.keys())]
+        # 'Tax Treatment' is not in POSITION_COL_MAP (not written to Sheets) but
+        # bundle.py reads it to set tax_treatment_available. Append it after the
+        # standard slice so it isn't silently dropped.
+        base_cols = list(config.POSITION_COL_MAP.keys())
+        result = df[base_cols].copy()
+        if 'Tax Treatment' in df.columns:
+            result['tax_treatment'] = df['Tax Treatment'].values
+        return result
     except Exception as e:
         err_msg = str(e)
         logging.error(f"fetch_positions failed: {err_msg}")
@@ -330,7 +348,7 @@ def fetch_transactions(client: schwab.client.Client, start_date=None, end_date=N
 
         # Build Fingerprint
         df['Fingerprint'] = df.apply(
-            lambda x: f"{x['Trade Date']}|{x['Ticker']}|{x['Action']}|{x['Quantity']}|{x['Price']}",
+            lambda x: f"{str(x['Trade Date'])}|{str(x['Ticker'])}|{str(x['Action'])}|{str(x['Quantity'])}|{str(x['Price'])}",
             axis=1
         )
         

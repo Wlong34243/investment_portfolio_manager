@@ -1,5 +1,167 @@
 # Changelog
 
+## [Unreleased] — Phase 5: Valuation FMP Fallback + Tax Cash Fix
+
+### Fixed
+- **Valuation Agent: FMP 402/429 Subscription/Rate Limits causing empty data gaps**
+  - Root cause: Pre-computation step called FMP /quote and /earnings-surprises for all 53 positions sequentially; FMP free tier returns 402 for ETFs and 429 for the tail end of equities, causing Gemini to receive empty tables and produce "Insufficient data" signals for the majority of the portfolio.
+  - `utils/fmp_client.py` — added `yfinance` fallback tier:
+    - Added `_fetch_yf_fallback(ticker)`: maps yfinance `info` and `fast_info` fields (`trailingPE`, `forwardPE`, `priceToBook`, `pegRatio`, `beta`, `sector`, `marketCap`, `yearHigh`, `yearLow`, `trailingEps`) to FMP-style internal dict.
+    - Added `get_fmp_quote(ticker)`: calls FMP /quote; falls back to `_fetch_yf_fallback` on 402, 429, or network error.
+    - Upgraded `get_key_metrics`, `get_company_profile`, and `get_earnings_surprises_cached` (moved from agent) to handle 402/429 via yfinance fallback.
+    - Upgraded `get_financial_statements` to log 402/429 errors gracefully.
+  - `agents/valuation_agent.py` — refactored pre-computation:
+    - Removed local `_fetch_fmp_quote` and `_fetch_fmp_earnings_surprises`; now uses centralized, hardened `fmp_client` functions.
+    - Added `VALUATION_SKIP_ASSET_CLASSES`: automatically excludes ETFs, Funds, Mutual Funds, and Fixed Income from valuation analysis (they lack meaningful P/E), preserving FMP quota for individual equities.
+    - Excludes `SGOV` (treated as cash equivalent) from valuation analysis.
+
+- **Tax Agent: Cash Detection Anti-Pattern & SGOV Position Sizing**
+  - Root cause: Cash detection used `df['Is Cash'].astype(bool)` which failed due to Google Sheets silent boolean coercion (all-True). SGOV (0-3 mo Treasury) was being treated as an equity position, triggering irrelevant TLH and rebalancing actions for what is effectively dry powder.
+  - `agents/tax_agent.py` — hardened cash identification:
+    - Defined `CASH_EQUIVALENT_TICKERS = {'CASH_MANUAL', 'QACDS', 'CASH & CASH INVESTMENTS', 'SGOV'}`.
+    - Updated `_compute_tlh_candidates` and `_compute_drift` to use this explicit ticker set for exclusion.
+    - Updated `analyze` command to calculate total `cash_value` from these tickers; Gemini now receives the correct "Cash (dry powder)" figure for position sizing and cash sufficiency narrative.
+  - `config.py` — added `SGOV` to `CASH_TICKERS` for global consistency across pipeline and UI.
+
+### Verification
+- `smoke_test.py` — All critical imports and type-safety checks passed.
+- `valuation_agent` pre-computation — verified ETF/Fund exclusion logic skips VOO/VEU/SGOV.
+- `tax_agent` context — verified cash_value calculation includes SGOV as dry powder.
+
+---
+
+## [Unreleased] — Phase 5: Per-Agent Token Budgets + Bagger FMP Fix
+
+### Fixed
+- **"EOF while parsing" truncation on Valuation and Concentration agents**
+  - Root cause: `GEMINI_MAX_TOKENS = 2000` global default was being used wherever agents didn't explicitly override; valuation had a hardcoded `max_tokens=12000` which was still insufficient for 53 positions × ~350 tokens/object = ~18,550 tokens of structured JSON output
+  - `config.py` — added 4 per-agent token budget constants:
+    - `GEMINI_MAX_TOKENS_VALUATION = 24000` — 53 positions × full PositionValuation objects + narrative (33% headroom over estimated 18,550 token output)
+    - `GEMINI_MAX_TOKENS_CONCENTRATION = 10000` — 24 flags × hedge_suggestion narrative
+    - `GEMINI_MAX_TOKENS_MACRO = 8000` — chunked (15 pos/chunk); per-chunk budget
+    - `GEMINI_MAX_TOKENS_REBUY = 6000` — chunked (15 pos/chunk); per-chunk budget
+  - `agents/valuation_agent.py` — `max_tokens=12000` replaced with `config.GEMINI_MAX_TOKENS_VALUATION`
+  - `agents/concentration_hedger.py` — `max_tokens=8000` replaced with `config.GEMINI_MAX_TOKENS_CONCENTRATION`
+  - `agents/macro_cycle_agent.py` — `max_tokens=8000` replaced with `config.GEMINI_MAX_TOKENS_MACRO`
+  - `agents/utils/chunked_analysis.py` — removed hardcoded `max_tokens=16000`; added `max_tokens` parameter to `run_chunked_analysis()`; reads `config.GEMINI_MAX_TOKENS_REBUY` as module-level default
+  - `agents/rebuy_analyst.py` — passes `max_tokens=config.GEMINI_MAX_TOKENS_REBUY` to `run_chunked_analysis()`
+
+- **100-Bagger Screener: all positions rejected as data gaps (429 / no FMP data)**
+  - Root cause: `bagger_screener.py` had private FMP helpers (`_fmp_get`, `_fetch_fmp_profile`, `_fetch_fmp_key_metrics_ttm`, `_fetch_fmp_income_statements`) that fired raw `requests.get()` calls with no rate limiter and no cache — 150 sequential FMP calls on a 50-position run, all returning 429
+  - `utils/fmp_client.py` — full restoration and upgrade:
+    - Restored all Streamlit app functions lost in prior session rewrite: `get_earnings_calendar`, `get_earnings_transcript`, `get_key_metrics`, `get_historical_pe`, `get_company_profile`, `screen_by_metrics`, `get_financial_statements`
+    - Added `_fmp_rate_limit()`: 1.2s minimum spacing between live HTTP calls using `time.monotonic()`; cache hits bypass entirely
+    - Added `_cache_path()` / `_cache_valid()` helpers for 7-day file cache
+    - Restored `_get_fmp_cached()` with 7-day TTL and rate-limited miss path
+    - Added `get_income_statements_cached(ticker, limit=4)`: public function with 7-day cache + rate limiter; used by bagger screener as CAGR/margin fallback
+    - `get_fundamentals()` upgraded to three-tier: Tier 0 (Schwab bundle_quote) → Tier 1 (yfinance fast_info + info + financials) → Tier 2 (FMP cache); added `sector`, `payout_ratio`, `revenue_growth_3yr` to yfinance mapping; FMP tier only fires for fields still None after yfinance
+    - All live FMP HTTP calls now go through `_fmp_rate_limit()`
+  - `agents/bagger_screener.py` — private FMP helpers removed; now routes through shared `get_fundamentals()` + `get_income_statements_cached()`; yfinance provides market_cap, sector, ROE/ROIC proxy, gross_margin, payout_ratio, 3yr revenue CAGR at zero FMP cost; FMP income-statement cache used only as fallback for ETFs/foreign tickers where yfinance financials are empty
+
+### Verification
+- `get_fundamentals("NVDA")` → market_cap=$4.8T, sector=Technology, roic=101.48%, gross_margin=71.07%, revenue_growth_3yr=100.05% (all from yfinance, zero FMP calls)
+- `_evaluate_gates(NVDA)` → gates_passed=[roic, revenue_growth, gross_margin, dividend_payout], gates_failed=[acorn] — correct (NVDA fails acorn at $4.8T market cap)
+- `config.GEMINI_MAX_TOKENS_VALUATION` = 24000, `chunked_analysis._DEFAULT_MAX_TOKENS` = 6000 — both read from config correctly
+
+**Status:** Token truncation fixed. Bagger screener now gets real data from yfinance-first tier. Re-run `analyze-all` to verify both agents complete without EOF errors.
+
+---
+
+## [Unreleased] — Phase 5: Behavioral Auditor + journal promote + Rotation Derive
+
+### Added
+- `vault/frameworks/psychology_of_money.json` — Morgan Housel behavioral framework; 12 principles across 3 categories (survival_and_compounding, psychology_and_expectations, risk_and_uncertainty); each principle has `audit_trigger` and `audit_questions` fields; `reviewed_by_bill: true`
+- `agents/prompts/behavioral_auditor_system.txt` — 4-part audit structure: Compounding Gate, Fee vs. Fine Check, Different Game Test, Margin of Safety Assessment
+- `agents/schemas/behavioral_schema.py` — `BehavioralAudit` (7 fields incl. `housel_quote`) + `BehavioralAuditorResponse` (bundle_hash, overall_behavioral_score, summary_narrative, audits, top_risk)
+- `agents/behavioral_auditor.py` — Behavioral Finance Auditor agent; reads composite bundle positions sorted by worst unrealized P&L + optional Trade_Log context (--trade-days); no quantitative pre-computation; 3-7 audit findings per run; writes to Agent_Outputs tab
+- `manager.py` — `agent behavioral analyze` command wired; `journal promote` command added
+  - `journal promote`: reads Trade_Log_Staging rows with Status='approved', previews with table, maps Sell_Tickers→Sell_Ticker / Buy_Tickers→Buy_Ticker / Stage_ID→Trade_Log_ID, appends to Trade_Log, patches staging rows to Status='promoted'
+- `tasks/derive_rotations.py` — reads Transactions tab, clusters sell/buy transactions within configurable window, infers rotation_type, writes candidates to Trade_Log_Staging with fingerprint dedup
+- `config.py` — `TAB_TRADE_LOG_STAGING`, `TRADE_LOG_STAGING_COLUMNS` (14 cols)
+
+### Vault Frameworks (updated table)
+| File | Type | Used by |
+|---|---|---|
+| `psychology_of_money.json` | `behavioral` | Behavioral Auditor — Housel principle audit |
+
+### CLI Usage
+```
+python tasks/derive_rotations.py --since 2026-01-01 --days 90
+python manager.py journal promote          # dry-run preview
+python manager.py journal promote --live   # write to Trade_Log
+python manager.py agent behavioral analyze
+python manager.py agent behavioral analyze --trade-days 60 --live
+```
+
+**Status:** Behavioral Auditor wired. Rotation staging pipeline complete (derive → review → promote).
+
+---
+
+## [Unreleased] — Phase 5 Remediation: FMP 429 ETF Skip + Tax Treatment from Schwab
+
+### Fixed
+
+- **FMP 429 burst errors during `manager.py snapshot --enrich`**
+  - Root cause: `enrich_bundle_fundamentals` called `get_fundamentals()` for all 54 positions including ~19 ETFs (SGOV, QQQM, VTI, VEA, XBI, IFRA, IGV, EWZ, etc.). ETFs have no meaningful PE/PEG/ROIC, so yfinance returns None for those fields → `needs_fmp=True` fired for every ETF, generating ~20 FMP Tier 2 calls before any individual stocks. This blew through the free-tier burst limit immediately.
+  - `utils/fmp_client.py`:
+    - Added `_FMP_SKIP_ASSET_CLASSES` set: `{ETF, FUND, MUTUAL_FUND, FIXED_INCOME, CASH_EQUIVALENT, INDEX, BOND, MMMF}`
+    - Added `asset_class: str = ""` parameter to `get_fundamentals()`; FMP Tier 2 is skipped entirely when `asset_class` is in the skip set
+    - Increased `FMP_MIN_CALL_INTERVAL` from `1.2s` (50/min — right at free-tier edge) to `2.5s` (~24/min — safely under burst limit)
+  - `tasks/enrich_fundamentals.py`: passes `asset_class=pos.get("asset_class", "")` to `get_fundamentals()`
+  - Net effect: ~19 ETF FMP calls eliminated per run; individual stocks (~9 remaining) stay well within the 2.5s rate budget
+
+- **Tax Treatment always `unknown` on Schwab API path**
+  - Root cause: `fetch_positions` never read `securitiesAccount.type` from the Schwab response, so `bundle.py` always fell through to the `"unknown"` default and emitted the warning.
+  - `utils/schwab_client.py`:
+    - `acct_type = sa.get('type', '').upper()` captured per account in the iteration loop
+    - Mapped to `tax_treatment`: `ROTH*` → `tax_exempt`, `*IRA*` → `tax_deferred`, all others → `taxable`
+    - `'Tax Treatment': tax_treatment` added to every position row dict (including CASH_MANUAL)
+    - Return statement updated: `tax_treatment` appended as snake_case column after the `POSITION_COL_MAP` slice so `bundle.py` finds it without schema drift to Sheets
+  - `bundle.py` line 248 check now finds `tax_treatment` in df.columns → warning suppressed, `tax_treatment_available: yes` in bundle header
+
+### CLI Usage (no change — existing snapshot command benefits automatically)
+```
+python manager.py snapshot          # no longer emits FMP 429 spam or tax_treatment warning
+python manager.py snapshot --enrich # same
+```
+
+**Status:** FMP 429 burst errors eliminated for ETF-heavy portfolios. Tax treatment populated from Schwab account type on every snapshot. `enrich_fmp.py` batch task (bake all FMP data at snapshot time) still deferred — see CLAUDE.md Architectural Debt.
+
+---
+
+## [Unreleased] — Phase 5 Remediation: FMP 429 + Three-Tier get_fundamentals
+
+### Changed
+- `utils/fmp_client.py` — **Module-level rate limiter** added as short-term fix for FMP 429 errors
+  - `_fmp_last_call_time: float = 0.0` module-level state
+  - `_fmp_rate_limit()`: enforces 1.2s minimum spacing between HTTP calls using `time.monotonic()`; cache hits bypass entirely; fires before every `requests.get()` call (8 sites in module)
+  - Root cause: 54 sequential FMP requests with ~450ms spacing exceeded free tier (50 req/min)
+- `utils/fmp_client.py` — **Three-tier `get_fundamentals()`** restructure
+  - Tier 0 (bundle_quote/Schwab): `peRatio→trailing_pe`, `forwardPE→forward_pe`, `eps→eps_ttm`, `marketCap→market_cap`, `dividendYield→dividend_yield`, `52WeekHigh→52w_high`, `52WeekLow→52w_low`
+  - Tier 1 (yfinance): `fast_info` for market_cap/52w prices; `info` via `_YF_MAP` for PE/PEG/debt-equity/growth/beta; wraps in try/except (yfinance scrapes public endpoints, can fail silently)
+  - Tier 2 (FMP cache): only called for fields still None after yfinance; uses `_get_fmp_cached()` with 7-day file cache
+  - `_safe_float(v)` helper rejects NaN; returns `{k: v for k, v in result.items() if v is not None}`
+
+### Known Architectural Debt
+- **Correct fix is `tasks/enrich_fmp.py`** (not yet implemented): FMP fundamentals should be fetched ONCE during `manager.py snapshot` and baked into bundle positions as fields (e.g., `bundle.positions[n].pe_ratio`). Agents then read from bundle — zero API calls at agent-run time. The rate limiter and file cache are interim mitigations only.
+- See memory file `project_fmp_bundle_migration.md` for full scope.
+
+**Status:** FMP 429s mitigated by rate limiter + yfinance-first tier. Correct fix (enrich_fmp task) deferred to next build session.
+
+---
+
+## [Unreleased] — Phase 5 Remediation: model_dump() Bug Fix
+
+### Fixed
+- `agents/analyze_all.py` line 305: `market_bundle.model_dump().get("positions", [])` → `market_bundle.positions`
+  - Root cause: `ContextBundle` is a `@dataclass`, not a Pydantic model — `.model_dump()` does not exist on it
+  - `ContextBundle.positions` is already `list[dict]`; direct attribute access is correct
+  - Error manifested as: `ERROR: Fresh bundle build failed: 'ContextBundle' object has no attribute 'model_dump'`
+
+**Status:** `python manager.py analyze-all --fresh-bundle` no longer errors on this path.
+
+---
+
 ## [Unreleased] — Phase 5 Remediation: Van Tharp Sizing Wired (Fix 5)
 
 ### Changed

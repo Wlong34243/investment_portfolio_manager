@@ -230,13 +230,17 @@ def main_dashboard():
                     quotes_df = schwab_client.fetch_quotes(market_client, tickers)
                     if not quotes_df.empty:
                         positions_df = positions_df.merge(
-                            quotes_df[["ticker", "last_price"]],
+                            quotes_df[["ticker", "last_price", "change_pct"]],
                             on="ticker",
                             how="left",
                         )
                         mask = positions_df["last_price"].notna() & (positions_df["last_price"] > 0)
                         positions_df.loc[mask, "price"] = positions_df.loc[mask, "last_price"]
                         positions_df = positions_df.drop(columns=["last_price"])
+                        # Populate Daily Change % from batch quotes
+                        chg_mask = positions_df["change_pct"].notna()
+                        positions_df.loc[chg_mask, "daily_change_pct"] = positions_df.loc[chg_mask, "change_pct"]
+                        positions_df = positions_df.drop(columns=["change_pct"])
             except Exception as e:
                 import logging
                 logging.warning(f"Quote enrichment failed, using account snapshot prices: {e}")

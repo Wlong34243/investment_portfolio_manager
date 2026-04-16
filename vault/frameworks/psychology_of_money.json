@@ -1,0 +1,135 @@
+{
+  "framework_id": "psychology_of_money_housel",
+  "framework_version": "1.0",
+  "author": "Morgan Housel",
+  "source": "The Psychology of Money: Timeless Lessons on Wealth, Greed, and Happiness (2020)",
+  "reviewed_by_bill": true,
+  "applies_to_asset_classes": ["equity", "etf", "fixed_income", "cash"],
+  "applies_to_styles": ["GARP", "THEME", "FUND", "ETF"],
+  "description": "Behavioral finance audit framework. Evaluates portfolio actions, allocation decisions, and emotional responses against Morgan Housel's psychological principles. No quantitative pre-computation required — this framework governs the investor's BEHAVIOR, not the stock's fundamentals.",
+
+  "principles": {
+    "survival_and_compounding": [
+      {
+        "id": "confounding_compounding",
+        "name": "Confounding Compounding",
+        "summary": "The primary driver of wealth is time. The first rule of compounding is to never interrupt it unnecessarily.",
+        "audit_trigger": "Any sale or reallocation that interrupts a long-term compounder without a thesis-breaking event.",
+        "audit_questions": [
+          "Is this sale driven by a thesis change, or by price noise?",
+          "Was this position accumulating for years before being sold during a drawdown?",
+          "If the position is held another 5 years, would the compounding math still work?"
+        ]
+      },
+      {
+        "id": "getting_vs_staying_wealthy",
+        "name": "Getting Wealthy vs. Staying Wealthy",
+        "summary": "Getting money requires risk and optimism. Keeping it requires humility, frugality, and a paranoid survival mindset.",
+        "audit_trigger": "Concentrated bets, leverage signals, or overconfidence in a single thesis.",
+        "audit_questions": [
+          "Is the position sized appropriately for survival, or for maximum upside?",
+          "Does the portfolio have enough diversification to survive a single thesis being wrong?"
+        ]
+      },
+      {
+        "id": "tails_you_win",
+        "name": "Tails, You Win",
+        "summary": "A small number of events account for the majority of outcomes. You can be wrong half the time and still make a fortune. Don't overreact to individual losses.",
+        "audit_trigger": "Panic selling after a bad quarter, or abandoning a strategy after one position fails.",
+        "audit_questions": [
+          "Is the user abandoning a strategy after a single bad outcome?",
+          "Are they allowing one losing position to dictate the entire portfolio's direction?"
+        ]
+      }
+    ],
+    "psychology_and_expectations": [
+      {
+        "id": "reasonable_over_rational",
+        "name": "Reasonable > Rational",
+        "summary": "Do not aim to be coldly rational; aim to be mostly reasonable. Pick a strategy that helps you sleep at night so you can stick with it long-term.",
+        "audit_trigger": "Any portfolio action that seems 'optimal' but would cause behavioral abandonment under stress.",
+        "audit_questions": [
+          "Can the user tolerate the volatility of this position and stay the course?",
+          "Is this strategy one they can realistically stick with for 10+ years?"
+        ]
+      },
+      {
+        "id": "never_enough",
+        "name": "Never Enough",
+        "summary": "The hardest financial skill is getting the goalpost to stop moving. Wealth is the gap between ego and income.",
+        "audit_trigger": "Chasing higher returns by abandoning a working strategy, or adding risk after a strong run.",
+        "audit_questions": [
+          "Is the user increasing risk because their current returns feel insufficient, despite being on track for their goals?",
+          "Are they comparing returns to a benchmark they were never playing against?"
+        ]
+      },
+      {
+        "id": "wealth_is_what_you_dont_see",
+        "name": "Wealth is What You Don't See",
+        "summary": "Spending money to show people how much money you have is the fastest way to have less money. True wealth is unspent options and flexibility.",
+        "audit_trigger": "Heavy lifestyle spending signals, or liquidating investments for visible consumption.",
+        "audit_questions": [
+          "Is any cash being drawn from the portfolio for consumption rather than reinvestment?"
+        ]
+      },
+      {
+        "id": "different_game",
+        "name": "You & Me",
+        "summary": "Beware of taking financial cues from people playing a different game. Define your own time horizon and stick to it.",
+        "audit_trigger": "Chasing momentum in positions where the investor's time horizon is long but the catalyst is short-term.",
+        "audit_questions": [
+          "Is the user buying because of long-term conviction, or because CNBC/Reddit is excited?",
+          "Is this a long-term investment being managed like a short-term trade?"
+        ]
+      }
+    ],
+    "risk_and_uncertainty": [
+      {
+        "id": "nothing_is_free",
+        "name": "Nothing is Free",
+        "summary": "Volatility, uncertainty, and doubt are the price of admission for market returns. View them as a 'fee' to be paid, not a 'fine' to be avoided.",
+        "audit_trigger": "Selling during drawdowns, moving to cash due to fear, or adding hedges at the worst time.",
+        "audit_questions": [
+          "Is the user treating normal drawdowns as a signal to exit?",
+          "Are they accepting volatility as the fee for long-term returns, or panicking at the cost?"
+        ]
+      },
+      {
+        "id": "room_for_error",
+        "name": "Room for Error",
+        "summary": "The most important part of every plan is planning on your plan not going according to plan. Margin of safety is the only way to safely navigate a world governed by odds.",
+        "audit_trigger": "Fully invested with no cash buffer, or thesis that requires perfect execution with no error margin.",
+        "audit_questions": [
+          "Does the portfolio have a cash buffer for unexpected opportunities or emergencies?",
+          "Is any position sized such that being wrong would be catastrophic?"
+        ]
+      },
+      {
+        "id": "surprise",
+        "name": "Surprise!",
+        "summary": "History is the study of change, not a map of the future. The most important economic events of the future will be unprecedented.",
+        "audit_trigger": "Over-relying on historical patterns or backtests to justify a current position.",
+        "audit_questions": [
+          "Is the thesis dependent on macro conditions continuing exactly as they have been?",
+          "Is the user prepared for a scenario that has no historical precedent?"
+        ]
+      },
+      {
+        "id": "luck_and_risk",
+        "name": "Luck & Risk",
+        "summary": "Outcomes are guided by forces outside individual effort. Don't assume 100% of outcomes can be attributed to effort and decisions.",
+        "audit_trigger": "Overconfidence after a winning streak, attributing gains entirely to skill.",
+        "audit_questions": [
+          "Has the user had a strong run and is now increasing risk as a result?",
+          "Are they distinguishing between skill and a favorable macro environment?"
+        ]
+      }
+    ]
+  },
+
+  "verdict_rubric": {
+    "REASONABLE": "The action is aligned with the investor's stated time horizon, does not interrupt compounding without cause, and accepts volatility as a fee rather than a fine.",
+    "CAUTION": "The action has one or more behavioral warning signs — possible goalpost movement, short-term thinking in a long-term position, or implicit volatility aversion — but is not clearly irrational.",
+    "IRRATIONAL": "The action violates a core principle: interrupts compounding unnecessarily, treats volatility as punishment, chases someone else's game, or shows a complete absence of margin of safety."
+  }
+}

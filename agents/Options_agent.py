@@ -14,7 +14,7 @@ from pathlib import Path
 
 # Add project root to path so config is importable
 _HERE = Path(__file__).parent.resolve()
-_ROOT = _HERE.parent.parent
+_ROOT = _HERE.parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 

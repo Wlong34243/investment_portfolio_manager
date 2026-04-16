@@ -398,7 +398,7 @@ def analyze(
                     composite_bundle_path=bundle_path,
                     response_schema=MacroCycleResponse,
                     system_instruction=system_prompt_text,
-                    max_tokens=8000,
+                    max_tokens=config.GEMINI_MAX_TOKENS_MACRO,
                 )
                 if chunk_result is None:
                     msg = f"Chunk {idx + 1}/{len(chunks)} ({tickers_in_chunk}): Gemini returned None"

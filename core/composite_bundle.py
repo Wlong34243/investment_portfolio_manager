@@ -37,10 +37,14 @@ class CompositeBundle:
     vault_doc_count: int
     theses_present: list[str]
     theses_missing: list[str]
+    recent_rotations: list[dict] # From Trade_Log Sheet tab
 
-def _composite_hash(market_hash: str, vault_hash: str) -> str:
-    """Compute SHA256 hex digest of (market_hash + vault_hash)."""
-    return hashlib.sha256(f"{market_hash}{vault_hash}".encode("utf-8")).hexdigest()
+def _composite_hash(market_hash: str, vault_hash: str, recent_rotations: list[dict] = None) -> str:
+    """Compute SHA256 hex digest of (market_hash + vault_hash + rotations)."""
+    payload = f"{market_hash}{vault_hash}"
+    if recent_rotations:
+        payload += json.dumps(recent_rotations, sort_keys=True)
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 def build_composite_bundle(
     market_bundle_path: Path,
@@ -48,6 +52,7 @@ def build_composite_bundle(
 ) -> CompositeBundle:
     """
     Combines market and vault bundles into a CompositeBundle metadata object.
+    Includes recent rotations from Trade_Log.
     """
     # 1. Load and verify sub-bundles
     market_data = load_bundle(market_bundle_path)
@@ -56,10 +61,22 @@ def build_composite_bundle(
     market_hash = market_data["bundle_hash"]
     vault_hash = vault_data["vault_hash"]
     
-    # 2. Compute composite hash
-    comp_hash = _composite_hash(market_hash, vault_hash)
+    # 2. Fetch recent rotations from Trade_Log (Tier 2 data - baked into composite)
+    from utils.sheet_readers import get_trade_log
+    try:
+        trade_log_df = get_trade_log()
+        if not trade_log_df.empty:
+            recent_rotations = trade_log_df.sort_values("Date", ascending=False).head(10).to_dict(orient="records")
+        else:
+            recent_rotations = []
+    except Exception as e:
+        print(f"Warning: Could not fetch Trade_Log for composite bundle: {e}")
+        recent_rotations = []
+
+    # 3. Compute composite hash
+    comp_hash = _composite_hash(market_hash, vault_hash, recent_rotations)
     
-    # 3. Extract metadata
+    # 4. Extract metadata
     timestamp_utc = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     
     return CompositeBundle(
@@ -73,7 +90,8 @@ def build_composite_bundle(
         position_count=market_data["position_count"],
         vault_doc_count=vault_data["vault_doc_count"],
         theses_present=vault_data["theses_present"],
-        theses_missing=vault_data["theses_missing"]
+        theses_missing=vault_data["theses_missing"],
+        recent_rotations=recent_rotations
     )
 
 def write_composite_bundle(bundle: CompositeBundle) -> Path:
@@ -99,12 +117,13 @@ def load_composite_bundle(path: Path) -> dict:
     stored_comp_hash = data.get("composite_hash")
     market_hash = data.get("market_bundle_hash")
     vault_hash = data.get("vault_bundle_hash")
+    recent_rotations = data.get("recent_rotations", [])
     
     if not all([stored_comp_hash, market_hash, vault_hash]):
         raise ValueError(f"Composite bundle missing required hash fields: {path.name}")
         
     # Recompute composite hash to verify
-    expected_comp_hash = _composite_hash(market_hash, vault_hash)
+    expected_comp_hash = _composite_hash(market_hash, vault_hash, recent_rotations)
     
     if stored_comp_hash != expected_comp_hash:
         raise ValueError(

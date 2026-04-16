@@ -94,7 +94,7 @@ Repo additions:
 - ... (and 5 others covering Earnings, Concentration, Correlation, Cash, and Technicals)
 
 ## Vault Frameworks
-Structured investment frameworks live in `vault/frameworks/`. Every file has `reviewed_by_bill: true` to be loadable by `agents/framework_selector.py`. Three framework types:
+Structured investment frameworks live in `vault/frameworks/`. Every file has `reviewed_by_bill: true` to be loadable by `agents/framework_selector.py`. Framework types:
 
 | File | Type | Used by |
 |---|---|---|
@@ -102,6 +102,7 @@ Structured investment frameworks live in `vault/frameworks/`. Every file has `re
 | `joys_of_compounding_framework.json` | `screening` | Thesis Screener — Baid management scoring |
 | `100_bagger_framework.json` | `screening` | Bagger Screener — Mayer quantitative gate |
 | `van_tharp_position_sizing.json` | `position_sizing` | All agents — ATR-based 1R sizing |
+| `psychology_of_money.json` | `behavioral` | Behavioral Auditor — Housel principle audit |
 
 **Van Tharp position sizing framework lives in `vault/frameworks/van_tharp_position_sizing.json`.** Agents pre-compute 1R, position_size_units, stop_loss_price, and trailing_stop by calling `agents.framework_selector.compute_van_tharp_sizing(atr_14, entry_price, portfolio_equity)`. Gemini NEVER computes position sizes, R-multiples, or stop levels. ATR data comes from `composite["calculated_technical_stops"]` (populated by `tasks/enrich_atr.py`). Note: `enrich_atr.py` uses a 2.5x ATR multiplier for protective stops; Van Tharp uses 3.0x for 1R (different concepts — do not conflate).
 
@@ -114,9 +115,24 @@ Structured investment frameworks live in `vault/frameworks/`. Every file has `re
 - **Visuals:** Prefer Treemaps for allocation; use `st.toast` for transient notifications.
 - **Pricing:** Trust ingested CSV/API price during ingestion; avoid redundant yfinance refreshes in `enrich_positions`.
 
+## FMP Data — Known Architectural Debt
+FMP fundamentals (`pe_ratio`, `peg_ratio`, `debt_to_equity`) are fetched live by agents at run-time via `utils/fmp_client.get_fundamentals()`. With 50+ positions this fires 50+ sequential HTTP calls and reliably hits the free-tier rate limit (429).
+
+**Short-term mitigations in place:**
+- Module-level rate limiter in `fmp_client._fmp_rate_limit()`: 1.2s minimum between HTTP calls (cache hits bypass)
+- 7-day file cache in `data/fmp_cache/`: repeated runs within a week skip FMP entirely
+- Three-tier `get_fundamentals()`: Tier 0 = Schwab bundle_quote → Tier 1 = yfinance → Tier 2 = FMP (only for fields yfinance returned None)
+
+**Correct fix (deferred — `tasks/enrich_fmp.py`):** FMP data should be fetched ONCE during `manager.py snapshot` and baked into bundle positions as fields. Agents then read from the bundle — zero API calls at agent-run time. The `bundle_quote` parameter on `get_fundamentals()` is the scaffold for this path.
+
 ## CLI Migration Status
 - **Phase 1: Immutable Data Spine** — COMPLETE. `manager.py snapshot` freezes market state to SHA256-hashed bundles.
 - **Phase 2: Vault Bundling** — COMPLETE. `manager.py vault snapshot` freezes qualitative context (theses).
 - **Phase 3: Re-Buy Analyst** — COMPLETE. First agent ported to bundle interface; Peter Lynch GARP framework integrated.
 - **Phase 4: Schwab API Source** — COMPLETE. Schwab API wired as pluggable data source; `auto` mode defaults to API with CSV fallback.
-- **Phase 5: Agent Kit Completion** — NEXT. Porting remaining agents to the bundle spine.
+- **Phase 5: Agent Kit Completion** — IN PROGRESS.
+  - Behavioral Auditor added (`agent behavioral analyze`) — Morgan Housel framework
+  - Rotation pipeline added (`tasks/derive_rotations.py` + `journal promote`)
+  - FMP 429 mitigated (rate limiter + yfinance-first tier); correct fix (`tasks/enrich_fmp.py`) still pending
+  - `analyze-all --fresh-bundle` `model_dump()` bug fixed
+  - **NEXT:** `tasks/enrich_fmp.py` — bake FMP fundamentals into bundle at snapshot time

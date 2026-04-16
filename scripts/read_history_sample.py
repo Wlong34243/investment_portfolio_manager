@@ -15,7 +15,7 @@ def read_history_sample():
     ws = spreadsheet.worksheet(config.TAB_HOLDINGS_HISTORY)
     
     # Get rows 1 to 4 (Header + 3 data rows)
-    rows = ws.get("A1:S4")
+    rows = ws.get("A1:T4")
     
     import json
     print(json.dumps(rows, indent=2))
