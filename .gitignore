@@ -34,3 +34,5 @@ bundles/
 
 # FMP local cache — regenerable, do not commit
 data/fmp_cache/
+
+Books/
