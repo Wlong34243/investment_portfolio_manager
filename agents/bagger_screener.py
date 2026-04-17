@@ -22,7 +22,7 @@ from rich.table import Table
 
 import config
 from agents.schemas.bagger_schema import BaggerCandidate, BaggerScreenerResponse
-from utils.fmp_client import get_fundamentals, get_income_statements_cached
+from utils.fmp_client import get_income_statements_cached
 from agents.utils.chunked_analysis import CHUNK_SIZE, INTER_CHUNK_SLEEP
 from core.composite_bundle import load_composite_bundle
 from core.bundle import load_bundle
@@ -176,26 +176,27 @@ def _compute_bagger_facts(
         if ticker_filter and ticker not in ticker_filter:
             continue
 
-        # Fetch pre-computed metrics
-        fundamentals = get_fundamentals(ticker)
+        # Pre-baked fundamentals — written at snapshot time by tasks/enrich_fundamentals.py.
+        # Field names match get_fundamentals() snake_case output (trailing_pe, roic, etc.).
+        fundamentals = pos.get("fundamentals", {})
         income_stmts = get_income_statements_cached(ticker)
 
         if not fundamentals:
-            data_gaps.append(f"{ticker}: fundamentals unavailable")
+            data_gaps.append(f"{ticker}: fundamentals not pre-baked (run snapshot first)")
             continue
 
         # 3yr CAGR and gross margin fallback to income statements if fundamentals missing them
-        roic = _safe_pct(fundamentals.get("returnOnEquity")) # ROE proxy
-        rev_growth = _safe_pct(fundamentals.get("revenueGrowth"))
+        roic = _safe_pct(fundamentals.get("roic"))
+        rev_growth = _safe_pct(fundamentals.get("revenue_growth"))
         if rev_growth is None and income_stmts:
-             rev_growth = _revenue_cagr_3yr(income_stmts)
-        
-        gm = _safe_pct(fundamentals.get("grossMargin"))
+            rev_growth = _revenue_cagr_3yr(income_stmts)
+
+        gm = _safe_pct(fundamentals.get("gross_margin"))
         if gm is None and income_stmts:
             gm = _gross_margin_latest(income_stmts)
 
-        payout = _safe_pct(fundamentals.get("payoutRatio"))
-        mkt_cap = fundamentals.get("marketCap")
+        payout = _safe_pct(fundamentals.get("payout_ratio"))
+        mkt_cap = fundamentals.get("market_cap")
 
         gates = _evaluate_gates(mkt_cap, roic, rev_growth, gm, payout)
 

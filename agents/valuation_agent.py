@@ -28,7 +28,7 @@ from core.composite_bundle import load_composite_bundle, resolve_latest_bundles
 from core.bundle import load_bundle
 from core.vault_bundle import load_vault_bundle
 from utils.gemini_client import ask_gemini_composite
-from utils.fmp_client import get_fmp_quote, get_earnings_surprises_cached
+from utils.fmp_client import get_earnings_surprises_cached
 from utils.sheet_readers import get_gspread_client
 from utils.sheet_writers import archive_and_overwrite_agent_outputs
 from utils.formatters import dicts_to_markdown_table
@@ -104,37 +104,21 @@ def _compute_valuation_facts(
         frontmatter = parse_thesis_frontmatter(thesis_text)
         style_tag = (frontmatter.style or "Unknown").title()
 
-        # FMP data
-        quote = get_fmp_quote(ticker)
+        # Pre-baked fundamentals — written at snapshot time by tasks/enrich_fundamentals.py.
+        # Falls back gracefully to None fields; earnings surprises still fetched live.
+        fundamentals = pos.get("fundamentals", {})
         surprises = get_earnings_surprises_cached(ticker)
 
-        if not quote:
-            data_gaps.append(f"{ticker}: FMP quote unavailable")
-            facts.append({
-                "ticker": ticker,
-                "price": price,
-                "pe_trailing": None,
-                "pe_fwd": None,
-                "peg": None,
-                "high_52w": None,
-                "low_52w": None,
-                "price_vs_52w_range": None,
-                "discount_from_52w_high_pct": 0.0,
-                "earnings_surprises": [],
-                "style_tag": style_tag,
-                "thesis_present": thesis_doc is not None,
-                "current_weight_pct": round(_safe_float(pos.get("weight")) * 100, 2),
-                "market_value": _safe_float(pos.get("market_value")),
-            })
-            continue
+        if not fundamentals:
+            data_gaps.append(f"{ticker}: fundamentals not pre-baked (run snapshot first)")
 
-        pe_trailing = _safe_float_or_none(quote.get("pe"))
-        pe_fwd = _safe_float_or_none(quote.get("forwardPE"))
-        peg = None # Future: pull from key metrics
+        pe_trailing = _safe_float_or_none(fundamentals.get("trailing_pe"))
+        pe_fwd = _safe_float_or_none(fundamentals.get("forward_pe"))
+        peg = _safe_float_or_none(fundamentals.get("peg_ratio"))
 
         # 52-week range
-        high_52w = _safe_float_or_none(quote.get("yearHigh"))
-        low_52w = _safe_float_or_none(quote.get("yearLow"))
+        high_52w = _safe_float_or_none(fundamentals.get("52w_high"))
+        low_52w = _safe_float_or_none(fundamentals.get("52w_low"))
         price_vs_52w = None
         disc_52w_high = 0.0
 
