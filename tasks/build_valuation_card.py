@@ -21,12 +21,7 @@ from utils.sheet_readers import get_gspread_client, read_gsheet_robust
 
 app = typer.Typer()
 
-# ETF and Cash exclusion list as per prompt
-EXCLUDE_TICKERS = {
-    'SGOV', 'JPIE', 'QQQM', 'VEA', 'VTI', 'XBI', 'XOM_skip', 'IGV', 'EWZ', 'IFRA',
-    'XLV', 'XLE', 'XLF', 'RSP', 'EEM', 'VEU', 'EMXC', 'BBJP', 'EFG', 'PPA', 'EWJ',
-    'CASH_MANUAL', 'CASH & CASH INVESTMENTS', 'QACDS'
-}
+EXCLUDE_TICKERS = config.VALUATION_SKIP_TICKERS | config.CASH_TICKERS
 
 def fetch_ticker_valuation(ticker_symbol: str):
     """Fetches valuation data for a single ticker via yfinance."""
