@@ -40,7 +40,6 @@ from rich.table import Table
 
 import config
 from agents.schemas.value_investing_schema import ValueInvestingCandidate, ValueInvestingResponse
-from utils.fmp_client import get_fundamentals
 from agents.utils.chunked_analysis import CHUNK_SIZE, INTER_CHUNK_SLEEP
 from core.composite_bundle import load_composite_bundle
 from core.bundle import load_bundle
@@ -210,7 +209,7 @@ def _compute_value_facts(
         if ticker_filter and ticker not in ticker_filter:
             continue
 
-        fundamentals = get_fundamentals(ticker)
+        fundamentals = pos.get("fundamentals", {})
 
         pe_ratio     = fundamentals.get("trailing_pe")
         pb_ratio     = fundamentals.get("pb_ratio")

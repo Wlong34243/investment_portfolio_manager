@@ -32,6 +32,7 @@ from core.bundle import load_bundle
 from core.vault_bundle import load_vault_bundle
 from utils.gemini_client import ask_gemini_composite
 from utils import fmp_client
+from utils.fmp_client import get_fundamentals
 
 app = typer.Typer(help="New Idea Screener Agent")
 console = Console()
@@ -157,34 +158,30 @@ def analyze(
     
     for ticker in ticker_list:
         with console.status(f"[cyan]Fetching data for {ticker}..."):
-            # Market data from yfinance
+            # Market data from yfinance (fast_info is an object — use getattr, not .get())
             try:
-                yf_ticker = yf.Ticker(ticker)
-                # fast_info is better than history for 52w highs
-                info = yf_ticker.fast_info
-                current_price = info.get("lastPrice", 0.0)
-                high_52w = info.get("yearHigh", 0.0)
-                low_52w = info.get("yearLow", 0.0)
-                
+                fi = yf.Ticker(ticker).fast_info
+                current_price = getattr(fi, "last_price", 0.0) or 0.0
+                high_52w = getattr(fi, "year_high", 0.0) or 0.0
+                low_52w = getattr(fi, "year_low", 0.0) or 0.0
+
                 discount_from_52w_high_pct = ((high_52w - current_price) / high_52w * 100) if high_52w > 0 else 0.0
                 price_52w_range_position_pct = ((current_price - low_52w) / (high_52w - low_52w) * 100) if (high_52w - low_52w) > 0 else 0.0
             except Exception as e:
                 console.print(f"[yellow]⚠ yfinance error for {ticker}: {e}[/]")
                 current_price = high_52w = low_52w = discount_from_52w_high_pct = price_52w_range_position_pct = 0.0
 
-            # Fundamental data from FMP
+            # Fundamental data — new ideas aren't in the bundle so call live.
+            # get_fundamentals() uses three-tier: yfinance → FMP cache (rate-limited).
             try:
-                profile = fmp_client.get_company_profile(ticker)
-                metrics = fmp_client.get_key_metrics(ticker)
-                financials = fmp_client.get_financial_statements(ticker)
-                
-                pe_fwd = metrics.get("pe_ratio") # TTM
-                pe_trailing = pe_fwd # FMP key-metrics-ttm
-                revenue_growth_yoy = financials.get("operating_income") # placeholder if not direct
-                gross_margin = metrics.get("roe") # placeholder if not direct
-                market_cap = profile.get("market_cap")
+                fundamentals = get_fundamentals(ticker)
+                pe_fwd        = fundamentals.get("forward_pe")
+                pe_trailing   = fundamentals.get("trailing_pe")
+                revenue_growth_yoy = fundamentals.get("revenue_growth")
+                gross_margin  = fundamentals.get("gross_margin")
+                market_cap    = fundamentals.get("market_cap")
             except Exception as e:
-                console.print(f"[yellow]⚠ FMP error for {ticker}: {e}[/]")
+                console.print(f"[yellow]⚠ fundamentals error for {ticker}: {e}[/]")
                 pe_fwd = pe_trailing = revenue_growth_yoy = gross_margin = market_cap = None
 
             # Overlap check
