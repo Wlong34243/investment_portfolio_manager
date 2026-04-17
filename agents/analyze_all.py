@@ -162,8 +162,6 @@ def _run_one_agent(
         if agent_name == "thesis": runner_name = "run_thesis_agent"
         if agent_name == "tax": runner_name = "run_tax_agent"
         if agent_name == "concentration": runner_name = "run_concentration_agent"
-        if agent_name == "behavioral": runner_name = "run_behavioral_agent"
-        
         runner_fn = getattr(mod, runner_name)
         
         # Call runner (most standard agents use this signature)
