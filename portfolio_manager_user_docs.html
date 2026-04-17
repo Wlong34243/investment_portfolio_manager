@@ -140,7 +140,7 @@
 
 <h1>Investment Portfolio Manager</h1>
 <p class="subtitle">User Documentation — Architecture, Data Flows &amp; Implementation Guide</p>
-<p class="meta">Version: CLI-First Spine Architecture &nbsp;|&nbsp; April 2026 &nbsp;|&nbsp; Single user: Bill</p>
+<p class="meta">Version: CLI-First Spine Architecture — Phase 5 (Agent Kit) &nbsp;|&nbsp; April 2026 &nbsp;|&nbsp; Single user: Bill</p>
 
 <div class="toc">
   <h3>Contents</h3>
@@ -163,7 +163,7 @@
 <!-- ─────────────────────────────────────── OVERVIEW ─── -->
 <h2 id="overview">1. System overview</h2>
 
-<p>This system manages a ~$550K liquid investment portfolio (50+ positions across multiple Schwab brokerage accounts). It is a <strong>headless CLI tool</strong> — there is no web server, no automatic UI refresh, and no state held in memory between runs. Every run freezes its inputs to an immutable hashed bundle, executes deterministically, and exits.</p>
+<p>This system manages a ~$480K liquid investment portfolio (50+ positions across multiple Schwab brokerage accounts). It is a <strong>headless CLI tool</strong> — there is no web server, no automatic UI refresh, and no state held in memory between runs. Every run freezes its inputs to an immutable hashed bundle, executes deterministically, and exits.</p>
 
 <p>The authoritative user interface is <strong>Google Sheets</strong>. All pipeline output lands there. Agents write only to sandbox tabs. Target allocations are manual-only. The visual layer (charts, dashboards) is a pluggable consumer of the Sheet — it never owns data or runs the pipeline.</p>
 
@@ -466,69 +466,26 @@
 <!-- ─────────────────────────────────────── AGENT KIT ─── -->
 <h2 id="agent-kit">5. The agent kit</h2>
 
-<div class="diagram-wrap">
-  <div class="diagram-label">Figure 3 — Agent workflow and output routing</div>
-  <svg viewBox="0 0 680 250" role="img" xmlns="http://www.w3.org/2000/svg">
-    <title>Agent workflow</title>
-    <desc>Four agents each receive the composite bundle and write to the Agent_Outputs sandbox tab. Target_Allocation is manual-only and never touched by agents. The Coherence Checker runs last over the full buy list.</desc>
-    <defs>
-      <marker id="arr3" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-        <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-      </marker>
-    </defs>
+<p>There are 11 live agents, all in <code>agents/</code> at the project root. There is no deployment step — each agent is a Python file with a Typer CLI wired into <code>manager.py</code>. System prompts live as editable <code>.txt</code> files in <code>agents/prompts/</code>. Every agent follows the same pattern: receive the composite bundle, pre-compute all math in Python, pass facts to Gemini for narrative, write sandboxed output.</p>
 
-    <!-- Composite bundle input -->
-    <rect x="240" y="20" width="200" height="48" rx="10" fill="#3c3489" opacity="0.1"/>
-    <rect x="240" y="20" width="200" height="48" rx="10" fill="none" stroke="#3c3489" stroke-width="1.5" opacity="0.5"/>
-    <text x="340" y="42" font-family="Georgia,serif" font-size="13" font-weight="700" text-anchor="middle" fill="currentColor">composite bundle</text>
-    <text x="340" y="58" font-family="Georgia,serif" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.6">immutable · hashed · frozen</text>
+<table>
+  <tr><th>CLI command</th><th>Agent / file</th><th>What it answers</th><th>Needs vault?</th></tr>
+  <tr><td><code>agent rebuy analyze</code></td><td>rebuy_analyst.py</td><td>Scale-in candidates for current holdings. Peter Lynch GARP + Van Tharp sizing pre-computed.</td><td>Yes — reads thesis</td></tr>
+  <tr><td><code>agent add-candidate</code></td><td>add_candidate_analyst.py</td><td>Portfolio fit and displacement analysis for a ticker you're considering adding.</td><td>Yes</td></tr>
+  <tr><td><code>agent new-idea</code></td><td>new_idea_screener.py</td><td>Screens a comma-separated list of tickers against your style buckets. Ranks fit score.</td><td>Yes</td></tr>
+  <tr><td><code>agent tax analyze</code></td><td>tax_agent.py</td><td>TLH candidates, wash-sale risk, rebalancing actions with tax awareness.</td><td>No</td></tr>
+  <tr><td><code>agent valuation analyze</code></td><td>valuation_agent.py</td><td>Multi-year P/E context and accumulation plan signals for existing holdings.</td><td>No</td></tr>
+  <tr><td><code>agent concentration analyze</code></td><td>concentration_hedger.py</td><td>Concentration risk flags and correlation-based hedge suggestions.</td><td>No</td></tr>
+  <tr><td><code>agent macro analyze</code></td><td>macro_cycle_agent.py</td><td>Carlota Perez macro cycle positioning. Connects FRED/VIX to rotation triggers.</td><td>Yes — reads transcripts</td></tr>
+  <tr><td><code>agent thesis analyze</code></td><td>thesis_screener.py</td><td>Translates English investment goals into quantitative screens (Gautam Baid management quality).</td><td>Yes</td></tr>
+  <tr><td><code>agent bagger analyze</code></td><td>bagger_screener.py</td><td>Christopher Mayer 100-bagger quantitative gate over current holdings.</td><td>No</td></tr>
+  <tr><td><code>agent behavioral analyze</code></td><td>behavioral_auditor.py</td><td>Audits your last N days of trades against Morgan Housel behavioral principles.</td><td>No — reads Trade_Log</td></tr>
+  <tr><td><code>agent options run-agent</code></td><td>Options_agent.py</td><td>Covered call strategy suggestions, OTM 5–15%, for eligible positions.</td><td>No</td></tr>
+</table>
 
-    <!-- Four agent boxes -->
-    <rect x="20"  y="112" width="130" height="58" rx="8" fill="#faece7" opacity="0.6"/>
-    <rect x="20"  y="112" width="130" height="58" rx="8" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.25"/>
-    <text x="85" y="134" font-family="Georgia,serif" font-size="11" font-weight="700" text-anchor="middle" fill="currentColor">Re-buy Analyst</text>
-    <text x="85" y="150" font-family="Georgia,serif" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.6">needs thesis</text>
-    <text x="85" y="163" font-family="Georgia,serif" font-size="9" text-anchor="middle" fill="currentColor" opacity="0.5">scale_in / hold / watch</text>
-
-    <rect x="170" y="112" width="130" height="58" rx="8" fill="#faece7" opacity="0.6"/>
-    <rect x="170" y="112" width="130" height="58" rx="8" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.25"/>
-    <text x="235" y="134" font-family="Georgia,serif" font-size="11" font-weight="700" text-anchor="middle" fill="currentColor">Add-Candidate</text>
-    <text x="235" y="150" font-family="Georgia,serif" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.6">style fit · overlap</text>
-    <text x="235" y="163" font-family="Georgia,serif" font-size="9" text-anchor="middle" fill="currentColor" opacity="0.5">displacement analysis</text>
-
-    <rect x="320" y="112" width="130" height="58" rx="8" fill="#faece7" opacity="0.6"/>
-    <rect x="320" y="112" width="130" height="58" rx="8" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.25"/>
-    <text x="385" y="134" font-family="Georgia,serif" font-size="11" font-weight="700" text-anchor="middle" fill="currentColor">New Idea Screener</text>
-    <text x="385" y="150" font-family="Georgia,serif" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.6">user-supplied tickers</text>
-    <text x="385" y="163" font-family="Georgia,serif" font-size="9" text-anchor="middle" fill="currentColor" opacity="0.5">ranked fit score</text>
-
-    <rect x="470" y="112" width="155" height="58" rx="8" fill="#faece7" opacity="0.6"/>
-    <rect x="470" y="112" width="155" height="58" rx="8" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.25"/>
-    <text x="547" y="134" font-family="Georgia,serif" font-size="11" font-weight="700" text-anchor="middle" fill="currentColor">Coherence Checker</text>
-    <text x="547" y="150" font-family="Georgia,serif" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.6">runs last · full buy list</text>
-    <text x="547" y="163" font-family="Georgia,serif" font-size="9" text-anchor="middle" fill="currentColor" opacity="0.5">overlap · concentration</text>
-
-    <!-- Arrows: bundle → agents -->
-    <line x1="290" y1="68" x2="100" y2="112" stroke="currentColor" stroke-width="0.75" marker-end="url(#arr3)" opacity="0.4"/>
-    <line x1="310" y1="68" x2="235" y2="112" stroke="currentColor" stroke-width="0.75" marker-end="url(#arr3)" opacity="0.4"/>
-    <line x1="360" y1="68" x2="385" y2="112" stroke="currentColor" stroke-width="0.75" marker-end="url(#arr3)" opacity="0.4"/>
-    <line x1="390" y1="68" x2="520" y2="112" stroke="currentColor" stroke-width="0.75" marker-end="url(#arr3)" opacity="0.4"/>
-
-    <!-- Output: Agent_Outputs sandbox -->
-    <rect x="80" y="208" width="340" height="36" rx="8" fill="#e1f5ee" opacity="0.5"/>
-    <rect x="80" y="208" width="340" height="36" rx="8" fill="none" stroke="#0f6e56" stroke-width="1" opacity="0.4"/>
-    <text x="250" y="223" font-family="Georgia,serif" font-size="11" font-weight="700" text-anchor="middle" fill="currentColor">Agent_Outputs sandbox tab</text>
-    <text x="250" y="237" font-family="Georgia,serif" font-size="9" text-anchor="middle" fill="currentColor" opacity="0.6">DRY_RUN=true default · fingerprint dedup · never Target_Allocation</text>
-
-    <!-- Arrows: agents → sandbox -->
-    <line x1="85"  y1="170" x2="160" y2="208" stroke="currentColor" stroke-width="0.75" marker-end="url(#arr3)" opacity="0.4"/>
-    <line x1="235" y1="170" x2="220" y2="208" stroke="currentColor" stroke-width="0.75" marker-end="url(#arr3)" opacity="0.4"/>
-    <line x1="385" y1="170" x2="295" y2="208" stroke="currentColor" stroke-width="0.75" marker-end="url(#arr3)" opacity="0.4"/>
-
-    <!-- Coherence runs over full output -->
-    <path d="M547 170 L547 192 L250 192 L250 208" fill="none" stroke="currentColor" stroke-width="0.75" stroke-dasharray="4 3" marker-end="url(#arr3)" opacity="0.35"/>
-
-  </svg>
+<div class="callout info">
+  <strong>No deployment needed</strong>
+  All agents run via <code>python manager.py agent &lt;name&gt; [subcommand]</code>. No server, no separate install. The only prerequisite is a valid composite bundle on disk (run the three snapshot commands first). To customize an agent's reasoning, edit its system prompt in <code>agents/prompts/&lt;name&gt;_system.txt</code>.
 </div>
 
 <h3>Agent invariants</h3>
@@ -538,25 +495,38 @@
 </div>
 
 <h3>Running an agent</h3>
-<pre><code># Rebuild bundles first
+<pre><code># 1. Rebuild bundles first (always required before any agent run)
 python manager.py snapshot --live-api --cash 85000   # or --csv positions.csv
 python manager.py vault snapshot
 python manager.py bundle composite
 
-# Run Re-buy Analyst (dry run — no Sheet writes)
-python manager.py agent rebuy --ticker UNH
+# 2. Pre-compute ATR (required before rebuy — feeds Van Tharp position sizing)
+python tasks/enrich_atr.py
 
-# Run for all positions
-python manager.py agent rebuy
+# 3a. Run ALL agents in one shot (recommended)
+python manager.py analyze-all --bundle latest          # dry run
+python manager.py analyze-all --fresh-bundle           # rebuild bundle then run all
+python manager.py analyze-all --bundle latest --live   # write to Sheet
 
-# Screen new ideas
-python manager.py agent screen --ticker MSFT --ticker AAPL
+# 3b. Run individual agents
+python manager.py agent rebuy analyze --bundle latest
+python manager.py agent rebuy analyze --bundle latest --ticker UNH   # single position
 
-# Coherence check (run last, after other agents)
-python manager.py agent coherence
+python manager.py agent valuation analyze --bundle latest
+python manager.py agent bagger analyze --bundle latest
+python manager.py agent tax analyze --bundle latest
+python manager.py agent concentration analyze --bundle latest
+python manager.py agent macro analyze --bundle latest
+python manager.py agent thesis analyze --bundle latest
+python manager.py agent behavioral analyze --bundle latest --trade-days 60
+python manager.py agent options run-agent
 
-# Promote output to Sheet (explicit --live flag required)
-python manager.py agent rebuy --ticker UNH --live
+# Screen new ideas (comma-separated --tickers, not repeatable --ticker)
+python manager.py agent new-idea --tickers MSFT,NVDA,CRWD
+python manager.py agent add-candidate --tickers MSFT
+
+# Promote a single agent's output to Sheet (explicit --live required)
+python manager.py agent rebuy analyze --bundle latest --live
 </code></pre>
 
 <!-- ─────────────────────────────────────── AGENT DATA CHANNELS ─── -->
@@ -580,7 +550,7 @@ python manager.py agent rebuy --ticker UNH --live
   <li><strong>51 _thesis.md files (one per position):</strong> scaling state, rotation priority, bull case, exit conditions, style tag</li>
   <li><strong>Earnings transcripts:</strong> in <code>vault/transcripts/</code></li>
   <li><strong>Research notes:</strong> in <code>vault/research/</code></li>
-  <li><strong>Investment framework JSON files:</strong> in <code>vault/frameworks/</code> (Peter Lynch GARP, Christopher Mayer 100-Bagger, Carlota Perez macro cycle, Van Tharp position sizing, Gautam Baid management quality, Natenberg options)</li>
+  <li><strong>Investment framework files:</strong> in <code>vault/frameworks/</code> — Peter Lynch GARP (<code>lynch_garp_v1.json</code>), Christopher Mayer 100-Bagger (<code>100_bagger_framework.json</code>), Carlota Perez macro cycle (<code>Macro_super_cycle_framework.md</code>), Van Tharp position sizing (<code>van_tharp_position_sizing.json</code>), Gautam Baid management quality (<code>joys_of_compounding_framework.json</code>), Morgan Housel behavioral principles (<code>psychology_of_money.json</code>). The options framework (<code>OptionsFramework.json</code>) lives in <code>agents/</code> rather than <code>vault/frameworks/</code>.</li>
 </ul>
 
 <h3>Supplemental data channels</h3>
@@ -602,11 +572,11 @@ python manager.py agent rebuy --ticker UNH --live
 <h3>Refinement loop (improving existing agents)</h3>
 <p>Because every agent output is stamped with the <code>composite_hash</code>, you can isolate whether a change in output came from a prompt edit or from fresh data.</p>
 <ol>
-  <li>Run the agent dry: <span class="cmd">python manager.py agent rebuy analyze</span> — output lands in <code>bundles/rebuy_output_&lt;hash&gt;.md</code></li>
+  <li>Run the agent dry: <span class="cmd">python manager.py agent rebuy analyze --bundle latest</span> — output lands in <code>bundles/runs/</code></li>
   <li>Identify gaps: wrong signal, missing rationale, bad scaling language, ignored thesis</li>
-  <li>Edit the agent's system prompt (<code>agents/prompts/rebuy_analyst_system.txt</code>) or Pydantic schema</li>
+  <li>Edit the agent's system prompt in <code>agents/prompts/&lt;name&gt;_system.txt</code> (e.g. <code>rebuy_analyst_system.txt</code>) or Pydantic schema in <code>agents/schemas/</code></li>
   <li>Re-run against the <strong>same bundle</strong> (<code>--bundle bundles/composite_&lt;hash&gt;.json</code>) to compare apples to apples</li>
-  <li>satisfied, promote the edit and update CHANGELOG.md</li>
+  <li>When satisfied, promote the edit and update CHANGELOG.md</li>
 </ol>
 
 <h3>Adding new agents</h3>
@@ -683,31 +653,31 @@ python manager.py agent rebuy --ticker UNH --live
     </g>
     <line x1="146" y1="55" x2="156" y2="55" stroke="currentColor" stroke-width="0.75" marker-end="url(#arr4)" opacity="0.5"/>
     <g>
-      <rect x="156" y="30" width="62" height="50" rx="7" fill="#fef3dc" stroke="#b56d00" stroke-width="1.5" opacity="0.9"/>
+      <rect x="156" y="30" width="62" height="50" rx="7" fill="#e1f5ee" stroke="#0f6e56" stroke-width="1" opacity="0.8"/>
       <text x="187" y="52" font-family="Georgia,serif" font-size="10" font-weight="700" text-anchor="middle" fill="currentColor">Phase 02</text>
       <text x="187" y="66" font-family="Georgia,serif" font-size="9" text-anchor="middle" fill="currentColor" opacity="0.7">vault</text>
-      <text x="187" y="77" font-family="Georgia,serif" font-size="8" text-anchor="middle" fill="#b56d00" opacity="0.8">planned</text>
+      <text x="187" y="77" font-family="Georgia,serif" font-size="8" text-anchor="middle" fill="#0f6e56" opacity="0.8">done ✓</text>
     </g>
     <line x1="218" y1="55" x2="228" y2="55" stroke="currentColor" stroke-width="0.75" marker-end="url(#arr4)" opacity="0.5"/>
     <g>
-      <rect x="228" y="30" width="62" height="50" rx="7" fill="#dceaf5" stroke="#2c5f8a" stroke-width="1.5" opacity="0.9"/>
+      <rect x="228" y="30" width="62" height="50" rx="7" fill="#e1f5ee" stroke="#0f6e56" stroke-width="1" opacity="0.8"/>
       <text x="259" y="52" font-family="Georgia,serif" font-size="10" font-weight="700" text-anchor="middle" fill="currentColor">Phase 03</text>
       <text x="259" y="66" font-family="Georgia,serif" font-size="9" text-anchor="middle" fill="currentColor" opacity="0.7">Re-buy agent</text>
-      <text x="259" y="77" font-family="Georgia,serif" font-size="8" text-anchor="middle" fill="#2c5f8a" opacity="0.8">next</text>
+      <text x="259" y="77" font-family="Georgia,serif" font-size="8" text-anchor="middle" fill="#0f6e56" opacity="0.8">done ✓</text>
     </g>
     <line x1="290" y1="55" x2="300" y2="55" stroke="currentColor" stroke-width="0.75" marker-end="url(#arr4)" opacity="0.5"/>
     <g>
-      <rect x="300" y="30" width="62" height="50" rx="7" fill="#dceaf5" stroke="#2c5f8a" stroke-width="1" opacity="0.7"/>
+      <rect x="300" y="30" width="62" height="50" rx="7" fill="#e1f5ee" stroke="#0f6e56" stroke-width="1" opacity="0.8"/>
       <text x="331" y="52" font-family="Georgia,serif" font-size="10" font-weight="700" text-anchor="middle" fill="currentColor">Phase 04</text>
       <text x="331" y="66" font-family="Georgia,serif" font-size="9" text-anchor="middle" fill="currentColor" opacity="0.7">Schwab API</text>
-      <text x="331" y="77" font-family="Georgia,serif" font-size="8" text-anchor="middle" fill="#2c5f8a" opacity="0.7">after 03</text>
+      <text x="331" y="77" font-family="Georgia,serif" font-size="8" text-anchor="middle" fill="#0f6e56" opacity="0.8">done ✓</text>
     </g>
     <line x1="362" y1="55" x2="372" y2="55" stroke="currentColor" stroke-width="0.75" marker-end="url(#arr4)" opacity="0.5"/>
     <g>
-      <rect x="372" y="30" width="62" height="50" rx="7" fill="#dceaf5" stroke="#2c5f8a" stroke-width="1" opacity="0.7"/>
+      <rect x="372" y="30" width="62" height="50" rx="7" fill="#fef3dc" stroke="#b56d00" stroke-width="1.5" opacity="0.9"/>
       <text x="403" y="52" font-family="Georgia,serif" font-size="10" font-weight="700" text-anchor="middle" fill="currentColor">Phase 05</text>
       <text x="403" y="66" font-family="Georgia,serif" font-size="9" text-anchor="middle" fill="currentColor" opacity="0.7">agent kit</text>
-      <text x="403" y="77" font-family="Georgia,serif" font-size="8" text-anchor="middle" fill="#2c5f8a" opacity="0.7">after 04</text>
+      <text x="403" y="77" font-family="Georgia,serif" font-size="8" text-anchor="middle" fill="#b56d00" opacity="0.9">in progress ◐</text>
     </g>
     <line x1="434" y1="55" x2="444" y2="55" stroke="currentColor" stroke-width="0.75" marker-end="url(#arr4)" opacity="0.5"/>
     <g>
@@ -733,32 +703,22 @@ python manager.py agent rebuy --ticker UNH --live
   </svg>
 </div>
 
-<h3><span class="phase-badge phase-next">next</span> Phase 03 — Re-Buy Analyst</h3>
-<p><strong>Prerequisite:</strong> Phase 02 composite bundle round-trip verified (green smoke test, bundle file on disk).</p>
-<p>This is the proof-of-concept phase. The Re-buy Analyst exercises both sub-bundles simultaneously — live prices from the market bundle and thesis context from the vault bundle. If the composite bundle works for Re-buy, the interface works for everything.</p>
-<p><strong>Key deliverables:</strong> <code>agents/rebuy_analyst.py</code>, <code>agents/schemas/rebuy_schema.py</code>, <code>manager.py agent rebuy</code> subcommand, smoke test.</p>
-<p><strong>Exit criteria:</strong> Dry-run for UNH produces well-formed output with <code>bundle_hash</code> matching the composite bundle on disk. <code>--live</code> writes to <code>Agent_Outputs</code>, not <code>Target_Allocation</code>.</p>
+<h3><span class="phase-badge phase-done">done ✓</span> Phase 03 — Re-Buy Analyst</h3>
+<p>Complete. The Re-buy Analyst is live with Peter Lynch GARP framework evaluation and Van Tharp position sizing pre-computed in Python before any LLM call. Run <code>python tasks/enrich_atr.py</code> before each rebuy run to refresh 14-day ATR data used by Van Tharp sizing.</p>
+<p><strong>Key deliverables:</strong> <code>agents/rebuy_analyst.py</code>, <code>agents/schemas/</code> Pydantic schemas, <code>manager.py agent rebuy analyze</code> subcommand, <code>vault/frameworks/lynch_garp_v1.json</code>, <code>vault/frameworks/van_tharp_position_sizing.json</code>.</p>
 
-<h3><span class="phase-badge phase-next">next</span> Phase 04 — Schwab API Ingestion</h3>
-<p><strong>Prerequisite:</strong> Phase 03 Re-buy Analyst green.</p>
-<p>Swap the CSV reader inside <code>build_bundle()</code> for a Schwab REST call. The bundle interface doesn't change — only the data source changes. This is a surgical patch to one function.</p>
-<p><strong>Critical work items:</strong></p>
-<ul>
-  <li>Deploy token keep-alive Cloud Function to GCP (every 25 min, 24/7)</li>
-  <li>Fix multi-account aggregation bug in <code>fetch_positions()</code> — same ticker across Individual + IRA must be summed, not duplicated</li>
-  <li>Add <code>--live-api</code> flag to <code>manager.py snapshot</code></li>
-  <li>Build read-only <code>SchwabClient</code> wrapper — no order endpoints imported</li>
-  <li>Preserve CSV fallback for disaster recovery</li>
-</ul>
+<h3><span class="phase-badge phase-done">done ✓</span> Phase 04 — Schwab API Ingestion</h3>
+<p>Complete. The Schwab API is wired as the primary data source. <code>manager.py snapshot --live-api</code> calls the Schwab Accounts API for positions and the Market Data API for quotes. The CSV path remains as explicit disaster-recovery fallback. Token keep-alive Cloud Function runs every 25 minutes on GCP.</p>
 <div class="callout warning">
   <strong>Lessons learned — Schwab API gotchas</strong>
   <code>client_from_access_functions</code> takes NO <code>callback_url</code> argument. Passing one silently shifts every argument one position right and causes <code>'str' object is not callable</code> at runtime. The token writer function must accept <code>**kwargs</code> — schwab-py passes <code>refresh_token=...</code> as a keyword argument on refresh. Cash appears in <code>currentBalances.cashBalance</code> across account objects, not in the positions array. Quote enrichment mask must guard against zero: <code>mask = price.notna() &amp; (price > 0)</code>.
 </div>
 
-<h3><span class="phase-badge phase-next">next</span> Phase 05 — Agent Kit Completion + Thesis Backfill</h3>
-<p><strong>Prerequisite:</strong> Phase 04 stable with live API data.</p>
-<p>Port the remaining three agents (Add-Candidate, New Idea Screener, Coherence Checker) onto the spine. Each follows the Re-buy template: Pydantic schema with <code>bundle_hash</code>, composite bundle input, sandbox output.</p>
-<p><strong>Thesis backfill</strong> runs in parallel. Use <code>manager.py vault add-thesis --ticker X</code> to scaffold each file, then fill in the sections. Priority: top 15 positions by value first (covers ~75% of portfolio weight). This is transcription — you already know every thesis.</p>
+<h3><span class="phase-badge phase-wip">in progress</span> Phase 05 — Agent Kit Completion</h3>
+<p><strong>Prerequisite:</strong> Phase 04 stable with live API data — complete.</p>
+<p>10 of 11 agents are live (see agent table in Section 5). Remaining work: <code>tasks/enrich_fmp.py</code> — bake FMP fundamentals into the bundle at snapshot time so agents read from the bundle instead of making 50+ live FMP calls at agent-run time. The three-tier fallback and 7-day file cache are in place as interim mitigation.</p>
+<p><strong>Behavioral Auditor</strong> added: reads last N days from <code>Trade_Log</code> and audits against Morgan Housel <code>psychology_of_money.json</code> framework. Run with <code>--trade-days 60</code> for a quarter look-back.</p>
+<p><strong>Thesis backfill</strong> is ongoing. Use <code>manager.py vault add-thesis --ticker X</code> to scaffold each file. Priority: top 15 positions by weight (covers ~75% of portfolio value).</p>
 
 <h3><span class="phase-badge phase-defer">decision gate</span> Phase 06 — Visual Layer</h3>
 <p>Evaluate after running the CLI + Sheets workflow for 4+ weeks. Ask: "What specific question can I not answer today that I need a new tool to answer?" Options:</p>
@@ -807,12 +767,22 @@ python manager.py agent rebuy --ticker UNH --live
 <h3>Agent commands</h3>
 <table>
   <tr><th>Command</th><th>What it does</th></tr>
-  <tr><td><span class="cmd">python manager.py agent rebuy --ticker UNH</span></td><td>Re-buy analysis for one position (dry run)</td></tr>
-  <tr><td><span class="cmd">python manager.py agent rebuy</span></td><td>Re-buy analysis for all positions</td></tr>
-  <tr><td><span class="cmd">python manager.py agent add-candidate --ticker MSFT</span></td><td>Evaluate a new ticker for portfolio fit</td></tr>
-  <tr><td><span class="cmd">python manager.py agent screen --ticker X --ticker Y</span></td><td>Screen multiple user-supplied tickers</td></tr>
-  <tr><td><span class="cmd">python manager.py agent coherence</span></td><td>Run coherence check over full buy list (run last)</td></tr>
-  <tr><td><span class="cmd">python manager.py agent rebuy --ticker UNH --live</span></td><td>Write output to <code>Agent_Outputs</code> Sheet tab</td></tr>
+  <tr><td><span class="cmd">python manager.py analyze-all --bundle latest</span></td><td>Run all 11 agents (dry run) — recommended starting point</td></tr>
+  <tr><td><span class="cmd">python manager.py analyze-all --fresh-bundle</span></td><td>Rebuild bundle then run all agents</td></tr>
+  <tr><td><span class="cmd">python manager.py analyze-all --bundle latest --live</span></td><td>Run all agents and write results to Sheet</td></tr>
+  <tr><td><span class="cmd">python manager.py agent rebuy analyze --bundle latest</span></td><td>Re-buy analysis for all holdings (dry run)</td></tr>
+  <tr><td><span class="cmd">python manager.py agent rebuy analyze --bundle latest --ticker UNH</span></td><td>Re-buy analysis for one position</td></tr>
+  <tr><td><span class="cmd">python manager.py agent valuation analyze --bundle latest</span></td><td>Valuation signals for all holdings</td></tr>
+  <tr><td><span class="cmd">python manager.py agent bagger analyze --bundle latest</span></td><td>100-bagger quantitative gate (Mayer framework)</td></tr>
+  <tr><td><span class="cmd">python manager.py agent tax analyze --bundle latest</span></td><td>TLH candidates and wash-sale risk</td></tr>
+  <tr><td><span class="cmd">python manager.py agent concentration analyze --bundle latest</span></td><td>Concentration risk and correlation hedges</td></tr>
+  <tr><td><span class="cmd">python manager.py agent macro analyze --bundle latest</span></td><td>Macro cycle positioning and rotation triggers</td></tr>
+  <tr><td><span class="cmd">python manager.py agent thesis analyze --bundle latest</span></td><td>Goal-to-screen translation (Baid framework)</td></tr>
+  <tr><td><span class="cmd">python manager.py agent behavioral analyze --bundle latest --trade-days 60</span></td><td>Behavioral audit of last 60 days of trades</td></tr>
+  <tr><td><span class="cmd">python manager.py agent options run-agent</span></td><td>Covered call suggestions for eligible positions</td></tr>
+  <tr><td><span class="cmd">python manager.py agent new-idea --tickers MSFT,NVDA</span></td><td>Screen new tickers against your style buckets</td></tr>
+  <tr><td><span class="cmd">python manager.py agent add-candidate --tickers MSFT</span></td><td>Full displacement analysis for a single new ticker</td></tr>
+  <tr><td><span class="cmd">python manager.py agent rebuy analyze --bundle latest --live</span></td><td>Write rebuy output to <code>Agent_Outputs</code> Sheet tab</td></tr>
 </table>
 
 <h3>Typical weekly workflow</h3>
@@ -821,16 +791,23 @@ python manager.py snapshot --live-api --cash 85000
 python manager.py vault snapshot
 python manager.py bundle composite
 
-# Review agent suggestions
-python manager.py agent rebuy --bundle latest
-# → review bundles/rebuy_output_*.md before promoting with --live
+# Pre-compute ATR (required for Van Tharp sizing in rebuy agent)
+python tasks/enrich_atr.py
 
-# After reviewing and deciding to log to Sheet
-python manager.py agent rebuy --live
+# Run all agents dry — review bundles/runs/ output before promoting
+python manager.py analyze-all --bundle latest
 
-# Before making a trade — log the rotation
-# Add Trade_Log entry manually in Google Sheets with:
-# linked_sell_ticker, linked_buy_ticker, implicit_bet, redeployment_trigger
+# After reviewing, promote to Sheet
+python manager.py analyze-all --bundle latest --live
+
+# Screen a new idea you read about
+python manager.py agent new-idea --tickers NVDA,ARM
+
+# Behavioral check after a busy trading week
+python manager.py agent behavioral analyze --bundle latest --trade-days 30 --live
+
+# Before making a trade — log the rotation in Google Sheets manually:
+# Trade_Log tab: linked_sell_ticker, linked_buy_ticker, implicit_bet, redeployment_trigger
 </code></pre>
 
 <!-- ─────────────────────────────────────── HARD RULES ─── -->
