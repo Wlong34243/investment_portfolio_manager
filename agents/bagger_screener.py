@@ -24,6 +24,7 @@ import config
 from agents.schemas.bagger_schema import BaggerCandidate, BaggerScreenerResponse
 from utils.fmp_client import get_fundamentals, get_income_statements_cached
 from agents.utils.chunked_analysis import CHUNK_SIZE, INTER_CHUNK_SLEEP
+import time as _time
 from core.composite_bundle import load_composite_bundle
 from core.bundle import load_bundle
 from core.vault_bundle import load_vault_bundle
@@ -284,40 +285,85 @@ def run_bagger_agent(
     if not bagger_facts:
         raise RuntimeError("No positions to analyze. Check FMP API and tickers.")
 
-    # --- Build user prompt ---
+    # --- Build per-chunk prompt helper ---
     system_prompt_text = _SYSTEM_PROMPT_PATH.read_text(encoding="utf-8")
     framework_text = _FRAMEWORK_PATH.read_text(encoding="utf-8")
-    
-    # Markdown optimization
-    facts_table = dicts_to_markdown_table(bagger_facts)
+    composite_hash = composite["composite_hash"]
 
-    user_prompt = (
-        f"Evaluate the following portfolio positions against the 100-Bagger Framework.\n\n"
-        f"## Christopher Mayer 100-Bagger Framework\n"
-        f"{framework_text}\n\n"
-        f"## Pre-Computed Gate Facts\n"
-        f"{facts_table}\n\n"
-        f"## Data Gaps\n"
-        f"{', '.join(data_gaps) if data_gaps else 'None'}\n\n"
-        f"## Instructions\n"
-        "1. For each ticker: analyze ROIC, Moat (Gross Margin), Growth, and Size (Acorn).\n"
-        "2. Provide a 'fundamental_reason' and a 'final_recommendation' (STRONG_BUY, WATCHLIST, REJECT).\n"
-        "3. Write a global summary_narrative.\n"
-        "4. bundle_hash (echo it): {composite['composite_hash']}\n"
-        "Produce a BaggerScreenerResponse JSON object."
+    def _build_bagger_prompt(chunk: list[dict]) -> str:
+        chunk_table = dicts_to_markdown_table(chunk)
+        return (
+            f"Evaluate the following {len(chunk)} position(s) against the 100-Bagger Framework.\n\n"
+            f"## Christopher Mayer 100-Bagger Framework\n"
+            f"{framework_text}\n\n"
+            f"## Pre-Computed Gate Facts\n"
+            f"{chunk_table}\n\n"
+            f"## Instructions\n"
+            "1. For each ticker: analyze ROIC, Moat (Gross Margin), Growth, and Size (Acorn).\n"
+            "2. Keep each narrative field under 200 characters — concise evaluation, not paragraphs.\n"
+            "3. Provide a one-sentence 'fundamental_reason' and a 'final_recommendation'.\n"
+            "4. Write a brief summary_narrative covering this chunk only.\n"
+            f"5. bundle_hash (MUST echo): {composite_hash}\n"
+            "Produce a BaggerScreenerResponse JSON object."
+        )
+
+    # --- Manual chunked loop ---
+    # BaggerScreenerResponse.candidates_analyzed does not match run_chunked_analysis's
+    # result.candidates interface, so we chunk manually like the macro agent.
+    chunks = [bagger_facts[i:i + CHUNK_SIZE] for i in range(0, len(bagger_facts), CHUNK_SIZE)]
+
+    all_candidates: list[BaggerCandidate] = []
+    all_summaries: list[str] = []
+    chunk_errors: list[str] = []
+
+    for idx, chunk in enumerate(chunks):
+        tickers_in_chunk = [p["ticker"] for p in chunk]
+        logger.info("Bagger chunk %d/%d: %s", idx + 1, len(chunks), tickers_in_chunk)
+        try:
+            user_prompt = _build_bagger_prompt(chunk)
+            chunk_result: BaggerScreenerResponse | None = ask_gemini_composite(
+                prompt=user_prompt,
+                composite_bundle_path=bundle_path,
+                response_schema=BaggerScreenerResponse,
+                system_instruction=system_prompt_text,
+                max_tokens=config.GEMINI_MAX_TOKENS_BAGGER,
+                include_vault_context=False,  # facts pre-computed; vault docs not needed
+            )
+            if chunk_result is None:
+                msg = f"Chunk {idx + 1}/{len(chunks)} ({tickers_in_chunk}): Gemini returned None"
+                logger.warning(msg)
+                chunk_errors.append(msg)
+            else:
+                all_candidates.extend(chunk_result.candidates_analyzed)
+                if chunk_result.summary_narrative:
+                    all_summaries.append(chunk_result.summary_narrative)
+        except Exception as e:
+            msg = f"Chunk {idx + 1}/{len(chunks)} failed: {e}"
+            logger.error(msg, exc_info=True)
+            chunk_errors.append(msg)
+
+        if idx < len(chunks) - 1:
+            _time.sleep(INTER_CHUNK_SLEEP)
+
+    if not all_candidates:
+        raise RuntimeError(f"Bagger analysis failed for all chunks. Errors: {chunk_errors}")
+
+    if chunk_errors:
+        logger.warning("Some bagger chunks failed (%d/%d): %s", len(chunk_errors), len(chunks), chunk_errors)
+
+    strong_buys = [c.ticker for c in all_candidates if c.final_recommendation == "STRONG_BUY"]
+    watchlist = [c.ticker for c in all_candidates if c.final_recommendation == "WATCHLIST"]
+    summary = " | ".join(all_summaries[:2]) if all_summaries else f"Bagger analysis complete across {len(all_candidates)} positions."
+
+    result = BaggerScreenerResponse(
+        bundle_hash=composite_hash,
+        analysis_timestamp_utc=run_ts,
+        candidates_analyzed=all_candidates,
+        strong_buy_candidates=strong_buys,
+        watchlist_candidates=watchlist,
+        summary_narrative=summary,
+        data_gaps=data_gaps,
     )
-
-    # --- Call Gemini ---
-    result: BaggerScreenerResponse | None = ask_gemini_composite(
-        prompt=user_prompt,
-        composite_bundle_path=bundle_path,
-        response_schema=BaggerScreenerResponse,
-        system_instruction=system_prompt_text,
-        max_tokens=config.GEMINI_MAX_TOKENS_BAGGER,
-    )
-
-    if result is None:
-        raise RuntimeError("Gemini returned no result.")
 
     sheet_rows = _result_to_sheet_rows(result, run_id, run_ts, dry_run)
     return result, sheet_rows

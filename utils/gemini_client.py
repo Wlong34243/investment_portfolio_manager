@@ -145,19 +145,29 @@ def ask_gemini(prompt: str, system_instruction: str = None, json_mode: bool = Fa
     except Exception as e:
         print(f"DEBUG: Gemini API error: {e}")
         logging.error(f"Gemini API error ({model_name}): {e}")
-        if "429" in str(e):
-            logging.info("Rate limited. Waiting 30s...")
-            time.sleep(30)
-            try:
-                response = client.models.generate_content(
-                    model=model_name,
-                    contents=prompt,
-                    config=generation_config
-                )
-                if response_schema: return response.parsed
-                return response.text
-            except Exception:
-                pass
+        if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
+            # Vertex AI TPM/RPM quota — exponential backoff with two retries
+            for wait_sec in (60, 120):
+                logging.info("429/RESOURCE_EXHAUSTED — waiting %ds before retry...", wait_sec)
+                time.sleep(wait_sec)
+                try:
+                    response = client.models.generate_content(
+                        model=model_name,
+                        contents=prompt,
+                        config=generation_config,
+                    )
+                    print(f"DEBUG: Gemini Response Finish Reason: {response.candidates[0].finish_reason if response.candidates else 'Unknown'}")
+                    if response_schema:
+                        if response.parsed is not None:
+                            return response.parsed
+                        try:
+                            return response_schema.model_validate_json(response.text)
+                        except Exception:
+                            return None
+                    return response.text
+                except Exception as retry_e:
+                    if "429" not in str(retry_e) and "RESOURCE_EXHAUSTED" not in str(retry_e):
+                        break  # non-quota error; stop retrying
         return "" if not response_schema else None
 
 def ask_gemini_json(prompt: str, system_instruction: str = None, max_tokens: int = 2000) -> dict:
@@ -250,6 +260,7 @@ def ask_gemini_composite(
     ticker: str | None = None,
     system_instruction: str | None = None,
     max_tokens: int = 4000,
+    include_vault_context: bool = True,
 ) -> T | None:
     """
     Composite-bundle-aware Gemini call.
@@ -301,6 +312,22 @@ def ask_gemini_composite(
         thesis_docs = [doc for doc in vault["documents"] if doc["doc_type"] == "thesis"]
 
     # 5. Build composite preamble
+    # include_vault_context=False skips the full thesis doc dump to keep input tokens small.
+    # Use False for agents that pre-compute all needed context in their user_prompt (thesis, bagger).
+    if include_vault_context:
+        vault_section = (
+            f"VAULT STATE:\n"
+            f"  theses_present: {composite['theses_present']}\n"
+            f"  theses_missing: {composite['theses_missing']}\n"
+            f"  thesis_context: {json.dumps(thesis_docs, default=str)}\n\n"
+        )
+    else:
+        vault_section = (
+            f"VAULT STATE (summary only — full context pre-processed in user prompt):\n"
+            f"  theses_present: {composite.get('theses_present', [])}\n"
+            f"  theses_missing: {composite.get('theses_missing', [])}\n\n"
+        )
+
     bundle_preamble = (
         f"COMPOSITE CONTEXT BUNDLE (immutable snapshot):\n"
         f"  composite_hash: {composite['composite_hash']}\n"
@@ -311,10 +338,7 @@ def ask_gemini_composite(
         f"  total_value: {market['total_value']}\n"
         f"  position_count: {market['position_count']}\n"
         f"  positions: {json.dumps(market['positions'], default=str)}\n\n"
-        f"VAULT STATE:\n"
-        f"  theses_present: {composite['theses_present']}\n"
-        f"  theses_missing: {composite['theses_missing']}\n"
-        f"  thesis_context: {json.dumps(thesis_docs, default=str)}\n\n"
+        f"{vault_section}"
         f"You MUST include bundle_hash='{composite['composite_hash']}' "
         f"in your response.\n\n"
         f"USER PROMPT:\n{prompt}"

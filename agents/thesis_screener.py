@@ -304,12 +304,16 @@ def run_thesis_agent(
     )
 
     # --- Call Gemini ---
+    # include_vault_context=False: the full thesis docs are already summarized in the
+    # facts_table above. Sending all 50+ thesis docs again in the bundle preamble
+    # would exceed Vertex AI TPM quota and cause 429s.
     result: ThesisScreenerResponse | None = ask_gemini_composite(
         prompt=user_prompt,
         composite_bundle_path=bundle_path,
         response_schema=ThesisScreenerResponse,
         system_instruction=system_prompt_text,
         max_tokens=config.GEMINI_MAX_TOKENS_THESIS,
+        include_vault_context=False,
     )
 
     if result is None:

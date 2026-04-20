@@ -210,6 +210,11 @@ def get_income_statements_cached(ticker: str, limit: int = 4) -> list[dict]:
         resp = requests.get(url, timeout=12)
         if resp.status_code in (402, 429):
             logging.warning("FMP %d for %s income-statement", resp.status_code, ticker)
+            # Cache empty result so repeat calls within TTL skip the HTTP request silently
+            try:
+                path.write_text(json.dumps([]))
+            except Exception:
+                pass
             return []
         resp.raise_for_status()
         data = resp.json()
