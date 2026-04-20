@@ -7,9 +7,10 @@ from earnings transcripts and cross-references them against original theses.
 
 import json
 import logging
+import re
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -20,6 +21,7 @@ from rich.table import Table
 
 import config
 from agents.schemas.thesis_screener_schema import ThesisScreenerResponse, ManagementEvaluation
+from agents.framework_selector import parse_thesis_frontmatter
 from core.composite_bundle import load_composite_bundle
 from core.bundle import load_bundle
 from core.vault_bundle import load_vault_bundle
@@ -51,10 +53,33 @@ _REC_TO_SEVERITY = {
     "THESIS_VIOLATED":    "action",
 }
 
+_STALE_THRESHOLD_DAYS = 90
+
 
 # ---------------------------------------------------------------------------
 # Python pre-computation helpers
 # ---------------------------------------------------------------------------
+
+def _extract_exit_conditions(thesis_text: str) -> str:
+    """Extract the exit conditions section from thesis markdown (first 500 chars)."""
+    match = re.search(
+        r"##\s+(?:Hard\s+)?Exit\s+Conditions?\s*\n(.*?)(?=\n##|\Z)",
+        thesis_text,
+        re.DOTALL | re.IGNORECASE,
+    )
+    return match.group(1).strip()[:500] if match else ""
+
+
+def _is_stale_thesis(last_reviewed: str | None) -> bool:
+    """True if last_reviewed is missing or older than _STALE_THRESHOLD_DAYS."""
+    if not last_reviewed:
+        return True
+    try:
+        reviewed = date.fromisoformat(str(last_reviewed))
+        return (date.today() - reviewed).days > _STALE_THRESHOLD_DAYS
+    except (ValueError, TypeError):
+        return True
+
 
 def _compute_thesis_facts(
     vault_bundle: dict,
@@ -83,21 +108,35 @@ def _compute_thesis_facts(
     for ticker in sorted(all_tickers):
         if ticker_filter and ticker not in ticker_filter:
             continue
-            
+
         th = thesis_map.get(ticker)
         tr = transcript_map.get(ticker)
-        
-        if not th and not tr: continue
-        
+
+        if not th and not tr:
+            continue
+
+        # Parse frontmatter and extract quantitative facts from thesis content
+        has_thesis = th is not None
+        thesis_content = th.get("content", "") if th else ""
+        frontmatter = parse_thesis_frontmatter(thesis_content) if thesis_content else None
+        last_reviewed = frontmatter.last_reviewed if frontmatter else None
+        exit_conditions = _extract_exit_conditions(thesis_content)
+        stale_thesis = _is_stale_thesis(last_reviewed)
+
         facts.append({
             "ticker": ticker,
-            "thesis_present": th is not None,
+            "has_thesis": has_thesis,
             "transcript_present": tr is not None,
-            "transcript_date": tr.get("metadata", {}).get("date") if tr else "N/A"
+            "transcript_date": tr.get("metadata", {}).get("date") if tr else "N/A",
+            "last_reviewed": str(last_reviewed) if last_reviewed else "unknown",
+            "stale_thesis": stale_thesis,
+            "exit_conditions_summary": exit_conditions[:300] if exit_conditions else "none provided",
         })
-        
-        if not th: data_gaps.append(f"{ticker}: missing original thesis")
-        if not tr: data_gaps.append(f"{ticker}: missing latest transcript")
+
+        if not th:
+            data_gaps.append(f"{ticker}: missing original thesis")
+        if not tr:
+            data_gaps.append(f"{ticker}: missing latest transcript")
 
     return facts, data_gaps
 
@@ -173,7 +212,7 @@ def run_thesis_agent(
         f"## Pre-Computed Availability Facts\n"
         f"{facts_table}\n\n"
         f"## Data Gaps\n"
-        f"{json.dumps(data_gaps)}\n\n"
+        f"{', '.join(data_gaps) if data_gaps else 'None'}\n\n"
         "## Instructions\n"
         "1. For each ticker: compare latest transcript behavior to the original thesis.\n"
         "2. Score candor, stewardship, and alignment.\n"

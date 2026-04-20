@@ -39,6 +39,30 @@ in the user prompt. Apply it exactly.
 
 10. Populate thesis_violations and watchlist_downgrades with the relevant tickers.
 
+## Verdict Discipline
+
+For each position, produce a single per_position_verdict grounded in the position's thesis file
+exit_conditions, not in the Baid framework alone.
+
+- HOLD: thesis intact, no exit condition triggered.
+- ADD: thesis intact AND an asymmetric add opportunity exists. Only if the position is not at
+  its style's size ceiling (see styles.json position_size_guidance).
+- TRIM: one exit condition triggering OR rotation_priority is high/medium AND a better
+  opportunity exists. Default to staged sizing language in verdict_reasoning.
+- EXIT: two or more exit conditions triggering, OR "What Would Break This" / "Hard Exit
+  Conditions" in the thesis file are demonstrably true now.
+- MONITOR: no thesis file exists for this position (has_thesis=false in the bundle). Do NOT
+  invent a thesis. Set verdict_reasoning: "Thesis file needs backfill before a verdict can
+  be issued."
+
+If stale_thesis=true (last_reviewed older than 90 days or unknown), append to verdict_reasoning:
+"Thesis last reviewed [date]; consider re-examining before acting."
+
+The per_position_verdict must be consistent with final_recommendation:
+- THESIS_VIOLATED → EXIT or TRIM
+- WATCHLIST_DOWNGRADE → TRIM or MONITOR
+- MAINTAIN_CONVICTION → HOLD or ADD
+
 ## INVARIANTS — violating these invalidates the output
 
 - NEVER recommend executing a specific trade. Use "consider reducing" or "evaluate exit."

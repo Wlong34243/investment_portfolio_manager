@@ -286,6 +286,19 @@ def run_valuation_agent(
     if result is None:
         raise RuntimeError("Gemini returned no result.")
 
+    # Deterministic signal→verdict mapping (Python, not LLM)
+    _SIGNAL_TO_VERDICT = {
+        "accumulate": "ADD",
+        "hold":       "HOLD",
+        "trim":       "TRIM",
+        "monitor":    "MONITOR",
+    }
+    for pos in result.positions:
+        pos.verdict = _SIGNAL_TO_VERDICT.get(pos.signal, "HOLD")
+
+    if not _fmp_mod.FMP_EARNINGS_AVAILABLE:
+        logger.info("FMP earnings-surprises endpoint unavailable; earnings surprise data excluded from this run.")
+
     sheet_rows = _result_to_sheet_rows(result, run_id, run_ts, dry_run)
     return result, sheet_rows
 

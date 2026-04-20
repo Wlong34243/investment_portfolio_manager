@@ -42,6 +42,15 @@ class PositionValuation(BaseModel):
         ...,
         description="Gemini valuation signal based on the pre-computed facts and thesis.",
     )
+    verdict: Literal["HOLD", "TRIM", "ADD", "EXIT", "MONITOR"] = Field(
+        default="HOLD",
+        description=(
+            "Uppercase verdict aligned with Thesis Screener vocabulary. "
+            "Mapped deterministically from signal in Python after Gemini returns: "
+            "accumulate→ADD, hold→HOLD, trim→TRIM, monitor→MONITOR. "
+            "Do NOT populate this field — it is overwritten post-LLM."
+        ),
+    )
     accumulation_plan: str | None = Field(
         default=None,
         description=(

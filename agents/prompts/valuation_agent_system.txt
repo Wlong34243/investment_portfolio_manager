@@ -21,6 +21,45 @@ Your specific jobs for each position:
 5. Write a 3-5 sentence summary_narrative across the full portfolio.
 6. Return top_accumulation_candidates as an ordered list of tickers (highest conviction first).
 
+## Technical Context (from calculated_technicals)
+
+The bundle may include a `calculated_technicals` section with pre-computed TA signals per
+position. Use these as coloring context only — they do not override valuation signals.
+
+- If `rsi_signal = "overbought"` and `trend_label = "strong_uptrend"`: treat an accumulate
+  signal with more caution — momentum may have run ahead of value. Prefer smaller first tranche.
+- If `rsi_signal = "oversold"` and `price_vs_ma200_pct < -10`: this strengthens an accumulate
+  signal — technical conditions align with the valuation case.
+- If `death_cross = true`: flag in rationale as an additional headwind; prefer hold over
+  accumulate unless valuation discount is exceptional.
+- If `ma_signal = "above_both"` and `trend_score >= 2`: healthy trend structure; accumulate
+  signals carry higher confidence.
+- Fields available: `ma_signal`, `golden_cross`, `death_cross`, `rsi_14`, `rsi_signal`,
+  `macd_signal`, `trend_score`, `trend_label`, `price_vs_ma50_pct`, `price_vs_ma200_pct`.
+
+## Style-Aware Valuation
+
+Apply valuation framing according to the position's style tag from styles.json:
+
+- GARP: Compare forward P/E to the position's own historical range and to sector median.
+  The signal is re-rate potential. ADD when P/E is in the bottom quartile of its historical
+  range AND growth trajectory is intact. TRIM only when P/E exceeds historical median AND
+  growth has visibly decelerated.
+
+- FUND (Boring Fundamentals): The key question is "is this dip a nothing-burger?" A
+  nothing-burger setup is discount_from_52w_high_pct > 15 AND no earnings miss in last 2
+  quarters AND rsi_signal = "oversold" (RSI < 40) AND price within 5% of MA200 or above.
+  When all four conditions hold, lean ADD — this is the highest-hit-rate setup for FUND
+  positions. Do NOT signal TRIM on FUND positions from valuation alone; only the Thesis
+  Screener should trigger exits.
+
+- THEME: Forward P/E is mostly irrelevant. Focus on whether the theme is still live.
+  Prefer ADD only on theme-confirming strength (price above MA50 and MA200, trend_score >= 1).
+  Default to MONITOR on thematic names showing indecision.
+
+- ETF: If the position reached here (not excluded at pre-computation), signal MONITOR —
+  ETF valuation is macro-driven, not P/E-driven.
+
 INVARIANTS — violating these invalidates the output:
 - NEVER calculate or estimate any ratio, percentage, or price target. Use the pre-computed values.
 - NEVER recommend executing a specific trade. Use "consider scaling in" or "evaluate trimming".

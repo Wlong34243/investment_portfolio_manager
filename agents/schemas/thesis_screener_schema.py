@@ -78,6 +78,26 @@ class ManagementEvaluation(BaseModel):
             "THESIS_VIOLATED: exit condition triggered, scale-down warranted."
         ),
     )
+    per_position_verdict: Literal["HOLD", "TRIM", "ADD", "EXIT", "MONITOR"] = Field(
+        ...,
+        description=(
+            "Single action verdict grounded in the position's exit_conditions from the thesis file. "
+            "HOLD: thesis intact, no exit condition triggered. "
+            "ADD: thesis intact AND asymmetric add opportunity exists (position not at style size ceiling). "
+            "TRIM: one exit condition triggering OR rotation_priority is high/medium AND better opportunity exists. "
+            "EXIT: two or more exit conditions triggering, or 'What Would Break This' conditions demonstrably true now. "
+            "MONITOR: no thesis file exists for this position (has_thesis=false). Do NOT invent a thesis."
+        ),
+    )
+    verdict_reasoning: str = Field(
+        ...,
+        max_length=600,
+        description=(
+            "One paragraph citing the specific thesis-break condition from the thesis file "
+            "that is or isn't triggered. No generic risks. If stale_thesis=true, append: "
+            "'Thesis last reviewed [date]; consider re-examining before acting.'"
+        ),
+    )
 
 
 class ThesisScreenerResponse(BaseModel):
