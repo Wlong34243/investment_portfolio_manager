@@ -14,6 +14,8 @@
             --border: #e1e4e8;
             --code-bg: #f4f4f4;
             --success: #27ae60;
+            --warning: #e67e22;
+            --danger: #e74c3c;
         }
 
         body {
@@ -42,6 +44,7 @@
         h1 { color: var(--primary); margin: 0; font-size: 2.5rem; }
         h2 { color: var(--secondary); margin-top: 3rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; }
         h3 { color: var(--primary); margin-top: 2rem; }
+        h4 { color: var(--secondary); margin-top: 1.5rem; }
 
         .toc {
             background: #eef2f7;
@@ -50,49 +53,61 @@
             margin-bottom: 3rem;
         }
 
-        .toc h2 { margin-top: 0; border: none; font-size: 1.2rem; text-transform: uppercase; letter-spacing: 1px; }
-        .toc ul { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px; }
+        .toc h2 { margin-top: 0; border: none; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 1px; }
+        .toc ul { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 8px; }
         .toc a { text-decoration: none; color: var(--accent); font-weight: 600; }
         .toc a:hover { text-decoration: underline; }
 
         .callout {
-            padding: 1.5rem;
+            padding: 1.2rem 1.5rem;
             background: #fff8e1;
             border-left: 5px solid #ffc107;
-            margin: 2rem 0;
+            margin: 1.5rem 0;
             border-radius: 0 8px 8px 0;
+        }
+
+        .callout-danger {
+            background: #fdecea;
+            border-left-color: var(--danger);
+        }
+
+        .callout-success {
+            background: #e8f5e9;
+            border-left-color: var(--success);
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
             margin: 1.5rem 0;
+            font-size: 0.92rem;
         }
 
         th, td {
             text-align: left;
-            padding: 12px;
+            padding: 10px 12px;
             border: 1px solid var(--border);
             vertical-align: top;
         }
 
-        th { background: #f1f3f5; color: var(--primary); }
+        th { background: #f1f3f5; color: var(--primary); font-weight: 700; }
         tr:nth-child(even) { background: #f9fafb; }
 
         code {
             font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
             background: var(--code-bg);
-            padding: 0.2rem 0.4rem;
+            padding: 0.15rem 0.4rem;
             border-radius: 4px;
-            font-size: 0.9em;
+            font-size: 0.88em;
         }
 
         pre {
             background: #2d3436;
             color: #dfe6e9;
-            padding: 1rem;
+            padding: 1rem 1.25rem;
             border-radius: 8px;
             overflow-x: auto;
+            font-size: 0.9rem;
         }
 
         pre code { background: transparent; color: inherit; padding: 0; }
@@ -101,13 +116,37 @@
             display: inline-block;
             padding: 2px 8px;
             border-radius: 12px;
-            font-size: 0.75rem;
+            font-size: 0.72rem;
             font-weight: bold;
             text-transform: uppercase;
+            vertical-align: middle;
         }
-        .badge-core { background: #e3f2fd; color: #1565c0; }
-        .badge-task { background: #e8f5e9; color: #2e7d32; }
-        .badge-util { background: #fff3e0; color: #ef6c00; }
+        .badge-ok  { background: #e8f5e9; color: #2e7d32; }
+        .badge-warn { background: #fff3e0; color: #ef6c00; }
+        .badge-fail { background: #fdecea; color: #c62828; }
+        .badge-skip { background: #f5f5f5; color: #757575; }
+
+        .flow {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+        }
+
+        .flow-step {
+            background: var(--primary);
+            color: white;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+
+        .flow-arrow {
+            color: #999;
+            font-size: 1.2rem;
+        }
 
         footer {
             margin-top: 5rem;
@@ -118,13 +157,12 @@
             padding-top: 2rem;
         }
 
-        /* --- PRINT STYLES --- */
         @media print {
             .toc, .container { box-shadow: none; margin: 0; padding: 0; max-width: 100%; }
             .toc { display: none; }
             body { background: white; }
             h2, h3 { page-break-after: avoid; }
-            table, pre, blockquote { page-break-inside: avoid; }
+            table, pre { page-break-inside: avoid; }
             a { color: black; text-decoration: none; }
             pre { background: white; color: black; border: 1px solid #ccc; white-space: pre-wrap; }
         }
@@ -135,95 +173,489 @@
 <div class="container">
     <header>
         <h1>Portfolio Management System</h1>
-        <p><strong>Technical System Manual & Codebase Documentation</strong></p>
-        <p>Operational Date: April 2026 | Environment: Headless CLI</p>
+        <p><strong>Technical System Manual &amp; Operator Reference</strong></p>
+        <p style="color:#777; font-size:0.9rem;">Phase 5 · April 2026 · Headless CLI · Gemini 2.5 Flash via Vertex AI · ~$480K / 50+ positions</p>
     </header>
 
     <section class="toc">
         <h2>Table of Contents</h2>
         <ul>
+            <li><a href="#sunday-run">0. Sunday Morning Cheat Sheet</a></li>
             <li><a href="#architecture">1. System Architecture</a></li>
-            <li><a href="#core">2. Core Engine (Manager & Pipeline)</a></li>
-            <li><a href="#tasks">3. Tasks & Automations (/tasks)</a></li>
-            <li><a href="#utils">4. Utility Reference (/utils)</a></li>
-            <li><a href="#scripts">5. Maintenance Scripts (/scripts)</a></li>
-            <li><a href="#agents">6. AI Agent Tuning Guide (/agents)</a></li>
+            <li><a href="#core">2. Core Engine (manager.py)</a></li>
+            <li><a href="#bundle-pipeline">3. Bundle Pipeline</a></li>
+            <li><a href="#agents">4. AI Agent Reference</a></li>
+            <li><a href="#agent-outputs">5. Agent_Outputs Tab Guide</a></li>
+            <li><a href="#vault">6. Vault — Theses &amp; Frameworks</a></li>
+            <li><a href="#tasks">7. Tasks &amp; Enrichment Scripts</a></li>
+            <li><a href="#utils">8. Utility Reference</a></li>
+            <li><a href="#troubleshooting">9. Troubleshooting</a></li>
         </ul>
     </section>
 
-    <section id="architecture">
-        <h2>1. System Architecture Overview</h2>
-        <p>The system is a <strong>Headless CLI application</strong> designed for high-integrity financial analysis. It follows a strictly decoupled architecture:</p>
-        
-        <ul>
-            <li><strong>Data Ingestion:</strong> Pulls from Schwab API or CSV.</li>
-            <li><strong>The "Frozen State" Pattern:</strong> Every run captures a <em>Context Bundle</em> (JSON) containing all market and research data. This ensures the AI never hallucinates numbers based on stale or shifting data.</li>
-            <li><strong>Intelligence Layer:</strong> Specialized Python agents send curated "Context Bundles" to Gemini 2.5 Pro with structured Pydantic schemas.</li>
-            <li><strong>View Layer:</strong> Results are written back to Google Sheets via <code>gspread</code>.</li>
-        </ul>
+    <!-- =====================================================================
+         SECTION 0: SUNDAY CHEAT SHEET
+         ===================================================================== -->
+    <section id="sunday-run">
+        <h2>0. Sunday Morning Cheat Sheet</h2>
+        <p>This is the complete weekly workflow. Copy-paste these commands in order.</p>
 
-        <div class="callout">
-            <strong>Philosophy: Dry Run by Default.</strong> No script will write to your Google Sheets unless you explicitly pass the <code>--live</code> flag. This prevents accidental data corruption and unnecessary API costs.
+        <pre><code># Step 1: Full analysis run — builds fresh market snapshot, runs all 7 agents, writes to sheet
+python manager.py analyze-all --fresh-bundle --live
+
+# Step 2: Refresh Decision_View with latest agent signals
+python manager.py dashboard refresh --live
+
+# Step 3: Optional — check thesis trigger completeness (backfill queue)
+python manager.py vault thesis-audit</code></pre>
+
+        <div class="callout callout-success">
+            <strong>What to look at in the sheet afterwards:</strong>
+            <ol>
+                <li><strong>Agent_Outputs tab</strong> — data_quality rows first (pipeline issues), then action/alert rows (what needs attention). The HOLD SUMMARY row at the bottom condenses the "nothing happening" positions into one line.</li>
+                <li><strong>Decision_View tab</strong> — one row per position. <em>Non-empty</em> signal cells mean something needs attention; empty = no active signal (good).</li>
+                <li><strong>Rebuy candidates</strong> — listed in the manifest at <code>bundles/runs/manifest_*.json</code>. The rebuy agent writes its own JSON output, not to Agent_Outputs.</li>
+            </ol>
         </div>
+
+        <h3>If something fails mid-run</h3>
+        <pre><code># Re-run specific agents only (skip the slow ones that already succeeded)
+python manager.py analyze-all --agents thesis,bagger --live
+
+# Re-run without a fresh bundle (uses the bundle from the current run)
+python manager.py analyze-all --agents thesis --live</code></pre>
     </section>
 
+    <!-- =====================================================================
+         SECTION 1: ARCHITECTURE
+         ===================================================================== -->
+    <section id="architecture">
+        <h2>1. System Architecture</h2>
+
+        <p>The system is a <strong>headless CLI pipeline</strong> that builds immutable data snapshots, passes them to Gemini for analysis, and writes structured results to Google Sheets. No numbers are computed by the LLM — all math (yields, P/E, drift %, stop levels) is done in Python first.</p>
+
+        <h3>Data Flow</h3>
+        <div class="flow">
+            <span class="flow-step">Schwab API / CSV</span>
+            <span class="flow-arrow">→</span>
+            <span class="flow-step">Market Bundle</span>
+            <span class="flow-arrow">+</span>
+            <span class="flow-step">Vault Bundle</span>
+            <span class="flow-arrow">→</span>
+            <span class="flow-step">Composite Bundle</span>
+            <span class="flow-arrow">→</span>
+            <span class="flow-step">ATR + TA Enrichment</span>
+            <span class="flow-arrow">→</span>
+            <span class="flow-step">7 AI Agents</span>
+            <span class="flow-arrow">→</span>
+            <span class="flow-step">Google Sheets</span>
+        </div>
+
+        <h3>Core Invariants</h3>
+        <table>
+            <thead><tr><th>Rule</th><th>Why It Exists</th></tr></thead>
+            <tbody>
+                <tr><td><strong>No LLM Math</strong></td><td>Yields, drift %, P/E, stop levels, position sizes are all computed in Python and passed as facts. Gemini writes narrative only.</td></tr>
+                <tr><td><strong>Pydantic Schemas</strong></td><td>Every Gemini call uses a <code>response_schema=SomeModel</code>. If Gemini returns malformed JSON, it fails loudly — never silently corrupt data.</td></tr>
+                <tr><td><strong>Dry Run Default</strong></td><td>Nothing writes to Sheets without <code>--live</code>. Safe to run anytime.</td></tr>
+                <tr><td><strong>Bundle Provenance</strong></td><td>Every agent output carries <code>bundle_hash</code> linking it to the exact market snapshot it analyzed. Manifests stored in <code>bundles/runs/</code>.</td></tr>
+                <tr><td><strong>Van Tharp Sizing in Python</strong></td><td>1R, stop_loss_price, position_size_units are computed from ATR before any LLM call. Gemini only cites pre-computed values.</td></tr>
+            </tbody>
+        </table>
+
+        <h3>Tech Stack</h3>
+        <table>
+            <thead><tr><th>Component</th><th>Technology</th></tr></thead>
+            <tbody>
+                <tr><td>AI Model</td><td>Gemini 2.5 Flash via <code>google-genai</code> SDK + Vertex AI ADC (<code>re-property-manager-487122</code>)</td></tr>
+                <tr><td>Market Data</td><td>Schwab API (primary), yfinance (fallback), FMP free tier (fundamentals fallback)</td></tr>
+                <tr><td>Database</td><td>Google Sheets via <code>gspread</code></td></tr>
+                <tr><td>Schema Enforcement</td><td>Pydantic v2 — every agent response is validated</td></tr>
+                <tr><td>CLI Framework</td><td>Typer + Rich</td></tr>
+            </tbody>
+        </table>
+    </section>
+
+    <!-- =====================================================================
+         SECTION 2: CORE ENGINE
+         ===================================================================== -->
     <section id="core">
-        <h2>2. Core Engine</h2>
-        <p>The core engine consists of the orchestration layer and the data spine.</p>
+        <h2>2. Core Engine (<code>manager.py</code>)</h2>
+        <p><code>manager.py</code> is the single entry point for all operations. It groups commands into four sub-apps:</p>
+
+        <h3>analyze-all — Weekly Analysis Orchestrator</h3>
+        <pre><code>python manager.py analyze-all --fresh-bundle --live
+python manager.py analyze-all --fresh-bundle                       # dry run (no sheet write)
+python manager.py analyze-all --agents valuation,macro --live      # specific agents only
+python manager.py analyze-all --agents rebuy --live                # single agent</code></pre>
+
+        <p>Runs all 7 agents in sequence over a single composite bundle. On <code>--live</code>, writes one batch to Agent_Outputs (archive-before-overwrite). The rebuy agent uses a legacy schema and is excluded from the batch write — its output goes to <code>bundles/runs/</code> only.</p>
+
+        <h3>snapshot — Data Ingestion</h3>
+        <pre><code>python manager.py snapshot --live                              # Schwab API → Holdings_Current
+python manager.py snapshot --live --enrich-atr                 # + ATR stop levels
+python manager.py snapshot --live --enrich-atr --enrich-technicals  # + Murphy TA indicators
+python manager.py snapshot --source csv --file export.csv --live    # CSV fallback</code></pre>
+
+        <h3>vault — Thesis &amp; Research Management</h3>
+        <pre><code>python manager.py vault snapshot                               # freeze vault bundle
+python manager.py vault add-thesis TICKER                      # scaffold new thesis file
+python manager.py vault thesis-audit                           # quantitative trigger completeness report</code></pre>
+
+        <h3>agent — Individual Agent Runs (for testing)</h3>
+        <pre><code>python manager.py agent valuation analyze --bundle latest
+python manager.py agent macro analyze --bundle latest
+python manager.py agent thesis analyze --bundle latest --tickers UNH,GOOG
+python manager.py agent rebuy analyze --bundle latest --live   # rebuy writes its own output</code></pre>
+
+        <h3>dashboard — Sheet Formatting</h3>
+        <pre><code>python manager.py dashboard refresh --live
+python manager.py dashboard rebuild-decision-view --live</code></pre>
+
+        <h3>bundle — Inspect Snapshots</h3>
+        <pre><code>python manager.py bundle composite                             # build composite from latest
+python manager.py bundle inspect bundles/composite_bundle_*.json</code></pre>
+    </section>
+
+    <!-- =====================================================================
+         SECTION 3: BUNDLE PIPELINE
+         ===================================================================== -->
+    <section id="bundle-pipeline">
+        <h2>3. Bundle Pipeline</h2>
+        <p>Bundles are JSON snapshots stored in <code>bundles/</code>. They are immutable once created — the SHA256 hash locks the data. The pipeline builds them in order:</p>
 
         <table>
-            <thead>
-                <tr>
-                    <th>File</th>
-                    <th>Role</th>
-                    <th>Key Responsibilities</th>
-                </tr>
-            </thead>
+            <thead><tr><th>Bundle</th><th>File Pattern</th><th>What It Contains</th><th>Built By</th></tr></thead>
             <tbody>
                 <tr>
-                    <td><code>manager.py</code></td>
-                    <td><strong>CLI Entry Point</strong></td>
-                    <td>Orchestrates <code>snapshot</code>, <code>analyze-all</code>, <code>vault</code>, and <code>dashboard</code> commands.</td>
-                </tr>
-                <tr>
-                    <td><code>pipeline.py</code></td>
-                    <td><strong>Data Spine</strong></td>
-                    <td>Handles "Nuclear Type Enforcement," normalization, and core sheet writing logic for Holdings and Snapshots.</td>
-                </tr>
-                <tr>
-                    <td><code>config.py</code></td>
-                    <td><strong>Settings</strong></td>
-                    <td>Single source of truth for Tab names, Sheet IDs, API keys, and Ticker constants.</td>
-                </tr>
-                <tr>
+                    <td><strong>Market Bundle</strong></td>
+                    <td><code>context_bundle_*.json</code></td>
+                    <td>All positions with price, P/E, weight, cost basis, unrealized G/L. Schwab API or CSV.</td>
                     <td><code>core/bundle.py</code></td>
-                    <td><strong>State Freezer</strong></td>
-                    <td>Builds the Market Bundle by joining positions with yfinance/Schwab quotes.</td>
                 </tr>
                 <tr>
+                    <td><strong>Vault Bundle</strong></td>
+                    <td><code>vault_bundle_*.json</code></td>
+                    <td>Thesis markdown files + earnings transcripts packaged as JSON documents.</td>
                     <td><code>core/vault_bundle.py</code></td>
-                    <td><strong>Research Freezer</strong></td>
-                    <td>Packages local markdown theses and transcripts into a JSON bundle.</td>
+                </tr>
+                <tr>
+                    <td><strong>Composite Bundle</strong></td>
+                    <td><code>composite_bundle_*.json</code></td>
+                    <td>Joins market + vault. Contains <code>composite_hash</code> = SHA256(market_hash + vault_hash). All agents read this.</td>
+                    <td><code>core/composite_bundle.py</code></td>
                 </tr>
             </tbody>
         </table>
 
-        <h3>Manager Commands</h3>
-        <pre><code>python manager.py snapshot --live          # Sync Schwab and update Holdings
-python manager.py analyze-all --live       # Run all AI agents and update Dashboard
-python manager.py dashboard refresh --live  # Re-apply formatting and rebuild Action Views
-python manager.py vault snapshot           # Freeze research state</code></pre>
+        <h3>Bundle Enrichment (appended in-place, hash-safe)</h3>
+        <table>
+            <thead><tr><th>Task</th><th>Command</th><th>Injects Key</th><th>Used By</th></tr></thead>
+            <tbody>
+                <tr>
+                    <td><code>tasks/enrich_atr.py</code></td>
+                    <td><code>snapshot --enrich-atr</code></td>
+                    <td><code>calculated_technical_stops</code> (list keyed by ticker)</td>
+                    <td>Macro agent (stop triggers), Rebuy agent (Van Tharp sizing)</td>
+                </tr>
+                <tr>
+                    <td><code>tasks/enrich_technicals.py</code></td>
+                    <td><code>snapshot --enrich-technicals</code></td>
+                    <td><code>calculated_technicals</code> (MA50/200, RSI-14, MACD, volume)</td>
+                    <td>Valuation, Rebuy, Macro, Add-Candidate agents</td>
+                </tr>
+            </tbody>
+        </table>
+        <p><em>Both enrichment tasks run automatically during <code>analyze-all --fresh-bundle</code>.</em></p>
     </section>
 
+    <!-- =====================================================================
+         SECTION 4: AGENTS
+         ===================================================================== -->
+    <section id="agents">
+        <h2>4. AI Agent Reference</h2>
+        <p>All agents follow the same pattern: Python pre-computes facts → Pydantic schema constrains Gemini's output → Python post-processes (overrides any math). The system prompt in <code>agents/prompts/</code> is the only tuning surface.</p>
+
+        <div class="callout">
+            <strong>How to change agent behavior:</strong> Edit the <code>.txt</code> file in <code>agents/prompts/</code>. No Python changes needed. Run <code>python manager.py analyze-all --live</code> to apply.
+        </div>
+
+        <h3>Standard Agents (write to Agent_Outputs tab)</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Agent</th>
+                    <th>Key Name</th>
+                    <th>Framework</th>
+                    <th>System Prompt</th>
+                    <th>Schema</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Valuation Agent</strong></td>
+                    <td><code>valuation</code></td>
+                    <td>Peter Lynch / GARP. Style-aware: GARP/FUND/THEME/ETF rules differ.</td>
+                    <td><code>valuation_agent_system.txt</code></td>
+                    <td><code>ValuationAgentOutput</code></td>
+                </tr>
+                <tr>
+                    <td><strong>Tax Agent</strong></td>
+                    <td><code>tax</code></td>
+                    <td>TLH candidates, rebalancing drift vs. <code>REBALANCE_THRESHOLD_PCT</code> (5%)</td>
+                    <td><code>tax_agent_system.txt</code></td>
+                    <td><code>TaxAgentOutput</code></td>
+                </tr>
+                <tr>
+                    <td><strong>Concentration Hedger</strong></td>
+                    <td><code>concentration</code></td>
+                    <td>Single-position &gt;8%, sector &gt;30%, correlation |r|&gt;0.5</td>
+                    <td><code>concentration_hedger_system.txt</code></td>
+                    <td><code>ConcentrationAgentOutput</code></td>
+                </tr>
+                <tr>
+                    <td><strong>Macro-Cycle Agent</strong></td>
+                    <td><code>macro</code></td>
+                    <td>Carlota Perez paradigm phases. Runs in 5 chunks of 10 positions each.</td>
+                    <td><code>macro_cycle_system.txt</code></td>
+                    <td><code>MacroCycleResponse</code></td>
+                </tr>
+                <tr>
+                    <td><strong>Thesis Screener</strong></td>
+                    <td><code>thesis</code></td>
+                    <td>Gautam Baid (Joys of Compounding). Candor + capital stewardship scoring. Issues <code>per_position_verdict</code> (HOLD/TRIM/ADD/EXIT/MONITOR) grounded in thesis exit_conditions.</td>
+                    <td><code>thesis_screener_system.txt</code></td>
+                    <td><code>ThesisScreenerResponse</code></td>
+                </tr>
+                <tr>
+                    <td><strong>Bagger Screener</strong></td>
+                    <td><code>bagger</code></td>
+                    <td>Christopher Mayer 100-bagger gates (ROIC&gt;18%, revenue CAGR&gt;10%, gross margin&gt;50%). Runs in chunks of 10 positions.</td>
+                    <td><code>bagger_screener_system.txt</code></td>
+                    <td><code>BaggerScreenerResponse</code></td>
+                </tr>
+                <tr>
+                    <td><strong>Value Investing Screener</strong></td>
+                    <td><code>value</code></td>
+                    <td>Deep-value Graham/Buffett style screen</td>
+                    <td><code>value_investing_system.txt</code></td>
+                    <td><code>ValueInvestingResponse</code></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>Legacy Schema Agent (writes to bundles/runs/ only)</h3>
+        <table>
+            <thead>
+                <tr><th>Agent</th><th>Key Name</th><th>What it does</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Re-Buy Analyst</strong></td>
+                    <td><code>rebuy</code></td>
+                    <td>Peter Lynch GARP rules. Pre-computes Van Tharp position sizing (1R, stop_loss_price, trailing_stop) from ATR before Gemini call. Output in <code>bundles/runs/rebuy_analysis_*.json</code>.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>Verdict Vocabulary (aligned across agents)</h3>
+        <p>The Thesis Screener and Valuation Agent now share a common 5-value verdict vocabulary. The valuation agent maps its internal signal to verdict in Python after Gemini returns — never computed by the LLM.</p>
+        <table>
+            <thead><tr><th>Verdict</th><th>Meaning</th><th>Valuation signal</th></tr></thead>
+            <tbody>
+                <tr><td><code>ADD</code></td><td>Thesis intact, add opportunity exists</td><td><code>accumulate</code></td></tr>
+                <tr><td><code>HOLD</code></td><td>Thesis intact, no action</td><td><code>hold</code></td></tr>
+                <tr><td><code>TRIM</code></td><td>One exit condition triggering or valuation stretched</td><td><code>trim</code></td></tr>
+                <tr><td><code>EXIT</code></td><td>Two+ exit conditions or thesis fundamentally broken</td><td>—</td></tr>
+                <tr><td><code>MONITOR</code></td><td>No thesis file exists, or insufficient data</td><td><code>monitor</code></td></tr>
+            </tbody>
+        </table>
+
+        <h3>Investment Style Tags</h3>
+        <p>Every position has a style tag set in its thesis frontmatter. Style controls how the Valuation Agent frames its signal.</p>
+        <table>
+            <thead><tr><th>Tag</th><th>Description</th><th>Valuation Logic</th></tr></thead>
+            <tbody>
+                <tr><td><code>GARP</code></td><td>Growth at a Reasonable Price</td><td>Forward P/E vs. historical range. ADD when P/E in bottom quartile and growth intact.</td></tr>
+                <tr><td><code>FUND</code></td><td>Boring Fundamentals</td><td>"Nothing-burger" setup: &gt;15% off high + RSI oversold + near MA200. No TRIM from valuation alone.</td></tr>
+                <tr><td><code>THEME</code></td><td>Thematic / Secular Growth</td><td>P/E mostly irrelevant. ADD only on theme-confirming strength (above MA50+MA200, trend_score≥1).</td></tr>
+                <tr><td><code>ETF</code></td><td>Index / Sector ETF</td><td>Signal is always MONITOR — ETFs are macro-driven, not P/E-driven.</td></tr>
+            </tbody>
+        </table>
+
+        <h3>Token Budgets (config.py)</h3>
+        <table>
+            <thead><tr><th>Constant</th><th>Value</th><th>Agent</th></tr></thead>
+            <tbody>
+                <tr><td><code>GEMINI_MAX_TOKENS_VALUATION</code></td><td>30,000</td><td>Valuation (single call, 50+ positions)</td></tr>
+                <tr><td><code>GEMINI_MAX_TOKENS_CONCENTRATION</code></td><td>10,000</td><td>Concentration Hedger (single call)</td></tr>
+                <tr><td><code>GEMINI_MAX_TOKENS_MACRO</code></td><td>16,000</td><td>Macro per chunk (5 chunks × 10 positions)</td></tr>
+                <tr><td><code>GEMINI_MAX_TOKENS_REBUY</code></td><td>10,000</td><td>Rebuy per chunk (5 chunks × 10 positions)</td></tr>
+                <tr><td><code>GEMINI_MAX_TOKENS_THESIS</code></td><td>32,000</td><td>Thesis (single large call — vault context excluded)</td></tr>
+                <tr><td><code>GEMINI_MAX_TOKENS_BAGGER</code></td><td>24,000</td><td>Bagger per chunk (~5 chunks × 10 positions)</td></tr>
+            </tbody>
+        </table>
+
+        <h3>Chunked Agents</h3>
+        <p>These agents split positions into groups of 10 to stay under token limits. Each chunk is a separate Gemini call with <code>INTER_CHUNK_SLEEP = 5s</code> between calls.</p>
+        <ul>
+            <li><strong>Rebuy</strong> — uses <code>run_chunked_analysis()</code> (has <code>result.candidates</code>)</li>
+            <li><strong>Macro</strong> — manual loop (collects <code>result.positions_analyzed</code>)</li>
+            <li><strong>Bagger</strong> — manual loop (collects <code>result.candidates_analyzed</code>)</li>
+        </ul>
+    </section>
+
+    <!-- =====================================================================
+         SECTION 5: AGENT_OUTPUTS TAB
+         ===================================================================== -->
+    <section id="agent-outputs">
+        <h2>5. Agent_Outputs Tab Guide</h2>
+        <p>The <strong>Agent_Outputs</strong> tab is written once per <code>analyze-all --live</code> run. The previous run's rows are archived to <strong>Agent_Outputs_Archive</strong> before the new data is written.</p>
+
+        <h3>Column Schema (10-column compact format)</h3>
+        <table>
+            <thead><tr><th>Column</th><th>Example</th><th>Notes</th></tr></thead>
+            <tbody>
+                <tr><td><code>run_date</code></td><td><code>2026-04-20 07:52</code></td><td>No seconds, no T/Z noise</td></tr>
+                <tr><td><code>run_id_short</code></td><td><code>6ec49054</code></td><td>First 8 chars of the UUID. Full UUID is in the manifest file.</td></tr>
+                <tr><td><code>agent</code></td><td><code>valuation</code></td><td>Which agent produced the row</td></tr>
+                <tr><td><code>signal</code></td><td><code>accumulate</code></td><td>Agent's raw signal type</td></tr>
+                <tr><td><code>ticker</code></td><td><code>UNH</code></td><td>Position or <code>PORTFOLIO</code> for summary rows</td></tr>
+                <tr><td><code>action</code></td><td><code>Scale in 10% on each pullback…</code></td><td>≤80 chars, never truncated mid-word</td></tr>
+                <tr><td><code>narrative</code></td><td><em>2-3 sentence rationale</em></td><td>Full text, no length cap</td></tr>
+                <tr><td><code>scale_step</code></td><td><code>Trim 25% over 2 sessions</code></td><td>Sizing language; empty for holds</td></tr>
+                <tr><td><code>severity</code></td><td><code>action</code></td><td>Sort order: <code>data_quality → action → alert → watch → info</code></td></tr>
+                <tr><td><code>score</code></td><td><em>empty</em></td><td>Reserved for future conviction scores</td></tr>
+            </tbody>
+        </table>
+
+        <h3>Reading the Sheet — Row Types</h3>
+        <table>
+            <thead><tr><th>Severity</th><th>Sorted Position</th><th>What it means</th></tr></thead>
+            <tbody>
+                <tr>
+                    <td><span class="badge badge-fail">data_quality</span></td>
+                    <td>Top</td>
+                    <td><strong>Pipeline problem, not a portfolio finding.</strong> E.g., "97% of portfolio has unclassified sector — sector analysis skipped." Fix by running the enrichment pipeline.</td>
+                </tr>
+                <tr>
+                    <td><span class="badge badge-warn">action</span></td>
+                    <td>2nd</td>
+                    <td><strong>Needs attention.</strong> Accumulate signals, concentration violations, TLH candidates, tech stops triggered. These are the rows Bill opens the sheet to find.</td>
+                </tr>
+                <tr>
+                    <td><span class="badge badge-warn">alert</span></td>
+                    <td>3rd</td>
+                    <td>High-urgency watch: ATR stop very close, macro EXIT recommendation.</td>
+                </tr>
+                <tr>
+                    <td><span class="badge badge-skip">watch</span></td>
+                    <td>4th</td>
+                    <td>Monitor but no action yet. Macro TRIM_25PCT, thesis WATCHLIST_DOWNGRADE.</td>
+                </tr>
+                <tr>
+                    <td><span class="badge badge-ok">info</span></td>
+                    <td>Bottom</td>
+                    <td>No action. Valuation HOLD rows are collapsed into a single <code>[HOLD SUMMARY — 43 positions]</code> row listing all tickers in the narrative column.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="callout">
+            <strong>The HOLD SUMMARY row:</strong> Instead of 43 identical "hold / fair value" rows cluttering the sheet, the Valuation Agent's hold rows are collapsed into one row. The <code>narrative</code> column lists every hold ticker: <em>"UNH, GOOG, AMZN, XOM, ..."</em>. Individual rows are still written to the archive tab for audit.
+        </div>
+
+        <h3>Decision_View Integration</h3>
+        <p>The <strong>Decision_View</strong> tab pulls from Agent_Outputs and shows one row per position. Signal cells are only populated when <code>severity</code> is <code>action</code>, <code>alert</code>, or <code>data_quality</code>. Empty cell = no active signal. "Not Evaluated" is not used — empty means evaluated and nothing to do.</p>
+
+        <table>
+            <thead><tr><th>Column</th><th>Source</th></tr></thead>
+            <tbody>
+                <tr><td>Valuation Signal</td><td>Latest valuation agent row, action-severity only</td></tr>
+                <tr><td>Macro Signal</td><td>Latest macro agent row, action-severity only</td></tr>
+                <tr><td>Thesis Signal</td><td>Latest thesis agent row, action-severity only</td></tr>
+                <tr><td>Conc Flag</td><td>Concentration agent — position-level flag if flagged at action severity</td></tr>
+                <tr><td>TLH Flag</td><td><code>TLH</code> if tax agent flagged this ticker as a loss-harvest candidate</td></tr>
+                <tr><td>Top Rationale</td><td>Highest-severity narrative (valuation → macro → thesis priority)</td></tr>
+            </tbody>
+        </table>
+    </section>
+
+    <!-- =====================================================================
+         SECTION 6: VAULT
+         ===================================================================== -->
+    <section id="vault">
+        <h2>6. Vault — Theses &amp; Frameworks</h2>
+        <p>The vault contains the qualitative context the agents read. It lives in <code>vault/</code>.</p>
+
+        <h3>Thesis Files (<code>vault/theses/</code>)</h3>
+        <p>One Markdown file per position, named <code>TICKER_thesis.md</code>. Format:</p>
+        <pre><code>---
+ticker: UNH
+style: GARP
+framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
+entry_date: 2026-01-15
+last_reviewed: 2026-04-20
+current_allocation: 9.1%
+cost_basis: 482.00
+time_horizon: 3 to 5 years
+---
+
+## Core Thesis
+...
+
+## Exit Conditions
+1. ...
+
+## Quantitative Triggers
+```yaml
+triggers:
+  fwd_pe_add_below: 18.0
+  fwd_pe_trim_above: 32.0
+  price_add_below: 440.00
+  discount_from_52w_high_add: 0.20
+  revenue_growth_floor_pct: 8.0
+  style_size_ceiling_pct: 9.0
+  ...
+```</code></pre>
+
+        <h3>Quantitative Triggers</h3>
+        <p>The <code>triggers:</code> YAML block makes the Thesis Screener's verdicts machine-verifiable. When a trigger fires (e.g., price drops below <code>price_add_below</code>), the agent's <code>per_position_verdict</code> must cite it.</p>
+
+        <pre><code># See which theses need backfill
+python manager.py vault thesis-audit
+
+# Create a new thesis file from template
+python manager.py vault add-thesis NVDA</code></pre>
+
+        <div class="callout">
+            <strong>Backfill priority:</strong> See <code>vault/THESIS_BACKFILL_GUIDE.md</code> for style-specific examples (GARP, FUND, THEME, ETF) and the honest null rule: <em>leave a trigger null rather than inventing a value.</em>
+        </div>
+
+        <h3>Frameworks (<code>vault/frameworks/</code>)</h3>
+        <table>
+            <thead><tr><th>File</th><th>Type</th><th>Used By</th></tr></thead>
+            <tbody>
+                <tr><td><code>lynch_garp_v1.json</code></td><td>screening</td><td>Re-Buy Analyst — GARP rule evaluation</td></tr>
+                <tr><td><code>joys_of_compounding_framework.json</code></td><td>screening</td><td>Thesis Screener — Baid management scoring</td></tr>
+                <tr><td><code>100_bagger_framework.json</code></td><td>screening</td><td>Bagger Screener — Mayer quantitative gate</td></tr>
+                <tr><td><code>van_tharp_position_sizing.json</code></td><td>position_sizing</td><td>Rebuy Analyst — ATR-based 1R sizing</td></tr>
+                <tr><td><code>psychology_of_money.json</code></td><td>behavioral</td><td>Behavioral Auditor — Housel principle audit</td></tr>
+            </tbody>
+        </table>
+    </section>
+
+    <!-- =====================================================================
+         SECTION 7: TASKS
+         ===================================================================== -->
     <section id="tasks">
-        <h2>3. Tasks & Automations (<code>/tasks</code>)</h2>
-        <p>Tasks are modular "jobs" that perform specific sheet updates or data enrichments.</p>
+        <h2>7. Tasks &amp; Enrichment Scripts (<code>/tasks</code>)</h2>
 
         <table>
             <thead>
                 <tr>
                     <th>Script</th>
-                    <th>What it Updates</th>
+                    <th>Updates</th>
                     <th>When to Run</th>
                 </tr>
             </thead>
@@ -231,12 +663,22 @@ python manager.py vault snapshot           # Freeze research state</code></pre>
                 <tr>
                     <td><code>build_decision_view.py</code></td>
                     <td><em>Decision_View</em> tab</td>
-                    <td>After running agents; joins Holdings + Signals.</td>
+                    <td>After <code>analyze-all</code>. Joins Holdings + Agent_Outputs signals. Only action/alert/data_quality severity signals appear in signal columns.</td>
                 </tr>
                 <tr>
                     <td><code>build_valuation_card.py</code></td>
                     <td><em>Valuation_Card</em> tab</td>
-                    <td>Daily; provides deep-dive pricing and P/E stats.</td>
+                    <td>Daily/weekly. Deep-dive P/E, earnings growth, 52-week stats per position.</td>
+                </tr>
+                <tr>
+                    <td><code>enrich_atr.py</code></td>
+                    <td>Composite bundle (<code>calculated_technical_stops</code>)</td>
+                    <td>Auto-runs in <code>analyze-all --fresh-bundle</code>. Run manually: <code>python tasks/enrich_atr.py</code>.</td>
+                </tr>
+                <tr>
+                    <td><code>enrich_technicals.py</code></td>
+                    <td>Composite bundle (<code>calculated_technicals</code>)</td>
+                    <td>Auto-runs in <code>analyze-all --fresh-bundle</code>. Injects MA50/200, RSI-14, MACD, volume per position.</td>
                 </tr>
                 <tr>
                     <td><code>sync_transactions.py</code></td>
@@ -244,155 +686,209 @@ python manager.py vault snapshot           # Freeze research state</code></pre>
                     <td>Weekly; fetches trade history from Schwab API.</td>
                 </tr>
                 <tr>
-                    <td><code>enrich_atr.py</code></td>
-                    <td>Internal Bundle</td>
-                    <td>When calculating technical stop-loss levels.</td>
+                    <td><code>derive_rotations.py</code></td>
+                    <td><em>Trade_Log_Staging</em></td>
+                    <td>After trades; groups sells/buys into cohesive rotation events.</td>
                 </tr>
                 <tr>
                     <td><code>format_sheets_dashboard_v2.py</code></td>
-                    <td>All Tab Headers</td>
-                    <td>Run with <code>--live</code> to fix "broken" sheet formatting.</td>
-                </tr>
-                <tr>
-                    <td><code>derive_rotations.py</code></td>
-                    <td><em>Trade_Log_Staging</em></td>
-                    <td>After trades to group sells/buys into cohesive events.</td>
+                    <td>All tab headers and formatting</td>
+                    <td>Run with <code>--live</code> if sheet formatting looks broken.</td>
                 </tr>
                 <tr>
                     <td><code>weekly_podcast_sync.py</code></td>
                     <td><em>AI_Suggested_Allocation</em></td>
-                    <td>Every Sunday; scrapes macro research from YouTube.</td>
+                    <td>Every Sunday; processes macro podcast summaries via AI.</td>
+                </tr>
+                <tr>
+                    <td><code>enrich_fundamentals.py</code></td>
+                    <td>Holdings fundamentals</td>
+                    <td>Manual; fetches P/E and growth data for positions missing yfinance coverage.</td>
                 </tr>
             </tbody>
         </table>
     </section>
 
+    <!-- =====================================================================
+         SECTION 8: UTILITIES
+         ===================================================================== -->
     <section id="utils">
-        <h2>4. Utility Reference (<code>/utils</code>)</h2>
-        <p>The "Engine Room" where API clients and data parsers live.</p>
+        <h2>8. Utility Reference (<code>/utils</code>)</h2>
 
         <table>
             <thead>
                 <tr>
                     <th>Utility</th>
-                    <th>API / External Connection</th>
-                    <th>Purpose</th>
+                    <th>External Connection</th>
+                    <th>Key Behaviors</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
-                    <td><code>schwab_client.py</code></td>
-                    <td>Schwab OAuth2 API</td>
-                    <td>Fetches positions, balances, and real-time quotes.</td>
+                    <td><code>gemini_client.py</code></td>
+                    <td>Vertex AI — Gemini 2.5 Flash</td>
+                    <td>
+                        <code>ask_gemini_composite()</code> is the canonical CLI agent call. Pass <code>include_vault_context=False</code> for agents that pre-compute their own context (thesis, bagger) to avoid sending 50K+ input tokens.<br><br>
+                        429 retry: waits 60s then 120s before giving up. Catches both "429" and "RESOURCE_EXHAUSTED" strings.
+                    </td>
                 </tr>
                 <tr>
                     <td><code>fmp_client.py</code></td>
-                    <td>Financial Modeling Prep</td>
-                    <td>Fetches P/E ratios, earnings growth, and surprises.</td>
+                    <td>Financial Modeling Prep (free tier)</td>
+                    <td>
+                        Three-tier fundamentals: Schwab bundle → yfinance → FMP cache (7-day TTL).<br>
+                        <code>FMP_EARNINGS_AVAILABLE</code>: set False on first 404 from <code>/earnings-surprises</code>; all subsequent calls return [] silently.<br>
+                        402 on income-statement: writes [] to cache to prevent per-run spam.<br>
+                        Rate limiter: 2.5s minimum between live HTTP calls.
+                    </td>
                 </tr>
                 <tr>
-                    <td><code>gemini_client.py</code></td>
-                    <td>Google Gemini 2.5 Pro</td>
-                    <td>Robust LLM wrapper with token management and hashing.</td>
+                    <td><code>schwab_client.py</code></td>
+                    <td>Schwab OAuth2 API</td>
+                    <td>Two scoped clients: <code>get_accounts_client()</code> (positions, balances) and <code>get_market_client()</code> (quotes). Tokens stored in GCS bucket <code>portfolio-manager-tokens/</code>. Cloud Function refreshes every 25 minutes.</td>
                 </tr>
                 <tr>
                     <td><code>risk.py</code></td>
-                    <td>yfinance (Historical)</td>
-                    <td>Calculates Portfolio Beta, VaR, and Correlations.</td>
+                    <td>yfinance (historical)</td>
+                    <td>Calculates portfolio beta, 95% historical VaR, stress scenarios. All math in Python — never passed to LLM.</td>
                 </tr>
                 <tr>
                     <td><code>sheet_writers.py</code></td>
                     <td>Google Sheets API</td>
-                    <td>Atomic batch-writes to prevent sheet corruption.</td>
+                    <td><code>archive_and_overwrite_agent_outputs()</code>: archives existing rows, writes new 10-col compact batch. Exponential backoff on 429. <code>DRY_RUN</code> flag gates all writes.</td>
+                </tr>
+                <tr>
+                    <td><code>sheet_readers.py</code></td>
+                    <td>Google Sheets API</td>
+                    <td>Cached gspread client. Use <code>ws.col_values()</code> for fingerprint checks — avoids full sheet reads.</td>
                 </tr>
                 <tr>
                     <td><code>column_guard.py</code></td>
-                    <td>N/A</td>
-                    <td>Self-healing logic to prevent <code>KeyError</code> in Pandas.</td>
+                    <td>—</td>
+                    <td>Self-healing Title Case normalization for DataFrames. All DataFrames entering UI or agent code must pass through <code>ensure_display_columns()</code>.</td>
+                </tr>
+                <tr>
+                    <td><code>formatters.py</code></td>
+                    <td>—</td>
+                    <td><code>dicts_to_markdown_table()</code> — converts list-of-dicts to Markdown for Gemini prompts. More token-efficient than JSON for tabular data.</td>
                 </tr>
             </tbody>
         </table>
+
+        <h3>Schwab Token Recovery</h3>
+        <pre><code># Token expired (offline &gt; 7 days)
+python scripts/schwab_manual_reauth.py
+
+# Token missing (first setup or wiped)
+python scripts/schwab_initial_auth.py</code></pre>
     </section>
 
-    <section id="scripts">
-        <h2>5. Maintenance Scripts (<code>/scripts</code>)</h2>
-        <p>One-off scripts for setup, recovery, or debugging.</p>
+    <!-- =====================================================================
+         SECTION 9: TROUBLESHOOTING
+         ===================================================================== -->
+    <section id="troubleshooting">
+        <h2>9. Troubleshooting</h2>
 
+        <h3>Gemini Errors</h3>
         <table>
-            <thead>
-                <tr>
-                    <th>Script</th>
-                    <th>Circumstance for Use</th>
-                </tr>
-            </thead>
+            <thead><tr><th>Error</th><th>Cause</th><th>Fix</th></tr></thead>
             <tbody>
                 <tr>
-                    <td><code>schwab_initial_auth.py</code></td>
-                    <td>Run once per quarter or if tokens expire to reset API link.</td>
+                    <td><code>429 RESOURCE_EXHAUSTED</code></td>
+                    <td>Vertex AI TPM/RPM quota depleted. Most common after macro's 5 chunks exhaust the minute's budget before thesis runs.</td>
+                    <td>The client auto-retries at 60s and 120s. If both retries fail, re-run the specific agent: <code>python manager.py analyze-all --agents thesis --live</code>.</td>
                 </tr>
                 <tr>
-                    <td><code>read_sheet_debug.py</code></td>
-                    <td>If a script fails to read a sheet, use this to dump raw tab data.</td>
+                    <td><code>FinishReason.MAX_TOKENS</code> + Pydantic parse failure</td>
+                    <td>Output token budget exceeded. Response is truncated mid-JSON.</td>
+                    <td>Raise the relevant <code>GEMINI_MAX_TOKENS_*</code> constant in <code>config.py</code>. Bagger and thesis are chunked — if a chunk still truncates, reduce chunk size.</td>
                 </tr>
                 <tr>
-                    <td><code>repair_sheet_data.py</code></td>
-                    <td>Fixes structural errors (like "Unnamed_0" headers) in Google Sheets.</td>
+                    <td><code>Pydantic Parsing Failed: json_invalid</code></td>
+                    <td>Usually caused by MAX_TOKENS truncation. Occasionally Gemini returns non-JSON preamble.</td>
+                    <td>Check <code>FinishReason</code> in the DEBUG line just above the error. If it's <code>MAX_TOKENS</code>, raise the budget. If it's <code>STOP</code> but parsing still fails, the schema may have changed incompatibly.</td>
                 </tr>
                 <tr>
-                    <td><code>audit_cost_basis.py</code></td>
-                    <td>Run if Schwab's "Unrealized G/L" looks incorrect compared to your records.</td>
+                    <td><code>Gemini returned no result</code></td>
+                    <td><code>ask_gemini_composite()</code> returned None after all retries.</td>
+                    <td>Check the DEBUG lines above. Usually MAX_TOKENS or 429. Re-run the failed agent standalone to isolate.</td>
                 </tr>
             </tbody>
         </table>
-    </section>
 
-    <section id="agents">
-        <h2>6. Agent Tuning Guide (<code>/agents</code>)</h2>
-        <p>Intelligence is driven by the <strong>System Prompts</strong>. The behavior of any agent (Valuation, Tax, Macro) is dictated by plain English text files, not Python code.</p>
-
-        <div class="callout">
-            <strong>How to Change Agent Logic:</strong>
-            <ol>
-                <li>Locate the prompt in <code>agents/prompts/[agent_name]_system.txt</code>.</li>
-                <li>Edit the text (e.g., "Always prioritize high-dividend stocks" or "Be more aggressive with TLH").</li>
-                <li>Run <code>python manager.py analyze-all --live</code>. The agent will immediately use the new rules.</li>
-            </ol>
-        </div>
-
+        <h3>Data Pipeline Errors</h3>
         <table>
-            <thead>
-                <tr>
-                    <th>Agent</th>
-                    <th>System Prompt Path (The Tuning Surface)</th>
-                </tr>
-            </thead>
+            <thead><tr><th>Error</th><th>Cause</th><th>Fix</th></tr></thead>
             <tbody>
                 <tr>
-                    <td>Valuation Agent</td>
-                    <td><code>agents/prompts/valuation_agent_system.txt</code></td>
+                    <td><code>97% of portfolio has unclassified sector</code> (data_quality row)</td>
+                    <td>The <code>sector</code> field is not populated in the market bundle positions. The Concentration agent's sector analysis is skipped when &gt;10% unclassified.</td>
+                    <td>Run <code>python tasks/enrich_fundamentals.py --live</code> to backfill sectors. Or ensure the Schwab CSV/API positions include sector data.</td>
                 </tr>
                 <tr>
-                    <td>Tax Agent</td>
-                    <td><code>agents/prompts/tax_agent_system.txt</code></td>
+                    <td>FMP 402 warnings for all tickers</td>
+                    <td>FMP free tier doesn't support <code>/income-statement</code> endpoint. Normal behavior.</td>
+                    <td>Expected. The system falls back to yfinance. Warnings only appear on the first run per ticker — they are cached to <code>data/fmp_cache/</code> and suppressed on subsequent runs.</td>
                 </tr>
                 <tr>
-                    <td>Macro Cycle Agent</td>
-                    <td><code>agents/prompts/macro_cycle_system.txt</code></td>
+                    <td><code>AttributeError: 'list' object has no attribute 'get'</code> in macro agent</td>
+                    <td>Older code expected <code>calculated_technical_stops</code> as a dict, but <code>enrich_atr.py</code> writes a list.</td>
+                    <td>Fixed in current code. Macro agent normalizes list → dict at load time. If this reappears, check that <code>enrich_atr.py</code> ran before the agent.</td>
                 </tr>
                 <tr>
-                    <td>Concentration Hedger</td>
-                    <td><code>agents/prompts/concentration_hedger_system.txt</code></td>
+                    <td><code>No composite bundles found</code></td>
+                    <td>Bundles directory is empty or missing.</td>
+                    <td>Run <code>python manager.py snapshot --live</code> then <code>python manager.py vault snapshot</code> then <code>python manager.py bundle composite</code>. Or use <code>analyze-all --fresh-bundle</code> which does all three.</td>
                 </tr>
                 <tr>
-                    <td>Thesis Screener</td>
-                    <td><code>agents/prompts/thesis_screener_system.txt</code></td>
+                    <td>Agent_Outputs tab shows old 11-column format</td>
+                    <td>Sheet was last written by an individual agent run (<code>agent valuation analyze --live</code>), not <code>analyze-all</code>.</td>
+                    <td>The compact 10-column format only applies to <code>analyze-all</code> batch writes. Individual agent runs still write old format. Run <code>analyze-all --live</code> to get the compact layout.</td>
+                </tr>
+                <tr>
+                    <td>Schwab API returns stale positions</td>
+                    <td>Token expired (offline &gt; 7 days) or Cloud Function failed to refresh.</td>
+                    <td>Check <code>schwab_alert.json</code> in GCS for alert status. Run <code>python scripts/schwab_manual_reauth.py</code> if token is expired.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>Known Limitations</h3>
+        <table>
+            <thead><tr><th>Item</th><th>Status</th><th>Workaround</th></tr></thead>
+            <tbody>
+                <tr>
+                    <td>FMP earnings-surprises endpoint</td>
+                    <td>Returns 404 — paywalled or moved on free tier</td>
+                    <td><code>FMP_EARNINGS_AVAILABLE</code> flag suppresses it silently after first hit. Valuation signals are based on P/E and 52-week position instead.</td>
+                </tr>
+                <tr>
+                    <td>FMP fundamentals (income-statement)</td>
+                    <td>Returns 402 — paywalled on free tier</td>
+                    <td>yfinance provides all critical data (PE, PEG, revenue growth, gross margin, ROIC proxy). FMP cache is written on first 402 to prevent repeated calls.</td>
+                </tr>
+                <tr>
+                    <td>Sector classification missing for most positions</td>
+                    <td>Ongoing — <code>sector</code> field not in Schwab CSV/API data</td>
+                    <td>Concentration agent skips sector analysis when &gt;10% unclassified. Run <code>enrich_fundamentals.py</code> or populate via yfinance sector mapping.</td>
+                </tr>
+                <tr>
+                    <td>Thesis quantitative triggers all null</td>
+                    <td>Template added 2026-04-20 — all existing theses predate it</td>
+                    <td>Run <code>vault thesis-audit</code> to see the backfill queue. See <code>vault/THESIS_BACKFILL_GUIDE.md</code> for examples by style.</td>
+                </tr>
+                <tr>
+                    <td><code>enrich_fmp.py</code> not yet built</td>
+                    <td>Deferred — correct fix for FMP data is to bake it into the bundle at snapshot time</td>
+                    <td>Currently, agents fetch FMP at run time via 7-day cache. Works, but slow on cold cache.</td>
                 </tr>
             </tbody>
         </table>
     </section>
 
     <footer>
-        &copy; 2026 Investment Portfolio Operations | Generated for Bill (CPA) | Headless CLI Version 2.0
+        &copy; 2026 Investment Portfolio Operations &nbsp;|&nbsp; Bill Long (CPA) &nbsp;|&nbsp;
+        Phase 5 — Headless CLI &nbsp;|&nbsp; Last updated 2026-04-20
     </footer>
 </div>
 
