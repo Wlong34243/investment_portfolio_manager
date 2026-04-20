@@ -34,7 +34,6 @@ try:
     )
     HAS_FORMATTING = True
 except ImportError as e:
-    print(f"DEBUG: ImportError: {e}")
     HAS_FORMATTING = False
 
 app = typer.Typer()
@@ -69,7 +68,7 @@ def hide_cols(spreadsheet, sheet_id, start_index, end_index):
         }]
     })
 
-def apply_alternating_banding(ws, start_row, end_row, last_col_index):
+def apply_alternating_banding(ws, start_row, end_row):
     """Applies alternating row banding."""
     rules = get_conditional_format_rules(ws)
     rules.append(ConditionalFormatRule(
@@ -95,8 +94,11 @@ def format_agent_outputs(spreadsheet):
         for col, width in widths.items():
             set_column_width(ws, col, width)
             
-        set_frozen(ws, rows=1, cols=4)
-        
+        try:
+            set_frozen(ws, rows=1, cols=4)
+        except Exception as _fe:
+            print(f"  ! set_frozen skipped (merged cells?): {_fe}")
+
         header_fmt = CellFormat(
             backgroundColor=COLOR_NAVY,
             textFormat=TextFormat(bold=True, foregroundColor=COLOR_WHITE, fontSize=10),
@@ -106,158 +108,176 @@ def format_agent_outputs(spreadsheet):
         format_cell_range(ws, "A1:K1", header_fmt)
         
         rules = get_conditional_format_rules(ws)
-        signal_map = {"accumulate": COLOR_GREEN_LIGHT, "trim": COLOR_RED_LIGHT, "hold": COLOR_YELLOW_LIGHT, "monitor": COLOR_BLUE_LIGHT}
-        for val, color in signal_map.items():
-            rules.append(ConditionalFormatRule(
-                ranges=[GridRange.from_a1_range("E2:E1000", ws)],
-                booleanRule=BooleanRule(condition=BooleanCondition("TEXT_EQ", [val]), format=CellFormat(backgroundColor=color))
-            ))
-        rules.append(ConditionalFormatRule(
-            ranges=[GridRange.from_a1_range("E2:E1000", ws)],
-            booleanRule=BooleanRule(condition=BooleanCondition("TEXT_EQ", ["exit"]), format=CellFormat(backgroundColor=COLOR_RED_DARK, textFormat=TextFormat(foregroundColor=COLOR_WHITE)))
-        ))
-        severity_map = {"high": (COLOR_RED_DARK, COLOR_WHITE), "medium": (COLOR_ORANGE, COLOR_WHITE), "low": (COLOR_GREEN_MUTED, COLOR_WHITE)}
-        for val, (bg, fg) in severity_map.items():
-            rules.append(ConditionalFormatRule(
-                ranges=[GridRange.from_a1_range("H2:H1000", ws)],
-                booleanRule=BooleanRule(condition=BooleanCondition("TEXT_CONTAINS", [val]), format=CellFormat(backgroundColor=bg, textFormat=TextFormat(foregroundColor=fg)))
-            ))
+        # Signal Type (Col E)
+        rules.append(ConditionalFormatRule(ranges=[GridRange.from_a1_range("E2:E1000", ws)], booleanRule=BooleanRule(condition=BooleanCondition("TEXT_EQ", ["accumulate"]), format=CellFormat(backgroundColor=COLOR_GREEN_LIGHT))))
+        rules.append(ConditionalFormatRule(ranges=[GridRange.from_a1_range("E2:E1000", ws)], booleanRule=BooleanRule(condition=BooleanCondition("TEXT_EQ", ["trim"]), format=CellFormat(backgroundColor=COLOR_RED_LIGHT))))
+        rules.append(ConditionalFormatRule(ranges=[GridRange.from_a1_range("E2:E1000", ws)], booleanRule=BooleanRule(condition=BooleanCondition("TEXT_EQ", ["hold"]), format=CellFormat(backgroundColor=COLOR_YELLOW_LIGHT))))
+        rules.append(ConditionalFormatRule(ranges=[GridRange.from_a1_range("E2:E1000", ws)], booleanRule=BooleanRule(condition=BooleanCondition("TEXT_EQ", ["monitor"]), format=CellFormat(backgroundColor=COLOR_BLUE_LIGHT))))
+        rules.append(ConditionalFormatRule(ranges=[GridRange.from_a1_range("E2:E1000", ws)], booleanRule=BooleanRule(condition=BooleanCondition("TEXT_EQ", ["exit"]), format=CellFormat(backgroundColor=COLOR_RED_DARK, textFormat=TextFormat(foregroundColor=COLOR_WHITE)))))
+        
+        # Severity (Col H)
+        rules.append(ConditionalFormatRule(ranges=[GridRange.from_a1_range("H2:H1000", ws)], booleanRule=BooleanRule(condition=BooleanCondition("TEXT_CONTAINS", ["high"]), format=CellFormat(backgroundColor=COLOR_RED_DARK, textFormat=TextFormat(foregroundColor=COLOR_WHITE)))))
+        rules.append(ConditionalFormatRule(ranges=[GridRange.from_a1_range("H2:H1000", ws)], booleanRule=BooleanRule(condition=BooleanCondition("TEXT_CONTAINS", ["medium"]), format=CellFormat(backgroundColor=COLOR_ORANGE))))
+        rules.append(ConditionalFormatRule(ranges=[GridRange.from_a1_range("H2:H1000", ws)], booleanRule=BooleanRule(condition=BooleanCondition("TEXT_CONTAINS", ["low"]), format=CellFormat(backgroundColor=COLOR_GREEN_MUTED))))
         rules.save()
         
         set_row_height(ws, "2:1000", 80)
-        wrap_fmt = CellFormat(wrapStrategy="WRAP", verticalAlignment="TOP")
-        format_cell_range(ws, "I2:K1000", wrap_fmt)
+        format_cell_range(ws, "I2:K1000", CellFormat(wrapStrategy="WRAP", verticalAlignment="TOP"))
         
-        apply_alternating_banding(ws, 2, 1000, 11)
-        border = Border("SOLID_THICK", COLOR_NAVY)
-        format_cell_range(ws, "A1:K1", CellFormat(borders=Borders(bottom=border)))
+        apply_alternating_banding(ws, 2, 1000)
+        format_cell_range(ws, "A1:K1", CellFormat(borders=Borders(bottom=Border("SOLID_THICK", COLOR_NAVY))))
         
-        print(f"  ✓ formatted {tab_name}")
+        print(f"  OK formatted {tab_name}")
     except Exception as e:
-        print(f"  ⚠ Failed to format {tab_name}: {e}")
+        print(f"  ! Failed to format {tab_name}: {e}")
 
 def format_holdings_current(spreadsheet):
     """Tab 2: Holdings_Current — Daily P&L Review View"""
     tab_name = config.TAB_HOLDINGS_CURRENT
     try:
         ws = spreadsheet.worksheet(tab_name)
-        # Ensure row 1 is available for KPI
-        if ws.cell(1, 1).value != "📊 PORTFOLIO SNAPSHOT":
+        
+        # Insert KPI row 1 if missing
+        try:
+            first_cell = ws.cell(1, 1).value
+        except:
+            first_cell = None
+            
+        if first_cell != "📊 PORTFOLIO SNAPSHOT":
             ws.insert_row(["📊 PORTFOLIO SNAPSHOT"], 1)
             time.sleep(2)
             
-        set_frozen(ws, rows=2, cols=0)
-        # Hide B, D, I, N, O, P, R, S, T
-        for idx in [1, 3, 8, 13, 14, 15, 17, 18, 19]:
+        try:
+            set_frozen(ws, rows=2)
+        except Exception as _fe:
+            print(f"  ! set_frozen skipped (merged cells?): {_fe}")
+
+        # Hide columns B, D, I, N, O, P, S, T (indices 1, 3, 8, 13, 14, 15, 18, 19)
+        for idx in [1, 3, 8, 13, 14, 15, 18, 19]:
             hide_cols(spreadsheet, ws.id, idx, idx+1)
             
-        widths = {"A": 75, "C": 130, "E": 80, "F": 80, "G": 110, "H": 110, "J": 115, "K": 110, "L": 120, "M": 100, "Q": 75}
+        # Set widths
+        widths = {"A": 75, "C": 130, "E": 80, "F": 80, "G": 110, "H": 110, "J": 115, "K": 110, "L": 120, "M": 100, "R": 75}
         for col, width in widths.items():
             set_column_width(ws, col, width)
             
+        # Header formatting (Row 2)
         header_fmt = CellFormat(backgroundColor=COLOR_NAVY, textFormat=TextFormat(bold=True, foregroundColor=COLOR_WHITE, fontSize=10), horizontalAlignment="CENTER")
         format_cell_range(ws, "A2:T2", header_fmt)
+        set_row_height(ws, "2", 30)
         
-        # Percentage formatting for K (GL %), M (Yield), Q (Weight)
-        pct_fmt = CellFormat(numberFormat=NumberFormat(type="PERCENT", pattern="0.00%"))
-        format_cell_range(ws, "K3:K200", pct_fmt)
-        format_cell_range(ws, "M3:M200", pct_fmt)
-        format_cell_range(ws, "Q3:Q200", pct_fmt)
-        
-        # Currency formatting for G, H, J, L
-        curr_fmt = CellFormat(numberFormat=NumberFormat(type="CURRENCY", pattern='"$"#,##0.00'))
-        format_cell_range(ws, "G3:H200", curr_fmt)
-        format_cell_range(ws, "J3:J200", curr_fmt)
-        format_cell_range(ws, "L3:L200", curr_fmt)
-
         rules = get_conditional_format_rules(ws)
+        # Unrealized G/L $ (Col J)
         rules.append(ConditionalFormatRule(ranges=[GridRange.from_a1_range("J3:J200", ws)], booleanRule=BooleanRule(condition=BooleanCondition("NUMBER_GREATER", ["0"]), format=CellFormat(textFormat=TextFormat(foregroundColor=COLOR_GREEN_DARK)))))
         rules.append(ConditionalFormatRule(ranges=[GridRange.from_a1_range("J3:J200", ws)], booleanRule=BooleanRule(condition=BooleanCondition("NUMBER_LESS", ["0"]), format=CellFormat(textFormat=TextFormat(foregroundColor=COLOR_RED_DARK)))))
+        # Unrealized G/L % Scale (Col K)
         rules.append(ConditionalFormatRule(ranges=[GridRange.from_a1_range("K3:K200", ws)], gradientRule=GradientRule(
             minpoint=InterpolationPoint(color=COLOR_RED_DARK, type="NUMBER", value="-0.15"),
             midpoint=InterpolationPoint(color=COLOR_WHITE, type="NUMBER", value="0"),
             maxpoint=InterpolationPoint(color=COLOR_GREEN_DARK, type="NUMBER", value="0.20"))))
-        rules.append(ConditionalFormatRule(ranges=[GridRange.from_a1_range("Q3:Q200", ws)], booleanRule=BooleanRule(condition=BooleanCondition("NUMBER_GREATER", ["0.08"]), format=CellFormat(backgroundColor=COLOR_RED_LIGHT, textFormat=TextFormat(bold=True)))))
+        # Weight Flag (Col R)
+        rules.append(ConditionalFormatRule(ranges=[GridRange.from_a1_range("R3:R200", ws)], booleanRule=BooleanRule(condition=BooleanCondition("NUMBER_GREATER", ["0.08"]), format=CellFormat(backgroundColor=COLOR_RED_LIGHT, textFormat=TextFormat(bold=True)))))
+        # Wash Sale (Col O)
+        rules.append(ConditionalFormatRule(ranges=[GridRange.from_a1_range("O3:O200", ws)], booleanRule=BooleanRule(condition=BooleanCondition("TEXT_EQ", ["TRUE"]), format=CellFormat(backgroundColor=COLOR_ORANGE))))
         rules.save()
         
-        # KPI Row with LABELS
-        ws.update(range_name="A1:L1", values=[[
+        # Summary KPI row 1 with merged cells and formulas
+        kpi_formulas = [
             "📊 PORTFOLIO SNAPSHOT", "", 
-            'Total Value: ', '=SUM(G3:G200)',
-            'Unrealized G/L: ', '=SUM(J3:J200)',
-            'G/L %: ', '=SUM(J3:J200)/SUM(H3:H200)',
-            'Positions: ', '=COUNTA(A3:A200)-COUNTIF(P3:P200,TRUE)',
-            'Cash: ', '=SUMIF(P3:P200,TRUE,G3:G200)'
-        ]], value_input_option="USER_ENTERED")
+            '=TEXT(SUM(G3:G200),"$#,##0")', "",
+            '=TEXT(SUM(J3:J200),"$#,##0")', "",
+            '=TEXT(SUM(J3:J200)/SUM(H3:H200)*100,"0.0")&"%"', "",
+            '=TEXT(SUMIF(P3:P200,TRUE,G3:G200),"$#,##0")', "",
+            '=TEXT(COUNTA(A3:A200)-COUNTIF(P3:P200,TRUE),"0")&" positions"', ""
+        ]
+        ws.update(range_name="A1:L1", values=[kpi_formulas], value_input_option="USER_ENTERED")
         
-        # Apply formatting to KPI numbers
-        format_cell_range(ws, "D1", CellFormat(numberFormat=NumberFormat(type="CURRENCY", pattern='"$"#,##0'), textFormat=TextFormat(bold=True)))
-        format_cell_range(ws, "F1", CellFormat(numberFormat=NumberFormat(type="CURRENCY", pattern='"$"#,##0'), textFormat=TextFormat(bold=True)))
-        format_cell_range(ws, "H1", CellFormat(numberFormat=NumberFormat(type="PERCENT", pattern="0.0%"), textFormat=TextFormat(bold=True)))
-        format_cell_range(ws, "L1", CellFormat(numberFormat=NumberFormat(type="CURRENCY", pattern='"$"#,##0'), textFormat=TextFormat(bold=True)))
-
-        kpi_style = CellFormat(backgroundColor=COLOR_NAVY, textFormat=TextFormat(foregroundColor=COLOR_WHITE, fontSize=10), horizontalAlignment="RIGHT", verticalAlignment="MIDDLE")
-        format_cell_range(ws, "A1:L1", kpi_style)
-        ws.merge_cells("A1:B1")
+        # Format KPI row
+        kpi_fmt = CellFormat(backgroundColor=COLOR_NAVY, textFormat=TextFormat(bold=True, foregroundColor=COLOR_WHITE, fontSize=11), horizontalAlignment="CENTER", verticalAlignment="MIDDLE")
+        format_cell_range(ws, "A1:L1", kpi_fmt)
         set_row_height(ws, "1", 40)
         
-        apply_alternating_banding(ws, 3, 200, 19)
-        print(f"  ✓ formatted {tab_name}")
+        # Merging cells for labels/values pairs in row 1
+        for merge_range in ["A1:B1", "C1:D1", "E1:F1", "G1:H1", "I1:J1", "K1:L1"]:
+            try:
+                ws.merge_cells(merge_range)
+            except:
+                pass # Already merged
+        
+        apply_alternating_banding(ws, 3, 200)
+        print(f"  OK formatted {tab_name}")
     except Exception as e:
-        print(f"  ⚠ Failed to format {tab_name}: {e}")
+        print(f"  ! Failed to format {tab_name}: {e}")
 
 def format_daily_snapshots(spreadsheet):
     """Tab 3: Daily_Snapshots — Portfolio Trend View"""
     tab_name = config.TAB_DAILY_SNAPSHOTS
     try:
         ws = spreadsheet.worksheet(tab_name)
-        if "DAILY SNAPSHOT" not in str(ws.cell(1, 1).value):
+        try:
+            first_cell = ws.cell(1, 1).value
+        except:
+            first_cell = None
+            
+        if "DAILY SNAPSHOT" not in str(first_cell):
             ws.insert_row(["📈 DAILY SNAPSHOT"], 1)
             time.sleep(2)
             
-        set_frozen(ws, rows=2, cols=0)
-        hide_cols(spreadsheet, ws.id, 9, 10)
+        try:
+            set_frozen(ws, rows=2)
+        except Exception as _fe:
+            print(f"  ! set_frozen skipped (merged cells?): {_fe}")
+        hide_cols(spreadsheet, ws.id, 9, 10) # Fingerprint J
+        
         widths = {"A": 100, "B": 120, "C": 120, "D": 140, "E": 110, "F": 120, "G": 90, "H": 100, "I": 150}
         for col, width in widths.items():
             set_column_width(ws, col, width)
             
         format_cell_range(ws, "A2:I2", CellFormat(backgroundColor=COLOR_NAVY, textFormat=TextFormat(bold=True, foregroundColor=COLOR_WHITE)))
         
-        # Percentage formatting for H (Yield)
-        format_cell_range(ws, "H3:H500", CellFormat(numberFormat=NumberFormat(type="PERCENT", pattern="0.00%")))
-        # Currency for B, C, D, E, F
-        curr_fmt = CellFormat(numberFormat=NumberFormat(type="CURRENCY", pattern='"$"#,##0'))
-        format_cell_range(ws, "B3:F500", curr_fmt)
-
         rules = get_conditional_format_rules(ws)
         rules.append(ConditionalFormatRule(ranges=[GridRange.from_a1_range("D3:D500", ws)], booleanRule=BooleanRule(condition=BooleanCondition("NUMBER_GREATER", ["0"]), format=CellFormat(backgroundColor=COLOR_GREEN_LIGHT))))
         rules.append(ConditionalFormatRule(ranges=[GridRange.from_a1_range("D3:D500", ws)], booleanRule=BooleanRule(condition=BooleanCondition("NUMBER_LESS", ["0"]), format=CellFormat(backgroundColor=COLOR_RED_LIGHT))))
         rules.save()
         
+        # Sort newest first
         spreadsheet.batch_update({"requests": [{"sortRange": {"range": {"sheetId": ws.id, "startRowIndex": 2, "endRowIndex": 500, "startColumnIndex": 0, "endColumnIndex": 9}, "sortSpecs": [{"dimensionIndex": 0, "sortOrder": "DESCENDING"}]}}]})
         
+        # Row 1 Sparkline KPI
         ws.update(range_name="A1:E1", values=[[
             "📈 DAILY SNAPSHOT", "",
-            'Trend (50d):', '=SPARKLINE(D3:D50,{"charttype","line";"color","#34a853"})',
-            '=TEXT(D3,"$#,##0")'
+            '=SPARKLINE(D3:D50,{"charttype","line";"color","#34a853"})',
+            '=TEXT(D3,"$#,##0")',
+            '=TEXT(B3,"$#,##0")'
         ]], value_input_option="USER_ENTERED")
         
         ws.merge_cells("A1:B1")
         format_cell_range(ws, "A1:E1", CellFormat(backgroundColor=COLOR_NAVY, textFormat=TextFormat(bold=True, foregroundColor=COLOR_WHITE, fontSize=11), horizontalAlignment="CENTER", verticalAlignment="MIDDLE"))
-        print(f"  ✓ formatted {tab_name}")
+        format_cell_range(ws, "A3:I3", CellFormat(textFormat=TextFormat(bold=True))) # Bold most recent row
+        
+        print(f"  OK formatted {tab_name}")
     except Exception as e:
-        print(f"  ⚠ Failed to format {tab_name}: {e}")
+        print(f"  ! Failed to format {tab_name}: {e}")
 
 def format_realized_gl(spreadsheet):
     """Tab 4: Realized_GL — Tax Intelligence View"""
     tab_name = config.TAB_REALIZED_GL
     try:
         ws = spreadsheet.worksheet(tab_name)
-        if "REALIZED G/L" not in str(ws.cell(1, 1).value):
+        try:
+            first_cell = ws.cell(1, 1).value
+        except:
+            first_cell = None
+            
+        if "REALIZED G/L" not in str(first_cell):
             ws.insert_row(["🧾 REALIZED G/L"], 1)
             time.sleep(2)
             
-        set_frozen(ws, rows=2, cols=0)
+        try:
+            set_frozen(ws, rows=2)
+        except Exception as _fe:
+            print(f"  ! set_frozen skipped (merged cells?): {_fe}")
+        # Hide audit columns (indices 1, 6, 7, 10, 20, 21)
         for idx in [1, 6, 7, 10, 20, 21]:
             hide_cols(spreadsheet, ws.id, idx, idx+1)
             
@@ -265,39 +285,36 @@ def format_realized_gl(spreadsheet):
         for col, width in widths.items():
             set_column_width(ws, col, width)
             
-        # Percentage for M (Gain %)
-        format_cell_range(ws, "M3:M500", CellFormat(numberFormat=NumberFormat(type="PERCENT", pattern="0.00%")))
-        # Currency for G, H, I, J, L, N, O, R
-        curr_fmt = CellFormat(numberFormat=NumberFormat(type="CURRENCY", pattern='"$"#,##0'))
-        format_cell_range(ws, "G3:J500", curr_fmt)
-        format_cell_range(ws, "L3:L500", curr_fmt)
-        format_cell_range(ws, "N3:O500", curr_fmt)
-        format_cell_range(ws, "R3:R500", curr_fmt)
-
         rules = get_conditional_format_rules(ws)
+        # Gain Loss $ (Col L)
         rules.append(ConditionalFormatRule(ranges=[GridRange.from_a1_range("L3:L500", ws)], booleanRule=BooleanRule(condition=BooleanCondition("NUMBER_GREATER", ["0"]), format=CellFormat(textFormat=TextFormat(foregroundColor=COLOR_GREEN_DARK)))))
         rules.append(ConditionalFormatRule(ranges=[GridRange.from_a1_range("L3:L500", ws)], booleanRule=BooleanRule(condition=BooleanCondition("NUMBER_LESS", ["0"]), format=CellFormat(textFormat=TextFormat(foregroundColor=COLOR_RED_DARK)))))
+        # Disallowed Loss (Col R) - High Priority Red Bold White
         rules.append(ConditionalFormatRule(ranges=[GridRange.from_a1_range("R3:R500", ws)], booleanRule=BooleanRule(condition=BooleanCondition("NUMBER_NOT_BETWEEN", ["-0.01", "0.01"]), format=CellFormat(backgroundColor=COLOR_RED_DARK, textFormat=TextFormat(foregroundColor=COLOR_WHITE, bold=True)))))
+        # Wash Sale entire row background (Col Q)
+        rules.append(ConditionalFormatRule(ranges=[GridRange.from_a1_range("A3:S500", ws)], booleanRule=BooleanRule(condition=BooleanCondition("CUSTOM_FORMULA", ["=$Q3=TRUE"]), format=CellFormat(backgroundColor=COLOR_YELLOW_LIGHT))))
+        # Term ST/LT (Col P)
+        rules.append(ConditionalFormatRule(ranges=[GridRange.from_a1_range("P3:P500", ws)], booleanRule=BooleanRule(condition=BooleanCondition("TEXT_CONTAINS", ["ST"]), format=CellFormat(backgroundColor=COLOR_RED_LIGHT))))
+        rules.append(ConditionalFormatRule(ranges=[GridRange.from_a1_range("P3:P500", ws)], booleanRule=BooleanRule(condition=BooleanCondition("TEXT_CONTAINS", ["LT"]), format=CellFormat(backgroundColor=COLOR_GREEN_LIGHT))))
         rules.save()
         
-        ws.update(range_name="A1:L1", values=[[
+        # Row 1 KPI
+        # LT Gain (N>0), LT Loss (N<0), ST Gain (O>0), Disallowed (Q=TRUE, R)
+        kpis = [
             "🧾 REALIZED G/L", "",
-            'Total G/L: ', '=SUM(L3:L500)',
-            'LT Gain: ', '=SUMIF(O3:O500,">0",O3:O500)',
-            'ST Loss: ', '=SUMIF(N3:N500,"<0",N3:N500)',
-            'Disallowed: ', '=SUMIF(Q3:Q500,TRUE,R3:R500)', ""
-        ]], value_input_option="USER_ENTERED")
+            '=TEXT(SUM(L3:L500),"$#,##0")', "",
+            '=TEXT(SUMIF(N3:N500,">0",N3:N500),"$#,##0")', "",
+            '=TEXT(SUMIF(N3:N500,"<0",N3:N500),"$#,##0")', "",
+            '=TEXT(SUMIF(O3:O500,">0",O3:O500),"$#,##0")', "",
+            '=TEXT(SUMIF(Q3:Q500,TRUE,R3:R500),"$#,##0")', ""
+        ]
+        ws.update(range_name="A1:L1", values=[kpis], value_input_option="USER_ENTERED")
         
-        format_cell_range(ws, "D1", CellFormat(numberFormat=NumberFormat(type="CURRENCY", pattern='"$"#,##0'), textFormat=TextFormat(bold=True)))
-        format_cell_range(ws, "F1", CellFormat(numberFormat=NumberFormat(type="CURRENCY", pattern='"$"#,##0'), textFormat=TextFormat(bold=True)))
-        format_cell_range(ws, "H1", CellFormat(numberFormat=NumberFormat(type="CURRENCY", pattern='"$"#,##0'), textFormat=TextFormat(bold=True)))
-        format_cell_range(ws, "J1", CellFormat(numberFormat=NumberFormat(type="CURRENCY", pattern='"$"#,##0'), textFormat=TextFormat(bold=True)))
-
         ws.merge_cells("A1:B1")
-        format_cell_range(ws, "A1:L1", CellFormat(backgroundColor=COLOR_NAVY, textFormat=TextFormat(bold=True, foregroundColor=COLOR_WHITE, fontSize=11), horizontalAlignment="RIGHT", verticalAlignment="MIDDLE"))
-        print(f"  ✓ formatted {tab_name}")
+        format_cell_range(ws, "A1:L1", CellFormat(backgroundColor=COLOR_NAVY, textFormat=TextFormat(bold=True, foregroundColor=COLOR_WHITE, fontSize=11), horizontalAlignment="CENTER", verticalAlignment="MIDDLE"))
+        print(f"  OK formatted {tab_name}")
     except Exception as e:
-        print(f"  ⚠ Failed to format {tab_name}: {e}")
+        print(f"  ! Failed to format {tab_name}: {e}")
 
 @app.command()
 def main(
@@ -329,14 +346,14 @@ def main(
             print(f"Unknown tab: {tab}")
     else:
         format_agent_outputs(spreadsheet)
-        time.sleep(5)
+        time.sleep(20)
         format_holdings_current(spreadsheet)
-        time.sleep(5)
+        time.sleep(20)
         format_daily_snapshots(spreadsheet)
-        time.sleep(5)
+        time.sleep(20)
         format_realized_gl(spreadsheet)
     
-    typer.echo("✅ Formatting task complete.")
+    typer.echo("Formatting task complete.")
 
 if __name__ == "__main__":
     app()

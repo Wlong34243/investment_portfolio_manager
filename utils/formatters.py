@@ -23,3 +23,13 @@ def dicts_to_markdown_table(data: list[dict]) -> str:
         data_lines.append("| " + " | ".join(row_values) + " |")
     
     return "\n".join([header_line, separator_line] + data_lines)
+
+def to_markdown_table(df) -> str:
+    """
+    Converts a Pandas DataFrame into a Markdown table string.
+    """
+    if df is None or df.empty:
+        return "No data available."
+    
+    # Convert to list of dicts and reuse existing helper
+    return dicts_to_markdown_table(df.to_dict(orient="records"))

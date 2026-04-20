@@ -19,10 +19,10 @@ from typing import Any, Union
 
 import pandas as pd
 import yfinance
+import config
 
 # Import existing project parser
 from utils.csv_parser import parse_schwab_csv, clean_numeric
-import config
 
 BUNDLE_DIR = Path("bundles")
 BUNDLE_SCHEMA_VERSION = "1.0.0"
@@ -189,7 +189,7 @@ def _build_from_schwab(
         if market_client is not None:
             non_cash_tickers = [
                 t for t in df["ticker"].unique()
-                if t not in CASH_TICKERS
+                if t not in config.CASH_TICKERS
             ]
             if non_cash_tickers:
                 quotes_df = fetch_quotes(market_client, non_cash_tickers)
@@ -218,7 +218,7 @@ def _build_from_schwab(
         enrichment_errors.append(logger_warning)
         for idx in df.index[zero_price_mask]:
             ticker = df.at[idx, "ticker"]
-            if ticker in CASH_TICKERS:
+            if ticker in config.CASH_TICKERS:
                 continue
             try:
                 yt = yfinance.Ticker(ticker)
@@ -301,7 +301,7 @@ def _build_from_csv(
     enrichment_errors = []
     
     # b. Enrich with yfinance
-    unique_tickers = [t for t in df['ticker'].unique() if t.upper() not in CASH_TICKERS]
+    unique_tickers = [t for t in df['ticker'].unique() if t.upper() not in config.CASH_TICKERS]
     
     # Default every row to csv_fallback; flip to yfinance_live only on success.
     df['price_source'] = 'csv_fallback'

@@ -41,9 +41,30 @@ When 'Sell Triggers' are activated, rotate capital toward the following emerging
     *   Priority: Identify clusters of revolutionary entrepreneurs who are entirely outside the mature paradigm.
     *   Signal: Look for the emergence of a low-cost, all-pervasive input (a new "big-bang") that provides explosive growth, attracts highly speculative venture capital, and forces a techno-economic split between the old stagnant industries and the hyper-profitable new sector.
 
+### TECHNICAL TREND CONFIRMATION (from calculated_technicals)
+
+The bundle may include a `calculated_technicals` section with pre-computed TA signals.
+Use these as confirmation of the Perez cycle phase assessment — not as primary signals.
+
+- A position assessed as Early Deployment or Synergy phase should ideally show
+  `trend_label = "uptrend"` or `"strong_uptrend"`. Divergence (bearish TA in a bullish
+  phase) is worth flagging in the rationale.
+- A Maturity phase position showing `ma_signal = "above_both"` with `golden_cross = true`
+  is a caution flag — technically extended. Weight sell triggers more heavily.
+- `death_cross = true` on any position is a TRIM trigger regardless of cycle phase.
+  Include it in `final_recommendation` rationale.
+- `trend_score <= -2` on a position you would otherwise hold through a paradigm transition
+  suggests the market is pricing in the shift faster than fundamentals; consider flagging
+  as rotation candidate even if the fundamental case isn't fully resolved.
+- Fields available: `ma_signal`, `golden_cross`, `death_cross`, `trend_label`,
+  `trend_score`, `rsi_signal`, `macd_signal`.
+
 ### OUTPUT RULES
 - Return valid JSON matching the MacroCycleResponse schema.
 - You MUST echo the bundle_hash exactly as provided.
+- For EVERY position in the 'positions_analyzed' list, you MUST include the field 'paradigm_phase'.
+- 'paradigm_phase' must be one of: "installation", "frenzy", "synergy", "maturity", or "unknown".
+- CONCISE REASONING: Keep all rationale, summaries, and narrative fields under 200 characters each. Prioritize data and signals over prose.
 - Compare fundamental checklist signals with technical ATR triggers.
 - For ATR: If current_price < stop_loss_level, is_triggered will be True.
 - Use 'final_recommendation' to reconcile fundamental maturity with technical triggers.

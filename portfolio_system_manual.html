@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Investment Portfolio Manager | System & Codebase Manual</title>
+    <style>
+        :root {
+            --primary: #1a2744;
+            --secondary: #2c3e50;
+            --accent: #3498db;
+            --bg: #f8f9fa;
+            --text: #333;
+            --border: #e1e4e8;
+            --code-bg: #f4f4f4;
+            --success: #27ae60;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background-color: var(--bg);
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 2rem;
+            background: white;
+            box-shadow: 0 0 20px rgba(0,0,0,0.05);
+        }
+
+        header {
+            border-bottom: 4px solid var(--primary);
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+        }
+
+        h1 { color: var(--primary); margin: 0; font-size: 2.5rem; }
+        h2 { color: var(--secondary); margin-top: 3rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; }
+        h3 { color: var(--primary); margin-top: 2rem; }
+
+        .toc {
+            background: #eef2f7;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 3rem;
+        }
+
+        .toc h2 { margin-top: 0; border: none; font-size: 1.2rem; text-transform: uppercase; letter-spacing: 1px; }
+        .toc ul { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px; }
+        .toc a { text-decoration: none; color: var(--accent); font-weight: 600; }
+        .toc a:hover { text-decoration: underline; }
+
+        .callout {
+            padding: 1.5rem;
+            background: #fff8e1;
+            border-left: 5px solid #ffc107;
+            margin: 2rem 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 12px;
+            border: 1px solid var(--border);
+            vertical-align: top;
+        }
+
+        th { background: #f1f3f5; color: var(--primary); }
+        tr:nth-child(even) { background: #f9fafb; }
+
+        code {
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+            background: var(--code-bg);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+
+        pre {
+            background: #2d3436;
+            color: #dfe6e9;
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+
+        pre code { background: transparent; color: inherit; padding: 0; }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .badge-core { background: #e3f2fd; color: #1565c0; }
+        .badge-task { background: #e8f5e9; color: #2e7d32; }
+        .badge-util { background: #fff3e0; color: #ef6c00; }
+
+        footer {
+            margin-top: 5rem;
+            text-align: center;
+            font-size: 0.8rem;
+            color: #777;
+            border-top: 1px solid var(--border);
+            padding-top: 2rem;
+        }
+
+        /* --- PRINT STYLES --- */
+        @media print {
+            .toc, .container { box-shadow: none; margin: 0; padding: 0; max-width: 100%; }
+            .toc { display: none; }
+            body { background: white; }
+            h2, h3 { page-break-after: avoid; }
+            table, pre, blockquote { page-break-inside: avoid; }
+            a { color: black; text-decoration: none; }
+            pre { background: white; color: black; border: 1px solid #ccc; white-space: pre-wrap; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Portfolio Management System</h1>
+        <p><strong>Technical System Manual & Codebase Documentation</strong></p>
+        <p>Operational Date: April 2026 | Environment: Headless CLI</p>
+    </header>
+
+    <section class="toc">
+        <h2>Table of Contents</h2>
+        <ul>
+            <li><a href="#architecture">1. System Architecture</a></li>
+            <li><a href="#core">2. Core Engine (Manager & Pipeline)</a></li>
+            <li><a href="#tasks">3. Tasks & Automations (/tasks)</a></li>
+            <li><a href="#utils">4. Utility Reference (/utils)</a></li>
+            <li><a href="#scripts">5. Maintenance Scripts (/scripts)</a></li>
+            <li><a href="#agents">6. AI Agent Tuning Guide (/agents)</a></li>
+        </ul>
+    </section>
+
+    <section id="architecture">
+        <h2>1. System Architecture Overview</h2>
+        <p>The system is a <strong>Headless CLI application</strong> designed for high-integrity financial analysis. It follows a strictly decoupled architecture:</p>
+        
+        <ul>
+            <li><strong>Data Ingestion:</strong> Pulls from Schwab API or CSV.</li>
+            <li><strong>The "Frozen State" Pattern:</strong> Every run captures a <em>Context Bundle</em> (JSON) containing all market and research data. This ensures the AI never hallucinates numbers based on stale or shifting data.</li>
+            <li><strong>Intelligence Layer:</strong> Specialized Python agents send curated "Context Bundles" to Gemini 2.5 Pro with structured Pydantic schemas.</li>
+            <li><strong>View Layer:</strong> Results are written back to Google Sheets via <code>gspread</code>.</li>
+        </ul>
+
+        <div class="callout">
+            <strong>Philosophy: Dry Run by Default.</strong> No script will write to your Google Sheets unless you explicitly pass the <code>--live</code> flag. This prevents accidental data corruption and unnecessary API costs.
+        </div>
+    </section>
+
+    <section id="core">
+        <h2>2. Core Engine</h2>
+        <p>The core engine consists of the orchestration layer and the data spine.</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>File</th>
+                    <th>Role</th>
+                    <th>Key Responsibilities</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>manager.py</code></td>
+                    <td><strong>CLI Entry Point</strong></td>
+                    <td>Orchestrates <code>snapshot</code>, <code>analyze-all</code>, <code>vault</code>, and <code>dashboard</code> commands.</td>
+                </tr>
+                <tr>
+                    <td><code>pipeline.py</code></td>
+                    <td><strong>Data Spine</strong></td>
+                    <td>Handles "Nuclear Type Enforcement," normalization, and core sheet writing logic for Holdings and Snapshots.</td>
+                </tr>
+                <tr>
+                    <td><code>config.py</code></td>
+                    <td><strong>Settings</strong></td>
+                    <td>Single source of truth for Tab names, Sheet IDs, API keys, and Ticker constants.</td>
+                </tr>
+                <tr>
+                    <td><code>core/bundle.py</code></td>
+                    <td><strong>State Freezer</strong></td>
+                    <td>Builds the Market Bundle by joining positions with yfinance/Schwab quotes.</td>
+                </tr>
+                <tr>
+                    <td><code>core/vault_bundle.py</code></td>
+                    <td><strong>Research Freezer</strong></td>
+                    <td>Packages local markdown theses and transcripts into a JSON bundle.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>Manager Commands</h3>
+        <pre><code>python manager.py snapshot --live          # Sync Schwab and update Holdings
+python manager.py analyze-all --live       # Run all AI agents and update Dashboard
+python manager.py dashboard refresh --live  # Re-apply formatting and rebuild Action Views
+python manager.py vault snapshot           # Freeze research state</code></pre>
+    </section>
+
+    <section id="tasks">
+        <h2>3. Tasks & Automations (<code>/tasks</code>)</h2>
+        <p>Tasks are modular "jobs" that perform specific sheet updates or data enrichments.</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Script</th>
+                    <th>What it Updates</th>
+                    <th>When to Run</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>build_decision_view.py</code></td>
+                    <td><em>Decision_View</em> tab</td>
+                    <td>After running agents; joins Holdings + Signals.</td>
+                </tr>
+                <tr>
+                    <td><code>build_valuation_card.py</code></td>
+                    <td><em>Valuation_Card</em> tab</td>
+                    <td>Daily; provides deep-dive pricing and P/E stats.</td>
+                </tr>
+                <tr>
+                    <td><code>sync_transactions.py</code></td>
+                    <td><em>Transactions</em> tab</td>
+                    <td>Weekly; fetches trade history from Schwab API.</td>
+                </tr>
+                <tr>
+                    <td><code>enrich_atr.py</code></td>
+                    <td>Internal Bundle</td>
+                    <td>When calculating technical stop-loss levels.</td>
+                </tr>
+                <tr>
+                    <td><code>format_sheets_dashboard_v2.py</code></td>
+                    <td>All Tab Headers</td>
+                    <td>Run with <code>--live</code> to fix "broken" sheet formatting.</td>
+                </tr>
+                <tr>
+                    <td><code>derive_rotations.py</code></td>
+                    <td><em>Trade_Log_Staging</em></td>
+                    <td>After trades to group sells/buys into cohesive events.</td>
+                </tr>
+                <tr>
+                    <td><code>weekly_podcast_sync.py</code></td>
+                    <td><em>AI_Suggested_Allocation</em></td>
+                    <td>Every Sunday; scrapes macro research from YouTube.</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section id="utils">
+        <h2>4. Utility Reference (<code>/utils</code>)</h2>
+        <p>The "Engine Room" where API clients and data parsers live.</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Utility</th>
+                    <th>API / External Connection</th>
+                    <th>Purpose</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>schwab_client.py</code></td>
+                    <td>Schwab OAuth2 API</td>
+                    <td>Fetches positions, balances, and real-time quotes.</td>
+                </tr>
+                <tr>
+                    <td><code>fmp_client.py</code></td>
+                    <td>Financial Modeling Prep</td>
+                    <td>Fetches P/E ratios, earnings growth, and surprises.</td>
+                </tr>
+                <tr>
+                    <td><code>gemini_client.py</code></td>
+                    <td>Google Gemini 2.5 Pro</td>
+                    <td>Robust LLM wrapper with token management and hashing.</td>
+                </tr>
+                <tr>
+                    <td><code>risk.py</code></td>
+                    <td>yfinance (Historical)</td>
+                    <td>Calculates Portfolio Beta, VaR, and Correlations.</td>
+                </tr>
+                <tr>
+                    <td><code>sheet_writers.py</code></td>
+                    <td>Google Sheets API</td>
+                    <td>Atomic batch-writes to prevent sheet corruption.</td>
+                </tr>
+                <tr>
+                    <td><code>column_guard.py</code></td>
+                    <td>N/A</td>
+                    <td>Self-healing logic to prevent <code>KeyError</code> in Pandas.</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section id="scripts">
+        <h2>5. Maintenance Scripts (<code>/scripts</code>)</h2>
+        <p>One-off scripts for setup, recovery, or debugging.</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Script</th>
+                    <th>Circumstance for Use</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>schwab_initial_auth.py</code></td>
+                    <td>Run once per quarter or if tokens expire to reset API link.</td>
+                </tr>
+                <tr>
+                    <td><code>read_sheet_debug.py</code></td>
+                    <td>If a script fails to read a sheet, use this to dump raw tab data.</td>
+                </tr>
+                <tr>
+                    <td><code>repair_sheet_data.py</code></td>
+                    <td>Fixes structural errors (like "Unnamed_0" headers) in Google Sheets.</td>
+                </tr>
+                <tr>
+                    <td><code>audit_cost_basis.py</code></td>
+                    <td>Run if Schwab's "Unrealized G/L" looks incorrect compared to your records.</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section id="agents">
+        <h2>6. Agent Tuning Guide (<code>/agents</code>)</h2>
+        <p>Intelligence is driven by the <strong>System Prompts</strong>. The behavior of any agent (Valuation, Tax, Macro) is dictated by plain English text files, not Python code.</p>
+
+        <div class="callout">
+            <strong>How to Change Agent Logic:</strong>
+            <ol>
+                <li>Locate the prompt in <code>agents/prompts/[agent_name]_system.txt</code>.</li>
+                <li>Edit the text (e.g., "Always prioritize high-dividend stocks" or "Be more aggressive with TLH").</li>
+                <li>Run <code>python manager.py analyze-all --live</code>. The agent will immediately use the new rules.</li>
+            </ol>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Agent</th>
+                    <th>System Prompt Path (The Tuning Surface)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Valuation Agent</td>
+                    <td><code>agents/prompts/valuation_agent_system.txt</code></td>
+                </tr>
+                <tr>
+                    <td>Tax Agent</td>
+                    <td><code>agents/prompts/tax_agent_system.txt</code></td>
+                </tr>
+                <tr>
+                    <td>Macro Cycle Agent</td>
+                    <td><code>agents/prompts/macro_cycle_system.txt</code></td>
+                </tr>
+                <tr>
+                    <td>Concentration Hedger</td>
+                    <td><code>agents/prompts/concentration_hedger_system.txt</code></td>
+                </tr>
+                <tr>
+                    <td>Thesis Screener</td>
+                    <td><code>agents/prompts/thesis_screener_system.txt</code></td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <footer>
+        &copy; 2026 Investment Portfolio Operations | Generated for Bill (CPA) | Headless CLI Version 2.0
+    </footer>
+</div>
+
+</body>
+</html>

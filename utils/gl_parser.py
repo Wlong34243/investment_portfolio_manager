@@ -19,13 +19,17 @@ def _clean_dollar(value) -> float:
 def _clean_pct(value) -> float:
     """
     Parse percentage strings like "6.56688352686%" or "-0.567674026017%"
-    Returns float (e.g., 6.567) — NOT divided by 100. Store as-is.
+    Returns raw decimal (e.g., 0.0657 for 6.57%) for Google Sheets % formatting.
+    Sheets multiplies by 100 for display.
     """
     if pd.isna(value) or str(value).strip() in ("", "-"):
         return 0.0
-    s = str(value).strip().rstrip("%")
+    s = str(value).strip()
+    s = s.rstrip("%")
     try:
-        return float(s)
+        val = float(s)
+        # Authoritative clean: always return raw decimal
+        return val / 100.0
     except ValueError:
         return 0.0
 
@@ -157,8 +161,11 @@ def parse_transaction_history(file_or_path) -> pd.DataFrame:
         if col in df.columns:
             df[col] = df[col].apply(_clean_dollar)
             
-    # Build fingerprint
-    df['Fingerprint'] = df.apply(lambda x: f"{x['Date']}|{x.get('Symbol', '')}|{x['Action']}|{x['Amount']}", axis=1)
+    # Build fingerprint — unified format: Date|Ticker|Action|Quantity|Price (Task 3)
+    df['Fingerprint'] = df.apply(
+        lambda x: f"{x['Date']}|{x.get('Symbol', '')}|{x['Action']}|{x.get('Quantity', 0)}|{x.get('Price', 0)}",
+        axis=1
+    )
     
     return df
 

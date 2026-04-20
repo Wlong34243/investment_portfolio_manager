@@ -21,12 +21,8 @@ from utils.sheet_readers import get_gspread_client, read_gsheet_robust
 
 app = typer.Typer()
 
-# ETF and Cash exclusion list as per prompt
-EXCLUDE_TICKERS = {
-    'SGOV', 'JPIE', 'QQQM', 'VEA', 'VTI', 'XBI', 'XOM_skip', 'IGV', 'EWZ', 'IFRA',
-    'XLV', 'XLE', 'XLF', 'RSP', 'EEM', 'VEU', 'EMXC', 'BBJP', 'EFG', 'PPA', 'EWJ',
-    'CASH_MANUAL', 'CASH & CASH INVESTMENTS', 'QACDS'
-}
+# Centralized exclusion list from config (Task 1)
+EXCLUDE_TICKERS = set(config.VALUATION_SKIP)
 
 def fetch_ticker_valuation(ticker_symbol: str):
     """Fetches valuation data for a single ticker via yfinance."""
@@ -44,12 +40,17 @@ def fetch_ticker_valuation(ticker_symbol: str):
         
         pos_52w = None
         if high and low and price and (high - low) != 0:
-            pos_52w = (price - low) / (high - low) * 100
+            pos_52w = (price - low) / (high - low)
             
         disc_52w_high = None
         if high and price:
-            disc_52w_high = (high - price) / high * 100
+            disc_52w_high = (high - price) / high
             
+        # Handle PEG N/A gracefully (Task 5)
+        peg = info.get('pegRatio')
+        if peg is None or str(peg).lower() in ('nan', 'none', ''):
+            peg = "N/A"
+
         return {
             'Ticker': ticker_symbol,
             'Name': info.get('shortName', ''),
@@ -58,16 +59,16 @@ def fetch_ticker_valuation(ticker_symbol: str):
             'Trailing P/E': info.get('trailingPE'),
             'Forward P/E': info.get('forwardPE'),
             'P/B': info.get('priceToBook'),
-            'PEG': info.get('pegRatio'),
+            'PEG': peg,
             '52w Low': low,
             '52w High': high,
             '52w Position %': pos_52w,
             'Discount from 52w High %': disc_52w_high,
-            'Rev Growth %': info.get('revenueGrowth', 0) * 100 if info.get('revenueGrowth') else None,
-            'ROE %': info.get('returnOnEquity', 0) * 100 if info.get('returnOnEquity') else None,
+            'Rev Growth %': info.get('revenueGrowth'),
+            'ROE %': info.get('returnOnEquity'),
             'D/E': info.get('debtToEquity'),
             'FCF': info.get('freeCashflow'),
-            'Div Yield %': info.get('dividendYield', 0) * 100 if info.get('dividendYield') else None,
+            'Div Yield %': info.get('dividendYield'),
             'Last Updated': time.strftime('%Y-%m-%d %H:%M')
         }
     except Exception as e:

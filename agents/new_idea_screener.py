@@ -32,6 +32,7 @@ from core.bundle import load_bundle
 from core.vault_bundle import load_vault_bundle
 from utils.gemini_client import ask_gemini_composite
 from utils import fmp_client
+from utils.formatters import dicts_to_markdown_table
 
 app = typer.Typer(help="New Idea Screener Agent")
 console = Console()
@@ -220,25 +221,26 @@ def analyze(
             })
 
     # 5. Build context for Gemini
-    agent_context = {
-        "portfolio_state": {
-            "total_value_usd": total_value,
-            "dry_powder_available_usd": dry_powder,
-            "position_count": len(holdings),
-            "style_weights": style_weights,
-        },
-        "styles": styles_json,
-        "current_holdings_tickers": [h["ticker"] for h in holdings],
-        "candidates": candidates_pre,
-        "bundle_hash": composite.get("composite_hash", "unknown")
-    }
+    # Markdown optimization (Task 4)
+    candidates_table = dicts_to_markdown_table(candidates_pre)
+    
+    agent_context_text = (
+        f"Portfolio State:\n"
+        f"- Total Value: ${total_value:,.2f}\n"
+        f"- Dry Powder: ${dry_powder:,.2f}\n"
+        f"- Position Count: {len(holdings)}\n"
+        f"- Current Style Weights: {json.dumps(style_weights, indent=2)}\n\n"
+        f"Investment Styles:\n{json.dumps(styles_json, indent=2)}\n\n"
+        f"New Ideas for Evaluation:\n{candidates_table}\n\n"
+        f"bundle_hash: {composite.get('composite_hash', 'unknown')}"
+    )
     
     # 6. Load system prompt
     prompt_path = _HERE / "prompts" / "new_idea_system.txt"
     system_instruction = prompt_path.read_text(encoding="utf-8")
     
     # 7. LLM Call
-    user_prompt = f"Evaluate these candidate tickers and assign verdicts.\n\nContext:\n{json.dumps(agent_context, indent=2)}"
+    user_prompt = f"Evaluate these candidate tickers and assign verdicts.\n\nContext:\n{agent_context_text}"
     
     console.print(f"[cyan]Calling Gemini for {len(candidates_pre)} candidates...[/]")
     result: NewIdeaScreenerOutput | None = ask_gemini_composite(

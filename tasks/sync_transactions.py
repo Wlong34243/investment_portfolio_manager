@@ -70,10 +70,11 @@ def sync_transactions(days: int = 90, live: bool = False):
     
     combined_df = pd.concat([existing_df, new_tx_df], ignore_index=True)
     
-    # Deduplicate by Fingerprint
+    # Deduplicate by Fingerprint — keep='last' so fresh API data overwrites
+    # stale sheet rows that have the same fingerprint but empty Amount/Net Amount.
     if 'Fingerprint' in combined_df.columns:
         initial_count = len(combined_df)
-        combined_df = combined_df.drop_duplicates(subset=['Fingerprint'], keep='first')
+        combined_df = combined_df.drop_duplicates(subset=['Fingerprint'], keep='last')
         deduped_count = len(combined_df)
         print(f"Deduplicated: {initial_count} total rows -> {deduped_count} unique transactions.")
     

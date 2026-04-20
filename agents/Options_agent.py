@@ -27,6 +27,7 @@ import config
 from core.composite_bundle import load_composite_bundle, resolve_latest_bundles
 from utils.gemini_client import ask_gemini_composite
 from utils.sheet_readers import get_gspread_client
+from utils.sheet_writers import append_agent_outputs
 
 app = typer.Typer(help="Options Yield Agent")
 console = Console()
@@ -109,20 +110,12 @@ def run_agent(live: bool = typer.Option(False, "--live", help="Execute live writ
     # 3. Sandbox Write Phase
     if live:
         client = get_gspread_client()
-        sheet = client.open_by_key(config.PORTFOLIO_SHEET_ID)
-        ws = sheet.worksheet(AGENT_OUTPUTS_TAB)
-        
-        # Fetch existing fingerprints to dedup
-        all_vals = ws.get_all_values()
-        fp_col_idx = 12 
-        existing_fps = {row[fp_col_idx] for row in all_vals[1:] if len(row) > fp_col_idx}
+        ss = client.open_by_key(config.PORTFOLIO_SHEET_ID)
 
         new_rows = []
         for opp in result.yield_opportunities:
             # Unique fingerprint for deduplication
             fp = f"{result.bundle_hash[:12]}|{opp.ticker}|options_yield|{opp.strategy_type}|{opp.strike_price}"
-            if fp in existing_fps:
-                continue
                 
             new_rows.append([
                 datetime.now(timezone.utc).isoformat(),
@@ -141,10 +134,16 @@ def run_agent(live: bool = typer.Option(False, "--live", help="Execute live writ
             ])
 
         if new_rows:
-            ws.append_rows(new_rows, value_input_option="USER_ENTERED")
-            console.print(f"[bold green]Successfully wrote {len(new_rows)} yield opportunities to {AGENT_OUTPUTS_TAB}.[/bold green]")
+            # Task 4: Centralized Writer (Append pattern)
+            headers = [
+                "Run Timestamp", "Agent", "Bundle Hash", "Ticker",
+                "Paradigm Phase", "Action", "Rationale", "Rec",
+                "Priority", "Confidence", "Math", "Skew", "Fingerprint"
+            ]
+            append_agent_outputs(ss, new_rows, headers)
+            console.print(f"[bold green]Analysis complete.[/bold green]")
         else:
-            console.print("[yellow]No new unique yield analyses to write (deduplicated).[/yellow]")
+            console.print("[yellow]No new unique yield analyses to write.[/yellow]")
     else:
         console.print("[yellow]DRY RUN active. Skipping write to Google Sheets.[/yellow]")
         for opp in result.yield_opportunities:

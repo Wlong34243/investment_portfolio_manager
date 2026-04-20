@@ -46,6 +46,9 @@ from core.composite_bundle import load_composite_bundle
 from core.bundle import load_bundle
 from utils.gemini_client import ask_gemini_composite
 
+from utils.sheet_writers import archive_and_overwrite_agent_outputs
+from utils.formatters import dicts_to_markdown_table
+
 logger = logging.getLogger(__name__)
 
 app = typer.Typer(help="Value Investing Screener — Graham / Buffett / Browne framework")
@@ -357,13 +360,17 @@ def _build_value_chunk_prompt(chunk_facts: list[dict], ctx: dict) -> str:
     composite_hash = ctx["composite_hash"]
     chunk_data_gaps = [f["ticker"] for f in chunk_facts
                        if f.get("pe_ratio") is None and f.get("pb_ratio") is None]
+    
+    # Markdown optimization (Task 4)
+    facts_table = dicts_to_markdown_table(chunk_facts)
+
     return (
         f"Screen {len(chunk_facts)} portfolio position(s) against the Benjamin Graham "
         f"defensive investor framework and Warren Buffett quality overlay.\n\n"
         f"## Value Investing Strategy Reference\n"
         f"{strategy_context}\n\n"
         f"## Pre-Computed Quantitative Gate Results (Python — use exact values)\n"
-        f"{json.dumps(chunk_facts, indent=2, default=str)}\n\n"
+        f"{facts_table}\n\n"
         f"## Instructions\n"
         "For each position, write the narrative evaluation fields. "
         "gates_passed and gates_failed are already computed — echo them exactly.\n\n"
@@ -653,13 +660,11 @@ def analyze(
         console.print(f"  {json_path}")
         return
 
-    # --- Live: write to Agent_Outputs tab ---
-    from utils.sheet_readers import get_gspread_client
-
+    # --- Live: write to Agent_Outputs tab (Task 4: Centralized Writer) ---
     sheet_rows = _result_to_sheet_rows(result, run_id, run_ts, dry_run=False)
     client = get_gspread_client()
     ss = client.open_by_key(config.PORTFOLIO_SHEET_ID)
-    _archive_and_overwrite(ss, sheet_rows, run_ts)
+    archive_and_overwrite_agent_outputs(ss, sheet_rows, run_ts, _AGENT_OUTPUTS_HEADERS)
     console.print(f"[dim]Local audit file:[/] {json_path}")
 
 

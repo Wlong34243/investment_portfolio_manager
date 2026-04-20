@@ -35,6 +35,7 @@ from core.vault_bundle import load_vault_bundle
 from utils.fmp_client import get_fundamentals
 from utils.gemini_client import ask_gemini_composite
 from utils.sheet_readers import get_gspread_client
+from utils.formatters import dicts_to_markdown_table
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +60,10 @@ def _build_rebuy_chunk_prompt(chunk: list[dict], ctx: dict) -> str:
     framework_section = ctx.get("framework_section", "")
     recent_rotations_str = ""
     if ctx.get("recent_rotations"):
-        recent_rotations_str = f"\nRecent portfolio rotations (from Trade_Log):\n{json.dumps(ctx['recent_rotations'], default=str, indent=2)}\n"
+        recent_rotations_str = f"\nRecent portfolio rotations (from Trade_Log):\n{dicts_to_markdown_table(ctx['recent_rotations'])}\n"
+
+    # Convert chunk to markdown table (Task 4 optimization)
+    positions_table = dicts_to_markdown_table(chunk)
 
     return (
         f"Analyze the following {len(chunk)} position(s) "
@@ -69,7 +73,7 @@ def _build_rebuy_chunk_prompt(chunk: list[dict], ctx: dict) -> str:
         f"Cash as % of portfolio: "
         f"{ctx['cash_manual'] / ctx['total_value'] * 100:.1f}%\n\n"
         f"{recent_rotations_str}"
-        f"Positions:\n{json.dumps(chunk, default=str, indent=2)}\n\n"
+        f"Positions:\n{positions_table}\n\n"
         f"Thesis files present for: {ctx['thesis_map_keys']}\n"
         f"Thesis files missing for: {ctx['coverage_warnings']}\n"
         f"{framework_section}\n"

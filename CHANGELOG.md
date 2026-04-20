@@ -1,5 +1,137 @@
 # Changelog
 
+## [Unreleased] — Phase 5: Agent Utility Overhaul (agent_utility_improvements_prompt)
+
+### Fixed
+- **macro_cycle_agent: AttributeError on `calculated_technical_stops`** — `enrich_atr.py` writes
+  a list; agent was calling `.get(ticker)` on it as if it were a dict. Fixed with list→dict normalization.
+- **thesis + bagger: FinishReason.MAX_TOKENS** — raised `GEMINI_MAX_TOKENS_THESIS` 16000→32000 and
+  `GEMINI_MAX_TOKENS_BAGGER` 16000→24000 (both unchunked, send 50+ positions in one call).
+- **FMP /stable/earnings-surprises: 404 per ticker × 50 tickers** — added `FMP_EARNINGS_AVAILABLE`
+  flag; first 404 logs one warning and disables the endpoint for the session; all subsequent calls
+  return [] silently. Eliminates ~50 per-ticker warning lines from every analyze-all run.
+- **bagger_screener: `result.candidates` AttributeError** — latent bug; schema field is
+  `candidates_analyzed`; fixed in `_result_to_sheet_rows` and CLI summary table.
+
+### Refactored
+- **Agent_Outputs tab — human-readable compact format** (analyze-all batch writes only):
+  - New 10-column `_COMPACT_HEADERS`: `run_date`, `run_id_short`, `agent`, `signal`, `ticker`,
+    `action`, `narrative`, `scale_step`, `severity`, `score` (drops UUID, ISO timestamp, composite_hash)
+  - `_clean_headline()`: truncates action column at 80 chars on word boundary, never mid-word
+  - `_collapse_hold_rows()`: collapses valuation HOLD+info rows into one `[HOLD SUMMARY — N positions]`
+    row; individual rows still go to archive tab
+  - `_sort_by_severity()`: data_quality → action → alert → watch → info
+- **concentration_hedger: data quality surfacing** — `_compute_concentration_flags` now checks
+  unknown sector coverage before sector analysis; if >10% unclassified, emits `severity=data_quality`
+  row and skips unreliable sector concentration check
+- **Decision_View: action-filtered signals** — only surfaces `severity in (action, alert, data_quality)`;
+  empty cells for hold/info/watch (not "Not Evaluated"); handles both old 11-col and compact 10-col formats
+
+### Added
+- **Thesis Screener: `per_position_verdict`** — new schema field (HOLD/TRIM/ADD/EXIT/MONITOR) grounded
+  in thesis exit_conditions, not Baid framework alone; `verdict_reasoning` cites specific clause
+- **Thesis Screener: pre-computation enrichment** — parses exit_conditions section, last_reviewed,
+  stale_thesis flag (>90 days), quantitative triggers (YAML block); all injected into Gemini context
+- **Thesis Screener: Verdict Discipline** — new prompt section with MONITOR for no-thesis positions,
+  stale thesis staleness language, consistency rules between verdict and final_recommendation
+- **Valuation Agent: `verdict` field** — deterministic Python mapping (accumulate→ADD, hold→HOLD,
+  trim→TRIM, monitor→MONITOR) applied post-LLM; Gemini never computes it
+- **Valuation Agent: Style-Aware Valuation** — new prompt section with GARP/FUND/THEME/ETF framing;
+  FUND nothing-burger setup defined with 4-condition checklist
+- **`manager.py vault thesis-audit`** — new CLI command; reads all thesis files, parses triggers: YAML
+  block, reports populated/total/status as Rich table sorted worst-backfill-first; exits 0
+- **`manager.py vault add-thesis`** — updated template includes frontmatter + `## Quantitative Triggers`
+  section with full YAML block (10 fields)
+- **`vault/THESIS_BACKFILL_GUIDE.md`** — backfill priority, style examples (GARP/FUND/THEME/ETF),
+  honest null rule, step-by-step instructions
+
+**Status:** Agent utility overhaul complete. Next: `tasks/enrich_fmp.py` — bake FMP fundamentals
+into bundle at snapshot time (deferred).
+
+---
+
+## [Unreleased] — Phase 5: Murphy TA Signal Layer (enrich_technicals)
+
+### Added
+
+- **`tasks/enrich_technicals.py`** — Murphy TA indicator enrichment task
+  - Bulk yfinance 1-year daily OHLCV download (single call for all eligible tickers)
+  - Injects `calculated_technicals` key into composite bundle JSON in-place; does not invalidate SHA256 hash
+  - Per-ticker indicators: MA50/MA200, `price_vs_ma50_pct`, `price_vs_ma200_pct`, `ma_signal` (`above_both` / `above_200_below_50` / `below_both`), `golden_cross`, `death_cross`
+  - RSI-14 via Wilder smoothing (`ewm(alpha=1/14, min_periods=14, adjust=False)`) — no pandas_ta dependency
+  - MACD via pure pandas EWM (span 12/26/9); `macd_signal` (`bullish` / `bearish` / `neutral`) from 5-day histogram cross
+  - Volume: `volume_20d_avg`, `volume_ratio`, `volume_signal` (`high` / `low` / `normal`)
+  - Trend score: integer −3 to +3 from 4 binary components (above MA50, above MA200, RSI 40–70, MACD histogram > 0); mapped to `trend_label`
+  - Graceful degradation: `data_gap` field set to `"no_data"` / `"insufficient_history"` / `"partial"` — affected numeric fields set to `None`, never `0`
+  - ETFs included (MA/RSI/MACD meaningful); only `CASH_MANUAL`, `QACDS`, and `CASH_EQUIVALENT`/`MMMF`/`FIXED_INCOME`/`BOND` asset classes skipped
+  - Per-ticker fallback with `time.sleep(0.25)` rate limiting if bulk call fails
+  - Standalone CLI: `python tasks/enrich_technicals.py [--bundle path]`
+
+- **`config.py`** — 6 TA threshold constants:
+  - `TA_RSI_OVERBOUGHT = 70`, `TA_RSI_OVERSOLD = 30`
+  - `TA_VOLUME_HIGH_RATIO = 1.5`, `TA_VOLUME_LOW_RATIO = 0.5`
+  - `TA_CROSS_LOOKBACK_DAYS = 20`, `TA_MACD_CROSS_LOOKBACK = 5`
+
+- **`manager.py`** — `--enrich-technicals` flag on `snapshot` command
+  - Resolves latest composite bundle, runs `enrich_composite_bundle()`, prints position count, data-gap warnings, and trend distribution summary
+  - Compatible with `--enrich-atr --enrich-technicals` in one command (ATR runs first)
+
+- **`agents/analyze_all.py`** — ATR + technical enrichment wired into `--fresh-bundle` path
+  - Both `enrich_atr` and `enrich_technicals` called after composite is written; failures are caught and printed as warnings, not aborts
+
+- **4 agent system prompts updated** with `calculated_technicals` context sections:
+  - `valuation_agent_system.txt` — Technical Context: overbought/oversold coloring for accumulate signals; death cross flags headwind
+  - `rebuy_analyst_system.txt` — Technical Entry Conditions: RSI 35–60 window, volume conviction logic, death cross caution
+  - `macro_cycle_system.txt` — Technical Trend Confirmation: Perez phase alignment; death cross = TRIM trigger regardless of phase
+  - `add_candidate_system.txt` — Technical Add Conditions: prefer `above_both` + neutral RSI; demote `trend_score ≤ -1` to watchlist
+
+### CLI Usage
+```
+python tasks/enrich_technicals.py                              # enriches latest composite
+python manager.py snapshot --enrich-technicals                 # post-snapshot injection
+python manager.py snapshot --enrich-atr --enrich-technicals    # both in sequence
+python manager.py analyze-all --fresh-bundle                   # ATR + TA auto-injected
+```
+
+**Status:** Murphy TA signal layer complete. `calculated_technicals` available to all agents. Next: `tasks/enrich_fmp.py` — bake FMP fundamentals into bundle at snapshot time.
+
+---
+
+## [Unreleased] — Phase 5: Pipeline Math, Risk VaR, and Data Mapping Fixes
+
+### Fixed
+- **Snapshot Math & Nuclear Type Enforcement**
+  - Root cause: Calculations for `Total Value`, `Cost Basis`, and `Cash` were failing or inaccurate due to string-to-float conversion issues (commas/dollar signs) and weak cash masking.
+  - `pipeline.py`: Added "Nuclear Type Enforcement" to `append_daily_snapshot` and `calculate_income_metrics` to strip `$` and `,` before `pd.to_numeric` conversion.
+  - Hardened cash masking: Ticker matching now uses uppercase/stripped normalization and explicitly includes `SGOV` and `CASH_MANUAL` in all dry powder calculations.
+
+- **The 100x Yield/Return Bug**
+  - Root cause: Yields were being multiplied by 100 in Python, causing Google Sheets (which formats as %) to show 141% instead of 1.41%.
+  - Removed `* 100` from `append_daily_snapshot`, `calculate_income_metrics`, and `write_risk_metrics`.
+  - Standardized all yield/return outputs to raw decimals across the pipeline and `tasks/create_dashboard.py`.
+
+- **Zero VaR (Value at Risk) Bug**
+  - Root cause: VaR was defaulting to 0.0 because the historical price fetch was either failing or the calculation was not implemented.
+  - `utils/risk.py`: Implemented `calculate_var` using the **Historical Simulation** method (95% confidence).
+  - Improved `build_price_histories` robustness to handle `yfinance` MultiIndex data and empty results.
+  - `pipeline.py`: Integrated `calculate_var` into `write_risk_metrics` to provide real dollar-value risk metrics.
+
+- **Missing Acquisition Dates & Signal Mapping**
+  - Root cause: Schwab API acquisition dates were buried in `taxLots` or missing; Decision View was showing blank cells for evaluating agents.
+  - `pipeline.py`: Updated `normalize_positions` to extract acquisition dates from `tax_lots` array for Schwab API sources and added `fillna("N/A")` fallback.
+  - `tasks/build_decision_view.py`: Added explicit `.fillna("Not Evaluated")` for Macro and Thesis signal columns to ensure a clean dashboard UI.
+
+- **Syntax Error in FMP Client**
+  - `utils/fmp_client.py`: Fixed an unclosed `try` block in `get_earnings_surprises_cached` that caused a `SyntaxError` on subsequent decorators. Added proper `except Exception` handling and logging.
+
+### Verification
+- `python -m py_compile utils/fmp_client.py` — **PASS**
+- `append_daily_snapshot` math — Verified string-cleaning logic for `$` and `,`.
+- `calculate_var` logic — Verified 5th percentile loss calculation against 1yr daily returns.
+- `Decision_View` mapping — Verified "Not Evaluated" fallback for missing agent signals.
+
+---
+
 ## [Unreleased] — Phase 5: Valuation FMP Fallback + Tax Cash Fix
 
 ### Fixed

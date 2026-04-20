@@ -135,4 +135,16 @@ FMP fundamentals (`pe_ratio`, `peg_ratio`, `debt_to_equity`) are fetched live by
   - Rotation pipeline added (`tasks/derive_rotations.py` + `journal promote`)
   - FMP 429 mitigated (rate limiter + yfinance-first tier); correct fix (`tasks/enrich_fmp.py`) still pending
   - `analyze-all --fresh-bundle` `model_dump()` bug fixed
+  - Murphy TA signal layer added (`tasks/enrich_technicals.py`) — MA50/200, RSI-14, MACD, volume
   - **NEXT:** `tasks/enrich_fmp.py` — bake FMP fundamentals into bundle at snapshot time
+
+### Bundle Enrichment Tasks
+
+| Task | Command | Key injected | Notes |
+|---|---|---|---|
+| `tasks/enrich_atr.py` | `snapshot --enrich-atr` | `calculated_technical_stops` | ATR 14-day stops, Van Tharp input |
+| `tasks/enrich_technicals.py` | `snapshot --enrich-technicals` | `calculated_technicals` | MA50/200, RSI-14, MACD, volume |
+
+Both tasks append to the composite bundle JSON without invalidating the hash.
+Run order: `enrich_atr` first (Van Tharp sizing depends on it), then `enrich_technicals`.
+Both are included in `analyze_all --fresh-bundle` automatically.

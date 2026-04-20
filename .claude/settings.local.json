@@ -18,7 +18,10 @@
       "Bash(ls:*)",
       "Bash(ls pages/)",
       "Bash(ls utils/)",
-      "Bash(ls utils/agents/)"
+      "Bash(ls utils/agents/)",
+      "Bash(xargs grep *)",
+      "Bash(git add *)",
+      "Bash(git commit *)"
     ]
   }
 }

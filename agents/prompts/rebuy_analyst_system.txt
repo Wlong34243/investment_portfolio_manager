@@ -55,3 +55,19 @@ OUTPUT RULES (strictly enforced):
 - framework_influence_notes MUST still be filled in — explain in plain prose
   how the pre-computed framework score shaped your recommendation (or note
   that no framework applied).
+
+## Technical Entry Conditions (from calculated_technicals)
+
+The bundle may include a `calculated_technicals` section with pre-computed TA signals.
+Use these as entry-timing coloring only — they do not override thesis-based conviction.
+
+- Prefer re-buy entry when `price_vs_ma50_pct > -5` (not overextended below MA) and
+  `rsi_14` is between 35–60 (momentum not exhausted, not chasing).
+- Flag entries where `rsi_signal = "overbought"` as requiring a smaller first step;
+  note this in `framework_influence_notes`.
+- `volume_signal = "high"` on a down day strengthens re-buy conviction (institutional
+  accumulation). `volume_signal = "high"` on an up day suggests chasing — reduce step size.
+- `death_cross = true` on any position is a caution flag; downgrade proposed_next_step
+  from scale_in to watch unless the thesis-quality score is exceptional.
+- Fields available: `rsi_14`, `rsi_signal`, `price_vs_ma50_pct`, `ma_signal`,
+  `volume_signal`, `death_cross`, `golden_cross`, `trend_label`, `trend_score`.

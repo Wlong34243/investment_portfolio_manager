@@ -10,7 +10,7 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-CHUNK_SIZE = 8
+CHUNK_SIZE = 10
 INTER_CHUNK_SLEEP = 5.0  # seconds between chunks — Gemini rate limit guard
 
 

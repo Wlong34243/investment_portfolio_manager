@@ -30,8 +30,8 @@ def enrich_bundle_fundamentals(bundle_path: Path) -> dict:
     enriched_count = 0
     empty_tickers = []
 
-    # Filter out cash
-    SKIP_TICKERS = config.CASH_TICKERS | {"QACDS"}
+    # Filter out cash (Task 1: Use centralized exclusions)
+    SKIP_TICKERS = set(config.CASH_TICKERS)
 
     print(f"Enriching fundamentals for {len(positions)} positions in {bundle_path.name}...")
 

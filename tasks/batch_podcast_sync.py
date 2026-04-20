@@ -81,7 +81,7 @@ def get_latest_video(channel_id: str, title_filter: str = None) -> tuple[str, st
         root = ET.fromstring(xml_data)
 
         entries = root.findall(f"{{{ATOM_NS}}}entry")
-        for entry in entries[:15]:
+        for entry in entries[:25]:
             video_id_elem = entry.find(f"{{{YT_NS}}}videoId")
             title_elem    = entry.find(f"{{{ATOM_NS}}}title")
             video_id = video_id_elem.text if video_id_elem is not None else None
@@ -93,7 +93,7 @@ def get_latest_video(channel_id: str, title_filter: str = None) -> tuple[str, st
 
             return video_id, title
 
-        logger.warning(f"No video matching filter '{title_filter}' found in last 15 uploads")
+        logger.warning(f"No video matching filter '{title_filter}' found in last 25 uploads")
         return None, None
     except Exception as e:
         logger.error(f"Failed to fetch RSS for channel {channel_id}: {e}")

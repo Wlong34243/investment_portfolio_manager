@@ -403,7 +403,9 @@ def fetch_transactions(client: schwab.client.Client, start_date=None, end_date=N
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0.0)
 
-        # Build Fingerprint
+        # Build Fingerprint — unified format: Date|Ticker|Action|Quantity|Price (Task 3)
+        # Matches gl_parser.parse_transaction_history so CSV-uploaded and API-fetched
+        # rows for the same trade share the same fingerprint and deduplicate correctly.
         df['Fingerprint'] = df.apply(
             lambda x: f"{str(x['Trade Date'])}|{str(x['Ticker'])}|{str(x['Action'])}|{str(x['Quantity'])}|{str(x['Price'])}",
             axis=1

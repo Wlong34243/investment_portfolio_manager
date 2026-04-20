@@ -1,914 +1,350 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Investment Portfolio Manager — User Documentation</title>
-<style>
-  :root {
-    --ink: #1a1917;
-    --ink-mid: #4a4845;
-    --ink-light: #8a8880;
-    --rule: #e4e1d8;
-    --rule-mid: #ccc9be;
-    --surface: #faf9f6;
-    --surface-warm: #f4f1ea;
-    --accent: #2c5f8a;
-    --accent-light: #dceaf5;
-    --amber: #b56d00;
-    --amber-light: #fef3dc;
-    --teal: #0f6e56;
-    --teal-light: #e1f5ee;
-    --coral: #993c1d;
-    --coral-light: #faece7;
-    --code-bg: #f0ede4;
-    --mono: 'Courier New', 'Lucida Console', monospace;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --ink: #e8e5dc;
-      --ink-mid: #b4b0a6;
-      --ink-light: #7a7770;
-      --rule: #2e2c28;
-      --rule-mid: #3a3834;
-      --surface: #1e1c18;
-      --surface-warm: #232018;
-      --accent: #5ba3d4;
-      --accent-light: #0c2d46;
-      --amber: #e09a40;
-      --amber-light: #2e2010;
-      --teal: #3db892;
-      --teal-light: #04342c;
-      --coral: #d46b4a;
-      --coral-light: #2a1208;
-      --code-bg: #2a2820;
-    }
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: Georgia, 'Times New Roman', serif;
-    font-size: 16px;
-    line-height: 1.75;
-    color: var(--ink);
-    background: var(--surface);
-    max-width: 860px;
-    margin: 0 auto;
-    padding: 3rem 2rem 6rem;
-  }
-  h1 { font-family: Georgia, serif; font-size: 2.2rem; font-weight: 700; line-height: 1.2; margin-bottom: 0.5rem; }
-  h2 { font-family: Georgia, serif; font-size: 1.45rem; font-weight: 700; margin: 3.5rem 0 1rem; padding-bottom: 0.4rem; border-bottom: 1.5px solid var(--rule-mid); }
-  h3 { font-family: Georgia, serif; font-size: 1.15rem; font-weight: 700; margin: 2rem 0 0.75rem; }
-  h4 { font-family: Georgia, serif; font-size: 1rem; font-weight: 700; margin: 1.5rem 0 0.5rem; color: var(--ink-mid); }
-  p { margin-bottom: 1rem; }
-  a { color: var(--accent); }
-  ul, ol { margin: 0 0 1rem 1.5rem; }
-  li { margin-bottom: 0.4rem; }
-  code {
-    font-family: var(--mono);
-    font-size: 0.875em;
-    background: var(--code-bg);
-    padding: 0.1em 0.4em;
-    border-radius: 3px;
-    color: var(--coral);
-  }
-  pre {
-    background: var(--code-bg);
-    border: 1px solid var(--rule);
-    border-radius: 6px;
-    padding: 1.2rem 1.4rem;
-    overflow-x: auto;
-    margin: 1rem 0 1.5rem;
-    font-size: 0.85rem;
-    line-height: 1.6;
-  }
-  pre code { background: none; padding: 0; color: var(--ink-mid); }
-  .subtitle { font-size: 1.05rem; color: var(--ink-mid); margin-bottom: 2rem; }
-  .meta { font-size: 0.85rem; color: var(--ink-light); border-top: 1px solid var(--rule); padding-top: 0.75rem; margin-bottom: 3rem; }
-  .toc { background: var(--surface-warm); border: 1px solid var(--rule); border-radius: 8px; padding: 1.5rem 2rem; margin: 2rem 0 3rem; }
-  .toc h3 { margin-top: 0; font-size: 1rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-light); }
-  .toc ol { margin-left: 1.2rem; }
-  .toc li { margin-bottom: 0.3rem; font-size: 0.95rem; }
-  .toc a { text-decoration: none; color: var(--accent); }
-  .toc a:hover { text-decoration: underline; }
-  .callout {
-    border-left: 3px solid;
-    padding: 0.9rem 1.2rem;
-    margin: 1.5rem 0;
-    border-radius: 0 6px 6px 0;
-    font-size: 0.95rem;
-  }
-  .callout.info { border-color: var(--accent); background: var(--accent-light); }
-  .callout.warning { border-color: var(--amber); background: var(--amber-light); }
-  .callout.success { border-color: var(--teal); background: var(--teal-light); }
-  .callout.rule { border-color: var(--coral); background: var(--coral-light); }
-  .callout strong { display: block; margin-bottom: 0.3rem; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.06em; }
-  .callout.info strong { color: var(--accent); }
-  .callout.warning strong { color: var(--amber); }
-  .callout.success strong { color: var(--teal); }
-  .callout.rule strong { color: var(--coral); }
-  .diagram-wrap { margin: 2rem 0; background: var(--surface-warm); border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; }
-  .diagram-label { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-light); padding: 0.6rem 1rem; border-bottom: 1px solid var(--rule); background: var(--surface); }
-  .diagram-wrap svg { display: block; width: 100%; }
-  table { width: 100%; border-collapse: collapse; margin: 1rem 0 1.5rem; font-size: 0.93rem; }
-  th { background: var(--surface-warm); border: 1px solid var(--rule-mid); padding: 0.5rem 0.75rem; text-align: left; font-weight: 700; font-size: 0.85rem; }
-  td { border: 1px solid var(--rule); padding: 0.45rem 0.75rem; vertical-align: top; }
-  tr:nth-child(even) td { background: var(--surface-warm); }
-  .cmd { display: inline-block; font-family: var(--mono); font-size: 0.82rem; background: var(--code-bg); border: 1px solid var(--rule-mid); padding: 0.2rem 0.6rem; border-radius: 4px; margin: 0.1rem 0; white-space: nowrap; }
-  .phase-badge {
-    display: inline-block;
-    font-family: Georgia, serif;
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    padding: 0.15rem 0.5rem;
-    border-radius: 3px;
-    margin-right: 0.5rem;
-    border: 1px solid;
-  }
-  .phase-done { border-color: var(--teal); color: var(--teal); background: var(--teal-light); }
-  .phase-wip  { border-color: var(--amber); color: var(--amber); background: var(--amber-light); }
-  .phase-next { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
-  .phase-defer { border-color: var(--ink-light); color: var(--ink-light); background: var(--surface-warm); }
-  .checklist li { list-style: none; padding-left: 1.5rem; position: relative; }
-  .checklist li::before { content: '☐'; position: absolute; left: 0; color: var(--ink-light); }
-  .checklist li.done::before { content: '✓'; color: var(--teal); }
-  .checklist li.wip::before { content: '◐'; color: var(--amber); }
-  hr { border: none; border-top: 1px solid var(--rule); margin: 3rem 0; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Investment Portfolio Manager | User Documentation & Agent Tuning Guide</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #1a2744;
+            --secondary: #2c3e50;
+            --accent: #3498db;
+            --bg: #f8f9fa;
+            --text: #333;
+            --border: #e1e4e8;
+            --code-bg: #f1f3f5;
+            --sidebar-width: 280px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background-color: var(--bg);
+            margin: 0;
+            display: flex;
+        }
+
+        /* Sidebar Navigation */
+        nav {
+            width: var(--sidebar-width);
+            background: var(--primary);
+            color: white;
+            height: 100vh;
+            position: sticky;
+            top: 0;
+            padding: 2rem 1rem;
+            overflow-y: auto;
+        }
+
+        nav h2 {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 0.5rem;
+        }
+
+        nav ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        nav li {
+            margin-bottom: 0.8rem;
+        }
+
+        nav a {
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            font-size: 0.95rem;
+            transition: color 0.2s;
+        }
+
+        nav a:hover {
+            color: white;
+        }
+
+        /* Main Content */
+        main {
+            flex: 1;
+            padding: 3rem 4rem;
+            max-width: 1000px;
+            background: white;
+            min-height: 100vh;
+            box-shadow: -5px 0 15px rgba(0,0,0,0.05);
+        }
+
+        h1 { font-size: 2.5rem; color: var(--primary); margin-top: 0; }
+        h2 { font-size: 1.8rem; color: var(--secondary); margin-top: 3rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; }
+        h3 { font-size: 1.4rem; color: var(--primary); margin-top: 2rem; }
+
+        p { margin-bottom: 1.2rem; }
+
+        code {
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--code-bg);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+
+        pre {
+            background: #282c34;
+            color: #abb2bf;
+            padding: 1.5rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin-bottom: 1.5rem;
+        }
+
+        pre code {
+            background: transparent;
+            color: inherit;
+            padding: 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2rem 0;
+            font-size: 0.95rem;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 12px 15px;
+            border: 1px solid var(--border);
+        }
+
+        th {
+            background-color: #f1f3f5;
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-live { background: #e6fffa; color: #2c7a7b; border: 1px solid #81e6d9; }
+        .badge-dry { background: #fffaf0; color: #9c4221; border: 1px solid #fbd38d; }
+
+        .callout {
+            padding: 1.5rem;
+            border-left: 5px solid var(--accent);
+            background: #eef2f7;
+            margin: 2rem 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        /* Print Styles */
+        @media print {
+            nav { display: none; }
+            main { padding: 0; box-shadow: none; max-width: 100%; }
+            body { background: white; }
+            h2, h3 { page-break-after: avoid; }
+            table { page-break-inside: auto; }
+            tr { page-break-inside: avoid; page-break-after: auto; }
+            pre { white-space: pre-wrap; word-wrap: break-word; background: #eee; color: #000; border: 1px solid #ccc; }
+        }
+    </style>
 </head>
 <body>
-
-<h1>Investment Portfolio Manager</h1>
-<p class="subtitle">User Documentation — Architecture, Data Flows &amp; Implementation Guide</p>
-<p class="meta">Version: CLI-First Spine Architecture &nbsp;|&nbsp; April 2026 &nbsp;|&nbsp; Single user: Bill</p>
-
-<div class="toc">
-  <h3>Contents</h3>
-  <ol>
-    <li><a href="#overview">System overview</a></li>
-    <li><a href="#data-sources">Data sources</a></li>
-    <li><a href="#full-data-flow">Full data flow diagram</a></li>
-    <li><a href="#bundle-architecture">The bundle architecture</a></li>
-    <li><a href="#agent-kit">The agent kit</a></li>
-    <li><a href="#agent-data-channels">Agent data channels</a></li>
-    <li><a href="#agent-development">Agent development &amp; refinement</a></li>
-    <li><a href="#sheets-schema">Google Sheets schema</a></li>
-    <li><a href="#phase-guide">Phase-by-phase implementation guide</a></li>
-    <li><a href="#cli-reference">CLI command reference</a></li>
-    <li><a href="#hard-rules">Non-negotiable rules</a></li>
-    <li><a href="#troubleshooting">Troubleshooting</a></li>
-  </ol>
-</div>
-
-<!-- ─────────────────────────────────────── OVERVIEW ─── -->
-<h2 id="overview">1. System overview</h2>
-
-<p>This system manages a ~$550K liquid investment portfolio (50+ positions across multiple Schwab brokerage accounts). It is a <strong>headless CLI tool</strong> — there is no web server, no automatic UI refresh, and no state held in memory between runs. Every run freezes its inputs to an immutable hashed bundle, executes deterministically, and exits.</p>
-
-<p>The authoritative user interface is <strong>Google Sheets</strong>. All pipeline output lands there. Agents write only to sandbox tabs. Target allocations are manual-only. The visual layer (charts, dashboards) is a pluggable consumer of the Sheet — it never owns data or runs the pipeline.</p>
-
-<div class="callout info">
-  <strong>Core principle</strong>
-  "LLMs synthesize, APIs calculate." Python gathers all data deterministically. Agents reason over immutable snapshots. AI output is always sandboxed before any human-approved promotion. <code>DRY_RUN</code> defaults to <code>true</code> everywhere.
-</div>
-
-<h3>What the system does</h3>
-<ul>
-  <li>Ingests live portfolio positions from the Schwab API (or CSV fallback)</li>
-  <li>Enriches positions with prices, sector, beta, yield via yFinance and FMP</li>
-  <li>Freezes all inputs to a tamper-evident, SHA256-hashed context bundle</li>
-  <li>Runs AI agents over the frozen bundle: Re-buy, Add-Candidate, New Idea Screener, Coherence Checker</li>
-  <li>Writes agent output to sandbox tabs in Google Sheets for human review</li>
-  <li>Tracks portfolio history, risk metrics, income, and transactions over time</li>
-  <li>Processes podcast transcripts weekly for macro allocation signals (sandboxed)</li>
-</ul>
-
-<h3>What the system never does</h3>
-<ul>
-  <li>Execute trades — read-only is a structural guarantee, not a config flag</li>
-  <li>Write to <code>Target_Allocation</code> — manual-only; agents write to <code>AI_Suggested_Allocation</code></li>
-  <li>Provide price targets or directional market predictions</li>
-  <li>Fetch live data inside an agent — all data is pre-gathered before the LLM is invoked</li>
-</ul>
-
-<!-- ─────────────────────────────────────── DATA SOURCES ─── -->
-<h2 id="data-sources">2. Data sources</h2>
-
-<table>
-  <tr><th>Source</th><th>What it provides</th><th>Auth</th><th>Fallback</th></tr>
-  <tr><td>Schwab API</td><td>Live positions, cost basis, cash balances, L1 quotes, price history</td><td>OAuth2 via GCS-stored tokens</td><td>Schwab CSV export</td></tr>
-  <tr><td>yFinance</td><td>Prices, sector, beta, dividend yield, 1yr history</td><td>None (public scrape)</td><td>Description-based sector fallback</td></tr>
-  <tr><td>FMP (Financial Modeling Prep)</td><td>Earnings, fundamentals, historical P/E, three-statement data</td><td>API key in GCP Secret Manager</td><td>Surface "data unavailable" — no silent fallback</td></tr>
-  <tr><td>Finnhub</td><td>News feed per ticker</td><td>API key</td><td>Skip silently</td></tr>
-  <tr><td>YouTube RSS + transcript API</td><td>Podcast transcripts (weekly)</td><td>None — keyless</td><td>Skip episode if transcript unavailable</td></tr>
-  <tr><td>Schwab CSV (manual)</td><td>Realized G/L history, disaster-recovery positions</td><td>None</td><td>Primary path for realized G/L until API path is extended</td></tr>
-  <tr><td>STAX</td><td>Monthly macro allocation signal</td><td>None</td><td>Manual entry in Sheet</td></tr>
-</table>
-
-<div class="callout warning">
-  <strong>Schwab API token lifecycle</strong>
-  Access tokens expire after 30 minutes. Refresh tokens expire after 7 days. A GCP Cloud Function running every 25 minutes (24/7) keeps the refresh token alive. If the Cloud Function stops running for more than 7 days, the token is dead and requires a manual browser re-authorization. Monitor the <code>schwab_alert.json</code> blob in GCS — two consecutive Cloud Function failures trigger a Gmail alert.
-</div>
-
-<!-- ─────────────────────────────────────── FULL DATA FLOW ─── -->
-<h2 id="full-data-flow">3. Full data flow diagram</h2>
-
-<p>The diagram below shows the complete pipeline from raw data sources through to Google Sheets and the optional visual layer. Follow the numbered stages when debugging.</p>
-
-<div class="diagram-wrap">
-  <div class="diagram-label">Figure 1 — Full system data flow</div>
-  <svg viewBox="0 0 680 700" role="img" xmlns="http://www.w3.org/2000/svg">
-    <title>Investment Portfolio Manager full data flow</title>
-    <desc>Five pipeline stages: Ingest from Schwab API or CSV, Normalize positions, Enrich with market data, Freeze to immutable SHA256 bundle, then Agent reasoning over the bundle writing to Google Sheets sandbox tabs. An optional visual layer reads from Sheets.</desc>
-    <defs>
-      <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-        <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-      </marker>
-    </defs>
-
-    <!-- STAGE LABELS (left margin) -->
-    <text x="14" y="108" font-family="Georgia,serif" font-size="10" fill="currentColor" opacity="0.45" transform="rotate(-90,14,108)" text-anchor="middle">① INGEST</text>
-    <text x="14" y="234" font-family="Georgia,serif" font-size="10" fill="currentColor" opacity="0.45" transform="rotate(-90,14,234)" text-anchor="middle">② NORMALIZE</text>
-    <text x="14" y="350" font-family="Georgia,serif" font-size="10" fill="currentColor" opacity="0.45" transform="rotate(-90,14,350)" text-anchor="middle">③ ENRICH</text>
-    <text x="14" y="458" font-family="Georgia,serif" font-size="10" fill="currentColor" opacity="0.45" transform="rotate(-90,14,458)" text-anchor="middle">④ BUNDLE</text>
-    <text x="14" y="588" font-family="Georgia,serif" font-size="10" fill="currentColor" opacity="0.45" transform="rotate(-90,14,588)" text-anchor="middle">⑤ AGENTS</text>
-
-    <!-- ── STAGE 1: INGEST ── -->
-    <!-- Schwab API box -->
-    <rect x="34" y="36" width="162" height="56" rx="8" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.25"/>
-    <rect x="34" y="36" width="162" height="56" rx="8" fill="#dceaf5" opacity="0.35"/>
-    <text x="115" y="61" font-family="Georgia,serif" font-size="13" font-weight="700" text-anchor="middle" fill="currentColor">Schwab API</text>
-    <text x="115" y="78" font-family="Georgia,serif" font-size="11" text-anchor="middle" fill="currentColor" opacity="0.65">positions · quotes · history</text>
-
-    <!-- CSV fallback -->
-    <rect x="218" y="36" width="130" height="56" rx="8" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.25"/>
-    <rect x="218" y="36" width="130" height="56" rx="8" fill="#f0ede4" opacity="0.5"/>
-    <text x="283" y="61" font-family="Georgia,serif" font-size="13" font-weight="700" text-anchor="middle" fill="currentColor">CSV fallback</text>
-    <text x="283" y="78" font-family="Georgia,serif" font-size="11" text-anchor="middle" fill="currentColor" opacity="0.65">Schwab export</text>
-
-    <!-- Token keep-alive (GCP Cloud Function) -->
-    <rect x="370" y="36" width="140" height="56" rx="8" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.25"/>
-    <rect x="370" y="36" width="140" height="56" rx="8" fill="#e1f5ee" opacity="0.45"/>
-    <text x="440" y="57" font-family="Georgia,serif" font-size="12" font-weight="700" text-anchor="middle" fill="currentColor">GCP Cloud Fn</text>
-    <text x="440" y="73" font-family="Georgia,serif" font-size="11" text-anchor="middle" fill="currentColor" opacity="0.65">token keep-alive</text>
-    <text x="440" y="86" font-family="Georgia,serif" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.5">every 25 min · GCS tokens</text>
-
-    <!-- Arrow: Cloud Fn → Schwab API -->
-    <line x1="370" y1="64" x2="196" y2="64" stroke="currentColor" stroke-width="0.75" stroke-dasharray="4 3" marker-end="url(#arr)" opacity="0.4"/>
-
-    <!-- manager.py snapshot box -->
-    <rect x="80" y="128" width="240" height="48" rx="10" fill="#2c5f8a" opacity="0.15"/>
-    <rect x="80" y="128" width="240" height="48" rx="10" fill="none" stroke="#2c5f8a" stroke-width="1.5" opacity="0.6"/>
-    <text x="200" y="150" font-family="Georgia,serif" font-size="13" font-weight="700" text-anchor="middle" fill="currentColor">manager.py snapshot</text>
-    <text x="200" y="167" font-family="Georgia,serif" font-size="11" text-anchor="middle" fill="currentColor" opacity="0.6">--csv &lt;path&gt; | --live-api | --cash N</text>
-
-    <!-- Arrows: sources → snapshot -->
-    <line x1="115" y1="92" x2="160" y2="128" stroke="currentColor" stroke-width="1" marker-end="url(#arr)" opacity="0.5"/>
-    <line x1="283" y1="92" x2="240" y2="128" stroke="currentColor" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#arr)" opacity="0.35"/>
-
-    <!-- ── STAGE 2: NORMALIZE ── -->
-    <rect x="80" y="206" width="240" height="56" rx="8" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.2"/>
-    <rect x="80" y="206" width="240" height="56" rx="8" fill="#f4f1ea" opacity="0.6"/>
-    <text x="200" y="230" font-family="Georgia,serif" font-size="13" font-weight="700" text-anchor="middle" fill="currentColor">normalize_positions()</text>
-    <text x="200" y="247" font-family="Georgia,serif" font-size="11" text-anchor="middle" fill="currentColor" opacity="0.65">clean · aggregate accounts · inject CASH_MANUAL</text>
-
-    <line x1="200" y1="176" x2="200" y2="206" stroke="currentColor" stroke-width="1" marker-end="url(#arr)" opacity="0.6"/>
-
-    <!-- ── STAGE 3: ENRICH ── -->
-    <!-- yFinance -->
-    <rect x="34" y="296" width="118" height="48" rx="8" fill="#fef3dc" opacity="0.7"/>
-    <rect x="34" y="296" width="118" height="48" rx="8" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.2"/>
-    <text x="93" y="318" font-family="Georgia,serif" font-size="12" font-weight="700" text-anchor="middle" fill="currentColor">yFinance</text>
-    <text x="93" y="333" font-family="Georgia,serif" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.6">price · beta · yield · sector</text>
-
-    <!-- FMP -->
-    <rect x="170" y="296" width="118" height="48" rx="8" fill="#fef3dc" opacity="0.7"/>
-    <rect x="170" y="296" width="118" height="48" rx="8" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.2"/>
-    <text x="229" y="318" font-family="Georgia,serif" font-size="12" font-weight="700" text-anchor="middle" fill="currentColor">FMP</text>
-    <text x="229" y="333" font-family="Georgia,serif" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.6">earnings · fundamentals</text>
-
-    <!-- Finnhub -->
-    <rect x="306" y="296" width="104" height="48" rx="8" fill="#fef3dc" opacity="0.7"/>
-    <rect x="306" y="296" width="104" height="48" rx="8" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.2"/>
-    <text x="358" y="318" font-family="Georgia,serif" font-size="12" font-weight="700" text-anchor="middle" fill="currentColor">Finnhub</text>
-    <text x="358" y="333" font-family="Georgia,serif" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.6">news feed</text>
-
-    <!-- Arrows: normalize → enrichers -->
-    <line x1="200" y1="262" x2="93" y2="296" stroke="currentColor" stroke-width="0.75" marker-end="url(#arr)" opacity="0.45"/>
-    <line x1="200" y1="262" x2="200" y2="296" stroke="currentColor" stroke-width="0.75" marker-end="url(#arr)" opacity="0.45"/>
-    <line x1="200" y1="262" x2="310" y2="296" stroke="currentColor" stroke-width="0.75" marker-end="url(#arr)" opacity="0.45"/>
-
-    <!-- ── STAGE 4: BUNDLE ── -->
-    <!-- Market bundle -->
-    <rect x="60" y="382" width="175" height="60" rx="10" fill="#2c5f8a" opacity="0.12"/>
-    <rect x="60" y="382" width="175" height="60" rx="10" fill="none" stroke="#2c5f8a" stroke-width="1.5" opacity="0.55"/>
-    <text x="147" y="406" font-family="Georgia,serif" font-size="12" font-weight="700" text-anchor="middle" fill="currentColor">market bundle</text>
-    <text x="147" y="422" font-family="Georgia,serif" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.65">context_bundle_&lt;ts&gt;_&lt;hash&gt;.json</text>
-    <text x="147" y="436" font-family="Georgia,serif" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.5">SHA256 content hash</text>
-
-    <!-- Vault bundle -->
-    <rect x="258" y="382" width="175" height="60" rx="10" fill="#0f6e56" opacity="0.1"/>
-    <rect x="258" y="382" width="175" height="60" rx="10" fill="none" stroke="#0f6e56" stroke-width="1.5" opacity="0.55"/>
-    <text x="345" y="406" font-family="Georgia,serif" font-size="12" font-weight="700" text-anchor="middle" fill="currentColor">vault bundle</text>
-    <text x="345" y="422" font-family="Georgia,serif" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.65">vault_bundle_&lt;ts&gt;_&lt;hash&gt;.json</text>
-    <text x="345" y="436" font-family="Georgia,serif" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.5">thesis files · transcripts</text>
-
-    <!-- Composite bundle -->
-    <rect x="130" y="475" width="240" height="56" rx="10" fill="#3c3489" opacity="0.1"/>
-    <rect x="130" y="475" width="240" height="56" rx="10" fill="none" stroke="#3c3489" stroke-width="2" opacity="0.6"/>
-    <text x="250" y="499" font-family="Georgia,serif" font-size="13" font-weight="700" text-anchor="middle" fill="currentColor">composite bundle</text>
-    <text x="250" y="516" font-family="Georgia,serif" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.65">SHA256(market_hash + vault_hash) = composite_hash</text>
-
-    <!-- Arrows: enrichers → market bundle -->
-    <line x1="93" y1="344" x2="120" y2="382" stroke="currentColor" stroke-width="0.75" marker-end="url(#arr)" opacity="0.45"/>
-    <line x1="229" y1="344" x2="185" y2="382" stroke="currentColor" stroke-width="0.75" marker-end="url(#arr)" opacity="0.45"/>
-
-    <!-- Arrow: vault sources → vault bundle (from side) -->
-    <line x1="440" y1="64" x2="440" y2="410" stroke="#0f6e56" stroke-width="0.75" stroke-dasharray="3 3" opacity="0.4"/>
-    <line x1="440" y1="410" x2="433" y2="410" stroke="#0f6e56" stroke-width="0.75" marker-end="url(#arr)" opacity="0.4"/>
-    <text x="450" y="310" font-family="Georgia,serif" font-size="10" fill="currentColor" opacity="0.4">vault/ thesis</text>
-    <text x="450" y="322" font-family="Georgia,serif" font-size="10" fill="currentColor" opacity="0.4">files · transcripts</text>
-
-    <!-- Arrows: sub-bundles → composite -->
-    <line x1="147" y1="442" x2="200" y2="475" stroke="currentColor" stroke-width="1" marker-end="url(#arr)" opacity="0.5"/>
-    <line x1="345" y1="442" x2="296" y2="475" stroke="currentColor" stroke-width="1" marker-end="url(#arr)" opacity="0.5"/>
-
-    <!-- ── STAGE 5: AGENTS ── -->
-    <!-- Four agent boxes -->
-    <rect x="34"  y="564" width="130" height="52" rx="8" fill="#faece7" opacity="0.7"/>
-    <rect x="34"  y="564" width="130" height="52" rx="8" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.2"/>
-    <text x="99" y="586" font-family="Georgia,serif" font-size="11" font-weight="700" text-anchor="middle" fill="currentColor">Re-buy Analyst</text>
-    <text x="99" y="601" font-family="Georgia,serif" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.6">scale-in candidates</text>
-    <text x="99" y="613" font-family="Georgia,serif" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.5">needs vault bundle</text>
-
-    <rect x="180" y="564" width="130" height="52" rx="8" fill="#faece7" opacity="0.7"/>
-    <rect x="180" y="564" width="130" height="52" rx="8" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.2"/>
-    <text x="245" y="586" font-family="Georgia,serif" font-size="11" font-weight="700" text-anchor="middle" fill="currentColor">Add-Candidate</text>
-    <text x="245" y="601" font-family="Georgia,serif" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.6">new tickers to evaluate</text>
-    <text x="245" y="613" font-family="Georgia,serif" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.5">market bundle only</text>
-
-    <rect x="326" y="564" width="130" height="52" rx="8" fill="#faece7" opacity="0.7"/>
-    <rect x="326" y="564" width="130" height="52" rx="8" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.2"/>
-    <text x="391" y="586" font-family="Georgia,serif" font-size="11" font-weight="700" text-anchor="middle" fill="currentColor">New Idea Screener</text>
-    <text x="391" y="601" font-family="Georgia,serif" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.6">user-supplied tickers</text>
-    <text x="391" y="613" font-family="Georgia,serif" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.5">displacement analysis</text>
-
-    <rect x="472" y="564" width="148" height="52" rx="8" fill="#faece7" opacity="0.7"/>
-    <rect x="472" y="564" width="148" height="52" rx="8" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.2"/>
-    <text x="546" y="586" font-family="Georgia,serif" font-size="11" font-weight="700" text-anchor="middle" fill="currentColor">Coherence Checker</text>
-    <text x="546" y="601" font-family="Georgia,serif" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.6">runs after all agents</text>
-    <text x="546" y="613" font-family="Georgia,serif" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.5">buy list consistency</text>
-
-    <!-- Arrows: composite → agents -->
-    <line x1="199" y1="531" x2="99"  y2="564" stroke="currentColor" stroke-width="0.75" marker-end="url(#arr)" opacity="0.45"/>
-    <line x1="220" y1="531" x2="200" y2="564" stroke="currentColor" stroke-width="0.75" marker-end="url(#arr)" opacity="0.45"/>
-    <line x1="270" y1="531" x2="350" y2="564" stroke="currentColor" stroke-width="0.75" marker-end="url(#arr)" opacity="0.45"/>
-    <line x1="295" y1="531" x2="490" y2="564" stroke="currentColor" stroke-width="0.75" marker-end="url(#arr)" opacity="0.45"/>
-
-    <!-- Output label -->
-    <text x="200" y="654" font-family="Georgia,serif" font-size="11" fill="currentColor" opacity="0.5" text-anchor="middle">↓ Agent_Outputs (sandbox) · AI_Suggested_Allocation · bundles/*.md</text>
-    <text x="200" y="668" font-family="Georgia,serif" font-size="10" fill="currentColor" opacity="0.35" text-anchor="middle">DRY_RUN=true by default — no writes without --live flag</text>
-
-    <!-- Google Sheets icon area (right side) -->
-    <rect x="530" y="128" width="120" height="360" rx="10" fill="none" stroke="#0f6e56" stroke-width="0.75" stroke-dasharray="4 3" opacity="0.35"/>
-    <text x="590" y="148" font-family="Georgia,serif" font-size="11" font-weight="700" text-anchor="middle" fill="currentColor" opacity="0.6">Google Sheets</text>
-    <text x="590" y="162" font-family="Georgia,serif" font-size="9" text-anchor="middle" fill="currentColor" opacity="0.4">(authoritative frontend)</text>
-
-    <text x="590" y="192" font-family="Georgia,serif" font-size="9" text-anchor="middle" fill="currentColor" opacity="0.55">Holdings_Current</text>
-    <text x="590" y="206" font-family="Georgia,serif" font-size="9" text-anchor="middle" fill="currentColor" opacity="0.55">Daily_Snapshots</text>
-    <text x="590" y="220" font-family="Georgia,serif" font-size="9" text-anchor="middle" fill="currentColor" opacity="0.55">Risk_Metrics</text>
-    <text x="590" y="234" font-family="Georgia,serif" font-size="9" text-anchor="middle" fill="currentColor" opacity="0.55">Income_Tracking</text>
-    <line x1="530" y1="244" x2="650" y2="244" stroke="currentColor" stroke-width="0.5" opacity="0.2"/>
-    <text x="590" y="262" font-family="Georgia,serif" font-size="9" text-anchor="middle" fill="#b56d00" opacity="0.7">Target_Allocation</text>
-    <text x="590" y="275" font-family="Georgia,serif" font-size="8" text-anchor="middle" fill="#b56d00" opacity="0.6">← manual only</text>
-    <line x1="530" y1="286" x2="650" y2="286" stroke="currentColor" stroke-width="0.5" opacity="0.2"/>
-    <text x="590" y="304" font-family="Georgia,serif" font-size="9" text-anchor="middle" fill="currentColor" opacity="0.55">AI_Suggested_Allocation</text>
-    <text x="590" y="317" font-family="Georgia,serif" font-size="8" text-anchor="middle" fill="currentColor" opacity="0.4">← sandbox, never promoted</text>
-    <text x="590" y="330" font-family="Georgia,serif" font-size="9" text-anchor="middle" fill="currentColor" opacity="0.55">Agent_Outputs</text>
-    <text x="590" y="343" font-family="Georgia,serif" font-size="9" text-anchor="middle" fill="currentColor" opacity="0.55">Trade_Log</text>
-    <text x="590" y="356" font-family="Georgia,serif" font-size="9" text-anchor="middle" fill="currentColor" opacity="0.55">Realized_GL</text>
-    <line x1="530" y1="370" x2="650" y2="370" stroke="currentColor" stroke-width="0.5" opacity="0.2"/>
-    <text x="590" y="386" font-family="Georgia,serif" font-size="9" text-anchor="middle" fill="currentColor" opacity="0.4">Looker Studio /</text>
-    <text x="590" y="398" font-family="Georgia,serif" font-size="9" text-anchor="middle" fill="currentColor" opacity="0.4">FastAPI+HTMX</text>
-    <text x="590" y="410" font-family="Georgia,serif" font-size="9" text-anchor="middle" fill="currentColor" opacity="0.4">(read-only consumer)</text>
-
-    <!-- Arrows: pipeline output → Sheets -->
-    <line x1="340" y1="230" x2="530" y2="270" stroke="currentColor" stroke-width="0.5" stroke-dasharray="3 3" marker-end="url(#arr)" opacity="0.3"/>
-    <line x1="400" y1="344" x2="530" y2="344" stroke="currentColor" stroke-width="0.5" stroke-dasharray="3 3" marker-end="url(#arr)" opacity="0.3"/>
-
-  </svg>
-</div>
-
-<!-- ─────────────────────────────────────── BUNDLE ARCHITECTURE ─── -->
-<h2 id="bundle-architecture">4. The bundle architecture</h2>
-
-<p>Every AI call is traced to an immutable input snapshot. This is the fundamental audit guarantee — not a nice-to-have. If an agent output ever looks wrong, the bundle JSON tells you exactly what the agent saw: every position, every price, every thesis file, and the exact library versions used.</p>
-
-<div class="diagram-wrap">
-  <div class="diagram-label">Figure 2 — Bundle composition and hash chain</div>
-  <svg viewBox="0 0 680 310" role="img" xmlns="http://www.w3.org/2000/svg">
-    <title>Bundle hash chain</title>
-    <desc>Market bundle and vault bundle each have independent SHA256 hashes. The composite bundle stores both paths and hashes and computes a composite hash from SHA256(market_hash + vault_hash). Every agent response must include the composite_hash.</desc>
-    <defs>
-      <marker id="arr2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-        <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-      </marker>
-    </defs>
-
-    <!-- Market bundle box -->
-    <rect x="34" y="30" width="220" height="110" rx="10" fill="#2c5f8a" opacity="0.1"/>
-    <rect x="34" y="30" width="220" height="110" rx="10" fill="none" stroke="#2c5f8a" stroke-width="1.5" opacity="0.5"/>
-    <text x="144" y="54" font-family="Georgia,serif" font-size="13" font-weight="700" text-anchor="middle" fill="currentColor">market bundle</text>
-    <text x="144" y="72" font-family="Georgia,serif" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.6">positions · prices · cost_basis</text>
-    <text x="144" y="86" font-family="Georgia,serif" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.6">weight_pct · cash · enrichment</text>
-    <text x="144" y="106" font-family="Georgia,serif" font-size="10" font-weight="700" text-anchor="middle" fill="#2c5f8a" opacity="0.8">SHA256(canonical_json)</text>
-    <text x="144" y="120" font-family="Georgia,serif" font-size="9" text-anchor="middle" fill="currentColor" opacity="0.5">= market_hash (64 hex chars)</text>
-
-    <!-- Vault bundle box -->
-    <rect x="286" y="30" width="220" height="110" rx="10" fill="#0f6e56" opacity="0.1"/>
-    <rect x="286" y="30" width="220" height="110" rx="10" fill="none" stroke="#0f6e56" stroke-width="1.5" opacity="0.5"/>
-    <text x="396" y="54" font-family="Georgia,serif" font-size="13" font-weight="700" text-anchor="middle" fill="currentColor">vault bundle</text>
-    <text x="396" y="72" font-family="Georgia,serif" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.6">_thesis.md files per ticker</text>
-    <text x="396" y="86" font-family="Georgia,serif" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.6">podcast transcripts · research</text>
-    <text x="396" y="106" font-family="Georgia,serif" font-size="10" font-weight="700" text-anchor="middle" fill="#0f6e56" opacity="0.8">SHA256(file_bytes per doc)</text>
-    <text x="396" y="120" font-family="Georgia,serif" font-size="9" text-anchor="middle" fill="currentColor" opacity="0.5">= vault_hash (64 hex chars)</text>
-
-    <!-- Composite bundle box -->
-    <rect x="130" y="196" width="290" height="88" rx="10" fill="#3c3489" opacity="0.1"/>
-    <rect x="130" y="196" width="290" height="88" rx="10" fill="none" stroke="#3c3489" stroke-width="2" opacity="0.55"/>
-    <text x="275" y="220" font-family="Georgia,serif" font-size="13" font-weight="700" text-anchor="middle" fill="currentColor">composite bundle</text>
-    <text x="275" y="238" font-family="Georgia,serif" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.6">market_bundle_path · vault_bundle_path</text>
-    <text x="275" y="255" font-family="Georgia,serif" font-size="10" font-weight="700" text-anchor="middle" fill="#3c3489" opacity="0.8">SHA256(market_hash + vault_hash)</text>
-    <text x="275" y="270" font-family="Georgia,serif" font-size="9" text-anchor="middle" fill="currentColor" opacity="0.5">= composite_hash → required in every agent response</text>
-
-    <!-- Arrows: sub-bundles → composite -->
-    <path d="M144 140 L144 170 L240 170 L240 196" fill="none" stroke="currentColor" stroke-width="1" marker-end="url(#arr2)" opacity="0.45"/>
-    <path d="M396 140 L396 170 L308 170 L308 196" fill="none" stroke="currentColor" stroke-width="1" marker-end="url(#arr2)" opacity="0.45"/>
-
-    <!-- Agent response note (far right) -->
-    <rect x="542" y="56" width="112" height="72" rx="8" fill="#faece7" opacity="0.6"/>
-    <rect x="542" y="56" width="112" height="72" rx="8" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.2"/>
-    <text x="598" y="76" font-family="Georgia,serif" font-size="11" font-weight="700" text-anchor="middle" fill="currentColor">agent response</text>
-    <text x="598" y="92" font-family="Georgia,serif" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.6">Pydantic model</text>
-    <text x="598" y="107" font-family="Georgia,serif" font-size="10" font-weight="700" text-anchor="middle" fill="#993c1d" opacity="0.8">bundle_hash: str</text>
-    <text x="598" y="120" font-family="Georgia,serif" font-size="9" text-anchor="middle" fill="currentColor" opacity="0.5">required field</text>
-    <line x1="542" y1="230" x2="524" y2="230" stroke="currentColor" stroke-width="0.5" stroke-dasharray="3 3" opacity="0.3" marker-end="url(#arr2)"/>
-    <line x1="542" y1="230" x2="542" y2="92" stroke="currentColor" stroke-width="0.5" stroke-dasharray="3 3" opacity="0.3"/>
-  </svg>
-</div>
-
-<h3>Why content-hash, not Drive revision ID</h3>
-<p>The audit guarantee must hold without Drive being reachable. A content hash (SHA256 of file bytes) is self-contained: you can verify a thesis file against a six-month-old bundle without making any API call. Drive revision IDs can be deleted; file bytes are permanent.</p>
-
-<h3>The missing thesis rule</h3>
-<p>If a position has no <code>_thesis.md</code> file, the vault bundler does not fail. It produces a synthetic document with <code>thesis_present: false</code> and logs a warning. Agents downstream see the gap and reduce their confidence accordingly. This is intentional — you can run the agents while backfilling theses.</p>
-
-<!-- ─────────────────────────────────────── AGENT KIT ─── -->
-<h2 id="agent-kit">5. The agent kit</h2>
-
-<div class="diagram-wrap">
-  <div class="diagram-label">Figure 3 — Agent workflow and output routing</div>
-  <svg viewBox="0 0 680 250" role="img" xmlns="http://www.w3.org/2000/svg">
-    <title>Agent workflow</title>
-    <desc>Four agents each receive the composite bundle and write to the Agent_Outputs sandbox tab. Target_Allocation is manual-only and never touched by agents. The Coherence Checker runs last over the full buy list.</desc>
-    <defs>
-      <marker id="arr3" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-        <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-      </marker>
-    </defs>
-
-    <!-- Composite bundle input -->
-    <rect x="240" y="20" width="200" height="48" rx="10" fill="#3c3489" opacity="0.1"/>
-    <rect x="240" y="20" width="200" height="48" rx="10" fill="none" stroke="#3c3489" stroke-width="1.5" opacity="0.5"/>
-    <text x="340" y="42" font-family="Georgia,serif" font-size="13" font-weight="700" text-anchor="middle" fill="currentColor">composite bundle</text>
-    <text x="340" y="58" font-family="Georgia,serif" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.6">immutable · hashed · frozen</text>
-
-    <!-- Four agent boxes -->
-    <rect x="20"  y="112" width="130" height="58" rx="8" fill="#faece7" opacity="0.6"/>
-    <rect x="20"  y="112" width="130" height="58" rx="8" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.25"/>
-    <text x="85" y="134" font-family="Georgia,serif" font-size="11" font-weight="700" text-anchor="middle" fill="currentColor">Re-buy Analyst</text>
-    <text x="85" y="150" font-family="Georgia,serif" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.6">needs thesis</text>
-    <text x="85" y="163" font-family="Georgia,serif" font-size="9" text-anchor="middle" fill="currentColor" opacity="0.5">scale_in / hold / watch</text>
-
-    <rect x="170" y="112" width="130" height="58" rx="8" fill="#faece7" opacity="0.6"/>
-    <rect x="170" y="112" width="130" height="58" rx="8" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.25"/>
-    <text x="235" y="134" font-family="Georgia,serif" font-size="11" font-weight="700" text-anchor="middle" fill="currentColor">Add-Candidate</text>
-    <text x="235" y="150" font-family="Georgia,serif" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.6">style fit · overlap</text>
-    <text x="235" y="163" font-family="Georgia,serif" font-size="9" text-anchor="middle" fill="currentColor" opacity="0.5">displacement analysis</text>
-
-    <rect x="320" y="112" width="130" height="58" rx="8" fill="#faece7" opacity="0.6"/>
-    <rect x="320" y="112" width="130" height="58" rx="8" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.25"/>
-    <text x="385" y="134" font-family="Georgia,serif" font-size="11" font-weight="700" text-anchor="middle" fill="currentColor">New Idea Screener</text>
-    <text x="385" y="150" font-family="Georgia,serif" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.6">user-supplied tickers</text>
-    <text x="385" y="163" font-family="Georgia,serif" font-size="9" text-anchor="middle" fill="currentColor" opacity="0.5">ranked fit score</text>
-
-    <rect x="470" y="112" width="155" height="58" rx="8" fill="#faece7" opacity="0.6"/>
-    <rect x="470" y="112" width="155" height="58" rx="8" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.25"/>
-    <text x="547" y="134" font-family="Georgia,serif" font-size="11" font-weight="700" text-anchor="middle" fill="currentColor">Coherence Checker</text>
-    <text x="547" y="150" font-family="Georgia,serif" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.6">runs last · full buy list</text>
-    <text x="547" y="163" font-family="Georgia,serif" font-size="9" text-anchor="middle" fill="currentColor" opacity="0.5">overlap · concentration</text>
-
-    <!-- Arrows: bundle → agents -->
-    <line x1="290" y1="68" x2="100" y2="112" stroke="currentColor" stroke-width="0.75" marker-end="url(#arr3)" opacity="0.4"/>
-    <line x1="310" y1="68" x2="235" y2="112" stroke="currentColor" stroke-width="0.75" marker-end="url(#arr3)" opacity="0.4"/>
-    <line x1="360" y1="68" x2="385" y2="112" stroke="currentColor" stroke-width="0.75" marker-end="url(#arr3)" opacity="0.4"/>
-    <line x1="390" y1="68" x2="520" y2="112" stroke="currentColor" stroke-width="0.75" marker-end="url(#arr3)" opacity="0.4"/>
-
-    <!-- Output: Agent_Outputs sandbox -->
-    <rect x="80" y="208" width="340" height="36" rx="8" fill="#e1f5ee" opacity="0.5"/>
-    <rect x="80" y="208" width="340" height="36" rx="8" fill="none" stroke="#0f6e56" stroke-width="1" opacity="0.4"/>
-    <text x="250" y="223" font-family="Georgia,serif" font-size="11" font-weight="700" text-anchor="middle" fill="currentColor">Agent_Outputs sandbox tab</text>
-    <text x="250" y="237" font-family="Georgia,serif" font-size="9" text-anchor="middle" fill="currentColor" opacity="0.6">DRY_RUN=true default · fingerprint dedup · never Target_Allocation</text>
-
-    <!-- Arrows: agents → sandbox -->
-    <line x1="85"  y1="170" x2="160" y2="208" stroke="currentColor" stroke-width="0.75" marker-end="url(#arr3)" opacity="0.4"/>
-    <line x1="235" y1="170" x2="220" y2="208" stroke="currentColor" stroke-width="0.75" marker-end="url(#arr3)" opacity="0.4"/>
-    <line x1="385" y1="170" x2="295" y2="208" stroke="currentColor" stroke-width="0.75" marker-end="url(#arr3)" opacity="0.4"/>
-
-    <!-- Coherence runs over full output -->
-    <path d="M547 170 L547 192 L250 192 L250 208" fill="none" stroke="currentColor" stroke-width="0.75" stroke-dasharray="4 3" marker-end="url(#arr3)" opacity="0.35"/>
-
-  </svg>
-</div>
-
-<h3>Agent invariants</h3>
-<div class="callout rule">
-  <strong>Non-negotiable — applies to every agent</strong>
-  No price targets in any output field. No market predictions ("X will go up"). <code>bundle_hash</code> is a required field in every Pydantic response schema. <code>SAFETY_PREAMBLE</code> is auto-prepended by <code>ask_gemini_composite()</code> — never duplicate it in agent system prompts. All outputs are sandboxed. <code>Target_Allocation</code> is manual-only and unreachable from agent code.
-</div>
-
-<h3>Running an agent</h3>
-<pre><code># Rebuild bundles first
-python manager.py snapshot --live-api --cash 85000   # or --csv positions.csv
-python manager.py vault snapshot
-python manager.py bundle composite
-
-# Run Re-buy Analyst (dry run — no Sheet writes)
-python manager.py agent rebuy --ticker UNH
-
-# Run for all positions
-python manager.py agent rebuy
-
-# Screen new ideas
-python manager.py agent screen --ticker MSFT --ticker AAPL
-
-# Coherence check (run last, after other agents)
-python manager.py agent coherence
-
-# Promote output to Sheet (explicit --live flag required)
-python manager.py agent rebuy --ticker UNH --live
-</code></pre>
-
-<!-- ─────────────────────────────────────── AGENT DATA CHANNELS ─── -->
-<h2 id="agent-data-channels">6. Agent data channels</h2>
-
-<p>The agents consume a <strong>composite bundle</strong> — a single frozen JSON artifact combining two sub-bundles. The podcast pipeline is one of roughly six distinct data channels feeding the agents.</p>
-
-<h3>Market bundle (core/bundle.py)</h3>
-<p>Quantitative data, refreshed every snapshot:</p>
-<ul>
-  <li><strong>Schwab API (primary):</strong> live positions, cost basis, cash balances, per-position tax treatment, L1 quotes via <code>/marketdata/v1/quotes</code>, OHLCV history via <code>/pricehistory</code></li>
-  <li><strong>yFinance:</strong> sector, beta, dividend yield, 52-week range, earnings history (supplemental enrichment)</li>
-  <li><strong>FMP:</strong> forward P/E, PEG, three-statement fundamentals, earnings surprise history (via <code>fmp_client.py</code>)</li>
-  <li><strong>Finnhub:</strong> recent news headlines per ticker</li>
-  <li><strong>Manual cash entry:</strong> money market balance and yield</li>
-</ul>
-
-<h3>Vault bundle (core/vault_bundle.py)</h3>
-<p>Qualitative data, refreshed when you run <code>vault snapshot</code>:</p>
-<ul>
-  <li><strong>51 _thesis.md files (one per position):</strong> scaling state, rotation priority, bull case, exit conditions, style tag</li>
-  <li><strong>Earnings transcripts:</strong> in <code>vault/transcripts/</code></li>
-  <li><strong>Research notes:</strong> in <code>vault/research/</code></li>
-  <li><strong>Investment framework JSON files:</strong> in <code>vault/frameworks/</code> (Peter Lynch GARP, Christopher Mayer 100-Bagger, Carlota Perez macro cycle, Van Tharp position sizing, Gautam Baid management quality, Natenberg options)</li>
-</ul>
-
-<h3>Supplemental data channels</h3>
-<ul>
-  <li><strong>STAX (tasks/stax_sync.py):</strong> monthly macro allocation signal — writes to <code>AI_Suggested_Allocation</code> sandbox.</li>
-  <li><strong>Podcast pipeline (tasks/weekly_podcast_sync.py):</strong> YouTube RSS → transcript → Gemini → <code>AI_Suggested_Allocation</code> sandbox. Macro context for the macro layer.</li>
-</ul>
-
-<div class="callout info">
-  <strong>Data Channel Gap Analysis</strong>
-  New data sources (FRED macro data, SEC EDGAR filings, etc.) become new enrichment steps that run before <code>bundle composite</code>. The agents read the new fields as context from the bundle; they never call the source directly.
-</div>
-
-<!-- ─────────────────────────────────────── AGENT DEVELOPMENT ─── -->
-<h2 id="agent-development">7. Agent development &amp; refinement</h2>
-
-<p>There are two distinct loops — one for refinement of existing intelligence, one for net-new agent deployment.</p>
-
-<h3>Refinement loop (improving existing agents)</h3>
-<p>Because every agent output is stamped with the <code>composite_hash</code>, you can isolate whether a change in output came from a prompt edit or from fresh data.</p>
-<ol>
-  <li>Run the agent dry: <span class="cmd">python manager.py agent rebuy analyze</span> — output lands in <code>bundles/rebuy_output_&lt;hash&gt;.md</code></li>
-  <li>Identify gaps: wrong signal, missing rationale, bad scaling language, ignored thesis</li>
-  <li>Edit the agent's system prompt (<code>agents/prompts/rebuy_analyst_system.txt</code>) or Pydantic schema</li>
-  <li>Re-run against the <strong>same bundle</strong> (<code>--bundle bundles/composite_&lt;hash&gt;.json</code>) to compare apples to apples</li>
-  <li>satisfied, promote the edit and update CHANGELOG.md</li>
-</ol>
-
-<h3>Adding new agents</h3>
-<p>The pattern for adding a new agent is fully established and predictable:</p>
-<pre><code>1. Define what question the agent answers
-2. Identify required bundle data (market vs vault)
-3. Write Python pre-computation — everything deterministic lands here
-4. Write Pydantic output schema in agents/schemas/&lt;name&gt;_schema.py
-5. Write system prompt — narrative and recommendation only, NO MATH
-6. Create agents/&lt;name&gt;.py following the rebuy_analyst.py structure
-7. Register in manager.py: agent_app.add_typer(&lt;name&gt;_app, name="&lt;name&gt;")
-8. Create framework file if needed: vault/frameworks/&lt;name&gt;_framework.json
-9. Run dry, verify checklist, update CHANGELOG.md</code></pre>
-
-<div class="callout rule">
-  <strong>The Math Rule</strong>
-  If it's a number, Python calculates it. Gemini gets pre-computed facts and writes narrative, signals, and rationale.
-</div>
-
-<!-- ─────────────────────────────────────── SHEETS SCHEMA ─── -->
-<h2 id="sheets-schema">8. Google Sheets schema</h2>
-
-<p>Sheet ID: <code>1DuY68xVvyHq-0dyb7XUQgcoK7fqcVS0fv7UoGdTnfxA</code></p>
-
-<table>
-  <tr><th>Tab</th><th>Purpose</th><th>Write pattern</th><th>Who writes</th></tr>
-  <tr><td><code>Holdings_Current</code></td><td>Latest position snapshot</td><td>Full overwrite on each import</td><td>Pipeline</td></tr>
-  <tr><td><code>Holdings_History</code></td><td>Append-only history of every import</td><td>Append with fingerprint dedup</td><td>Pipeline</td></tr>
-  <tr><td><code>Daily_Snapshots</code></td><td>End-of-day portfolio totals</td><td>Append with date-based dedup</td><td>Pipeline</td></tr>
-  <tr><td><code>Transactions</code></td><td>Trade history + rotation log</td><td>Append with fingerprint dedup</td><td>Pipeline</td></tr>
-  <tr><td><code>Realized_GL</code></td><td>Tax lot close records</td><td>Append with fingerprint dedup</td><td>Pipeline (from Schwab CSV)</td></tr>
-  <tr><td><code>Target_Allocation</code></td><td>Bill's target allocation model</td><td>Manual only — pipeline never writes</td><td>Bill only</td></tr>
-  <tr><td><code>AI_Suggested_Allocation</code></td><td>Podcast / STAX allocation signals</td><td>Append with fingerprint dedup</td><td>Podcast pipeline (sandbox)</td></tr>
-  <tr><td><code>Agent_Outputs</code></td><td>Agent reasoning outputs</td><td>Append with bundle_hash + fingerprint</td><td>Agents (sandbox only)</td></tr>
-  <tr><td><code>Risk_Metrics</code></td><td>Beta, VaR, stress test snapshots</td><td>Append per run</td><td>Pipeline</td></tr>
-  <tr><td><code>Income_Tracking</code></td><td>Dividend income snapshots</td><td>Append per run</td><td>Pipeline</td></tr>
-  <tr><td><code>Trade_Log</code></td><td>Linked sell-buy rotation pairs</td><td>Append (Bill + pipeline)</td><td>Both</td></tr>
-  <tr><td><code>Config</code></td><td>App configuration parameters</td><td>Manual only</td><td>Bill only</td></tr>
-  <tr><td><code>Logs</code></td><td>Pipeline run log</td><td>Append</td><td>Pipeline</td></tr>
-</table>
-
-<div class="callout warning">
-  <strong>Fingerprint dedup is required on every append</strong>
-  Always check for an existing row with the same fingerprint before appending. Fingerprints are human-readable content hashes, not MD5. See <code>PORTFOLIO_SHEET_SCHEMA.md</code> for the authoritative fingerprint format for each tab.
-</div>
-
-<!-- ─────────────────────────────────────── PHASE GUIDE ─── -->
-<h2 id="phase-guide">9. Phase-by-phase implementation guide</h2>
-
-<div class="diagram-wrap">
-  <div class="diagram-label">Figure 4 — Phase dependency chain</div>
-  <svg viewBox="0 0 680 110" role="img" xmlns="http://www.w3.org/2000/svg">
-    <title>Phase dependency chain from Phase 01 through Phase 08</title>
-    <desc>Linear dependency chain: Phase 01 spine scaffold leads to Phase 01b ADC auth, then Phase 02 vault bundling, Phase 03 Re-buy agent, Phase 04 Schwab API swap, Phase 05 agent kit completion, Phase 06 visual layer decision (optional), Phase 07 retire app.py, and Phase 08 plus options scanner and Marimo.</desc>
-    <defs>
-      <marker id="arr4" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-        <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-      </marker>
-    </defs>
-
-    <!-- Phase boxes -->
-    <g>
-      <rect x="10"  y="30" width="62" height="50" rx="7" fill="#e1f5ee" stroke="#0f6e56" stroke-width="1" opacity="0.8"/>
-      <text x="41" y="52" font-family="Georgia,serif" font-size="10" font-weight="700" text-anchor="middle" fill="currentColor">Phase 01</text>
-      <text x="41" y="66" font-family="Georgia,serif" font-size="9" text-anchor="middle" fill="currentColor" opacity="0.7">spine</text>
-      <text x="41" y="77" font-family="Georgia,serif" font-size="8" text-anchor="middle" fill="#0f6e56" opacity="0.8">done ✓</text>
-    </g>
-    <line x1="72" y1="55" x2="82" y2="55" stroke="currentColor" stroke-width="0.75" marker-end="url(#arr4)" opacity="0.5"/>
-    <g>
-      <rect x="82"  y="30" width="64" height="50" rx="7" fill="#e1f5ee" stroke="#0f6e56" stroke-width="1" opacity="0.8"/>
-      <text x="114" y="52" font-family="Georgia,serif" font-size="10" font-weight="700" text-anchor="middle" fill="currentColor">Ph 01b</text>
-      <text x="114" y="66" font-family="Georgia,serif" font-size="9" text-anchor="middle" fill="currentColor" opacity="0.7">ADC auth</text>
-      <text x="114" y="77" font-family="Georgia,serif" font-size="8" text-anchor="middle" fill="#0f6e56" opacity="0.8">done ✓</text>
-    </g>
-    <line x1="146" y1="55" x2="156" y2="55" stroke="currentColor" stroke-width="0.75" marker-end="url(#arr4)" opacity="0.5"/>
-    <g>
-      <rect x="156" y="30" width="62" height="50" rx="7" fill="#fef3dc" stroke="#b56d00" stroke-width="1.5" opacity="0.9"/>
-      <text x="187" y="52" font-family="Georgia,serif" font-size="10" font-weight="700" text-anchor="middle" fill="currentColor">Phase 02</text>
-      <text x="187" y="66" font-family="Georgia,serif" font-size="9" text-anchor="middle" fill="currentColor" opacity="0.7">vault</text>
-      <text x="187" y="77" font-family="Georgia,serif" font-size="8" text-anchor="middle" fill="#b56d00" opacity="0.8">planned</text>
-    </g>
-    <line x1="218" y1="55" x2="228" y2="55" stroke="currentColor" stroke-width="0.75" marker-end="url(#arr4)" opacity="0.5"/>
-    <g>
-      <rect x="228" y="30" width="62" height="50" rx="7" fill="#dceaf5" stroke="#2c5f8a" stroke-width="1.5" opacity="0.9"/>
-      <text x="259" y="52" font-family="Georgia,serif" font-size="10" font-weight="700" text-anchor="middle" fill="currentColor">Phase 03</text>
-      <text x="259" y="66" font-family="Georgia,serif" font-size="9" text-anchor="middle" fill="currentColor" opacity="0.7">Re-buy agent</text>
-      <text x="259" y="77" font-family="Georgia,serif" font-size="8" text-anchor="middle" fill="#2c5f8a" opacity="0.8">next</text>
-    </g>
-    <line x1="290" y1="55" x2="300" y2="55" stroke="currentColor" stroke-width="0.75" marker-end="url(#arr4)" opacity="0.5"/>
-    <g>
-      <rect x="300" y="30" width="62" height="50" rx="7" fill="#dceaf5" stroke="#2c5f8a" stroke-width="1" opacity="0.7"/>
-      <text x="331" y="52" font-family="Georgia,serif" font-size="10" font-weight="700" text-anchor="middle" fill="currentColor">Phase 04</text>
-      <text x="331" y="66" font-family="Georgia,serif" font-size="9" text-anchor="middle" fill="currentColor" opacity="0.7">Schwab API</text>
-      <text x="331" y="77" font-family="Georgia,serif" font-size="8" text-anchor="middle" fill="#2c5f8a" opacity="0.7">after 03</text>
-    </g>
-    <line x1="362" y1="55" x2="372" y2="55" stroke="currentColor" stroke-width="0.75" marker-end="url(#arr4)" opacity="0.5"/>
-    <g>
-      <rect x="372" y="30" width="62" height="50" rx="7" fill="#dceaf5" stroke="#2c5f8a" stroke-width="1" opacity="0.7"/>
-      <text x="403" y="52" font-family="Georgia,serif" font-size="10" font-weight="700" text-anchor="middle" fill="currentColor">Phase 05</text>
-      <text x="403" y="66" font-family="Georgia,serif" font-size="9" text-anchor="middle" fill="currentColor" opacity="0.7">agent kit</text>
-      <text x="403" y="77" font-family="Georgia,serif" font-size="8" text-anchor="middle" fill="#2c5f8a" opacity="0.7">after 04</text>
-    </g>
-    <line x1="434" y1="55" x2="444" y2="55" stroke="currentColor" stroke-width="0.75" marker-end="url(#arr4)" opacity="0.5"/>
-    <g>
-      <rect x="444" y="30" width="62" height="50" rx="7" fill="#f0ede4" stroke="currentColor" stroke-width="0.5" opacity="0.6"/>
-      <text x="475" y="52" font-family="Georgia,serif" font-size="10" font-weight="700" text-anchor="middle" fill="currentColor">Phase 06</text>
-      <text x="475" y="66" font-family="Georgia,serif" font-size="9" text-anchor="middle" fill="currentColor" opacity="0.7">visual layer?</text>
-      <text x="475" y="77" font-family="Georgia,serif" font-size="8" text-anchor="middle" fill="currentColor" opacity="0.5">decision gate</text>
-    </g>
-    <line x1="506" y1="55" x2="516" y2="55" stroke="currentColor" stroke-width="0.75" marker-end="url(#arr4)" opacity="0.5"/>
-    <g>
-      <rect x="516" y="30" width="62" height="50" rx="7" fill="#f0ede4" stroke="currentColor" stroke-width="0.5" opacity="0.6"/>
-      <text x="547" y="52" font-family="Georgia,serif" font-size="10" font-weight="700" text-anchor="middle" fill="currentColor">Phase 07</text>
-      <text x="547" y="66" font-family="Georgia,serif" font-size="9" text-anchor="middle" fill="currentColor" opacity="0.7">retire app.py</text>
-      <text x="547" y="77" font-family="Georgia,serif" font-size="8" text-anchor="middle" fill="currentColor" opacity="0.5">cleanup</text>
-    </g>
-    <line x1="578" y1="55" x2="588" y2="55" stroke="currentColor" stroke-width="0.75" marker-end="url(#arr4)" opacity="0.5" stroke-dasharray="3 2"/>
-    <g>
-      <rect x="588" y="30" width="72" height="50" rx="7" fill="#f0ede4" stroke="currentColor" stroke-width="0.5" opacity="0.4"/>
-      <text x="624" y="52" font-family="Georgia,serif" font-size="10" font-weight="700" text-anchor="middle" fill="currentColor" opacity="0.7">Phase 08+</text>
-      <text x="624" y="66" font-family="Georgia,serif" font-size="9" text-anchor="middle" fill="currentColor" opacity="0.5">options</text>
-      <text x="624" y="77" font-family="Georgia,serif" font-size="8" text-anchor="middle" fill="currentColor" opacity="0.4">net worth</text>
-    </g>
-  </svg>
-</div>
-
-<h3><span class="phase-badge phase-next">next</span> Phase 03 — Re-Buy Analyst</h3>
-<p><strong>Prerequisite:</strong> Phase 02 composite bundle round-trip verified (green smoke test, bundle file on disk).</p>
-<p>This is the proof-of-concept phase. The Re-buy Analyst exercises both sub-bundles simultaneously — live prices from the market bundle and thesis context from the vault bundle. If the composite bundle works for Re-buy, the interface works for everything.</p>
-<p><strong>Key deliverables:</strong> <code>agents/rebuy_analyst.py</code>, <code>agents/schemas/rebuy_schema.py</code>, <code>manager.py agent rebuy</code> subcommand, smoke test.</p>
-<p><strong>Exit criteria:</strong> Dry-run for UNH produces well-formed output with <code>bundle_hash</code> matching the composite bundle on disk. <code>--live</code> writes to <code>Agent_Outputs</code>, not <code>Target_Allocation</code>.</p>
-
-<h3><span class="phase-badge phase-next">next</span> Phase 04 — Schwab API Ingestion</h3>
-<p><strong>Prerequisite:</strong> Phase 03 Re-buy Analyst green.</p>
-<p>Swap the CSV reader inside <code>build_bundle()</code> for a Schwab REST call. The bundle interface doesn't change — only the data source changes. This is a surgical patch to one function.</p>
-<p><strong>Critical work items:</strong></p>
-<ul>
-  <li>Deploy token keep-alive Cloud Function to GCP (every 25 min, 24/7)</li>
-  <li>Fix multi-account aggregation bug in <code>fetch_positions()</code> — same ticker across Individual + IRA must be summed, not duplicated</li>
-  <li>Add <code>--live-api</code> flag to <code>manager.py snapshot</code></li>
-  <li>Build read-only <code>SchwabClient</code> wrapper — no order endpoints imported</li>
-  <li>Preserve CSV fallback for disaster recovery</li>
-</ul>
-<div class="callout warning">
-  <strong>Lessons learned — Schwab API gotchas</strong>
-  <code>client_from_access_functions</code> takes NO <code>callback_url</code> argument. Passing one silently shifts every argument one position right and causes <code>'str' object is not callable</code> at runtime. The token writer function must accept <code>**kwargs</code> — schwab-py passes <code>refresh_token=...</code> as a keyword argument on refresh. Cash appears in <code>currentBalances.cashBalance</code> across account objects, not in the positions array. Quote enrichment mask must guard against zero: <code>mask = price.notna() &amp; (price > 0)</code>.
-</div>
-
-<h3><span class="phase-badge phase-next">next</span> Phase 05 — Agent Kit Completion + Thesis Backfill</h3>
-<p><strong>Prerequisite:</strong> Phase 04 stable with live API data.</p>
-<p>Port the remaining three agents (Add-Candidate, New Idea Screener, Coherence Checker) onto the spine. Each follows the Re-buy template: Pydantic schema with <code>bundle_hash</code>, composite bundle input, sandbox output.</p>
-<p><strong>Thesis backfill</strong> runs in parallel. Use <code>manager.py vault add-thesis --ticker X</code> to scaffold each file, then fill in the sections. Priority: top 15 positions by value first (covers ~75% of portfolio weight). This is transcription — you already know every thesis.</p>
-
-<h3><span class="phase-badge phase-defer">decision gate</span> Phase 06 — Visual Layer</h3>
-<p>Evaluate after running the CLI + Sheets workflow for 4+ weeks. Ask: "What specific question can I not answer today that I need a new tool to answer?" Options:</p>
-<ul>
-  <li><strong>Nothing — Sheets is enough:</strong> skip Phase 06, go directly to Phase 07.</li>
-  <li><strong>Charts but no interactivity:</strong> Looker Studio, direct Sheets connector, zero code, 1 day.</li>
-  <li><strong>Specific interactive gap</strong> (options chain scanner, what-if rebalance): minimal FastAPI+HTMX, one page, one purpose.</li>
-  <li><strong>Ad-hoc bundle exploration:</strong> Marimo analytical workbench, personal tool not a dashboard.</li>
-</ul>
-<div class="callout warning">
-  <strong>Do not start Phase 06 speculatively</strong>
-  The Streamlit lesson: building a UI layer before you know what you need from it is expensive rework. Set a calendar reminder for 4 weeks after Phase 05 completes, then evaluate with a specific capability gap in hand.
-</div>
-
-<h3><span class="phase-badge phase-defer">deferred</span> Phase 07 — Retire app.py</h3>
-<p>Once all agents are bundle-aware and Phase 06 is resolved, <code>app.py</code> has no users. Remove it, remove <code>streamlit</code> from <code>requirements.txt</code>, simplify <code>config.py</code> to <code>os.getenv()</code> only, remove the Streamlit fallback paths from <code>utils/sheet_readers.py</code>.</p>
-<p><strong>Precondition:</strong> No active use of <code>app.py</code> in the last 30 days.</p>
-
-<!-- ─────────────────────────────────────── CLI REFERENCE ─── -->
-<h2 id="cli-reference">10. CLI command reference</h2>
-
-<h3>Snapshot commands</h3>
-<table>
-  <tr><th>Command</th><th>What it does</th></tr>
-  <tr><td><span class="cmd">python manager.py snapshot --csv &lt;path&gt; --cash 85000</span></td><td>Build market bundle from Schwab CSV + manual cash amount (dry run)</td></tr>
-  <tr><td><span class="cmd">python manager.py snapshot --live-api --cash 85000</span></td><td>Build market bundle from live Schwab API (Phase 04+)</td></tr>
-  <tr><td><span class="cmd">python manager.py snapshot ... --live</span></td><td>Enable Sheet writes (required for any persistence)</td></tr>
-</table>
-
-<h3>Vault commands</h3>
-<table>
-  <tr><th>Command</th><th>What it does</th></tr>
-  <tr><td><span class="cmd">python manager.py vault snapshot</span></td><td>Freeze thesis files and transcripts to vault bundle</td></tr>
-  <tr><td><span class="cmd">python manager.py vault snapshot --drive</span></td><td>Pull from Google Drive for missing vault files</td></tr>
-  <tr><td><span class="cmd">python manager.py vault add-thesis --ticker UNH</span></td><td>Scaffold a new <code>vault/theses/UNH_thesis.md</code> from template</td></tr>
-</table>
-
-<h3>Bundle commands</h3>
-<table>
-  <tr><th>Command</th><th>What it does</th></tr>
-  <tr><td><span class="cmd">python manager.py bundle composite</span></td><td>Combine latest market + vault bundles into composite</td></tr>
-  <tr><td><span class="cmd">python manager.py bundle composite --market &lt;path&gt; --vault &lt;path&gt;</span></td><td>Composite from explicit sub-bundle paths</td></tr>
-  <tr><td><span class="cmd">python manager.py bundle verify &lt;path&gt;</span></td><td>Verify hash of any bundle file (market, vault, or composite)</td></tr>
-</table>
-
-<h3>Agent commands</h3>
-<table>
-  <tr><th>Command</th><th>What it does</th></tr>
-  <tr><td><span class="cmd">python manager.py agent rebuy --ticker UNH</span></td><td>Re-buy analysis for one position (dry run)</td></tr>
-  <tr><td><span class="cmd">python manager.py agent rebuy</span></td><td>Re-buy analysis for all positions</td></tr>
-  <tr><td><span class="cmd">python manager.py agent add-candidate --ticker MSFT</span></td><td>Evaluate a new ticker for portfolio fit</td></tr>
-  <tr><td><span class="cmd">python manager.py agent screen --ticker X --ticker Y</span></td><td>Screen multiple user-supplied tickers</td></tr>
-  <tr><td><span class="cmd">python manager.py agent coherence</span></td><td>Run coherence check over full buy list (run last)</td></tr>
-  <tr><td><span class="cmd">python manager.py agent rebuy --ticker UNH --live</span></td><td>Write output to <code>Agent_Outputs</code> Sheet tab</td></tr>
-</table>
-
-<h3>Typical weekly workflow</h3>
-<pre><code># Monday morning — refresh everything
-python manager.py snapshot --live-api --cash 85000
-python manager.py vault snapshot
-python manager.py bundle composite
-
-# Review agent suggestions
-python manager.py agent rebuy --bundle latest
-# → review bundles/rebuy_output_*.md before promoting with --live
-
-# After reviewing and deciding to log to Sheet
-python manager.py agent rebuy --live
-
-# Before making a trade — log the rotation
-# Add Trade_Log entry manually in Google Sheets with:
-# linked_sell_ticker, linked_buy_ticker, implicit_bet, redeployment_trigger
-</code></pre>
-
-<!-- ─────────────────────────────────────── HARD RULES ─── -->
-<h2 id="hard-rules">11. Non-negotiable rules</h2>
-
-<div class="callout rule">
-  <strong>Read-only guarantee</strong>
-  The system never executes trades. The <code>SchwabClient</code> wrapper exposes only GET endpoints. No order or trading endpoints are imported, referenced, or reachable anywhere in the codebase. This is a structural guarantee, not a config flag.
-</div>
-
-<div class="callout rule">
-  <strong>Target_Allocation is manual-only</strong>
-  No pipeline function, no agent, and no script ever writes to the <code>Target_Allocation</code> tab. Agents write to <code>AI_Suggested_Allocation</code> or <code>Agent_Outputs</code>. Promotion from sandbox to authoritative allocation is always a manual step by Bill.
-</div>
-
-<div class="callout rule">
-  <strong>DRY_RUN defaults true</strong>
-  Every script requires an explicit <code>--live</code> flag to enable Sheet writes. A script that runs silently and writes to production on first execution is a bug.
-</div>
-
-<div class="callout rule">
-  <strong>Agents never browse or fetch</strong>
-  Python gathers all data before any LLM is invoked. The LLM receives a frozen bundle and reasons over it. There is no path for an agent to make a live API call, read a web page, or access any data not in the bundle.
-</div>
-
-<div class="callout rule">
-  <strong>Single-batch gspread writes only</strong>
-  Never write cell-by-cell. Always <code>batch_update()</code> or <code>append_rows()</code> with a full list. Check for existing fingerprints before appending. Rate limits apply.
-</div>
-
-<div class="callout rule">
-  <strong>CASH_MANUAL and QACDS are excluded from AI analysis</strong>
-  These synthetic positions are excluded from all agent inputs, beta calculations, and allocation percentages. They appear in total portfolio value and income calculations only.
-</div>
-
-<!-- ─────────────────────────────────────── TROUBLESHOOTING ─── -->
-<h2 id="troubleshooting">12. Troubleshooting</h2>
-
-<h3>Bundle hash mismatch</h3>
-<p><code>load_bundle()</code> raises <code>ValueError: hash mismatch</code>. The bundle file was modified after being written. Never edit bundle JSON files manually. Delete the corrupted bundle and rebuild: <span class="cmd">python manager.py snapshot ...</span></p>
-
-<h3>Schwab API returns zero prices</h3>
-<p>The market is closed and <code>lastPrice</code> from the Quotes endpoint returns <code>0.0</code>. The quote enrichment mask must be <code>price.notna() &amp; (price &gt; 0)</code> — not just <code>notna()</code>. When all prices are zero, the Schwab Accounts API snapshot (<code>market_value / qty</code>) is used as fallback.</p>
-
-<h3>Total portfolio value ~$52K lower than Schwab's reported total</h3>
-<p>Cash is being missed. Read <code>currentBalances.cashBalance</code> from each <code>securitiesAccount</code> object and sum across all accounts. Do not rely on <code>CASH_EQUIVALENT</code> entries in the positions array — their structure varies by account type.</p>
-
-<h3>Agent output contains wrong bundle_hash</h3>
-<p>The LLM hallucinated a different hash. <code>ask_gemini_composite()</code> overwrites the model's <code>bundle_hash</code> field with the correct composite hash after parsing and logs a warning. Trust the file, not the LLM. If this warning fires frequently, check that the bundle preamble includes the explicit instruction: <code>"You MUST include bundle_hash='...' in your response."</code></p>
-
-<h3>Schwab token expired — manual re-auth required</h3>
-<p>If the Cloud Function failed to run for more than 7 days, the refresh token is dead. Re-authorize manually:</p>
-<pre><code>python -c "
-import schwab.auth
-schwab.auth.client_from_login_flow(
-    app_key='...',
-    app_secret='...',
-    callback_url='https://127.0.0.1',
-    token_path='/tmp/token.json'
-)
-"
-# Then upload /tmp/token.json to the GCS bucket
-gsutil cp /tmp/token.json gs://portfolio-manager-tokens/token_accounts.json
-</code></pre>
-
-<h3>Is Cash column showing True for all rows</h3>
-<p>Known bug: <code>Is Cash</code> can become all-True when read back from Sheets due to boolean coercion. Never filter on <code>df['Is Cash'] == True</code>. Always use the reliable signals:</p>
-<pre><code>cash_mask = (
-    df['Asset Class'].astype(str).str.lower() == 'cash'
-    | df['Ticker'].astype(str).str.upper().isin({'QACDS', 'CASH_MANUAL', 'CASH &amp; CASH INVESTMENTS'})
-)
-</code></pre>
-
-<h3>FMP returning 402 / PE ratio showing 0%</h3>
-<p>Subscription limit hit. When <code>get_historical_pe()</code> returns an empty DataFrame, do not fall back to <code>avg_pe = current_pe</code> — that makes both sides of the comparison identical and produces a misleading 0% discount. Surface <code>None</code> explicitly and display "data unavailable" in the UI. The right signal for a broken data dependency is silence, not a silent zero.</p>
-
-<hr>
-<p style="font-size:0.85rem; color: var(--ink-light); text-align: center;">Investment Portfolio Manager — Internal documentation for Bill's use only<br>Do not commit to a public repository. Contains configuration and architectural details.</p>
-
+    <nav>
+        <h2>Documentation</h2>
+        <ul>
+            <li><a href="#overview">System Overview</a></li>
+            <li><a href="#architecture">Architecture & Bundles</a></li>
+            <li><a href="#cli-reference">CLI Command Reference</a></li>
+            <li><a href="#agent-tuning">Agent Tuning Guide</a></li>
+            <li><a href="#maintenance">Maintenance Workflows</a></li>
+        </ul>
+    </nav>
+
+    <main>
+        <header>
+            <h1>Investment Portfolio Manager</h1>
+            <p><strong>Version 2.0</strong> | Comprehensive Operator Manual & AI Tuning Guide</p>
+        </header>
+
+        <section id="overview">
+            <h2>1. System Overview</h2>
+            <p>The <strong>Investment Portfolio Manager</strong> is a production-grade, headless CLI tool designed to move financial data through an automated analysis pipeline. It follows a strictly linear, auditable execution model where every significant decision is backed by a cryptographically hashed "Context Bundle."</p>
+            
+            <h3>The Headless Philosophy</h3>
+            <p>Unlike traditional GUI-based portfolio trackers, this system is designed for <strong>accuracy over aesthetic</strong>. It prioritizes data integrity, type-hardened calculations (Nuclear Type Enforcement), and explicit AI reasoning. The dashboard (Google Sheets) acts as a passive view layer, while the logic resides in Python and the intelligence in Gemini 2.5 Pro.</p>
+        </section>
+
+        <section id="architecture">
+            <h2>2. Architecture & Bundles</h2>
+            <p>The system is built around the concept of <strong>Immutable Context Bundles</strong>. A bundle is a JSON snapshot of the world at a specific moment in time. This prevents "state leakage" where an AI agent might analyze a ticker using price data from 5 minutes ago while another agent uses data from 5 minutes in the future.</p>
+
+            <div class="callout">
+                <strong>Why Bundles?</strong> By freezing data into a file with a SHA256 hash, we ensure that the AI's "rationale" is tied to a specific set of numbers. If a calculation looks wrong later, you can inspect the exact bundle the agent used.
+            </div>
+
+            <ul>
+                <li><strong>Market Bundle:</strong> Positions, quantities, live prices, and cost basis. Built via <code>manager.py snapshot</code>.</li>
+                <li><strong>Vault Bundle:</strong> Local markdown theses, YouTube transcripts, and qualitative research. Built via <code>manager.py vault snapshot</code>.</li>
+                <li><strong>Composite Bundle:</strong> The "Master View" that joins Market and Vault data. All agents run over this file.</li>
+            </ul>
+        </section>
+
+        <section id="cli-reference">
+            <h2>3. CLI Command Reference</h2>
+            <p>All operations are managed through <code>python manager.py</code>. By default, all commands are <strong>Dry-Run</strong> (read-only).</p>
+
+            <h3>Core Commands</h3>
+
+            <h4><code>snapshot</code></h4>
+            <p>Freezes current market state from Schwab API or CSV.</p>
+            <pre><code>python manager.py snapshot --source schwab --live</code></pre>
+            <ul>
+                <li><code>--source [auto|schwab|csv]</code>: Where to pull position data.</li>
+                <li><code>--cash [float]</code>: Manual cash balance entry.</li>
+                <li><code>--enrich-atr</code>: Injects Average True Range (14-day) stop levels.</li>
+                <li><code>--live</code>: Writes the snapshot to the <em>Daily_Snapshots</em> and <em>Holdings_Current</em> tabs.</li>
+            </ul>
+
+            <h4><code>analyze-all</code></h4>
+            <p>Runs the tactical squad of AI agents over the latest composite bundle.</p>
+            <pre><code>python manager.py analyze-all --fresh-bundle --live</code></pre>
+            <ul>
+                <li><code>--fresh-bundle</code>: Regenerates market, vault, and composite bundles before running.</li>
+                <li><code>--agents [list]</code>: Comma-separated list of specific agents to run (e.g. <code>valuation,tax</code>).</li>
+                <li><code>--live</code>: Writes all agent signals to the <em>Agent_Outputs</em> tab in a single batch.</li>
+            </ul>
+
+            <h4><code>dashboard refresh</code></h4>
+            <p>Maintenance command to rebuild high-level Action views.</p>
+            <pre><code>python manager.py dashboard refresh --update --live</code></pre>
+            <ul>
+                <li><code>--update</code>: Runs a live Schwab sync before rebuilding.</li>
+                <li><code>--live</code>: Re-builds <em>Valuation_Card</em>, <em>Decision_View</em>, and applies V2 formatting.</li>
+            </ul>
+        </section>
+
+        <section id="agent-tuning">
+            <h2>4. Agent Tuning Guide</h2>
+            <p>The system utilizes 11+ specialized AI agents. To adjust how an agent thinks—its strictness, its logic, or its style—you only need to edit its <strong>System Prompt</strong>. The Python code is just the orchestrator; the "brains" are in the text files.</p>
+
+            <h3>How to Tune</h3>
+            <p>1. Open the <strong>Prompt File</strong> path listed below.<br>
+            2. Edit the plain English instructions (e.g., change "Be aggressive with TLH" to "Only suggest TLH if loss is >$5,000").<br>
+            3. Save the file and re-run <code>manager.py analyze-all</code>. The agent will immediately adopt the new logic.</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Agent</th>
+                        <th>Purpose</th>
+                        <th>Tuning Surface (Prompt Path)</th>
+                        <th>Data Schema (Output)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Valuation</strong></td>
+                        <td>PE Ratio analysis vs Hist averages</td>
+                        <td><code>agents/prompts/valuation_agent_system.txt</code></td>
+                        <td><code>valuation_schema.py</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Tax</strong></td>
+                        <td>Tax Loss Harvesting (TLH) logic</td>
+                        <td><code>agents/prompts/tax_agent_system.txt</code></td>
+                        <td><code>tax_schema.py</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Macro Cycle</strong></td>
+                        <td>Determines cycle phase & rotation</td>
+                        <td><code>agents/prompts/macro_cycle_system.txt</code></td>
+                        <td><code>macro_cycle_schema.py</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Concentration</strong></td>
+                        <td>Hedging & Correlation risk</td>
+                        <td><code>agents/prompts/concentration_hedger_system.txt</code></td>
+                        <td><code>concentration_schema.py</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Thesis</strong></td>
+                        <td>Qualitative thesis alignment</td>
+                        <td><code>agents/prompts/thesis_screener_system.txt</code></td>
+                        <td><code>thesis_screener_schema.py</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Bagger</strong></td>
+                        <td>100-Bagger (Mayer) framework</td>
+                        <td><code>agents/prompts/bagger_screener_system.txt</code></td>
+                        <td><code>bagger_schema.py</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Behavioral</strong></td>
+                        <td>Audits trades vs rationale</td>
+                        <td><code>agents/prompts/behavioral_auditor_system.txt</code></td>
+                        <td><code>behavioral_schema.py</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Rebuy</strong></td>
+                        <td>Evaluation of existing positions</td>
+                        <td><code>agents/prompts/rebuy_analyst_system.txt</code></td>
+                        <td><code>rebuy_schema.py</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>New Idea</strong></td>
+                        <td>Screening buy candidates</td>
+                        <td><code>agents/prompts/new_idea_system.txt</code></td>
+                        <td><code>new_idea_schema.py</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Value Investing</strong></td>
+                        <td>Deep fundamental value analysis</td>
+                        <td><code>agents/prompts/value_investing_system.txt</code></td>
+                        <td><code>value_investing_schema.py</code></td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section id="maintenance">
+            <h2>5. Maintenance Workflows</h2>
+            <h3>Weekly Rotation Cycle</h3>
+            <ol>
+                <li><strong>Snapshot:</strong> Capture Schwab state (<code>python manager.py snapshot --live</code>).</li>
+                <li><strong>Research:</strong> Update <code>vault/theses/</code> with any new notes.</li>
+                <li><strong>Analyze:</strong> Run tactical squad (<code>python manager.py analyze-all --live</code>).</li>
+                <li><strong>Decision:</strong> Review the <em>Decision_View</em> tab in Google Sheets.</li>
+                <li><strong>Refine:</strong> Use <code>python manager.py journal promote --live</code> to move approved ideas to the log.</li>
+            </ol>
+
+            <div class="callout">
+                <strong>Pro-Tip:</strong> If the Google Sheet formatting looks "broken" (wrong colors, unreadability), run <code>python manager.py dashboard refresh --live</code> to restore the V2 professional UI.
+            </div>
+        </section>
+
+        <footer style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); color: #777; font-size: 0.8rem;">
+            Generated for: Bill (CPA) | Investment Portfolio Manager CLI | System Date: April 2026
+        </footer>
+    </main>
 </body>
 </html>

@@ -66,7 +66,7 @@ def main():
                   "lose focus on earlier segments.")
 
         # --- AI analysis ---
-        from utils.agents.podcast_analyst import analyze_podcast
+        from agents.podcast_analyst import analyze_podcast
 
         strategy = analyze_podcast(full_text, source_name=source_name)
         if strategy is None:

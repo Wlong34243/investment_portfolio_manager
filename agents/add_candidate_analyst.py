@@ -30,6 +30,7 @@ from core.composite_bundle import load_composite_bundle
 from core.bundle import load_bundle
 from core.vault_bundle import load_vault_bundle
 from utils.gemini_client import ask_gemini_composite
+from utils.formatters import dicts_to_markdown_table
 
 app = typer.Typer(help="Add-Candidate Analyst Agent")
 console = Console()
@@ -224,24 +225,27 @@ def analyze(
         })
 
     # 5. Build context for Gemini
-    agent_context = {
-        "portfolio_state": {
-            "total_value_usd": total_value,
-            "dry_powder_available_usd": dry_powder,
-            "position_count": len(holdings),
-        },
-        "styles": styles_json,
-        "candidates": candidates_raw,
-        "excluded": excluded,
-        "composite_hash": composite.get("composite_hash", "unknown")
-    }
+    # Markdown optimization (Task 4)
+    candidates_table = dicts_to_markdown_table(candidates_raw)
+    excluded_table = dicts_to_markdown_table(excluded)
+    
+    agent_context_text = (
+        f"Portfolio Summary:\n"
+        f"- Total Value: ${total_value:,.2f}\n"
+        f"- Dry Powder: ${dry_powder:,.2f}\n"
+        f"- Position Count: {len(holdings)}\n\n"
+        f"Investment Styles:\n{json.dumps(styles_json, indent=2)}\n\n"
+        f"Potential Candidates:\n{candidates_table}\n\n"
+        f"Excluded Positions:\n{excluded_table}\n\n"
+        f"composite_hash: {composite.get('composite_hash', 'unknown')}"
+    )
     
     # 6. Load system prompt
     prompt_path = _HERE / "prompts" / "add_candidate_system.txt"
     system_instruction = prompt_path.read_text(encoding="utf-8")
     
     # 7. LLM Call
-    user_prompt = f"Review these potential add candidates and produce a ranked list with scaling plans.\n\nContext:\n{json.dumps(agent_context, indent=2)}"
+    user_prompt = f"Review these potential add candidates and produce a ranked list with scaling plans.\n\nContext:\n{agent_context_text}"
     
     console.print(f"[cyan]Calling Gemini for {len(candidates_raw)} potential candidates...[/]")
     result: AddCandidateOutput | None = ask_gemini_composite(

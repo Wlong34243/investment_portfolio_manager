@@ -177,6 +177,7 @@ def normalize_positions(df: pd.DataFrame, import_date: str, source: str = "csv")
     df.loc[mask_gl, 'unrealized_gl'] = df.loc[mask_gl, 'market_value'] - df.loc[mask_gl, 'cost_basis']
 
     # Back-fill unrealized G/L %
+    # Task 2: Raw decimal (remove * 100)
     mask_pct = (df['unrealized_gl_pct'] == 0) & (df['cost_basis'] > 0)
     df.loc[mask_pct, 'unrealized_gl_pct'] = (
         df.loc[mask_pct, 'unrealized_gl'] / df.loc[mask_pct, 'cost_basis']
@@ -276,7 +277,7 @@ def append_daily_snapshot(ws, df: pd.DataFrame, existing_fps: set = None) -> boo
     total_cost    = float(df['Cost Basis'].sum())
     unrealized_gl = total_value - total_cost
 
-    # Robust Cash Mask (Task 1: include CASH_MANUAL and SGOV)
+    # Robust Cash Mask (Task 1: include centralized CASH_TICKERS)
     df['Ticker_Clean'] = df['Ticker'].astype(str).str.strip().str.upper()
     cash_tickers_upper = {str(t).strip().upper() for t in config.CASH_TICKERS}
     cash_mask = (df['Asset Class'].astype(str).str.lower() == 'cash') | df['Ticker_Clean'].isin(cash_tickers_upper)
@@ -285,8 +286,15 @@ def append_daily_snapshot(ws, df: pd.DataFrame, existing_fps: set = None) -> boo
     invested_value = total_value - cash_value
     position_count = int(len(df))
 
-    total_income  = float(df['Est Annual Income'].sum() if 'Est Annual Income' in df.columns else 0.0)
-    # Task 2: raw decimal (e.g. 0.03 for 3%)
+    # Task 5: Sum (Market Value * Dividend Yield) across ALL positions for Authoritative Income
+    # Task 2: Pass as raw decimal (remove any remaining * 100)
+    if 'Dividend Yield' in df.columns:
+        dy = pd.to_numeric(df['Dividend Yield'], errors='coerce').fillna(0.0)
+        # Assuming dy is already raw decimal in df (Step 2 enforces this)
+        total_income = (df['Market Value'] * dy).sum()
+    else:
+        total_income = float(df['Est Annual Income'].sum() if 'Est Annual Income' in df.columns else 0.0)
+    
     blended_yield = (total_income / total_value) if total_value > 0 else 0.0
 
     fp = f"{import_date}|{position_count}|{round(total_value, 2)}"
@@ -332,7 +340,14 @@ def calculate_income_metrics(df: pd.DataFrame) -> dict:
             df[col] = 'Unknown' if col == 'Ticker' else (False if col == 'Is Cash' else 0.0)
 
     total_value              = float(df['Market Value'].sum())
-    projected_annual_income  = float(df['Est Annual Income'].sum())
+    
+    # Task 5: Authoritative Income Sum
+    if 'Dividend Yield' in df.columns:
+        dy = pd.to_numeric(df['Dividend Yield'], errors='coerce').fillna(0.0)
+        projected_annual_income = (df['Market Value'] * dy).sum()
+    else:
+        projected_annual_income  = float(df['Est Annual Income'].sum())
+    
     # Task 2: raw decimal for blended yield
     blended_yield_pct        = (projected_annual_income / total_value) if total_value > 0 else 0.0
 

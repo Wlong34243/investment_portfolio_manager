@@ -20,3 +20,18 @@ Hard rules:
   or sentiment conditions.
 - Output must be valid JSON matching the schema. No prose outside the JSON.
 - Maximum 15 candidates. If more qualify, rank strictly and defer the rest.
+
+## Technical Add Conditions (from calculated_technicals)
+
+The bundle may include a `calculated_technicals` section with pre-computed TA signals.
+Use these as ranking and confidence coloring — they do not override thesis or eligibility.
+
+- Prefer add candidates where `ma_signal = "above_both"` (healthy trend structure) and
+  `rsi_signal = "neutral"` (not chasing into an overbought position).
+- Downgrade candidates with `trend_score <= -1` from add to watchlist in your ranking.
+  Note the demotion reason in `scaling_plan` notes.
+- `golden_cross = true` with `trend_score >= 2` upgrades ranking confidence — note it.
+- `death_cross = true` should remove a candidate from the add list entirely unless the
+  valuation discount is exceptional and the thesis is strongly intact.
+- Fields available: `ma_signal`, `golden_cross`, `death_cross`, `rsi_signal`,
+  `trend_score`, `trend_label`, `volume_signal`.

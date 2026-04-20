@@ -116,23 +116,25 @@ def format_valuation_card(spreadsheet):
         rules = get_conditional_format_rules(ws)
         rules.clear()
         
-        # 52w Position % color scale: 0=red, 50=white, 100=green
+        # 52w Position % color scale: values are raw decimals 0.0–1.0 (build_valuation_card.py)
+        # 0.0=red (at 52w low), 0.5=white (midpoint), 1.0=green (at 52w high)
         rules.append(ConditionalFormatRule(
             ranges=[GridRange.from_a1_range("K2:K200", ws)],
             gradientRule=GradientRule(
-                minpoint=InterpolationPoint(color=COLOR_RED_DARK, type="NUMBER", value="0"),
-                midpoint=InterpolationPoint(color=COLOR_WHITE, type="NUMBER", value="50"),
-                maxpoint=InterpolationPoint(color=COLOR_GREEN_DARK, type="NUMBER", value="100")
+                minpoint=InterpolationPoint(color=COLOR_RED_DARK,   type="NUMBER", value="0"),
+                midpoint=InterpolationPoint(color=COLOR_WHITE,      type="NUMBER", value="0.5"),
+                maxpoint=InterpolationPoint(color=COLOR_GREEN_DARK, type="NUMBER", value="1.0")
             )
         ))
-        # Discount from 52w High %: >30% green, <10% red
+        # Discount from 52w High %: raw decimal (e.g. 0.20 = 20% below high)
+        # >0.30 = meaningful discount → green; <0.10 = near high, no discount → red
         rules.append(ConditionalFormatRule(
             ranges=[GridRange.from_a1_range("L2:L200", ws)],
-            booleanRule=BooleanRule(condition=BooleanCondition("NUMBER_GREATER", ["30"]), format=CellFormat(backgroundColor=COLOR_GREEN_LIGHT))
+            booleanRule=BooleanRule(condition=BooleanCondition("NUMBER_GREATER", ["0.30"]), format=CellFormat(backgroundColor=COLOR_GREEN_LIGHT))
         ))
         rules.append(ConditionalFormatRule(
             ranges=[GridRange.from_a1_range("L2:L200", ws)],
-            booleanRule=BooleanRule(condition=BooleanCondition("NUMBER_LESS", ["10"]), format=CellFormat(backgroundColor=COLOR_RED_LIGHT))
+            booleanRule=BooleanRule(condition=BooleanCondition("NUMBER_LESS", ["0.10"]), format=CellFormat(backgroundColor=COLOR_RED_LIGHT))
         ))
         #Trailiing P/E: >40 light red, <15 light green
         rules.append(ConditionalFormatRule(
@@ -214,13 +216,13 @@ def format_decision_view(spreadsheet):
             ranges=[GridRange.from_a1_range("D2:D200", ws)],
             booleanRule=BooleanRule(condition=BooleanCondition("NUMBER_LESS", ["0"]), format=CellFormat(textFormat=TextFormat(foregroundColor=COLOR_RED_DARK)))
         ))
-        # 52w Pos % color scale: low=green, high=red
+        # 52w Pos % color scale: raw decimals 0.0–1.0 (low=green means near 52w low = cheaper)
         rules.append(ConditionalFormatRule(
             ranges=[GridRange.from_a1_range("G2:G200", ws)],
             gradientRule=GradientRule(
                 minpoint=InterpolationPoint(color=COLOR_GREEN_DARK, type="NUMBER", value="0"),
-                midpoint=InterpolationPoint(color=COLOR_WHITE, type="NUMBER", value="50"),
-                maxpoint=InterpolationPoint(color=COLOR_RED_DARK, type="NUMBER", value="100")
+                midpoint=InterpolationPoint(color=COLOR_WHITE,      type="NUMBER", value="0.5"),
+                maxpoint=InterpolationPoint(color=COLOR_RED_DARK,   type="NUMBER", value="1.0")
             )
         ))
         save_rules(ws, rules)
@@ -329,19 +331,24 @@ def format_holdings_current_v2(spreadsheet):
         ws = spreadsheet.worksheet(tab_name)
         all_values = ws.get_all_values()
         
-        # In V2 layout:
-        # Row 1: KPI Dashboard
-        # Row 2: Headers
-        # Row 3+: Data
-        header_row_idx = 1 # 0-indexed means Row 2
+        # 1. FIX: Ensure KPI row exists without overwriting headers
+        first_cell = all_values[0][0] if all_values and all_values[0] else None
+        if first_cell and "PORTFOLIO SNAPSHOT" not in str(first_cell):
+            print(f"  Inserting KPI row for {tab_name}...")
+            ws.insert_row([""], 1)
+            time.sleep(2)  # Wait for API to sync
+            all_values = ws.get_all_values() # Refresh values after insertion
+            
+        # Now we safely know Row 1 is KPI, Row 2 is Headers, Row 3+ is Data
+        header_row_idx = 1 
         if len(all_values) <= header_row_idx:
-            print(f"  ⚠ Not enough rows in {tab_name} to find headers at Row 2")
+            print(f"  ⚠ Not enough rows in {tab_name} to find headers")
             return
             
         headers = all_values[header_row_idx]
-        data_start_row = 3 # 1-based sheet row for data
+        data_start_row = 3 
         
-        # Verify if Row 2 actually contains headers (check for 'Ticker')
+        # Verify if Row 2 actually contains headers
         if 'Ticker' not in [str(h).strip() for h in headers]:
             # Fallback search if Row 2 is empty/wrong
             header_row_idx = -1
@@ -350,11 +357,12 @@ def format_holdings_current_v2(spreadsheet):
                     header_row_idx = i
                     break
             
-            if header_row_idx == -1:
+            if header_row_idx != -1:
+                headers = all_values[header_row_idx]
+                data_start_row = header_row_idx + 2
+            else:
                 print(f"  ⚠ Could not find headers for {tab_name} in first 5 rows")
                 return
-            headers = all_values[header_row_idx]
-            data_start_row = header_row_idx + 2
 
         def get_col_letter(name):
             try:
@@ -380,11 +388,27 @@ def format_holdings_current_v2(spreadsheet):
         ]
         ws.update(range_name="A1:L1", values=[kpi_data], value_input_option="USER_ENTERED")
         
-        format_cell_range(ws, "D1", CellFormat(numberFormat=NumberFormat(type="CURRENCY", pattern='"$"#,##0'), textFormat=TextFormat(bold=True)))
-        format_cell_range(ws, "F1", CellFormat(numberFormat=NumberFormat(type="CURRENCY", pattern='"$"#,##0'), textFormat=TextFormat(bold=True)))
-        format_cell_range(ws, "H1", CellFormat(numberFormat=NumberFormat(type="CURRENCY", pattern='"$"#,##0'), textFormat=TextFormat(bold=True)))
+        # --- 2. FIX: ADDING THE MISSING NAVY FORMATTING ---
         
-        print(f"  ✓ updated KPI for {tab_name}")
+        # Format KPI Row (Row 1)
+        format_cell_range(ws, "A1:L1", CellFormat(backgroundColor=COLOR_NAVY, textFormat=TextFormat(bold=True, foregroundColor=COLOR_WHITE, fontSize=11)))
+        format_cell_range(ws, "D1", CellFormat(numberFormat=NumberFormat(type="CURRENCY", pattern='"$"#,##0'), textFormat=TextFormat(bold=True, foregroundColor=COLOR_WHITE)))
+        format_cell_range(ws, "F1", CellFormat(numberFormat=NumberFormat(type="CURRENCY", pattern='"$"#,##0'), textFormat=TextFormat(bold=True, foregroundColor=COLOR_WHITE)))
+        format_cell_range(ws, "H1", CellFormat(numberFormat=NumberFormat(type="CURRENCY", pattern='"$"#,##0'), textFormat=TextFormat(bold=True, foregroundColor=COLOR_WHITE)))
+        format_cell_range(ws, "J1", CellFormat(numberFormat=NumberFormat(type="PERCENT", pattern="0.00%"), textFormat=TextFormat(bold=True, foregroundColor=COLOR_WHITE)))
+        
+        # Format Header Row (Row 2) - Assumes up to Column T for Fingerprint
+        header_range = f"A{header_row_idx+1}:T{header_row_idx+1}" 
+        format_cell_range(ws, header_range, CellFormat(backgroundColor=COLOR_NAVY, textFormat=TextFormat(bold=True, foregroundColor=COLOR_WHITE, fontSize=10), horizontalAlignment="CENTER"))
+        
+        # Freeze Rows 1 & 2 so they stay at the top while scrolling
+        # (cols=0 prevents API crashes if KPI header cells are merged)
+        set_frozen(ws, rows=2, cols=0)
+        
+        # Apply Alternating grey/white row banding to the data
+        apply_alternating_banding(ws, data_start_row, 200)
+
+        print(f"  ✓ updated KPI and formatting for {tab_name}")
     except Exception as e:
         print(f"  ⚠ Failed to update KPI for {tab_name}: {e}")
 
