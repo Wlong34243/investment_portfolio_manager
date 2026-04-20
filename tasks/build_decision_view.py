@@ -20,38 +20,52 @@ from utils.sheet_readers import get_gspread_client
 
 app = typer.Typer()
 
+_ACTION_SEVERITIES = {"action", "alert", "data_quality"}
+
+
 def get_latest_agent_outputs(ws_agent):
-    """Reads Agent_Outputs and returns the latest signal per ticker per agent."""
+    """
+    Reads Agent_Outputs and returns signals.
+
+    Handles both legacy 11-col format (run_id, run_ts, composite_hash, ...) and
+    compact 10-col format (run_date, run_id_short, ...) written by analyze-all.
+    Normalizes column names to a standard internal set.
+    """
     all_values = ws_agent.get_all_values()
     if len(all_values) < 2:
         return pd.DataFrame()
-        
-    # Detect where headers are (search first 5 rows for 'agent' column)
+
+    # Detect header row (search first 5 rows for 'agent' column)
     header_row_idx = -1
     for i, row in enumerate(all_values[:5]):
         if 'agent' in [str(h).strip().lower() for h in row]:
             header_row_idx = i
             break
-            
+
     if header_row_idx == -1:
         print("Warning: Could not find 'agent' column in first 5 rows of Agent_Outputs.")
         return pd.DataFrame()
 
-    headers = all_values[header_row_idx]
+    headers = [str(h).strip().lower() for h in all_values[header_row_idx]]
     data = all_values[header_row_idx + 1:]
-    
+
     df = pd.DataFrame(data, columns=headers)
-    
     if df.empty:
         return pd.DataFrame()
-        
-    # Standardize column names if they are different from what we expect
-    # run_id, run_ts, composite_hash, agent, signal_type, ticker, action, rationale, scale_step, severity, dry_run
-    
-    # Sort by run_ts descending to get latest first
-    df['run_ts'] = pd.to_datetime(df['run_ts'], errors='coerce')
-    df = df.sort_values(by='run_ts', ascending=False)
-    
+
+    # Normalize column aliases: compact format → standard names
+    rename_map = {
+        "run_date":      "run_ts",       # compact timestamp → sort key
+        "run_id_short":  "run_id",
+        "signal":        "signal_type",  # compact signal → signal_type
+        "narrative":     "rationale",    # compact narrative → rationale
+    }
+    df = df.rename(columns={k: v for k, v in rename_map.items() if k in df.columns})
+
+    # Sort by timestamp descending (most recent first)
+    df["run_ts"] = pd.to_datetime(df["run_ts"], errors="coerce")
+    df = df.sort_values(by="run_ts", ascending=False)
+
     return df
 
 @app.command()
@@ -121,44 +135,67 @@ def main(live: bool = typer.Option(False, "--live", help="Write to Google Sheets
         else:
             val_data = {'Fwd P/E': '', '52w Pos %': '', 'Disc from High %': ''}
             
-        # Agent Signals
+        # Agent Signals — only surface severity in (action, alert, data_quality)
+        # Empty cell = "no active signal" (not "Not Evaluated"); hold/info/watch rows are noise
         ticker_agents = df_agent[df_agent['ticker'] == ticker] if not df_agent.empty else pd.DataFrame()
-        
-        def get_agent_signal(agent_name):
-            if ticker_agents.empty: return ''
-            matches = ticker_agents[ticker_agents['agent'] == agent_name]
-            if matches.empty: return ''
-            return matches.iloc[0].get('signal_type', '') or matches.iloc[0].get('action', '')
-            
-        val_signal = get_agent_signal('valuation') or "Not Evaluated"
-        macro_signal = get_agent_signal('macro') or "Not Evaluated"
-        thesis_signal = get_agent_signal('thesis') or "Not Evaluated"
-        tax_signal = get_agent_signal('tax') or "Not Evaluated"
-        
-        # TLH Flag
+
+        def get_active_signal(agent_name: str) -> str:
+            """Return signal_type if latest row has action-level severity, else ''."""
+            if ticker_agents.empty:
+                return ''
+            agent_rows = ticker_agents[ticker_agents['agent'] == agent_name]
+            if agent_rows.empty:
+                return ''
+            row = agent_rows.iloc[0]  # already sorted by run_ts descending
+            sev = str(row.get('severity', '')).lower()
+            if sev not in _ACTION_SEVERITIES:
+                return ''
+            return str(row.get('signal_type', '') or row.get('action', ''))
+
+        def get_concentration_flag(tkr: str) -> str:
+            """Return concentration flag text if this ticker is flagged at action severity."""
+            if df_agent.empty:
+                return ''
+            conc_rows = df_agent[
+                (df_agent['agent'] == 'concentration')
+                & (df_agent['ticker'] == tkr)
+                & (df_agent['severity'].str.lower().isin(_ACTION_SEVERITIES))
+            ]
+            if conc_rows.empty:
+                return ''
+            return str(conc_rows.iloc[0].get('signal_type', 'flagged'))
+
+        val_signal = get_active_signal('valuation')
+        macro_signal = get_active_signal('macro')
+        thesis_signal = get_active_signal('thesis')
+        conc_flag = get_concentration_flag(ticker)
+
+        # TLH Flag — tax agent uses ticker-level rows
         tlh_flag = ""
-        if tax_signal.lower() == 'tlh_candidate':
-            tlh_flag = "⚠️ TLH"
-            
-        # Top Rationale
+        if not ticker_agents.empty:
+            tax_rows = ticker_agents[ticker_agents['agent'] == 'tax']
+            if not tax_rows.empty:
+                sig = str(tax_rows.iloc[0].get('signal_type', '')).lower()
+                if 'tlh' in sig:
+                    tlh_flag = "TLH"
+
+        # Top Rationale — highest-severity, non-generic narrative for this ticker
         top_rationale = ""
-        # Priority: Valuation (if not insufficient) > Macro > Thesis
-        val_match = ticker_agents[ticker_agents['agent'] == 'valuation']
-        if not val_match.empty:
-            rat = val_match.iloc[0].get('rationale', '')
-            if "Insufficient data" not in rat:
+        for agent_name in ('valuation', 'macro', 'thesis'):
+            if ticker_agents.empty:
+                break
+            agent_rows = ticker_agents[ticker_agents['agent'] == agent_name]
+            if agent_rows.empty:
+                continue
+            row = agent_rows.iloc[0]
+            sev = str(row.get('severity', '')).lower()
+            if sev not in _ACTION_SEVERITIES:
+                continue
+            rat = str(row.get('rationale', '') or row.get('action', ''))
+            if rat and "Insufficient data" not in rat:
                 top_rationale = rat[:120]
-        
-        if not top_rationale:
-            macro_match = ticker_agents[ticker_agents['agent'] == 'macro']
-            if not macro_match.empty:
-                top_rationale = macro_match.iloc[0].get('action', '')[:60]
-                
-        if not top_rationale:
-            thesis_match = ticker_agents[ticker_agents['agent'] == 'thesis']
-            if not thesis_match.empty:
-                top_rationale = thesis_match.iloc[0].get('action', '')[:60]
-                
+                break
+
         results.append({
             'Ticker': ticker,
             'Weight %': row_h.get('Weight', 0.0),
@@ -171,8 +208,9 @@ def main(live: bool = typer.Option(False, "--live", help="Write to Google Sheets
             'Valuation Signal': val_signal,
             'Macro Signal': macro_signal,
             'Thesis Signal': thesis_signal,
+            'Conc Flag': conc_flag,
             'TLH Flag': tlh_flag,
-            'Top Rationale': top_rationale
+            'Top Rationale': top_rationale,
         })
             
     df_decision = pd.DataFrame(results)
