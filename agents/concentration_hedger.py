@@ -49,17 +49,48 @@ _AGENT_OUTPUTS_HEADERS = [
 # Python pre-computation helpers
 # ---------------------------------------------------------------------------
 
-def _compute_concentration_flags(positions: list[dict], total_value: float) -> list[dict]:
+def _compute_concentration_flags(
+    positions: list[dict],
+    total_value: float,
+) -> tuple[list[dict], list[dict]]:
     """
     Identify positions or sectors exceeding config thresholds.
+    Returns (concentration_flags, data_quality_flags).
+
+    Data quality check: if >10% of portfolio value has unclassified sector,
+    sector analysis is unreliable and is skipped. The data_quality_flags list
+    carries the issue for surfacing as a top-priority row in Agent_Outputs.
     """
-    flags = []
-    
+    dq_flags: list[dict] = []
+    flags: list[dict] = []
+
+    # 0. Data quality guard — check sector coverage before running sector analysis
+    unknown_mv = sum(
+        (p.get("market_value") or 0)
+        for p in positions
+        if (p.get("sector") or "Unknown").lower() in ("unknown", "")
+        and p.get("ticker") not in config.CASH_TICKERS
+    )
+    unknown_pct = unknown_mv / total_value if total_value > 0 else 0.0
+    skip_sector = unknown_pct > 0.10
+    if skip_sector:
+        dq_flags.append({
+            "issue": (
+                f"{unknown_pct:.1%} of portfolio has unclassified sector/asset_class; "
+                "sector concentration analysis skipped — backfill asset_class in bundle"
+            ),
+            "pct": round(unknown_pct * 100, 1),
+        })
+        logger.warning(
+            "Sector analysis skipped: %.1f%% of portfolio market value has unclassified sector.",
+            unknown_pct * 100,
+        )
+
     # 1. Single Position Flags
     for p in positions:
         ticker = p.get("ticker", "")
-        if ticker in config.CASH_TICKERS: continue
-        
+        if ticker in config.CASH_TICKERS:
+            continue
         weight = (p.get("market_value") or 0) / total_value
         if weight > config.CONCENTRATION_SINGLE_THRESHOLD:
             flags.append({
@@ -67,29 +98,30 @@ def _compute_concentration_flags(positions: list[dict], total_value: float) -> l
                 "target": ticker,
                 "current_weight_pct": round(weight * 100, 2),
                 "threshold_pct": round(config.CONCENTRATION_SINGLE_THRESHOLD * 100, 2),
-                "status": "VIOLATION"
+                "status": "VIOLATION",
             })
 
-    # 2. Sector Flags
-    sector_mv = {}
-    for p in positions:
-        if p.get("ticker") in config.CASH_TICKERS: continue
-        sector = p.get("sector") or "Unknown"
-        mv = p.get("market_value") or 0
-        sector_mv[sector] = sector_mv.get(sector, 0.0) + mv
-        
-    for sector, mv in sector_mv.items():
-        weight = mv / total_value
-        if weight > config.CONCENTRATION_SECTOR_THRESHOLD:
-            flags.append({
-                "type": "SECTOR",
-                "target": sector,
-                "current_weight_pct": round(weight * 100, 2),
-                "threshold_pct": round(config.CONCENTRATION_SECTOR_THRESHOLD * 100, 2),
-                "status": "VIOLATION"
-            })
-            
-    return flags
+    # 2. Sector Flags (skipped when data quality is too low)
+    if not skip_sector:
+        sector_mv: dict[str, float] = {}
+        for p in positions:
+            if p.get("ticker") in config.CASH_TICKERS:
+                continue
+            sector = p.get("sector") or "Unknown"
+            sector_mv[sector] = sector_mv.get(sector, 0.0) + (p.get("market_value") or 0)
+
+        for sector, mv in sector_mv.items():
+            weight = mv / total_value
+            if weight > config.CONCENTRATION_SECTOR_THRESHOLD:
+                flags.append({
+                    "type": "SECTOR",
+                    "target": sector,
+                    "current_weight_pct": round(weight * 100, 2),
+                    "threshold_pct": round(config.CONCENTRATION_SECTOR_THRESHOLD * 100, 2),
+                    "status": "VIOLATION",
+                })
+
+    return flags, dq_flags
 
 
 def _extract_high_correlations(matrix: dict) -> list[dict]:
@@ -124,20 +156,37 @@ def _result_to_sheet_rows(
     run_id: str,
     run_ts: str,
     dry_run: bool,
+    dq_flags: list[dict] | None = None,
 ) -> list[list]:
-    """Serialize ConcentrationAgentOutput to Agent_Outputs tab rows."""
+    """Serialize ConcentrationAgentOutput to Agent_Outputs tab rows.
+
+    Data quality rows are prepended with severity='data_quality' so they sort
+    to the top of Agent_Outputs (above action rows).
+    """
     rows = []
     composite_hash_short = result.bundle_hash[:16]
     dry_str = "TRUE" if dry_run else "FALSE"
+
+    # Data quality rows first — these are pipeline issues, not portfolio findings
+    for dq in (dq_flags or []):
+        issue_text = dq.get("issue", "Unknown data quality issue")
+        rows.append([
+            run_id, run_ts, composite_hash_short, AGENT_NAME,
+            "data_quality", "PORTFOLIO",
+            _clean_action_headline(issue_text),
+            issue_text,
+            "Fix asset_class/sector enrichment in bundle", "data_quality", dry_str,
+        ])
 
     for f in result.flags:
         action = f.hedge_suggestion or "Trim to threshold"
         severity = "action" if f.status == "VIOLATION" else "watch"
         rows.append([
             run_id, run_ts, composite_hash_short, AGENT_NAME,
-            f"concentration_{f.type.lower()}", f.target, action[:120],
+            f"concentration_{f.type.lower()}", f.target,
+            _clean_action_headline(action),
             f"Weight {f.current_weight_pct}% vs threshold {f.threshold_pct}%",
-            f.hedge_suggestion, severity, dry_str,
+            f.scale_step, severity, dry_str,
         ])
 
     if result.summary_narrative:
@@ -149,8 +198,16 @@ def _result_to_sheet_rows(
             "", "info", dry_str,
         ])
 
-
     return rows
+
+
+def _clean_action_headline(text: str, max_len: int = 80) -> str:
+    """Truncate action text on a word boundary, never mid-word."""
+    text = str(text)
+    if len(text) <= max_len:
+        return text
+    truncated = text[:max_len].rsplit(" ", 1)[0]
+    return truncated + "…"
 
 
 # ---------------------------------------------------------------------------
@@ -175,7 +232,7 @@ def run_concentration_agent(
     matrix = composite.get("correlation_matrix", {})
 
     # --- Pre-computation ---
-    flags = _compute_concentration_flags(market["positions"], total_value)
+    flags, dq_flags = _compute_concentration_flags(market["positions"], total_value)
     correlations = _extract_high_correlations(matrix)
 
     # --- Build user prompt ---
@@ -213,7 +270,7 @@ def run_concentration_agent(
     if result is None:
         raise RuntimeError("Gemini returned no result.")
 
-    sheet_rows = _result_to_sheet_rows(result, run_id, run_ts, dry_run)
+    sheet_rows = _result_to_sheet_rows(result, run_id, run_ts, dry_run, dq_flags=dq_flags)
     return result, sheet_rows
 
 

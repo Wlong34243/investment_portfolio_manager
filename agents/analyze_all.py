@@ -72,7 +72,115 @@ _AGENT_OUTPUTS_HEADERS = [
     "scale_step", "severity", "dry_run",
 ]
 
+# Compact write format for Agent_Outputs tab — human-readable, no UUID noise
+_COMPACT_HEADERS = [
+    "run_date", "run_id_short", "agent", "signal",
+    "ticker", "action", "narrative", "scale_step", "severity", "score",
+]
+
+# Severity sort order: data quality issues surface first, then actionable rows
+_SEVERITY_ORDER = {"data_quality": 0, "action": 1, "alert": 2, "watch": 3, "info": 4}
+
 RUNS_DIR = Path("bundles") / "runs"
+
+
+# ---------------------------------------------------------------------------
+# Agent_Outputs row transformation helpers
+# ---------------------------------------------------------------------------
+
+def _clean_headline(text: str, max_len: int = 80) -> str:
+    """Truncate action text cleanly on a word boundary, never mid-word."""
+    text = str(text)
+    if len(text) <= max_len:
+        return text
+    truncated = text[:max_len].rsplit(" ", 1)[0]
+    return truncated + "…"
+
+
+def _compact_run_ts(run_ts: str) -> str:
+    """Convert ISO-8601 UTC timestamp to 'YYYY-MM-DD HH:MM' (no seconds, no T/Z)."""
+    try:
+        dt = datetime.fromisoformat(run_ts.replace("Z", "+00:00"))
+        return dt.strftime("%Y-%m-%d %H:%M")
+    except Exception:
+        return run_ts[:16]
+
+
+def _transform_to_compact(rows: list[list], run_id_short: str, run_date: str) -> list[list]:
+    """
+    Convert 11-col agent rows to 10-col compact format:
+      Old: [run_id, run_ts, composite_hash, agent, signal_type, ticker,
+            action, rationale, scale_step, severity, dry_run]
+      New: [run_date, run_id_short, agent, signal, ticker, action,
+            narrative, scale_step, severity, score]
+    composite_hash is dropped (lives in the manifest file).
+    dry_run is replaced by score (empty — available for future use).
+    """
+    compact = []
+    for r in rows:
+        if len(r) < 11:
+            continue
+        compact.append([
+            run_date,
+            run_id_short,
+            r[3],                        # agent
+            r[4],                        # signal (was signal_type)
+            r[5],                        # ticker
+            _clean_headline(str(r[6])),  # action (word-boundary truncated)
+            r[7],                        # narrative (was rationale)
+            r[8],                        # scale_step
+            r[9],                        # severity
+            "",                          # score (empty; replaces dry_run)
+        ])
+    return compact
+
+
+def _collapse_hold_rows(rows: list[list]) -> list[list]:
+    """
+    Collapse valuation-agent HOLD rows (severity=info) into a single summary row.
+    Individual rows with severity in (action, alert, watch, data_quality) are kept.
+    The archive tab receives the full uncollapsed set (handled upstream).
+    """
+    hold_tickers: list[str] = []
+    hold_run_date = ""
+    hold_run_id_short = ""
+    non_hold: list[list] = []
+
+    for r in rows:
+        # Compact format: [run_date, run_id_short, agent, signal, ticker, action, narrative, scale_step, severity, score]
+        #                   [0]        [1]           [2]    [3]     [4]     [5]     [6]        [7]         [8]       [9]
+        is_valuation_hold = (
+            r[2] == "valuation"
+            and str(r[3]).lower() in ("hold",)
+            and r[8] == "info"
+        )
+        if is_valuation_hold:
+            hold_tickers.append(str(r[4]))
+            if not hold_run_date:
+                hold_run_date = r[0]
+                hold_run_id_short = r[1]
+        else:
+            non_hold.append(r)
+
+    if hold_tickers:
+        n = len(hold_tickers)
+        ticker_str = ", ".join(hold_tickers[:50])
+        if len(hold_tickers) > 50:
+            ticker_str += f" +{len(hold_tickers) - 50} more"
+        non_hold.append([
+            hold_run_date, hold_run_id_short,
+            "valuation", "hold",
+            f"[HOLD SUMMARY — {n} positions]",
+            "Hold — see narrative for position list",
+            ticker_str, "", "info", "",
+        ])
+
+    return non_hold
+
+
+def _sort_by_severity(rows: list[list]) -> list[list]:
+    """Sort rows: data_quality → action → alert → watch → info."""
+    return sorted(rows, key=lambda r: _SEVERITY_ORDER.get(str(r[8]), 5))
 
 
 # ---------------------------------------------------------------------------
@@ -227,6 +335,22 @@ def _build_fresh_bundles() -> Path:
     composite_path = write_composite_bundle(composite)
     console.print(f"[dim]Composite bundle: {composite_path.name}[/]")
 
+    with console.status("[cyan]Enriching: ATR stops..."):
+        try:
+            from tasks.enrich_atr import enrich_composite_bundle as _enrich_atr
+            _enrich_atr(composite_path)
+            console.print("[dim]ATR stops injected.[/]")
+        except Exception as e:
+            console.print(f"[yellow]! ATR enrichment skipped: {e}[/]")
+
+    with console.status("[cyan]Enriching: Murphy TA indicators..."):
+        try:
+            from tasks.enrich_technicals import enrich_composite_bundle as _enrich_technicals
+            _enrich_technicals(composite_path)
+            console.print("[dim]Murphy TA indicators injected.[/]")
+        except Exception as e:
+            console.print(f"[yellow]! Technical enrichment skipped: {e}[/]")
+
     return composite_path
 
 
@@ -329,19 +453,26 @@ def run_analyze_all(
 
     console.print(Rule("[bold]analyze-all complete", style="green"))
 
+    # Transform raw 11-col rows → compact 10-col readable format
+    run_id_short = run_id[:8]
+    run_date = _compact_run_ts(run_ts)
+    compact_rows = _transform_to_compact(all_standard_rows, run_id_short, run_date)
+    compact_rows = _collapse_hold_rows(compact_rows)
+    compact_rows = _sort_by_severity(compact_rows)
+
     # Sheet write (live mode only)
-    total_rows = len(all_standard_rows)
-    if live and all_standard_rows:
+    total_rows = len(compact_rows)
+    if live and compact_rows:
         from utils.sheet_readers import get_gspread_client
         client = get_gspread_client()
         ss = client.open_by_key(config.PORTFOLIO_SHEET_ID)
-        archive_and_overwrite_agent_outputs(ss, all_standard_rows, run_ts, _AGENT_OUTPUTS_HEADERS)
-    elif live and not all_standard_rows:
+        archive_and_overwrite_agent_outputs(ss, compact_rows, run_ts, _COMPACT_HEADERS)
+    elif live and not compact_rows:
         console.print("[yellow]LIVE: no standard rows to write (all agents failed or produced no output).[/]")
     else:
         console.print(
-            f"[dim]DRY RUN: {total_rows} row(s) queued across {len(succeeded)} agent(s) "
-            f"— not written. Use --live to write.[/]"
+            f"[dim]DRY RUN: {total_rows} compact row(s) from {len(all_standard_rows)} raw rows "
+            f"across {len(succeeded)} agent(s) — not written. Use --live to write.[/]"
         )
 
     # Write manifest to bundles/runs/
