@@ -63,36 +63,32 @@ GEMINI_MAX_TOKENS = int(os.getenv("GEMINI_MAX_TOKENS", "2000"))  # default for l
 # Per-agent token budgets — overrides for agents that return large structured JSON.
 # Gemini 2.5 Flash output cap is 65,536 tokens; these are well within bounds.
 # Root cause of "EOF while parsing" errors: output truncated at the global 2000-token default.
-GEMINI_MAX_TOKENS_VALUATION     = 24000   # 53 positions × ~350 tokens each + narrative overhead
+GEMINI_MAX_TOKENS_VALUATION     = 30000   # 53 positions × ~350 tokens each + narrative overhead
 GEMINI_MAX_TOKENS_CONCENTRATION = 10000   # 24 flags × hedge_suggestion + correlation table
 GEMINI_MAX_TOKENS_MACRO         = 16000   # Increased from 8000 due to truncation
-GEMINI_MAX_TOKENS_REBUY         = 8000    # Increased from 6000
-GEMINI_MAX_TOKENS_BAGGER        = 16000   # 50+ tickers × compounder gate narrative
-GEMINI_MAX_TOKENS_THESIS        = 16000   # 50+ tickers × management candor analysis
+GEMINI_MAX_TOKENS_REBUY         = 10000    # Increased from 6000
+GEMINI_MAX_TOKENS_BAGGER        = 24000   # 50+ tickers × compounder gate narrative (raised from 16000)
+GEMINI_MAX_TOKENS_THESIS        = 32000   # 50+ tickers × management candor analysis (raised from 16000; unchunked)
 
 # ---------------------------------------------------------------------------
-# Cash / Non-Investment Tickers
+# Centralized Exclusions (Phase 5-Hardening)
 # ---------------------------------------------------------------------------
-# These are cash sweep or money market positions — track as cash, not investments
-CASH_TICKERS = {'CASH_MANUAL', 'QACDS', 'CASH & CASH INVESTMENTS', 'SGOV'}
-CASH_EQUIVALENT_TICKERS = CASH_TICKERS  # Alias for consistency across agents
+# These are used to filter positions out of specific analysis tracks.
+CASH_TICKERS     = ['CASH', 'SGOV', 'CASH_MANUAL', 'MMDA', 'REDEEMED', 'QACDS', 'CASH & CASH INVESTMENTS']
+VALUATION_SKIP   = ['SGOV', 'JPIE', 'Fixed Income', 'CASH', 'QACDS', 'MMDA']
+VALUATION_SKIP_TICKERS = ['SGOV', 'CASH_MANUAL']
+BETA_EXCLUDE     = ['CASH', 'Fixed Income', 'MMDA', 'REDEEMED', 'SGOV']
 
-# Default cash yield for money market / sweep (editable in Sheet Config tab)
-DEFAULT_CASH_YIELD_PCT = 4.50
+# Backward compatibility / Aliases
+CASH_EQUIVALENT_TICKERS = CASH_TICKERS
 
 # ---------------------------------------------------------------------------
-# Valuation Agent Skips
+# Valuation Agent Skips (Legacy - being replaced by VALUATION_SKIP)
 # ---------------------------------------------------------------------------
 # Asset classes and tickers to exclude from valuation analysis (ETFs, Funds, etc. have no P/E)
 VALUATION_SKIP_ASSET_CLASSES = {
     "ETF", "FUND", "MUTUAL_FUND", "FIXED_INCOME", "CASH_EQUIVALENT",
     "INDEX", "BOND", "MMMF",
-}
-
-VALUATION_SKIP_TICKERS = {
-    'SGOV', 'JPIE', 'QQQM', 'VEA', 'VTI', 'XBI', 'XOM_skip', 'IGV', 'EWZ', 'IFRA',
-    'XLV', 'XLE', 'XLF', 'RSP', 'EEM', 'VEU', 'EMXC', 'BBJP', 'EFG', 'PPA', 'EWJ',
-    'CASH_MANUAL', 'CASH & CASH INVESTMENTS', 'QACDS'
 }
 
 # ---------------------------------------------------------------------------
@@ -110,6 +106,7 @@ TAB_REALIZED_GL = "Realized_GL"
 TAB_CONFIG = "Config"
 TAB_LOGS = "Logs"
 TAB_AGENT_OUTPUTS = "Agent_Outputs"
+TAB_AGENT_OUTPUTS_ARCHIVE = "Agent_Outputs_Archive"
 TAB_AI_SUGGESTED_ALLOCATION = "AI_Suggested_Allocation"
 TAB_DECISION_LOG = "Decision_Log"
 TAB_TRADE_LOG = "Trade_Log"
@@ -418,3 +415,13 @@ ADD_CANDIDATE_STALE_THRESHOLD_DAYS = 120
 NEW_IDEA_MAX_CANDIDATES_PER_RUN = 10   # hard cap on --tickers list length
 NEW_IDEA_STARTER_SIZE_PCT = 0.015      # 1.5% of dry powder as default starter
 NEW_IDEA_MAX_STARTER_PCT = 0.025       # hard cap: 2.5% of dry powder for new ideas
+
+# ---------------------------------------------------------------------------
+# Technical Indicator Thresholds (Murphy TA — used by tasks/enrich_technicals.py)
+# ---------------------------------------------------------------------------
+TA_RSI_OVERBOUGHT      = 70    # RSI above this → "overbought"
+TA_RSI_OVERSOLD        = 30    # RSI below this → "oversold"
+TA_VOLUME_HIGH_RATIO   = 1.5   # volume_ratio above this → "high"
+TA_VOLUME_LOW_RATIO    = 0.5   # volume_ratio below this → "low"
+TA_CROSS_LOOKBACK_DAYS = 20    # days to look back for golden/death cross detection
+TA_MACD_CROSS_LOOKBACK = 5     # days to look back for MACD signal cross

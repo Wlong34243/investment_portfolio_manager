@@ -115,7 +115,16 @@ def run_macro_agent(
     market = load_bundle(Path(composite["market_bundle_path"]))
     
     positions = [p for p in market["positions"] if p.get("ticker") not in config.CASH_TICKERS]
-    atr_stops = composite.get("calculated_technical_stops", {})
+
+    # enrich_atr.py writes a list-of-dicts; normalize to dict keyed by ticker
+    _atr_raw = composite.get("calculated_technical_stops", [])
+    if isinstance(_atr_raw, list):
+        atr_stops = {s["ticker"]: s for s in _atr_raw if isinstance(s, dict) and "ticker" in s}
+    elif isinstance(_atr_raw, dict):
+        atr_stops = _atr_raw
+    else:
+        logger.warning("calculated_technical_stops has unexpected shape — running in fundamentals-only mode")
+        atr_stops = {}
 
     # --- Pre-computation facts ---
     macro_facts = []

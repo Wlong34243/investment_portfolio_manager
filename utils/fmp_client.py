@@ -17,6 +17,12 @@ except ImportError:
 BASE_URL = "https://financialmodelingprep.com/stable"
 
 # ---------------------------------------------------------------------------
+# Endpoint availability flags (set False on first 404; suppresses per-ticker spam)
+# ---------------------------------------------------------------------------
+FMP_EARNINGS_AVAILABLE: bool = True      # /stable/earnings-surprises
+_fmp_earnings_404_logged: bool = False   # gate for the one-time warning log
+
+# ---------------------------------------------------------------------------
 # Cache + rate-limiter config
 # ---------------------------------------------------------------------------
 FMP_CACHE_DIR = Path("data/fmp_cache")
@@ -334,8 +340,12 @@ def get_earnings_surprises_cached(ticker: str) -> list[dict]:
     """
     Fetch last 2 quarters of earnings surprises from FMP.
     Returns list of dicts with: date, actual, estimated, surprise_pct.
-    Falls back to [] on 402/429.
+    Returns [] silently when the endpoint is unavailable (404) or rate-limited.
     """
+    global FMP_EARNINGS_AVAILABLE, _fmp_earnings_404_logged
+    if not FMP_EARNINGS_AVAILABLE:
+        return []
+
     api_key = get_fmp_api_key()
     if not api_key:
         return []
@@ -347,6 +357,15 @@ def get_earnings_surprises_cached(ticker: str) -> list[dict]:
     try:
         _fmp_rate_limit()
         resp = requests.get(url, timeout=10)
+        if resp.status_code == 404:
+            FMP_EARNINGS_AVAILABLE = False
+            if not _fmp_earnings_404_logged:
+                logging.warning(
+                    "FMP /stable/earnings-surprises returned 404 — endpoint unavailable on free tier; "
+                    "suppressing further earnings-surprise requests this session"
+                )
+                _fmp_earnings_404_logged = True
+            return []
         if resp.status_code in (402, 429):
             logging.warning("FMP %d for %s earnings-surprises", resp.status_code, ticker)
             return []

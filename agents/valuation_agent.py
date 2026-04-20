@@ -29,6 +29,7 @@ from core.bundle import load_bundle
 from core.vault_bundle import load_vault_bundle
 from utils.gemini_client import ask_gemini_composite
 from utils.fmp_client import get_fmp_quote, get_earnings_surprises_cached
+import utils.fmp_client as _fmp_mod
 from utils.sheet_readers import get_gspread_client
 from utils.sheet_writers import archive_and_overwrite_agent_outputs
 from utils.formatters import dicts_to_markdown_table
@@ -84,7 +85,9 @@ def _compute_valuation_facts(
 
     for pos in positions:
         ticker = pos.get("ticker", "")
-        if ticker in config.CASH_TICKERS or ticker in config.VALUATION_SKIP_TICKERS:
+        # Use VALUATION_SKIP (canonical list) — VALUATION_SKIP_TICKERS is legacy/truncated
+        _skip_tickers = set(config.CASH_TICKERS) | set(config.VALUATION_SKIP)
+        if ticker in _skip_tickers:
             continue
         if ticker_filter and ticker not in ticker_filter:
             continue
@@ -234,6 +237,9 @@ def run_valuation_agent(
     with console.status("[cyan]Fetching FMP data..."):
         val_facts, data_gaps = _compute_valuation_facts(investable, thesis_map, ticker_filter)
 
+    if not _fmp_mod.FMP_EARNINGS_AVAILABLE:
+        logger.info("FMP earnings-surprises endpoint unavailable; earnings surprise data excluded from this run.")
+
     if not val_facts:
         raise RuntimeError("No positions to analyze after FMP fetch. Check FMP_API_KEY.")
 
@@ -253,7 +259,7 @@ def run_valuation_agent(
         f"Portfolio total value: ${total_value:,.2f}\n\n"
         f"{valuation_table_str}\n\n"
         f"## Data Gaps (tickers with missing FMP data — assign signal='monitor', rationale='Insufficient data')\n"
-        f"{json.dumps(data_gaps)}\n\n"
+        f"{', '.join(data_gaps) if data_gaps else 'None'}\n\n"
         f"## Instructions\n"
         "For each position in the valuation table:\n"
         "  - Assign a signal: 'accumulate', 'hold', 'trim', or 'monitor'.\n"

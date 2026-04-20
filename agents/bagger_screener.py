@@ -171,9 +171,16 @@ def _compute_bagger_facts(
 
     for pos in positions:
         ticker = pos.get("ticker", "")
-        if ticker in config.CASH_TICKERS or ticker in config.VALUATION_SKIP_TICKERS:
+        # Use VALUATION_SKIP (canonical list) — VALUATION_SKIP_TICKERS is legacy/truncated
+        _skip_tickers = set(config.CASH_TICKERS) | set(config.VALUATION_SKIP)
+        if ticker in _skip_tickers:
             continue
         if ticker_filter and ticker not in ticker_filter:
+            continue
+
+        # Secondary guard: skip ETF/fund asset classes (no 100-bagger potential)
+        asset_class = (pos.get("asset_class") or pos.get("Asset Class") or "").upper().replace(" ", "_")
+        if asset_class in config.VALUATION_SKIP_ASSET_CLASSES:
             continue
 
         # Fetch pre-computed metrics
@@ -228,7 +235,7 @@ def _result_to_sheet_rows(
     composite_hash_short = result.bundle_hash[:16]
     dry_str = "TRUE" if dry_run else "FALSE"
 
-    for c in result.candidates:
+    for c in result.candidates_analyzed:
         action = _REC_TO_ACTION.get(c.final_recommendation, c.final_recommendation)
         severity = _REC_TO_SEVERITY.get(c.final_recommendation, "info")
         rationale = f"{c.final_recommendation}: {c.fundamental_reason}"
@@ -291,7 +298,7 @@ def run_bagger_agent(
         f"## Pre-Computed Gate Facts\n"
         f"{facts_table}\n\n"
         f"## Data Gaps\n"
-        f"{json.dumps(data_gaps)}\n\n"
+        f"{', '.join(data_gaps) if data_gaps else 'None'}\n\n"
         f"## Instructions\n"
         "1. For each ticker: analyze ROIC, Moat (Gross Margin), Growth, and Size (Acorn).\n"
         "2. Provide a 'fundamental_reason' and a 'final_recommendation' (STRONG_BUY, WATCHLIST, REJECT).\n"
@@ -348,17 +355,17 @@ def main(
     summary.add_column("Field", style="cyan")
     summary.add_column("Value", style="white")
     summary.add_row("Bundle Hash", result.bundle_hash[:16] + "...")
-    summary.add_row("Candidates", str(len(result.candidates)))
+    summary.add_row("Candidates", str(len(result.candidates_analyzed)))
     summary.add_row("Strong Buys", str(len(result.strong_buy_candidates)))
     console.print(summary)
 
-    if result.candidates:
+    if result.candidates_analyzed:
         colors = {"STRONG_BUY": "bold green", "WATCHLIST": "yellow", "REJECT": "dim red"}
         table = Table(title="Bagger Candidates", show_header=True)
         table.add_column("Ticker")
         table.add_column("Rec")
         table.add_column("Reason")
-        for c in result.candidates:
+        for c in result.candidates_analyzed:
             table.add_row(c.ticker, f"[{colors.get(c.final_recommendation)}]{c.final_recommendation}[/]", c.fundamental_reason[:80])
         console.print(table)
 
