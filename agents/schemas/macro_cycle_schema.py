@@ -76,6 +76,10 @@ class MacroCycleResponse(BaseModel):
         description="composite_hash from the composite bundle. Required for provenance linkage.",
     )
     analysis_timestamp_utc: str = Field(..., description="ISO-8601 UTC timestamp.")
+    paradigm_phase: Literal["installation", "frenzy", "synergy", "maturity", "unknown"] = Field(
+        ...,
+        description="Authoritative phase for the entire portfolio paradigm.",
+    )
     positions_analyzed: list[PositionCycleAnalysis] = Field(
         default_factory=list,
         description="Per-position Carlota Perez framework assessments.",

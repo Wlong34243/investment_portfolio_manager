@@ -102,6 +102,34 @@ def _result_to_sheet_rows(
 # Runner & CLI
 # ---------------------------------------------------------------------------
 
+def _build_macro_user_prompt(chunk: list[dict], context: dict) -> str:
+    """Build the Gemini prompt for one chunk of positions."""
+    facts_table = dicts_to_markdown_table(chunk)
+    framework_text = context.get("framework_text", "")
+    composite_hash = context.get("composite_hash", "")
+    total_value = context.get("total_value", 0.0)
+
+    return (
+        f"Analyze the following {len(chunk)} position(s) against the Carlota Perez Macro-Cycle Framework.\n\n"
+        f"## Pre-Computed Macro Facts (Technical Stops + Weights)\n"
+        f"Portfolio total value: ${total_value:,.2f}\n\n"
+        f"{facts_table}\n\n"
+        f"## Carlota Perez Framework Context\n"
+        f"{framework_text}\n\n"
+        "## Instructions\n"
+        "For each position:\n"
+        "  - Identify the paradigm_phase (installation, frenzy, synergy, maturity, unknown).\n"
+        "  - Reconcile fundamental maturity signals with technical ATR triggers.\n"
+        "  - Assign a final_recommendation (HOLD, TRIM_25PCT, TRIM_50PCT, EXIT, MONITOR).\n"
+        "  - Provide a concise fundamental_reason_to_sell (max 200 chars).\n"
+        "  - Provide a concise technical_trigger_summary (max 100 chars).\n\n"
+        "Set paradigm_phase on the response to the dominant phase for this chunk's positions.\n"
+        "Set portfolio_cycle_summary to a brief overall paradigm narrative for this chunk.\n"
+        f"bundle_hash (MUST echo): {composite_hash}\n"
+        "Produce a MacroCycleResponse JSON object."
+    )
+
+
 def run_macro_agent(
     bundle_path: Path,
     run_id: str,
@@ -109,79 +137,110 @@ def run_macro_agent(
     dry_run: bool = True,
 ) -> tuple[MacroCycleResponse, list[list]]:
     """
-    Orchestrates the Macro-Cycle Agent analysis.
+    Orchestrates the Macro-Cycle Agent with manual per-chunk Gemini calls.
+
+    Does NOT use run_chunked_analysis because MacroCycleResponse.positions_analyzed
+    does not match that utility's result.candidates interface.
     """
+    from collections import Counter
+
     composite = load_composite_bundle(bundle_path)
     market = load_bundle(Path(composite["market_bundle_path"]))
-    
-    positions = [p for p in market["positions"] if p.get("ticker") not in config.CASH_TICKERS]
+    composite_hash = composite["composite_hash"]
+    total_value = market.get("total_value", 0.0)
 
-    # enrich_atr.py writes a list-of-dicts; normalize to dict keyed by ticker
+    investable = [p for p in market["positions"] if p.get("ticker") not in config.CASH_TICKERS]
+
+    # Normalize ATR stops: enrich_atr.py writes a list; convert to dict keyed by ticker
     _atr_raw = composite.get("calculated_technical_stops", [])
-    if isinstance(_atr_raw, list):
-        atr_stops = {s["ticker"]: s for s in _atr_raw if isinstance(s, dict) and "ticker" in s}
-    elif isinstance(_atr_raw, dict):
-        atr_stops = _atr_raw
-    else:
-        logger.warning("calculated_technical_stops has unexpected shape — running in fundamentals-only mode")
-        atr_stops = {}
+    atr_stops = {s["ticker"]: s for s in _atr_raw if isinstance(s, dict) and "ticker" in s}
 
-    # --- Pre-computation facts ---
-    macro_facts = []
-    for p in positions:
+    # Build per-position facts for Gemini
+    macro_positions = []
+    for p in investable:
         ticker = p["ticker"]
         stop_data = atr_stops.get(ticker, {})
         stop_level = stop_data.get("stop_loss_level")
-        price = p.get("price", 0.0)
-        
-        is_triggered = False
-        pct_from_stop = None
-        if stop_level and price > 0:
-            is_triggered = price < stop_level
-            pct_from_stop = round((price - stop_level) / price * 100, 2)
+        price = float(p.get("price") or 0.0)
+        pct_from_stop = round((price - stop_level) / price * 100, 2) if stop_level and price > 0 else None
 
-        macro_facts.append({
+        macro_positions.append({
             "ticker": ticker,
             "sector": p.get("sector", "Unknown"),
             "price": price,
             "stop_loss_level": stop_level,
             "pct_from_stop": pct_from_stop,
-            "is_triggered": is_triggered,
-            "weight_pct": round(p.get("weight_pct", 0.0), 2)
+            "is_triggered": price < stop_level if stop_level and price > 0 else False,
+            "weight_pct": round(p.get("weight_pct", 0.0), 2),
         })
 
-    # --- Build user prompt ---
-    system_prompt_text = _SYSTEM_PROMPT_PATH.read_text(encoding="utf-8")
     framework_text = _FRAMEWORK_PATH.read_text(encoding="utf-8")
-    
-    # Markdown optimization
-    facts_table = dicts_to_markdown_table(macro_facts)
+    system_instruction = _SYSTEM_PROMPT_PATH.read_text(encoding="utf-8")
+    portfolio_context = {
+        "framework_text": framework_text,
+        "composite_hash": composite_hash,
+        "total_value": total_value,
+    }
 
-    user_prompt = (
-        f"Analyze the following portfolio against the Carlota Perez Macro-Cycle Framework.\n\n"
-        f"## Pre-Computed Macro Facts (Technical Stops + Weights)\n"
-        f"{facts_table}\n\n"
-        f"## Carlota Perez Framework Context\n"
-        f"{framework_text}\n\n"
-        "## Instructions\n"
-        "1. Identify the current paradigm_phase (Installation, Deployment, Turning Point).\n"
-        "2. For each triggered stop-loss: decide if this is a fundamental EXIT or a 'noise' dip.\n"
-        "3. Provide final_recommendation (HOLD, TRIM_25PCT, TRIM_50PCT, EXIT, MONITOR).\n"
-        "4. bundle_hash (echo it): {composite['composite_hash']}\n"
-        "Produce a MacroCycleResponse JSON object."
+    # Manual chunking — collect positions_analyzed from each chunk directly
+    chunks = [macro_positions[i:i + CHUNK_SIZE] for i in range(0, len(macro_positions), CHUNK_SIZE)]
+
+    all_positions: list[PositionCycleAnalysis] = []
+    all_summaries: list[str] = []
+    chunk_errors: list[str] = []
+
+    for idx, chunk in enumerate(chunks):
+        tickers_in_chunk = [p["ticker"] for p in chunk]
+        logger.info("Macro chunk %d/%d: %s", idx + 1, len(chunks), tickers_in_chunk)
+        try:
+            user_prompt = _build_macro_user_prompt(chunk, portfolio_context)
+            chunk_result: MacroCycleResponse | None = ask_gemini_composite(
+                prompt=user_prompt,
+                composite_bundle_path=bundle_path,
+                response_schema=MacroCycleResponse,
+                system_instruction=system_instruction,
+                max_tokens=config.GEMINI_MAX_TOKENS_MACRO,
+            )
+            if chunk_result is None:
+                msg = f"Chunk {idx + 1}/{len(chunks)} ({tickers_in_chunk}): Gemini returned None"
+                logger.warning(msg)
+                chunk_errors.append(msg)
+            else:
+                all_positions.extend(chunk_result.positions_analyzed)
+                if chunk_result.portfolio_cycle_summary:
+                    all_summaries.append(chunk_result.portfolio_cycle_summary)
+        except Exception as e:
+            msg = f"Chunk {idx + 1}/{len(chunks)} failed: {e}"
+            logger.error(msg, exc_info=True)
+            chunk_errors.append(msg)
+
+        if idx < len(chunks) - 1:
+            time.sleep(INTER_CHUNK_SLEEP)
+
+    if not all_positions:
+        raise RuntimeError(f"Macro analysis failed for all chunks. Errors: {chunk_errors}")
+
+    if chunk_errors:
+        logger.warning("Some macro chunks failed (%d/%d): %s", len(chunk_errors), len(chunks), chunk_errors)
+
+    # Derive portfolio-level paradigm phase from most common per-position phase
+    phases = [p.paradigm_phase for p in all_positions if p.paradigm_phase != "unknown"]
+    portfolio_phase = Counter(phases).most_common(1)[0][0] if phases else "unknown"
+
+    portfolio_summary = (
+        " | ".join(all_summaries[:2])
+        if all_summaries
+        else f"Portfolio paradigm phase: {portfolio_phase}. Analysis complete across {len(all_positions)} positions."
     )
 
-    # --- Call Gemini ---
-    result: MacroCycleResponse | None = ask_gemini_composite(
-        prompt=user_prompt,
-        composite_bundle_path=bundle_path,
-        response_schema=MacroCycleResponse,
-        system_instruction=system_prompt_text,
-        max_tokens=config.GEMINI_MAX_TOKENS_MACRO,
+    result = MacroCycleResponse(
+        bundle_hash=composite_hash,
+        analysis_timestamp_utc=run_ts,
+        paradigm_phase=portfolio_phase,
+        positions_analyzed=all_positions,
+        rotation_targets=[],
+        portfolio_cycle_summary=portfolio_summary,
     )
-
-    if result is None:
-        raise RuntimeError("Gemini returned no result.")
 
     sheet_rows = _result_to_sheet_rows(result, run_id, run_ts, dry_run)
     return result, sheet_rows
