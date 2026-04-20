@@ -339,6 +339,11 @@ def snapshot(
         help="After building the snapshot, find the latest composite bundle and inject ATR stops. "
              "Requires a composite bundle to already exist (run 'manager.py bundle composite' first).",
     ),
+    enrich_technicals: bool = typer.Option(
+        False, "--enrich-technicals",
+        help="After building the snapshot, inject Murphy TA indicators (MA/RSI/MACD/volume) "
+             "into the latest composite bundle. Requires composite bundle to exist.",
+    ),
     live: bool = typer.Option(False, "--live", help="Enable live mode. Default is DRY RUN."),
 ):
     """Freeze current market state to an immutable context bundle."""
@@ -451,6 +456,41 @@ def snapshot(
                 except Exception as e:
                     console.print(f"[red]ATR enrichment failed: {e}[/]")
 
+    # Technical indicators enrichment — optional post-snapshot step
+    if enrich_technicals:
+        from tasks.enrich_technicals import enrich_composite_bundle as _enrich_technicals
+        from collections import Counter
+        composite_candidates = sorted(
+            Path("bundles").glob("composite_bundle_*.json"),
+            key=lambda p: p.stat().st_mtime,
+        )
+        if not composite_candidates:
+            console.print(
+                "[yellow]! --enrich-technicals: No composite bundles found. "
+                "Run 'manager.py bundle composite' first, then re-run with --enrich-technicals.[/]"
+            )
+        else:
+            composite_path = composite_candidates[-1]
+            console.print(f"\n[cyan]Technical Indicators Enrichment — {composite_path.name}[/]")
+            with console.status("[cyan]Computing Murphy TA indicators (MA/RSI/MACD/volume)..."):
+                try:
+                    enriched = _enrich_technicals(composite_path)
+                    technicals = enriched.get("calculated_technicals", [])
+                    data_gaps  = [e for e in technicals if e.get("data_gap")]
+                    console.print(
+                        f"[green]Technical indicators computed for {len(technicals)} position(s).[/]"
+                    )
+                    if data_gaps:
+                        console.print(f"[yellow]⚠  Data gaps ({len(data_gaps)}):[/]")
+                        for e in data_gaps:
+                            console.print(f"  [yellow]{e['ticker']:8s} → {e['data_gap']}[/]")
+                    dist = Counter(e.get("trend_label") for e in technicals if e.get("trend_label"))
+                    for label in ["strong_uptrend", "uptrend", "neutral", "downtrend", "strong_downtrend"]:
+                        if dist[label]:
+                            console.print(f"  [dim]{label:<20}[/] {dist[label]}")
+                except Exception as e:
+                    console.print(f"[red]Technical enrichment failed: {e}[/]")
+
 
 # --- VAULT GROUP ---
 
@@ -531,26 +571,164 @@ def vault_add_thesis(
         console.print(f"[yellow]! Thesis for {ticker.upper()} already exists. Aborting.[/]")
         raise typer.Exit()
 
-    template = f"""# {ticker.upper()} - Investment Thesis
+    _today = datetime.now().strftime("%Y-%m-%d")
+    template = f"""---
+ticker: {ticker.upper()}
+style: GARP
+framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
+entry_date: {_today}
+last_reviewed: {_today}
+current_allocation: null
+cost_basis: null
+time_horizon: 3 to 5 years
+---
 
-## Style
-[Growth | Value | Dividend | Speculative]
-
-## Scaling State
-next_step: [accumulate | hold | trim | exit]
-
-## Rotation Priority
-priority: [high | medium | low]
+# {ticker.upper()} — Investment Thesis
 
 ## Core Thesis
-... why do we own this? ...
+... why do we own this? What is the compounding engine? ...
 
-## Risks to Watch
-... what would make us sell? ...
+## Valuation & Targets
+... target P/E range, PEG ceiling, acceptable multiples ...
+
+## Position Sizing & Action Zones
+... add zone (price or % below cost basis), trim zone ...
+
+## Behavioral Guardrails
+... drawdown tolerance, patience mandate ...
+
+## Exit Conditions
+1. ...
+2. ...
+
+## Quantitative Triggers
+
+<!-- Machine-readable triggers. Keep the YAML block EXACT — parsers depend on it.
+     Use null for fields that don't apply to this position's style. -->
+
+```yaml
+triggers:
+  # Valuation triggers (GARP, FUND)
+  fwd_pe_add_below: null      # ADD if forward P/E drops below this
+  fwd_pe_trim_above: null     # TRIM if forward P/E rises above this
+  fwd_pe_historical_median: null  # the position's own 5-year median, for reference
+
+  # Price/technical triggers (all styles)
+  price_add_below: null       # ADD if price drops below this dollar level
+  price_trim_above: null      # TRIM if price rises above this dollar level
+  discount_from_52w_high_add: null   # ADD if % discount exceeds this (e.g., 0.15 for 15%)
+
+  # Fundamental triggers (GARP, FUND)
+  revenue_growth_floor_pct: null     # concern if YoY revenue growth drops below this
+  operating_margin_floor_pct: null   # concern if operating margin drops below this
+
+  # Position management
+  style_size_ceiling_pct: null       # max weight for this position, per its style
+  current_weight_pct: null           # auto-populated by weekly snapshot; do not edit
+```
 """
     THESES_DIR.mkdir(parents=True, exist_ok=True)
     target.write_text(template)
     console.print(f"Created {target} — fill in the sections.")
+
+
+@vault_app.command("thesis-audit")
+def vault_thesis_audit():
+    """
+    Report quantitative trigger completeness across all thesis files.
+
+    Reads all _thesis.md files in vault/theses/, parses the triggers: YAML block
+    from each, and reports populated vs null fields. Sorted by completeness ascending
+    so Bill sees the worst-backfilled positions first.
+
+    Exits 0 regardless — this is reporting, not enforcement.
+    """
+    import re
+    import yaml as _yaml
+
+    _TRIGGER_FIELDS = [
+        "fwd_pe_add_below",
+        "fwd_pe_trim_above",
+        "fwd_pe_historical_median",
+        "price_add_below",
+        "price_trim_above",
+        "discount_from_52w_high_add",
+        "revenue_growth_floor_pct",
+        "operating_margin_floor_pct",
+        "style_size_ceiling_pct",
+        "current_weight_pct",
+    ]
+    total_fields = len(_TRIGGER_FIELDS)
+
+    thesis_files = sorted(THESES_DIR.glob("*_thesis.md"))
+    if not thesis_files:
+        console.print(f"[yellow]No thesis files found in {THESES_DIR}[/]")
+        raise typer.Exit()
+
+    rows = []
+    for tf in thesis_files:
+        ticker = tf.stem.replace("_thesis", "").upper()
+        content = tf.read_text(encoding="utf-8")
+
+        # Extract style from frontmatter
+        style = "unknown"
+        fm_match = re.match(r"^---\n(.*?)\n---", content, re.DOTALL)
+        if fm_match:
+            try:
+                fm_data = _yaml.safe_load(fm_match.group(1)) or {}
+                style = str(fm_data.get("style", "unknown"))[:10]
+            except Exception:
+                pass
+
+        # Extract triggers YAML block
+        trig_match = re.search(
+            r"```yaml\s*\ntriggers:\s*\n(.*?)```",
+            content,
+            re.DOTALL,
+        )
+        if not trig_match:
+            rows.append((ticker, style, 0, total_fields, "no_triggers_block"))
+            continue
+
+        try:
+            trig_data = _yaml.safe_load("triggers:\n" + trig_match.group(1)) or {}
+            triggers = trig_data.get("triggers", {}) or {}
+        except Exception:
+            rows.append((ticker, style, 0, total_fields, "parse_error"))
+            continue
+
+        populated = sum(1 for f in _TRIGGER_FIELDS if triggers.get(f) is not None)
+        status = "complete" if populated == total_fields else ("partial" if populated > 0 else "empty")
+        rows.append((ticker, style, populated, total_fields, status))
+
+    # Sort by populated ascending (worst-backfilled first)
+    rows.sort(key=lambda r: r[2])
+
+    table = Table(title="Thesis Quantitative Trigger Audit", show_header=True)
+    table.add_column("Ticker", style="bold")
+    table.add_column("Style")
+    table.add_column("Populated")
+    table.add_column("Total")
+    table.add_column("Status")
+
+    status_colors = {"complete": "green", "partial": "yellow", "empty": "red", "no_triggers_block": "dim", "parse_error": "red"}
+    for ticker, style, populated, total, status in rows:
+        color = status_colors.get(status, "white")
+        table.add_row(
+            ticker,
+            style,
+            str(populated),
+            str(total),
+            f"[{color}]{status}[/]",
+        )
+
+    console.print(table)
+    console.print(
+        f"\n[dim]{len(rows)} thesis file(s) scanned. "
+        f"Complete: {sum(1 for r in rows if r[4] == 'complete')} | "
+        f"Partial: {sum(1 for r in rows if r[4] == 'partial')} | "
+        f"Empty/Missing: {sum(1 for r in rows if r[4] in ('empty', 'no_triggers_block', 'parse_error'))}[/]"
+    )
 
 
 # --- BUNDLE GROUP ---
@@ -666,21 +844,21 @@ app.add_typer(dashboard_app, name="dashboard")
 def dashboard_refresh(
     live: bool = typer.Option(False, "--live", help="Perform live update/formatting."),
     update: bool = typer.Option(False, "--update", help="Sync latest positions from Schwab before refreshing."),
+    tx_days: int = typer.Option(90, "--tx-days", help="Days of transaction history to fetch with --update (use 365 for backfill)."),
 ):
     """Refreshes Valuation_Card, Decision_View, and all formatting."""
     from tasks.build_valuation_card import main as build_val
     from tasks.build_decision_view import main as build_dec
     from tasks.format_sheets_dashboard_v2 import main as format_v2
-    
+
     if update:
-        console.print("[cyan]Step 0: Running Live Update from Schwab...[/]")
+        console.print(f"[cyan]Step 0: Running Live Update from Schwab (tx_days={tx_days})...[/]")
         import scripts.live_update as live_up
-        # Ensure config.DRY_RUN is set based on the --live flag for the script
         import config as cfg
         original_dry = cfg.DRY_RUN
         cfg.DRY_RUN = not live
         try:
-            live_up.update_portfolio()
+            live_up.update_portfolio(tx_days=tx_days)
         finally:
             cfg.DRY_RUN = original_dry
         

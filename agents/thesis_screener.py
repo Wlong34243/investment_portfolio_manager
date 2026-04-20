@@ -70,6 +70,63 @@ def _extract_exit_conditions(thesis_text: str) -> str:
     return match.group(1).strip()[:500] if match else ""
 
 
+def _parse_thesis_triggers(thesis_text: str) -> dict:
+    """
+    Extract the triggers: YAML block from the ## Quantitative Triggers section.
+    Returns the triggers dict (may have null values). Returns {} if section missing.
+    """
+    import yaml as _yaml
+    match = re.search(r"```yaml\s*\ntriggers:\s*\n(.*?)```", thesis_text, re.DOTALL)
+    if not match:
+        return {}
+    try:
+        data = _yaml.safe_load("triggers:\n" + match.group(1)) or {}
+        return data.get("triggers") or {}
+    except Exception:
+        return {}
+
+
+_TRIGGER_FIELDS = [
+    "fwd_pe_add_below", "fwd_pe_trim_above", "fwd_pe_historical_median",
+    "price_add_below", "price_trim_above", "discount_from_52w_high_add",
+    "revenue_growth_floor_pct", "operating_margin_floor_pct",
+    "style_size_ceiling_pct",
+]
+
+
+def _evaluate_triggers(triggers: dict, bundle_pos: dict) -> tuple[list[str], list[str]]:
+    """
+    Compare trigger values against current bundle data (price, fwd PE, weight).
+    Returns (trigger_fired, trigger_missing).
+    """
+    fired: list[str] = []
+    missing: list[str] = []
+
+    price = float(bundle_pos.get("price") or 0.0)
+
+    for field in _TRIGGER_FIELDS:
+        val = triggers.get(field)
+        if val is None:
+            missing.append(field)
+            continue
+        try:
+            threshold = float(val)
+        except (TypeError, ValueError):
+            missing.append(field)
+            continue
+        # Evaluate firing conditions
+        if field == "price_add_below" and price > 0 and price < threshold:
+            fired.append(f"{field}={threshold} (current={price:.2f})")
+        elif field == "price_trim_above" and price > 0 and price > threshold:
+            fired.append(f"{field}={threshold} (current={price:.2f})")
+        elif field == "discount_from_52w_high_add":
+            disc = float(bundle_pos.get("discount_from_52w_high_pct") or 0.0)
+            if disc > threshold * 100:
+                fired.append(f"{field}={threshold:.0%} (current={disc:.1f}%)")
+
+    return fired, missing
+
+
 def _is_stale_thesis(last_reviewed: str | None) -> bool:
     """True if last_reviewed is missing or older than _STALE_THRESHOLD_DAYS."""
     if not last_reviewed:
@@ -84,6 +141,7 @@ def _is_stale_thesis(last_reviewed: str | None) -> bool:
 def _compute_thesis_facts(
     vault_bundle: dict,
     ticker_filter: set[str] | None = None,
+    positions_by_ticker: dict | None = None,
 ) -> tuple[list[dict], list[str]]:
     """
     Match tickers with their theses and transcripts.
@@ -123,6 +181,11 @@ def _compute_thesis_facts(
         exit_conditions = _extract_exit_conditions(thesis_content)
         stale_thesis = _is_stale_thesis(last_reviewed)
 
+        # Parse quantitative triggers and evaluate against current bundle data
+        triggers = _parse_thesis_triggers(thesis_content) if thesis_content else {}
+        bundle_pos = (positions_by_ticker or {}).get(ticker, {})
+        trigger_fired, trigger_missing = _evaluate_triggers(triggers, bundle_pos)
+
         facts.append({
             "ticker": ticker,
             "has_thesis": has_thesis,
@@ -131,6 +194,8 @@ def _compute_thesis_facts(
             "last_reviewed": str(last_reviewed) if last_reviewed else "unknown",
             "stale_thesis": stale_thesis,
             "exit_conditions_summary": exit_conditions[:300] if exit_conditions else "none provided",
+            "trigger_fired": trigger_fired,
+            "trigger_missing": trigger_missing,
         })
 
         if not th:
@@ -190,10 +255,14 @@ def run_thesis_agent(
     Orchestrates the Thesis Screener Agent analysis.
     """
     composite = load_composite_bundle(bundle_path)
+    market = load_bundle(Path(composite["market_bundle_path"]))
     vault = load_vault_bundle(Path(composite["vault_bundle_path"]))
 
+    # Build positions lookup for trigger evaluation (price, weight, discount)
+    positions_by_ticker = {p["ticker"]: p for p in market.get("positions", [])}
+
     # --- Pre-computation ---
-    facts, data_gaps = _compute_thesis_facts(vault, ticker_filter)
+    facts, data_gaps = _compute_thesis_facts(vault, ticker_filter, positions_by_ticker)
 
     if not facts:
         raise RuntimeError("No positions with thesis/transcript data to analyze.")
@@ -205,19 +274,32 @@ def run_thesis_agent(
     # Markdown optimization for flat list
     facts_table = dicts_to_markdown_table(facts)
 
+    # Summarize trigger status for context
+    fired_summary = [
+        f"{f['ticker']}: {f['trigger_fired']}"
+        for f in facts if f.get("trigger_fired")
+    ]
+
     user_prompt = (
         f"Analyze management candor and capital stewardship against original theses.\n\n"
         f"## Gautam Baid Framework (Joys of Compounding)\n"
         f"{framework_text}\n\n"
-        f"## Pre-Computed Availability Facts\n"
+        f"## Pre-Computed Facts (thesis coverage, exit conditions, trigger status)\n"
         f"{facts_table}\n\n"
+        f"## Quantitative Triggers Currently Firing\n"
+        f"{'; '.join(fired_summary) if fired_summary else 'None — no price/PE triggers breached'}\n\n"
+        f"## Trigger Precedence\n"
+        "Quantitative triggers from the thesis file (price levels, P/E thresholds, weight ceilings) "
+        "override narrative exit_conditions when they conflict. If trigger_fired is non-empty for a "
+        "position, the per_position_verdict MUST cite at least one fired trigger in verdict_reasoning.\n\n"
         f"## Data Gaps\n"
         f"{', '.join(data_gaps) if data_gaps else 'None'}\n\n"
         "## Instructions\n"
         "1. For each ticker: compare latest transcript behavior to the original thesis.\n"
         "2. Score candor, stewardship, and alignment.\n"
         "3. Provide final_recommendation (MAINTAIN_CONVICTION, WATCHLIST_DOWNGRADE, THESIS_VIOLATED).\n"
-        "4. bundle_hash (echo it): {composite['composite_hash']}\n"
+        "4. Provide per_position_verdict (HOLD, TRIM, ADD, EXIT, MONITOR) per Verdict Discipline rules.\n"
+        f"5. bundle_hash (echo it): {composite['composite_hash']}\n"
         "Produce a ThesisScreenerResponse JSON object."
     )
 
