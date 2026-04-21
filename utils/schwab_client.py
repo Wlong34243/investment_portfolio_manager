@@ -536,6 +536,93 @@ def fetch_transactions(client: "schwab.client.Client", start_date=None, end_date
 
     return df[config.TRANSACTION_COLUMNS]
 
+def fetch_tax_lots(client: "schwab.client.Client") -> list[dict]:
+    """
+    Derive tax-lot data from the Schwab positions endpoint.
+
+    The Schwab Developer API does not expose individual cost-lot detail (that
+    data lives in Schwab's internal systems, not the public API).  This function
+    therefore creates one *synthetic* lot per position per account using the
+    aggregate cost data the positions endpoint does return:
+        - taxLotAverageLongPrice  (most accurate for tax purposes)
+        - averagePrice            (fallback)
+
+    All returned lots carry source='schwab' and lot_id=None.  Acquisition date
+    is not available from the positions endpoint; holding_period is therefore
+    'unknown' unless a date can be inferred.  For full lot-level granularity,
+    call utils.tax.reconstruct_lots_fifo() against the Transactions history.
+
+    Returns empty list on API failure; never raises.
+    """
+    from utils.tax import classify_holding_period, days_until_long_term
+
+    try:
+        r = client.get_accounts(fields=client.Account.Fields.POSITIONS)
+        r.raise_for_status()
+        accounts = r.json()
+    except Exception as e:
+        logging.error("fetch_tax_lots: failed to list accounts: %s", e)
+        return []
+
+    lots: list[dict] = []
+
+    for acc in accounts:
+        sa = acc.get('securitiesAccount', {})
+        acct_hash = str(acc.get('hashValue') or sa.get('accountNumber', ''))
+
+        acct_type_raw = sa.get('type', '').upper()
+        if 'ROTH' in acct_type_raw:
+            account_type = 'roth'
+        elif 'IRA' in acct_type_raw:
+            account_type = 'ira'
+        else:
+            account_type = 'taxable'
+
+        for p in sa.get('positions', []):
+            instr  = p.get('instrument', {})
+            ticker = instr.get('symbol', '')
+            if not ticker or ticker in config.CASH_TICKERS:
+                continue
+
+            long_qty  = float(p.get('longQuantity',  0) or 0)
+            short_qty = float(p.get('shortQuantity', 0) or 0)
+            qty = long_qty - short_qty
+            if qty <= 0:
+                continue
+
+            # taxLotAverageLongPrice is the IRS-relevant average; fall back to averagePrice
+            cost_per_share = float(
+                p.get('taxLotAverageLongPrice') or p.get('averagePrice') or 0
+            )
+            cost_total = round(cost_per_share * qty, 2)
+
+            # Acquisition date is not exposed by the positions endpoint
+            acquisition_date = None
+            holding_period   = "unknown"
+            days_lt          = None
+
+            lots.append({
+                'ticker':               ticker,
+                'account_hash':         acct_hash,
+                'account_type':         account_type,
+                'lot_id':               None,
+                'acquisition_date':     acquisition_date,
+                'quantity':             qty,
+                'cost_basis_per_share': cost_per_share,
+                'cost_basis_total':     cost_total,
+                'holding_period':       holding_period,
+                'days_until_long_term': days_lt,
+                'source':               'schwab',
+            })
+
+    logging.info(
+        "fetch_tax_lots: %d synthetic lots from %d accounts "
+        "(source=schwab, aggregate — no individual lot IDs from public API)",
+        len(lots), len(accounts),
+    )
+    return lots
+
+
 def fetch_balances(client: schwab.client.Client) -> dict:
     """Fetch aggregated account balances across all accounts."""
     try:

@@ -12,7 +12,7 @@ import hashlib
 import json
 import platform
 import sys
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Union
@@ -50,6 +50,7 @@ class ContextBundle:
     position_count: int
     environment: dict           # python, pandas, yfinance versions, os
     enrichment_errors: list[str]
+    tax_lots: list[dict] = field(default_factory=list)  # Phase 1.3: one synthetic lot per position per account
 
 def _sha256_file(path: Path) -> str:
     """Stream-read the file in 64KB chunks and return hex digest."""
@@ -137,12 +138,12 @@ def _normalize_positions(records: list[dict]) -> list[dict]:
 
 def _build_from_schwab(
     cash_manual: float,
-) -> tuple[pd.DataFrame, str, list[str]]:
+) -> tuple[pd.DataFrame, str, list[str], list[dict]]:
     """
     Fetch positions from the live Schwab API.
 
     Returns:
-        (positions_df, data_source_fingerprint, enrichment_errors)
+        (positions_df, data_source_fingerprint, enrichment_errors, tax_lots)
 
     Raises:
         RuntimeError: if get_accounts_client() returns None (no token,
@@ -154,7 +155,7 @@ def _build_from_schwab(
     try:
         from utils.schwab_client import (
             get_accounts_client, get_market_client,
-            fetch_positions, fetch_quotes,
+            fetch_positions, fetch_quotes, fetch_tax_lots,
         )
     except ImportError as e:
         raise RuntimeError(
@@ -280,7 +281,17 @@ def _build_from_schwab(
         account_hash.encode("utf-8")
     ).hexdigest()[:16]
 
-    return df, source_fingerprint, enrichment_errors
+    # Fetch tax lots (one synthetic lot per position per account).
+    # Schwab's public API does not expose individual cost lots; each lot
+    # here represents the full aggregate for ticker + account.
+    # acquisition_date is unknown from this endpoint; holding_period = "unknown".
+    tax_lots: list[dict] = []
+    try:
+        tax_lots = fetch_tax_lots(client)
+    except Exception as _lot_err:
+        enrichment_errors.append(f"tax_lot ingestion failed: {_lot_err}")
+
+    return df, source_fingerprint, enrichment_errors, tax_lots
 
 def _build_from_csv(
     csv_path: Path,
@@ -384,6 +395,8 @@ def build_bundle(
             f"Invalid source '{source}'. Must be one of {VALID_SOURCES}."
         )
 
+    tax_lots: list[dict] = []
+
     if source == SOURCE_CSV:
         if csv_path is None:
             raise ValueError(
@@ -397,7 +410,7 @@ def build_bundle(
         source_path_repr = str(csv_path)
 
     elif source == SOURCE_SCHWAB:
-        df, source_fingerprint, enrichment_errors = _build_from_schwab(
+        df, source_fingerprint, enrichment_errors, tax_lots = _build_from_schwab(
             cash_manual=cash_manual
         )
         resolved_source = SOURCE_SCHWAB
@@ -405,7 +418,7 @@ def build_bundle(
 
     elif source == SOURCE_AUTO:
         try:
-            df, source_fingerprint, enrichment_errors = (
+            df, source_fingerprint, enrichment_errors, tax_lots = (
                 _build_from_schwab(cash_manual=cash_manual)
             )
             resolved_source = SOURCE_SCHWAB
@@ -469,6 +482,7 @@ def build_bundle(
         "position_count": int(position_count),
         "environment": _capture_environment(),
         "enrichment_errors": enrichment_errors,
+        "tax_lots": tax_lots,   # Phase 1.3: included in hash
     }
 
     bundle_hash = _sha256_canonical(_hashable_payload(payload))
@@ -477,6 +491,7 @@ def build_bundle(
         bundle_hash=bundle_hash,
         **payload,
     )
+
 
 def write_bundle(bundle: ContextBundle) -> Path:
     """Writes the bundle to BUNDLE_DIR as a JSON file."""

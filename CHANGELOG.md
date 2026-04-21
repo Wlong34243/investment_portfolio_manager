@@ -1,5 +1,39 @@
 # Changelog
 
+## [2026-04-21] Phase 1.3 — Add tax-lot ingestion to snapshot
+
+### Added
+- **`utils/tax.py`** — new pure-function module (no I/O, fully unit-testable):
+  - `Lot` dataclass with `.to_dict()` helper.
+  - `classify_holding_period(acquisition_date, as_of)` — IRS rule: > 365 days = long_term.
+  - `days_until_long_term(acquisition_date, as_of)` — 0 when already long_term, None when
+    acquisition_date unknown.
+  - `reconstruct_lots_fifo(transactions, ticker, ...)` — pure FIFO reconstruction from
+    Transactions tab schema.  Splits lots on partial sells.  Returns lots marked
+    `source="derived"`.
+- **`tests/test_tax.py`** — 23 unit tests covering all three functions, including
+  365/366-day boundary cases, leap-year awareness, same-day buy-sell, FIFO partial
+  splits, and multi-lot consumption.  All 23 pass.
+- **`utils/schwab_client.fetch_tax_lots(client)`** — reads positions via
+  `get_accounts(fields=POSITIONS)`.  Creates one synthetic lot per position per account
+  using `taxLotAverageLongPrice` (preferred) or `averagePrice` as cost basis.
+  Schwab's public API does not expose individual cost lots; acquisition_date is unknown
+  from this endpoint so `holding_period = "unknown"`.  All lots carry `source="schwab"`.
+- **`core/bundle.py`**: `tax_lots: list[dict]` added to `ContextBundle` dataclass
+  (with `field(default_factory=list)` so old bundles still load/verify).  `tax_lots` is
+  included in the SHA256 hash payload.  `_build_from_schwab` now calls `fetch_tax_lots`
+  and returns a 4-tuple `(df, fingerprint, errors, tax_lots)`.  CSV path sets
+  `tax_lots = []`.
+
+### Note on lot granularity
+The Schwab Developer API exposes aggregate position data only — no individual cost lot
+IDs or per-lot acquisition dates.  Each entry in `tax_lots` therefore represents the
+full aggregate for a ticker × account combination.  `holding_period` is `"unknown"`.
+Phase 3 tax module will enrich this with FIFO-reconstructed lot detail from the
+Transactions history using `utils.tax.reconstruct_lots_fifo()`.
+
+---
+
 ## [2026-04-21] Phase 1.2 — Bake FMP fundamentals into bundle at snapshot time
 
 ### Added
