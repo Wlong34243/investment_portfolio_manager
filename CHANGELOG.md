@@ -1,5 +1,56 @@
 # Changelog
 
+## [2026-04-21] Phase 1.1 — Harden transaction sync (pagination, fingerprint, retry)
+
+### Fixed
+- **`fetch_transactions`: per-account error isolation** — moved each account's fetch inside its own
+  try/except; a failed account is logged and skipped rather than aborting all collected data.
+- **`fetch_transactions`: exponential-backoff retry** — 3 attempts per account, delays 2s → 4s → 8s,
+  triggered on HTTP 429 or 5xx. Prevents one rate-limited account from silently discarding others.
+- **`fetch_transactions`: action normalization** — raw Schwab type `TRADE` is now mapped to `Buy` or
+  `Sell` using `positionEffect` (OPENING/CLOSING) with netAmount-sign fallback. `DIVIDEND_OR_INTEREST`
+  → `Dividend`; fund/wire/ACH types → `Transfer`. Fixes `derive_rotations.py` which checks for
+  `"buy"`/`"sell"` substrings and was silently finding no rotations.
+- **`fetch_transactions`: enhanced fingerprint** — uses Schwab native `activityId` when present
+  (eliminates same-day multi-lot collision). Fallback: `trade_date|ticker|action|net_amount|settlement_date`.
+- **`fetch_transactions`: quantity field** — `transferItems[0].amount` is now only used as share
+  quantity for `TRADE` type. Non-trade transactions default Quantity to 0.0 (dollar amounts in that
+  field were polluting the Quantity column).
+- **`fetch_transactions`: ticker fallback logging** — ticker inferred from description is logged at
+  WARNING; transactions with no parseable ticker are logged and skipped (previously silently stored
+  with corrupt ticker).
+
+### Added
+- **`sync transactions --reconcile`** — new read-only diff mode: fetches N days from Schwab, reads
+  current Sheet, prints three tables (missing from sheet, only in sheet, value diffs). No writes.
+  Gate: two back-to-back runs show zero diffs after a `--live` sync.
+- **`docs/phase1/transaction_sync_diagnosis.md`** — root-cause analysis committed per Phase 1.1
+  gate criteria.
+
+---
+
+## [2026-04-21] Phase 0 — Architectural pivot executed.
+Decommissioned 12-agent squad, vault frameworks, and podcast Gemini summarizer. All stashed in deprecated/. System is now pure data pipeline + Sheets dashboard. Export engine (Phase 4) will replace agent reasoning with manual paste to external frontier LLMs. See CLAUDE.md for the new philosophy.
+
+## [Unreleased] — 2026-04-20 — Focused three-agent roster
+
+### Fixed
+- **analyze-all: Orchestration crash for `new_idea`** — Corrected `_run_one_agent` mapping to use `run_new_idea_screener`.
+- **analyze-all: Disagreement indexing error** — Thesis signals now correctly extracted from index 8 (`final_recommendation`).
+- **new_idea: NameError for `logger`** — Added missing `logger` definition to `agents/new_idea_screener.py`.
+- **thesis: Silent crash during chunked analysis** — Refactored `run_chunked_analysis` to support dynamic `result_field` (e.g., `evaluations`) and added full traceback logging for chunk failures.
+- **thesis: ModuleNotFoundError for `config`** — Added project root to `sys.path` in `agents/thesis_screener.py`.
+- **format_sheets_ui: Signal regression** — Updated conditional formatting rules to match new uppercase signal vocabulary (`ADD`, `TRIM`, `HOLD`, `MONITOR`, `EXIT`).
+
+### Added
+- **analyze-all: Disagreement logging to Sheets** — In `--live` mode, Thesis/Valuation conflicts are now logged to a dedicated `Disagreements` tab for historical auditing.
+- **analyze-all: Enhanced disagreement detection** — Expanded logic to catch severe (e.g., `THESIS_VIOLATED` vs `ADD`) and moderate signal conflicts.
+
+### Changed
+- `manager.py analyze-all --agents` default changed from seven agents to three: `thesis,valuation,new_idea`. The retired five (rebuy, tax, concentration, macro, bagger) remain importable and can be invoked explicitly via `--agents` for ad-hoc runs.
+
+---
+
 ## [Unreleased] — Phase 5: Agent Utility Overhaul (agent_utility_improvements_prompt)
 
 ### Fixed

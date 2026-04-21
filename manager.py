@@ -31,18 +31,6 @@ from core.composite_bundle import (
     build_composite_bundle, write_composite_bundle,
     load_composite_bundle, resolve_latest_bundles,
 )
-from agents.rebuy_analyst import app as rebuy_app
-from agents.add_candidate_analyst import app as add_candidate_app
-from agents.new_idea_screener import app as new_idea_app
-from agents.tax_agent import app as tax_app
-from agents.valuation_agent import app as valuation_app
-from agents.concentration_hedger import app as concentration_app
-from agents.macro_cycle_agent import app as macro_app
-from agents.thesis_screener import app as thesis_app
-from agents.bagger_screener import app as bagger_app
-from agents.behavioral_auditor import app as behavioral_app
-from agents.Options_agent import app as options_app
-from agents.value_investing_screener import app as value_app
 
 app = typer.Typer(help="Investment Portfolio Manager CLI", no_args_is_help=True)
 console = Console()
@@ -287,35 +275,6 @@ def journal_rotation(
         except Exception as e:
             console.print(f"[red]ERROR: Failed to write to Sheet: {e}[/]")
             raise typer.Exit(code=1)
-
-# --- AGENT GROUP ---
-agent_app = typer.Typer(help="AI agents — run over composite bundles.")
-app.add_typer(agent_app, name="agent")
-agent_app.add_typer(rebuy_app, name="rebuy")
-agent_app.add_typer(add_candidate_app, name="add-candidate")
-agent_app.add_typer(new_idea_app, name="new-idea")
-agent_app.add_typer(tax_app, name="tax")
-agent_app.add_typer(valuation_app, name="valuation")
-agent_app.add_typer(concentration_app, name="concentration")
-agent_app.add_typer(macro_app, name="macro")
-agent_app.add_typer(thesis_app, name="thesis")
-agent_app.add_typer(bagger_app, name="bagger")
-agent_app.add_typer(behavioral_app, name="behavioral")
-agent_app.add_typer(options_app, name="options")
-agent_app.add_typer(value_app, name="value")
-# Usage: python manager.py agent rebuy analyze --bundle latest
-# Usage: python manager.py agent tax analyze --bundle latest
-# Usage: python manager.py agent valuation analyze --bundle latest
-# Usage: python manager.py agent concentration analyze --bundle latest
-# Usage: python manager.py agent macro analyze --bundle latest
-# Usage: python manager.py agent thesis analyze --bundle latest
-# Usage: python manager.py agent bagger analyze --bundle latest
-# Usage: python manager.py agent behavioral analyze --bundle latest
-# Usage: python manager.py agent behavioral analyze --trade-days 60 --live
-# Usage: python manager.py agent options run-agent --live
-# Usage: python manager.py agent value analyze --bundle latest
-# Usage: python manager.py agent value analyze --ticker AAPL,BA --live
-
 
 @app.command()
 def snapshot(
@@ -828,10 +787,11 @@ app.add_typer(sync_app, name="sync")
 def sync_transactions_cmd(
     days: int = typer.Option(90, "--days", help="Number of days to sync."),
     live: bool = typer.Option(False, "--live", help="Perform live sheet write."),
+    reconcile: bool = typer.Option(False, "--reconcile", help="Diff-only: compare Schwab vs Sheet, no writes."),
 ):
     """Sync Schwab transaction history to Google Sheets (merged archive-overwrite)."""
     from tasks.sync_transactions import sync_transactions
-    success = sync_transactions(days=days, live=live)
+    success = sync_transactions(days=days, live=live, reconcile=reconcile)
     if not success:
         raise typer.Exit(code=1)
 
@@ -881,35 +841,6 @@ def dashboard_refresh(
     format_v2(live=live)
     
     console.print("\n[bold green]✅ Dashboard refresh complete.[/]")
-
-
-@app.command("analyze-all")
-def analyze_all(
-    fresh_bundle: bool = typer.Option(
-        False, "--fresh-bundle",
-        help="Regenerate market + vault + composite bundles before running agents.",
-    ),
-    agents: str = typer.Option(
-        "rebuy,tax,valuation,concentration,macro,thesis,bagger",
-        "--agents",
-        help="Comma-separated list of agents to run. Default: all.",
-    ),
-    live: bool = typer.Option(
-        False, "--live",
-        help="Write all agent outputs to Agent_Outputs in a single batch. Default: dry run.",
-    ),
-):
-    """
-    Run all portfolio agents in sequence and write outputs in one batch transaction.
-
-    Agent execution is fault-tolerant — one agent failure does not abort the others.
-    Rebuy agent is included in the manifest but uses a legacy write schema (not in
-    the standard Agent_Outputs batch write).
-
-    Run manifest is always written to bundles/runs/ regardless of --live.
-    """
-    from agents.analyze_all import run_analyze_all
-    run_analyze_all(agents_str=agents, fresh_bundle=fresh_bundle, live=live)
 
 
 if __name__ == "__main__":

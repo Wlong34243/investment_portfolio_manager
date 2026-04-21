@@ -311,115 +311,230 @@ def fetch_positions(client: schwab.client.Client) -> pd.DataFrame:
             schwab_token_store.write_alert(f"Failed to fetch positions: {e}", "warning")
         return pd.DataFrame()
 
-def fetch_transactions(client: schwab.client.Client, start_date=None, end_date=None) -> pd.DataFrame:
+# ---------------------------------------------------------------------------
+# Action normalization map for Schwab transaction types.
+# TRADE requires positionEffect inspection (handled inline).
+# ---------------------------------------------------------------------------
+_SCHWAB_ACTION_MAP = {
+    "DIVIDEND_OR_INTEREST": "Dividend",
+    "ELECTRONIC_FUND":      "Transfer",
+    "ACH_RECEIPT":          "Transfer",
+    "ACH_DISBURSEMENT":     "Transfer",
+    "WIRE_IN":              "Transfer",
+    "WIRE_OUT":             "Transfer",
+    "CASH_IN_OR_CASH_OUT":  "Transfer",
+    "RECEIVE_AND_DELIVER":  "Transfer",
+    "JOURNAL":              "Journal",
+}
+
+
+def _normalize_action(t_type: str, transfer_items: list, net_amount: float) -> str:
+    """Map raw Schwab transaction type to human-readable action."""
+    if t_type == "TRADE":
+        if transfer_items:
+            effect = transfer_items[0].get("positionEffect", "")
+            if effect == "OPENING":
+                return "Buy"
+            if effect == "CLOSING":
+                return "Sell"
+        # Fallback: cash-out (negative) = Buy, cash-in (positive) = Sell
+        if net_amount < 0:
+            return "Buy"
+        if net_amount > 0:
+            return "Sell"
+        return "Trade"
+    return _SCHWAB_ACTION_MAP.get(t_type, t_type)
+
+
+def _fetch_account_transactions(
+    client: "schwab.client.Client",
+    acct_hash: str,
+    start_date: datetime,
+    end_date: datetime,
+    max_retries: int = 3,
+    base_delay: float = 2.0,
+) -> list:
+    """
+    Fetch raw transaction list for one account with exponential-backoff retry.
+    Returns list of raw dicts, or empty list on permanent failure.
+    Isolated per-account so a single bad account does not abort others.
+    """
+    masked = f"...{acct_hash[-4:]}"
+    last_exc: Exception | None = None
+
+    for attempt in range(max_retries):
+        try:
+            r_tx = client.get_transactions(
+                acct_hash,
+                start_datetime=start_date,
+                end_datetime=end_date,
+            )
+            if r_tx.status_code == 429 or r_tx.status_code >= 500:
+                delay = base_delay * (2 ** attempt)
+                logging.warning(
+                    "fetch_transactions: %s HTTP %d on attempt %d/%d, retrying in %.0fs",
+                    masked, r_tx.status_code, attempt + 1, max_retries, delay,
+                )
+                time.sleep(delay)
+                continue
+            r_tx.raise_for_status()
+            txns = r_tx.json()
+            if not isinstance(txns, list):
+                logging.warning("fetch_transactions: %s non-list response, skipping", masked)
+                return []
+            # Warn if result count is suspiciously round (possible silent truncation)
+            n = len(txns)
+            if n > 0 and n % 500 == 0:
+                logging.warning(
+                    "fetch_transactions: %s returned exactly %d results — possible API truncation",
+                    masked, n,
+                )
+            logging.info("fetch_transactions: %s — %d transactions", masked, n)
+            return txns
+        except Exception as exc:
+            last_exc = exc
+            if attempt < max_retries - 1:
+                delay = base_delay * (2 ** attempt)
+                logging.warning(
+                    "fetch_transactions: %s error on attempt %d/%d (%s), retrying in %.0fs",
+                    masked, attempt + 1, max_retries, exc, delay,
+                )
+                time.sleep(delay)
+
+    logging.error(
+        "fetch_transactions: %s failed after %d attempts: %s",
+        masked, max_retries, last_exc,
+    )
+    return []
+
+
+def fetch_transactions(client: "schwab.client.Client", start_date=None, end_date=None) -> pd.DataFrame:
     """
     Fetch transaction history for ALL linked Schwab accounts.
-    Loops through all account hashes and aggregates results.
+    Each account is fetched independently with retry so one failure does not
+    discard data already collected from other accounts.
     """
     if not start_date:
         start_date = datetime.now() - timedelta(days=30)
     if not end_date:
         end_date = datetime.now()
-        
+
+    # Enumerate accounts — fail fast if this call fails (nothing to iterate)
     try:
-        # 1. Get all account hashes
         r_accounts = client.get_accounts()
         r_accounts.raise_for_status()
         accounts = r_accounts.json()
-        
-        all_transactions = []
-        
-        for acc in accounts:
-            sa = acc.get('securitiesAccount', {})
-            acct_hash = acc.get('hashValue')
-            if not acct_hash:
-                continue
-            
-            # 2. Fetch transactions for this specific account
-            # schwab-py expects datetime objects for start_datetime and end_datetime
-            r_tx = client.get_transactions(
-                acct_hash, 
-                start_datetime=start_date, 
-                end_datetime=end_date
-            )
-            r_tx.raise_for_status()
-            txns = r_tx.json()
-            
-            if not isinstance(txns, list):
-                continue
-                
-            for t in txns:
-                # Filter for relevant types
-                t_type = t.get('type', '')
-                # Note: Schwab API often uses 'TRADE', 'DIVIDEND_OR_INTEREST', etc.
-                
-                # Extract activity details
-                # The structure varies by transaction type
-                transfer_items = t.get('transferItems', [])
-                
-                ticker = ""
-                qty = 0.0
-                price = 0.0
-                
-                if transfer_items:
-                    item = transfer_items[0]
-                    instr = item.get('instrument', {})
-                    ticker = instr.get('symbol', '')
-                    qty = float(item.get('amount', 0) or 0)
-                    price = float(item.get('price', 0) or 0)
-                
-                # Fallback for ticker if not in transferItems (e.g. some dividends)
-                if not ticker:
-                    ticker = t.get('description', '').split(' ')[0] # Very crude fallback
-
-                trade_date = t.get('transactionDate', '')[:10]
-                net_amount = float(t.get('netAmount', 0) or 0)
-                
-                row = {
-                    'Trade Date': trade_date,
-                    'Settlement Date': t.get('settlementDate', '')[:10],
-                    'Ticker': ticker,
-                    'Description': t.get('description', ''),
-                    'Action': t_type,
-                    'Quantity': qty,
-                    'Price': price,
-                    'Amount': net_amount,
-                    'Fees': 0.0,
-                    'Net Amount': net_amount,
-                    'Account': f"Schwab...{acct_hash[-4:]}",
-                }
-                all_transactions.append(row)
-            
-            # Rate limiting safety
-            time.sleep(0.5)
-            
-        df = pd.DataFrame(all_transactions)
-        if df.empty:
-            return pd.DataFrame(columns=config.TRANSACTION_COLUMNS)
-
-        # Nuclear type enforcement
-        txn_numeric_cols = ['Quantity', 'Price', 'Amount', 'Fees', 'Net Amount']
-        for col in txn_numeric_cols:
-            if col in df.columns:
-                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0.0)
-
-        # Build Fingerprint — unified format: Date|Ticker|Action|Quantity|Price (Task 3)
-        # Matches gl_parser.parse_transaction_history so CSV-uploaded and API-fetched
-        # rows for the same trade share the same fingerprint and deduplicate correctly.
-        df['Fingerprint'] = df.apply(
-            lambda x: f"{str(x['Trade Date'])}|{str(x['Ticker'])}|{str(x['Action'])}|{str(x['Quantity'])}|{str(x['Price'])}",
-            axis=1
-        )
-        
-        # Ensure all TRANSACTION_COLUMNS exist
-        for col in config.TRANSACTION_COLUMNS:
-            if col not in df.columns:
-                df[col] = ""
-                
-        return df[config.TRANSACTION_COLUMNS]
     except Exception as e:
-        logging.error(f"fetch_transactions failed: {e}")
+        logging.error("fetch_transactions: failed to list accounts: %s", e)
         return pd.DataFrame(columns=config.TRANSACTION_COLUMNS)
+
+    all_transactions: list[dict] = []
+    accounts_ok = 0
+    accounts_failed = 0
+
+    for acc in accounts:
+        acct_hash = acc.get('hashValue')
+        if not acct_hash:
+            logging.warning("fetch_transactions: account missing hashValue, skipping")
+            continue
+
+        masked = f"...{acct_hash[-4:]}"
+        txns = _fetch_account_transactions(client, acct_hash, start_date, end_date)
+
+        if txns is None:
+            accounts_failed += 1
+            continue
+
+        accounts_ok += 1
+
+        for t in txns:
+            t_type = t.get('type', '')
+            transfer_items = t.get('transferItems', [])
+            net_amount = float(t.get('netAmount', 0) or 0)
+
+            action = _normalize_action(t_type, transfer_items, net_amount)
+
+            # Extract ticker and per-share price from transferItems when available.
+            # For TRADE transactions, transferItems[0].amount = share quantity.
+            # For non-trade types (dividends, transfers), amount is a dollar figure
+            # that would pollute the Quantity column — default to 0.0 instead.
+            ticker = ""
+            qty = 0.0
+            price = 0.0
+
+            if transfer_items:
+                item = transfer_items[0]
+                instr = item.get('instrument', {})
+                ticker = instr.get('symbol', '') or ""
+                price = float(item.get('price', 0) or 0)
+                if t_type == "TRADE":
+                    qty = float(item.get('amount', 0) or 0)
+
+            # Fallback ticker: parse description only as last resort; log the fallback.
+            if not ticker:
+                raw_desc = t.get('description', '') or ''
+                candidate = raw_desc.split(' ')[0] if raw_desc else ''
+                if candidate and len(candidate) <= 6 and candidate.isalpha():
+                    ticker = candidate
+                    logging.debug(
+                        "fetch_transactions: %s ticker inferred from description '%s' → '%s'",
+                        masked, raw_desc[:60], ticker,
+                    )
+                else:
+                    logging.warning(
+                        "fetch_transactions: %s type=%s, no ticker found — description='%s', skipped",
+                        masked, t_type, raw_desc[:80],
+                    )
+                    continue
+
+            trade_date = (t.get('transactionDate') or t.get('time') or '')[:10]
+            settlement_date = (t.get('settlementDate') or '')[:10]
+            activity_id = t.get('activityId') or t.get('transactionId')
+
+            # Fingerprint: use Schwab's native activityId when available (most stable).
+            # Fallback uses settlement_date to distinguish same-day multi-lot trades.
+            if activity_id:
+                fingerprint = str(activity_id)
+            else:
+                fingerprint = f"{trade_date}|{ticker}|{action}|{net_amount}|{settlement_date}"
+
+            all_transactions.append({
+                'Trade Date':      trade_date,
+                'Settlement Date': settlement_date,
+                'Ticker':          ticker,
+                'Description':     t.get('description', ''),
+                'Action':          action,
+                'Quantity':        qty,
+                'Price':           price,
+                'Amount':          net_amount,
+                'Fees':            0.0,
+                'Net Amount':      net_amount,
+                'Account':         f"Schwab{masked}",
+                'Fingerprint':     fingerprint,
+            })
+
+        # Polite rate-limit spacing between accounts
+        time.sleep(0.5)
+
+    logging.info(
+        "fetch_transactions: %d accounts OK, %d failed, %d total transactions",
+        accounts_ok, accounts_failed, len(all_transactions),
+    )
+
+    df = pd.DataFrame(all_transactions)
+    if df.empty:
+        return pd.DataFrame(columns=config.TRANSACTION_COLUMNS)
+
+    # Type enforcement
+    for col in ['Quantity', 'Price', 'Amount', 'Fees', 'Net Amount']:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0.0)
+
+    for col in config.TRANSACTION_COLUMNS:
+        if col not in df.columns:
+            df[col] = ""
+
+    return df[config.TRANSACTION_COLUMNS]
 
 def fetch_balances(client: schwab.client.Client) -> dict:
     """Fetch aggregated account balances across all accounts."""

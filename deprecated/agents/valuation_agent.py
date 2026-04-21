@@ -185,14 +185,25 @@ def _result_to_sheet_rows(
     composite_hash_short = result.bundle_hash[:16]
     dry_str = "TRUE" if dry_run else "FALSE"
 
+    _REC_TO_SEVERITY = {
+        "ADD":     "action",
+        "HOLD":    "info",
+        "TRIM":    "watch",
+        "MONITOR": "watch",
+        "EXIT":    "action",
+    }
+
     for p in result.positions:
-        action = p.accumulation_plan if p.signal == "accumulate" else p.signal.title()
-        severity = "action" if p.signal == "accumulate" else ("watch" if p.signal == "trim" else "info")
-        scale_step = p.accumulation_plan if p.signal == "accumulate" else "No action"
+        # Signal vocabulary is now directly in 'signal' field (ADD, HOLD, etc)
+        signal_type = p.signal
+        action = p.accumulation_plan if p.signal == "ADD" else p.signal.title()
+        
+        severity = _REC_TO_SEVERITY.get(signal_type, "info")
+        scale_step = p.accumulation_plan if p.signal == "ADD" else "No action"
         
         rows.append([
             run_id, run_ts, composite_hash_short, AGENT_NAME,
-            p.signal, p.ticker, action[:120],
+            signal_type, p.ticker, action[:120],
             p.rationale[:800],
             scale_step[:120], severity, dry_str,
         ])
@@ -258,15 +269,15 @@ def run_valuation_agent(
         f"## Pre-Computed Valuation Metrics (use exact numbers — do NOT recalculate)\n"
         f"Portfolio total value: ${total_value:,.2f}\n\n"
         f"{valuation_table_str}\n\n"
-        f"## Data Gaps (tickers with missing FMP data — assign signal='monitor', rationale='Insufficient data')\n"
+        f"## Data Gaps (tickers with missing FMP data — assign signal='MONITOR', rationale='Insufficient data')\n"
         f"{', '.join(data_gaps) if data_gaps else 'None'}\n\n"
         f"## Instructions\n"
         "For each position in the valuation table:\n"
-        "  - Assign a signal: 'accumulate', 'hold', 'trim', or 'monitor'.\n"
-        "  - If signal='accumulate', write an accumulation_plan using staged language.\n"
+        "  - Assign a signal: 'ADD', 'HOLD', 'TRIM', 'MONITOR', or 'EXIT'.\n"
+        "  - If signal='ADD', write an accumulation_plan using staged language.\n"
         "  - Write a 2-3 sentence rationale.\n"
         "  - Set style_alignment from the 'style_tag' field in the table above.\n\n"
-        "Set top_accumulation_candidates to tickers with signal='accumulate', "
+        "Set top_accumulation_candidates to tickers with signal='ADD', "
         "ordered by highest conviction.\n"
         "Write a 3-5 sentence summary_narrative.\n"
         "Set data_gaps to the list provided above.\n\n"
@@ -285,16 +296,6 @@ def run_valuation_agent(
 
     if result is None:
         raise RuntimeError("Gemini returned no result.")
-
-    # Deterministic signal→verdict mapping (Python, not LLM)
-    _SIGNAL_TO_VERDICT = {
-        "accumulate": "ADD",
-        "hold":       "HOLD",
-        "trim":       "TRIM",
-        "monitor":    "MONITOR",
-    }
-    for pos in result.positions:
-        pos.verdict = _SIGNAL_TO_VERDICT.get(pos.signal, "HOLD")
 
     if not _fmp_mod.FMP_EARNINGS_AVAILABLE:
         logger.info("FMP earnings-surprises endpoint unavailable; earnings surprise data excluded from this run.")

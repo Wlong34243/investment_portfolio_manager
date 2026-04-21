@@ -24,15 +24,13 @@ def run_chunked_analysis(
     portfolio_context: dict,
     ask_gemini_fn,
     max_tokens: int | None = None,
+    result_field: str = "candidates",
 ) -> tuple[list, list, list, list[str]]:
     """
     Splits investable positions into chunks of CHUNK_SIZE, runs each through
     Gemini, and merges the results.
 
-    Returns: (all_candidates, all_excluded, all_coverage_warnings, chunk_errors)
-
-    CRITICAL: composite_hash is the hash from the ORIGINAL bundle, passed in by
-    the caller. It is NEVER taken from a chunk response. This preserves provenance.
+    Returns: (all_results, all_excluded, all_coverage_warnings, chunk_errors)
     """
     token_budget = max_tokens if max_tokens is not None else _DEFAULT_MAX_TOKENS
 
@@ -46,7 +44,7 @@ def run_chunked_analysis(
         len(investable), len(chunks), CHUNK_SIZE, token_budget,
     )
 
-    all_candidates = []
+    all_results = []
     all_excluded = []
     all_warnings = []
     chunk_errors = []
@@ -70,19 +68,29 @@ def run_chunked_analysis(
                 logger.warning(msg)
                 chunk_errors.append(msg)
             else:
-                if hasattr(result, "candidates") and result.candidates:
-                    all_candidates.extend(result.candidates)
+                # Dynamically collect results based on provided field name
+                main_list = getattr(result, result_field, [])
+                if main_list:
+                    all_results.extend(main_list)
+                else:
+                    logger.warning("Chunk %d: Field '%s' is empty or missing.", idx+1, result_field)
+
+                # Standard fields for exclusion/warnings
                 if hasattr(result, "excluded_tickers") and result.excluded_tickers:
                     all_excluded.extend(result.excluded_tickers)
+                if hasattr(result, "tickers_skipped") and result.tickers_skipped:
+                    all_excluded.extend(result.tickers_skipped)
                 if hasattr(result, "coverage_warnings") and result.coverage_warnings:
                     all_warnings.extend(result.coverage_warnings)
 
         except Exception as e:
-            msg = f"Chunk {idx + 1}/{len(chunks)} failed: {e}"
-            logger.error(msg, exc_info=True)
+            import traceback
+            tb = traceback.format_exc()
+            msg = f"Chunk {idx + 1}/{len(chunks)} failed: {type(e).__name__}: {e}\n{tb}"
+            logger.error(msg)
             chunk_errors.append(msg)
 
         if idx < len(chunks) - 1:
             time.sleep(INTER_CHUNK_SLEEP)
 
-    return all_candidates, all_excluded, all_warnings, chunk_errors
+    return all_results, all_excluded, all_warnings, chunk_errors

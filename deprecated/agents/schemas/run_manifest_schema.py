@@ -64,6 +64,10 @@ class AgentRunManifest(BaseModel):
         default_factory=list,
         description="Agents not in --agents list.",
     )
+    retired_agents: list[str] = Field(
+        default_factory=list,
+        description="Agents retired from the default roster but still available via --agents.",
+    )
 
     agent_summaries: list[AgentRunSummary] = Field(
         default_factory=list,

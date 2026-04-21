@@ -1,43 +1,79 @@
 ---
 ticker: META
-style: 
-framework_preference: 
-entry_date:
-last_reviewed:
+style: Mega-Cap Compounder / AI Integrator / Cash Flow Machine
+framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
+entry_date: 2026-04-20
+last_reviewed: 2026-04-20
+current_allocation: 1.6%
+cost_basis: 379.72
+time_horizon: 3 to 5+ years
+triggers:
+  fwd_pe_add_below: 18              # add if ads/engagement solid but market panics
+  fwd_pe_trim_above: 28             # trim if multiple rich AND RL spend re-accelerates
+  fwd_pe_historical_median: null
+  price_add_below: null             # valuation + KPIs drive actions, not price levels alone
+  price_trim_above: null
+  discount_from_52w_high_add: null
+  revenue_growth_floor_pct: 8       # want at least high single-digit top line
+  operating_margin_floor_pct: null  # focus on FCF margin and Reality Labs losses
+  style_size_ceiling_pct: 4.0       # below MSFT given higher idiosyncratic risk
+  current_weight_pct: 1.6
 ---
 
 # META — Investment Thesis
 
-## Style
-Mega-Cap Compounder / AI Integrator / Cash Flow Machine
+## Core Thesis (AI‑Supercharged Ad Engine)
 
-## Core Thesis
-Buying the most ruthlessly efficient digital advertising engine in the world, supercharged by an AI-driven turnaround. Upside is driven by the continuous improvement of their AI targeting algorithms (Advantage+), massive engagement across Instagram Reels, and aggressive cost discipline. Meta has effectively neutralized the Apple iOS privacy changes and is using open-source AI (Llama) to commoditize the foundation model layer while protecting its core ad business. The key question is whether Mark Zuckerberg can restrain his multi-billion-dollar cash burn on the Reality Labs (Metaverse) division. Judgment: yes.
+I am owning META as the most ruthlessly efficient digital advertising engine in the world, now **supercharged by AI** and cost discipline. Upside is driven by continuous improvement in AI‑driven ad targeting (e.g., Advantage+), growing engagement on Instagram Reels, and a structurally leaner cost base post “Year of Efficiency.”
+
+Meta has largely neutralized the Apple iOS privacy hit and is using its open‑source Llama models to commoditize the foundation‑model layer while protecting and enhancing its core ad business. The key question is whether Mark Zuckerberg can keep Reality Labs’ cash burn under control and maintain shareholder‑friendly discipline; my judgment is cautiously yes.
 
 ## Entry Context
-Cost basis: $379.72. At this level, you caught the stock during its massive "Year of Efficiency" recovery rally, but well before it reached its euphoric all-time highs. Buying in the high-$300s means you captured a highly reasonable valuation relative to its explosive free cash flow growth and the initiation of its new dividend program. You are sitting on a comfortable gain that allows you to ride out normal tech volatility.
 
-## Bull Case
-- **Unrivaled Distribution:** With over 3 billion daily active users across Facebook, Instagram, and WhatsApp, Meta owns the attention of half the planet. Advertisers simply have no other platform (besides Google) that offers this scale and return on ad spend (ROAS).
-- **AI-Driven Advertising:** Meta’s Advantage+ platform uses AI to automatically generate and target ads, significantly lowering the cost of acquisition for small businesses and driving ad prices higher for Meta.
-- **The Llama Strategy:** By open-sourcing their Llama AI models, Meta forces developers to build on their ecosystem, preventing Microsoft or Google from establishing a closed-source AI monopoly, while integrating the smartest AI chatbots directly into Instagram and WhatsApp.
-- **Capital Returns:** Management has formally transitioned into a mature cash-return phase, instituting a dividend and executing massive share repurchases, putting a strong floor under the stock.
+Cost basis: 379.72. I bought during the massive “Year of Efficiency” recovery — not at the panic lows, but at a still‑reasonable valuation relative to its free‑cash‑flow ramp and the launch of a dividend and larger buybacks.
+
+- I am sitting on a gain that gives me psychological room to ride out normal mega‑cap tech volatility.  
+- The purchase was price‑driven: META looked attractively valued versus its cash generation once the market believed Zuck’s efficiency pivot was real.
+
+## Bull Case (Why Own META)
+
+- Unrivaled distribution: Facebook, Instagram, and WhatsApp collectively command attention from billions of users; only Google rivals this reach for advertisers.  
+- AI‑driven ads: Advantage+ and other AI tools help advertisers automatically create and target ads, improving ROAS and supporting higher ad pricing over time.  
+- Llama strategy: Open‑sourcing Llama invites the developer community in, keeps big closed‑source competitors from monopolizing the model layer, and allows AI assistants to be natively embedded in Instagram and WhatsApp.  
+- Capital returns: The combination of a growing dividend and large buybacks formalizes META’s shift into a mature cash‑return phase, putting a floor under the equity story.
 
 ## Key Risks
-- **The Metaverse Cash Burn:** Reality Labs continues to lose $10B+ a year. If core ad revenue slows down, Wall Street will severely punish Zuckerberg for setting this capital on fire instead of returning it to shareholders.
-- **TikTok / Regulatory Bans:** While a US TikTok ban helps Meta, regulatory agencies globally are constantly threatening Meta with data privacy fines and restrictions on targeted advertising, particularly in the EU.
-- **Consumer Fatigue:** If users finally tire of the algorithmic "sludge" of Reels and engagement metrics structurally decline, advertisers will pull their budgets.
 
-## Scaling State
-next_step: hold
+- Reality Labs cash burn: The Metaverse division continues to lose billions per year; if core ads falter, this becomes much harder for the market to tolerate.  
+- Regulatory and political risk: Global regulators regularly target Meta for privacy, content, and market‑power issues; extreme outcomes could materially constrain targeted ads or even force divestitures.  
+- Engagement fatigue and competition: If users tire of Reels/feeds or shift meaningfully to other platforms, engagement and ad inventory could structurally weaken.
 
-## Rotation Priority
-priority: low
+## Position Sizing & Role
 
-## Exit Conditions
-- Ad revenue structurally declines for consecutive quarters due to an inability to bypass new privacy restrictions (like Google removing third-party cookies).
-- Mark Zuckerberg completely abandons his "Year of Efficiency" discipline and drastically accelerates the cash burn rate of Reality Labs.
-- Global regulators successfully force the divestiture of Instagram and WhatsApp.
+META is a core but not max‑size AI/attention compounder in the portfolio.
 
-## Review Log
-- 2026-04: Initiated. Thesis intact. Monitoring daily active users (DAUs), ad impression pricing, and Reality Labs operating losses.
+- Current allocation: 1.6%.  
+- Role: High‑cash‑flow consumer‑internet and AI‑ads pillar, complementary to MSFT’s enterprise/AI footprint.  
+- Style ceiling: I will allow META to grow, but I cap it below MSFT due to higher regulatory and CEO‑concentration risk.
+
+## Behavioral Guardrails
+
+- I will tolerate normal tech drawdowns, sentiment swings, and headline noise as long as:  
+  - Daily and monthly active users stay broadly stable or growing.  
+  - Ad revenue and pricing per impression remain healthy.  
+  - Reality Labs spend is bounded and clearly communicated.  
+- I will not ignore a re‑acceleration in Metaverse spending or a breakdown in ad economics just because the stock is widely owned or “core FAANG.”
+
+## Key KPIs to Monitor
+
+- User and engagement metrics: DAUs/MAUs, time spent, Reels and Stories engagement trends.  
+- Ad business health: Ad impression growth, pricing trends, ROAS feedback from advertisers.  
+- Reality Labs: Operating loss size and trajectory; evidence of discipline vs. unconstrained experimentation.  
+- Capital returns: Pace and consistency of buybacks and dividend growth relative to FCF.
+
+## Hard Exit / Major Trim Conditions
+
+I will trim or exit META if any of the following become clear, structural trends:
+
+1. Ad revenue declines for several consecutive quarters due to new privacy rules or platform changes that Meta cannot route around.  
+2. Zuckerberg abandons “Year of Efficiency” discipline and aggressively ramps Reality Labs spend without 

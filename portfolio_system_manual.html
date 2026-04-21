@@ -246,7 +246,7 @@ python manager.py analyze-all --agents thesis --live</code></pre>
             <span class="flow-arrow">→</span>
             <span class="flow-step">ATR + TA Enrichment</span>
             <span class="flow-arrow">→</span>
-            <span class="flow-step">7 AI Agents</span>
+            <span class="flow-step">3 Core Agents (+ 5 optional)</span>
             <span class="flow-arrow">→</span>
             <span class="flow-step">Google Sheets</span>
         </div>
@@ -289,7 +289,7 @@ python manager.py analyze-all --fresh-bundle                       # dry run (no
 python manager.py analyze-all --agents valuation,macro --live      # specific agents only
 python manager.py analyze-all --agents rebuy --live                # single agent</code></pre>
 
-        <p>Runs all 7 agents in sequence over a single composite bundle. On <code>--live</code>, writes one batch to Agent_Outputs (archive-before-overwrite). The rebuy agent uses a legacy schema and is excluded from the batch write — its output goes to <code>bundles/runs/</code> only.</p>
+        <p>Runs agents in sequence over a single composite bundle. The default roster is 3 agents: <code>thesis,valuation,new_idea</code>. The retired 5 agents (rebuy, tax, concentration, macro, bagger) remain importable via <code>--agents</code> for ad-hoc runs. On <code>--live</code>, writes one batch to Agent_Outputs (archive-before-overwrite). The rebuy agent uses a legacy schema and is excluded from the batch write — its output goes to <code>bundles/runs/</code> only.</p>
 
         <h3>snapshot — Data Ingestion</h3>
         <pre><code>python manager.py snapshot --live                              # Schwab API → Holdings_Current
@@ -380,7 +380,7 @@ python manager.py bundle inspect bundles/composite_bundle_*.json</code></pre>
             <strong>How to change agent behavior:</strong> Edit the <code>.txt</code> file in <code>agents/prompts/</code>. No Python changes needed. Run <code>python manager.py analyze-all --live</code> to apply.
         </div>
 
-        <h3>Standard Agents (write to Agent_Outputs tab)</h3>
+        <h3>Default Agents — run every week (write to Agent_Outputs tab)</h3>
         <table>
             <thead>
                 <tr>
@@ -393,12 +393,41 @@ python manager.py bundle inspect bundles/composite_bundle_*.json</code></pre>
             </thead>
             <tbody>
                 <tr>
+                    <td><strong>Thesis Screener</strong></td>
+                    <td><code>thesis</code></td>
+                    <td>Gautam Baid (Joys of Compounding). Candor + capital stewardship scoring. Issues <code>per_position_verdict</code> (HOLD/TRIM/ADD/EXIT/MONITOR) grounded in thesis exit_conditions and quantitative triggers.</td>
+                    <td><code>thesis_screener_system.txt</code></td>
+                    <td><code>ThesisScreenerResponse</code></td>
+                </tr>
+                <tr>
                     <td><strong>Valuation Agent</strong></td>
                     <td><code>valuation</code></td>
-                    <td>Peter Lynch / GARP. Style-aware: GARP/FUND/THEME/ETF rules differ.</td>
+                    <td>Peter Lynch / GARP. Style-aware: GARP/FUND/THEME/ETF rules differ. Deterministic <code>verdict</code> field mapped in Python post-LLM.</td>
                     <td><code>valuation_agent_system.txt</code></td>
                     <td><code>ValuationAgentOutput</code></td>
                 </tr>
+                <tr>
+                    <td><strong>New Idea Screener</strong></td>
+                    <td><code>new-idea</code></td>
+                    <td>Style fit evaluation (GARP/THEME/FUND/ETF). Requires <code>--tickers</code>. Starter size 1.5%, max 2.5%.</td>
+                    <td><code>new_idea_screener_system.txt</code></td>
+                    <td><code>NewIdeaScreenerOutput</code></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>Optional Agents — run via <code>--agents</code> flag (write to Agent_Outputs tab)</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Agent</th>
+                    <th>Key Name</th>
+                    <th>Framework</th>
+                    <th>System Prompt</th>
+                    <th>Schema</th>
+                </tr>
+            </thead>
+            <tbody>
                 <tr>
                     <td><strong>Tax Agent</strong></td>
                     <td><code>tax</code></td>
@@ -419,13 +448,6 @@ python manager.py bundle inspect bundles/composite_bundle_*.json</code></pre>
                     <td>Carlota Perez paradigm phases. Runs in 5 chunks of 10 positions each.</td>
                     <td><code>macro_cycle_system.txt</code></td>
                     <td><code>MacroCycleResponse</code></td>
-                </tr>
-                <tr>
-                    <td><strong>Thesis Screener</strong></td>
-                    <td><code>thesis</code></td>
-                    <td>Gautam Baid (Joys of Compounding). Candor + capital stewardship scoring. Issues <code>per_position_verdict</code> (HOLD/TRIM/ADD/EXIT/MONITOR) grounded in thesis exit_conditions.</td>
-                    <td><code>thesis_screener_system.txt</code></td>
-                    <td><code>ThesisScreenerResponse</code></td>
                 </tr>
                 <tr>
                     <td><strong>Bagger Screener</strong></td>
@@ -564,6 +586,9 @@ python manager.py bundle inspect bundles/composite_bundle_*.json</code></pre>
         <div class="callout">
             <strong>The HOLD SUMMARY row:</strong> Instead of 43 identical "hold / fair value" rows cluttering the sheet, the Valuation Agent's hold rows are collapsed into one row. The <code>narrative</code> column lists every hold ticker: <em>"UNH, GOOG, AMZN, XOM, ..."</em>. Individual rows are still written to the archive tab for audit.
         </div>
+
+        <h3>Disagreements Tab</h3>
+        <p>When <code>analyze-all --live</code> runs, Thesis/Valuation signal conflicts are automatically logged to the <strong>Disagreements</strong> tab for historical auditing. A disagreement is detected when the thesis screener and valuation agent issue conflicting severity signals for the same ticker (e.g., thesis says <code>TRIM</code> but valuation says <code>ADD</code>). The tab preserves one row per conflict per run.</p>
 
         <h3>Decision_View Integration</h3>
         <p>The <strong>Decision_View</strong> tab pulls from Agent_Outputs and shows one row per position. Signal cells are only populated when <code>severity</code> is <code>action</code>, <code>alert</code>, or <code>data_quality</code>. Empty cell = no active signal. "Not Evaluated" is not used — empty means evaluated and nothing to do.</p>
@@ -888,7 +913,7 @@ python scripts/schwab_initial_auth.py</code></pre>
 
     <footer>
         &copy; 2026 Investment Portfolio Operations &nbsp;|&nbsp; Bill Long (CPA) &nbsp;|&nbsp;
-        Phase 5 — Headless CLI &nbsp;|&nbsp; Last updated 2026-04-20
+        Phase 5 — Headless CLI · 3-Agent Default &nbsp;|&nbsp; Last updated 2026-04-20
     </footer>
 </div>
 

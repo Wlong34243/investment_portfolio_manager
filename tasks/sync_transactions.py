@@ -1,4 +1,3 @@
-
 """
 tasks/sync_transactions.py — Sync Schwab transaction history to Google Sheets.
 Default: last 90 days.
@@ -22,27 +21,154 @@ import pipeline
 
 logger = logging.getLogger(__name__)
 
-def sync_transactions(days: int = 90, live: bool = False):
+
+def _canonical_key(trade_date: str, ticker: str, action: str, net_amount) -> str:
+    """Stable comparison key independent of fingerprint format."""
+    return f"{trade_date}|{ticker}|{action}|{round(float(net_amount or 0), 2)}"
+
+
+def _read_sheet_transactions(ws) -> pd.DataFrame:
+    """Read all rows from the Transactions worksheet into a DataFrame."""
+    all_values = ws.get_all_values()
+    if not all_values or len(all_values) < 2:
+        return pd.DataFrame(columns=config.TRANSACTION_COLUMNS)
+    headers = all_values[0]
+    data = all_values[1:]
+    return pd.DataFrame(data, columns=headers)
+
+
+def reconcile_transactions(days: int = 90) -> bool:
     """
-    Fetches Schwab transactions, merges with existing history, 
+    Fetch `days` days of transactions from Schwab and diff against what's in
+    the Google Sheet.  Prints three tables:
+      - Rows in Schwab but missing from the Sheet
+      - Rows in Sheet but missing from Schwab
+      - Rows present in both but with a changed Net Amount
+
+    No writes are performed.  Returns True on success, False on API failure.
+    """
+    print(f"--- Transaction Reconcile ({days} days, read-only) ---")
+
+    client = schwab_client.get_accounts_client()
+    if not client:
+        print("❌ Could not initialize Schwab client.")
+        return False
+
+    start_date = datetime.now() - timedelta(days=days)
+    print(f"Fetching Schwab transactions since {start_date.strftime('%Y-%m-%d')}...")
+    api_df = schwab_client.fetch_transactions(client, start_date=start_date)
+
+    print("Reading existing transactions from Google Sheets...")
+    gc = get_gspread_client()
+    ss = gc.open_by_key(config.PORTFOLIO_SHEET_ID)
+    ws = ss.worksheet(config.TAB_TRANSACTIONS)
+    sheet_df = _read_sheet_transactions(ws)
+
+    # Build canonical-key → row maps for comparison
+    def _to_keyed(df: pd.DataFrame) -> dict:
+        result = {}
+        for _, row in df.iterrows():
+            key = _canonical_key(
+                str(row.get('Trade Date', '')),
+                str(row.get('Ticker', '')),
+                str(row.get('Action', '')),
+                row.get('Net Amount', 0),
+            )
+            result[key] = row
+        return result
+
+    api_keyed = _to_keyed(api_df)
+    sheet_keyed = _to_keyed(sheet_df)
+
+    api_keys = set(api_keyed)
+    sheet_keys = set(sheet_keyed)
+
+    only_in_api = sorted(api_keys - sheet_keys)
+    only_in_sheet = sorted(sheet_keys - api_keys)
+    # Value diffs: same key, compare Net Amount as a sanity check
+    changed = []
+    for key in api_keys & sheet_keys:
+        api_net = round(float(api_keyed[key].get('Net Amount', 0) or 0), 2)
+        sheet_net = round(float(sheet_keyed[key].get('Net Amount', 0) or 0), 2)
+        if api_net != sheet_net:
+            changed.append((key, api_net, sheet_net))
+
+    # --- Print results ---
+    print(f"\n{'='*60}")
+    print(f"RECONCILE SUMMARY  ({days}-day window)")
+    print(f"  Schwab API:   {len(api_df):>5} transactions")
+    print(f"  Sheet:        {len(sheet_df):>5} transactions")
+    print(f"  Only in API:  {len(only_in_api):>5} (missing from sheet)")
+    print(f"  Only in sheet:{len(only_in_sheet):>5} (not in API window)")
+    print(f"  Value diffs:  {len(changed):>5}")
+    print(f"{'='*60}")
+
+    if only_in_api:
+        print(f"\n[MISSING FROM SHEET — {len(only_in_api)} rows]")
+        print(f"{'Trade Date':<12} {'Ticker':<8} {'Action':<12} {'Net Amount':>12}")
+        print("-" * 50)
+        for key in only_in_api[:50]:  # cap display at 50
+            row = api_keyed[key]
+            print(f"{str(row.get('Trade Date','')):<12} "
+                  f"{str(row.get('Ticker','')):<8} "
+                  f"{str(row.get('Action','')):<12} "
+                  f"{float(row.get('Net Amount', 0) or 0):>12.2f}")
+        if len(only_in_api) > 50:
+            print(f"  ... and {len(only_in_api) - 50} more")
+
+    if only_in_sheet:
+        print(f"\n[ONLY IN SHEET (outside {days}-day window or orphaned) — {len(only_in_sheet)} rows]")
+        print(f"{'Trade Date':<12} {'Ticker':<8} {'Action':<12} {'Net Amount':>12}")
+        print("-" * 50)
+        for key in only_in_sheet[:20]:
+            row = sheet_keyed[key]
+            print(f"{str(row.get('Trade Date','')):<12} "
+                  f"{str(row.get('Ticker','')):<8} "
+                  f"{str(row.get('Action','')):<12} "
+                  f"{float(row.get('Net Amount', 0) or 0):>12.2f}")
+        if len(only_in_sheet) > 20:
+            print(f"  ... and {len(only_in_sheet) - 20} more")
+
+    if changed:
+        print(f"\n[VALUE DIFFS — {len(changed)} rows]")
+        print(f"{'Key':<50} {'API Net':>10} {'Sheet Net':>10}")
+        print("-" * 74)
+        for key, api_net, sheet_net in changed[:20]:
+            print(f"{key:<50} {api_net:>10.2f} {sheet_net:>10.2f}")
+
+    if not only_in_api and not changed:
+        print("\n✅ CLEAN: Schwab API matches Sheet (within the reconcile window).")
+    else:
+        print(f"\n⚠️  Run 'sync transactions --live' to refresh the sheet.")
+
+    return True
+
+
+def sync_transactions(days: int = 90, live: bool = False, reconcile: bool = False):
+    """
+    Fetches Schwab transactions, merges with existing history,
     and performs an archive-before-overwrite write to the Sheet.
+
+    With reconcile=True: read-only diff mode — no writes.
     """
+    if reconcile:
+        return reconcile_transactions(days=days)
+
     print(f"--- Transaction Sync ({days} days, live={live}) ---")
-    
+
     # 1. Initialize Schwab Client
     client = schwab_client.get_accounts_client()
     if not client:
         print("❌ Could not initialize Schwab client.")
         return False
-    
+
     # 2. Fetch from API
     start_date = datetime.now() - timedelta(days=days)
     print(f"Fetching Schwab transactions since {start_date.strftime('%Y-%m-%d')}...")
     new_tx_df = schwab_client.fetch_transactions(client, start_date=start_date)
-    
+
     if new_tx_df.empty:
         print("ℹ️ No transactions found in API for the specified range.")
-        # We still continue to check if we should refresh the sheet with existing data
     else:
         print(f"✅ Fetched {len(new_tx_df)} transactions from API.")
 
@@ -51,34 +177,19 @@ def sync_transactions(days: int = 90, live: bool = False):
     gc = get_gspread_client()
     ss = gc.open_by_key(config.PORTFOLIO_SHEET_ID)
     ws = ss.worksheet(config.TAB_TRANSACTIONS)
-    
-    # Fingerprint column is the last one in config.TRANSACTION_COLUMNS
-    fp_col_idx = len(config.TRANSACTION_COLUMNS)
-    all_values = ws.get_all_values()
-    headers = all_values[0] if all_values else config.TRANSACTION_COLUMNS
-    existing_data = all_values[1:] if len(all_values) > 1 else []
-    
-    # Load existing into DataFrame for merging
-    if existing_data:
-        existing_df = pd.DataFrame(existing_data, columns=headers)
-    else:
-        existing_df = pd.DataFrame(columns=config.TRANSACTION_COLUMNS)
+    sheet_df = _read_sheet_transactions(ws)
+    existing_data = sheet_df.values.tolist() if not sheet_df.empty else []
 
     # 4. Merge and Deduplicate
-    # Pattern: date|ticker|action|quantity|price
-    # Note: schwab_client.fetch_transactions already builds 'Fingerprint' in this format.
-    
-    combined_df = pd.concat([existing_df, new_tx_df], ignore_index=True)
-    
-    # Deduplicate by Fingerprint — keep='last' so fresh API data overwrites
-    # stale sheet rows that have the same fingerprint but empty Amount/Net Amount.
+    combined_df = pd.concat([sheet_df, new_tx_df], ignore_index=True)
+
     if 'Fingerprint' in combined_df.columns:
         initial_count = len(combined_df)
+        # keep='last' so fresh API data overwrites stale sheet rows with the same key
         combined_df = combined_df.drop_duplicates(subset=['Fingerprint'], keep='last')
         deduped_count = len(combined_df)
         print(f"Deduplicated: {initial_count} total rows -> {deduped_count} unique transactions.")
-    
-    # Sort by Trade Date
+
     if 'Trade Date' in combined_df.columns:
         combined_df = combined_df.sort_values(by='Trade Date', ascending=False)
 
@@ -91,8 +202,7 @@ def sync_transactions(days: int = 90, live: bool = False):
 
     # 6. Archive and Overwrite
     print(f"\n--- LIVE MODE --- Preparing to update {config.TAB_TRANSACTIONS}...")
-    
-    # Archive existing rows to Logs
+
     if existing_data:
         ws_logs = ss.worksheet(config.TAB_LOGS)
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -101,30 +211,35 @@ def sync_transactions(days: int = 90, live: bool = False):
             "INFO",
             "Sync_Transactions",
             f"Archiving {len(existing_data)} rows before overwrite refresh.",
-            f"New total: {len(combined_df)}"
+            f"New total: {len(combined_df)}",
         ])
         print(f"Archived {len(existing_data)} rows metadata to Logs.")
         time.sleep(1.0)
 
-    # Clear and Write
     print(f"Clearing and writing {len(combined_df)} rows to {config.TAB_TRANSACTIONS}...")
     ws.clear()
     time.sleep(1.0)
-    
-    # Sanitize
-    data_to_write = pipeline.sanitize_dataframe_for_sheets(combined_df, config.TRANSACTION_COLUMNS, config.TRANSACTION_COL_MAP)
-    
-    # Write headers + data
-    ws.update(range_name="A1", values=[config.TRANSACTION_COLUMNS] + data_to_write, value_input_option='USER_ENTERED')
-    
+
+    data_to_write = pipeline.sanitize_dataframe_for_sheets(
+        combined_df, config.TRANSACTION_COLUMNS, config.TRANSACTION_COL_MAP
+    )
+
+    ws.update(
+        range_name="A1",
+        values=[config.TRANSACTION_COLUMNS] + data_to_write,
+        value_input_option='USER_ENTERED',
+    )
+
     print(f"✅ SUCCESS: {len(combined_df)} transactions written.")
     return True
+
 
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description="Sync Schwab Transactions")
     parser.add_argument("--days", type=int, default=90, help="Number of days to fetch")
     parser.add_argument("--live", action="store_true", help="Perform live sheet write")
+    parser.add_argument("--reconcile", action="store_true", help="Diff-only mode, no writes")
     args = parser.parse_args()
-    
-    sync_transactions(days=args.days, live=args.live)
+
+    sync_transactions(days=args.days, live=args.live, reconcile=args.reconcile)

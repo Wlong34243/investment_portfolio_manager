@@ -1,47 +1,37 @@
----
-ticker: MSFT
-style: Defensive Growth / Mega-Cap Compounder
-framework_preference:
-entry_date:
-last_reviewed: 2026-04
----
+# META — Investment Thesis
 
-# MSFT — Investment Thesis
+## Core Thesis (AI-Supercharged Ad Engine)
 
-## Style
-Defensive Growth / Mega-Cap Compounder
+I own META as **the most efficient digital advertising engine** on the planet, now supercharged by AI‑driven targeting and cost discipline.[file:28] Upside is driven by Advantage+ ad optimization, Reels engagement, and the use of Llama and AI to both defend the ad business and create new surfaces in Instagram and WhatsApp.[file:28]
 
-## Core Thesis
-Microsoft is the foundational operating system of the global enterprise economy. It possesses a uniquely diversified and virtually unassailable monopoly spanning productivity software (Office/M365), cloud infrastructure (Azure), and frontier artificial intelligence. MSFT is the safest, highest-quality vehicle to monetize the AI revolution at both the infrastructure layer (selling compute to developers) and the application layer (selling Copilot tools to enterprises). It is the ultimate earnings and dividend compounder.
+META is a cash‑flow monster in a “Year of Efficiency” phase, returning capital via buybacks and a dividend, but it carries more idiosyncratic CEO/Reality Labs and regulatory risk than MSFT, so conviction is slightly lower.[file:28]
 
-## Entry Context
-Cost basis: $438.00.
-Halftime Committee Perspective: At $438, the Halftime Committee’s quality-growth advocates generally agree that Microsoft rarely screens as "cheap" on a traditional trailing P/E basis. However, their price-to-value argument rests on the sheer certainty and durability of Microsoft's earnings. The committee frequently notes that investors must pay a premium multiple for a fortress balance sheet, consistent double-digit dividend growth, and unparalleled enterprise integration. The value here is derived not from a discount, but from the compounding safety and near-guaranteed forward growth trajectory.
+## Entry Context & Why It’s Paired With MSFT
 
-## Bull Case
-The stickiness of the Office 365 ecosystem makes Microsoft practically immune to enterprise churn.
+Cost basis: 379.72.[file:28] I bought during the efficiency‑driven recovery, at a still‑reasonable valuation relative to its FCF ramp and the shift toward capital returns.[file:28]
 
-Azure's AI Dominance: Thanks to its early and aggressive partnership with OpenAI, Azure is the primary cloud destination for enterprises looking to train and deploy generative AI, allowing it to capture market share in cloud infrastructure.
+- META complements MSFT: MSFT monetizes AI via enterprise and cloud, META via consumer attention and ads.  
+- Position sizes are the same, but **MSFT is allowed to grow larger** over time; META’s style ceiling is tighter due to regulatory and Reality Labs risk.[file:27][file:28]  
 
-Copilot Monetization: Charging an additional premium per user for AI integration within legacy software provides an immediate, high-margin revenue lever that drops straight to the bottom line.
+## Bull Case (Why Hold META)
 
-## Key Risks
-CapEx Overextension: The capital required to build out frontier AI data centers is staggering. If enterprise adoption of AI tools slows, the massive infrastructure spending could pressure free cash flow.
+- Unrivaled distribution: Over 3B daily active users across Facebook, Instagram, WhatsApp; only Google rivals this scale.[file:28]  
+- AI‑driven ads: Advantage+ lowers acquisition costs for advertisers and can drive higher ad prices and volumes.[file:28]  
+- Llama strategy: Open‑sourcing Llama attracts developers and helps prevent closed‑source monopolies by others; META can integrate AI directly into its apps.[file:28]  
+- Capital returns: Dividend + large buybacks provide a strong floor under the equity story.[file:28]  
 
-Antitrust Scrutiny: Increased global regulatory action targeting the bundling of Microsoft's products (e.g., Teams, Office, Azure, and cybersecurity tools) could force margin-eroding unbundling.
+## Key Risks & Guardrails
 
-OpenAI Dependency: Over-reliance on OpenAI for frontier model capabilities. If a competitor (like Google or Anthropic) decisively wins the model war, Microsoft's AI moat could weaken.
+- Reality Labs burn: Continued $10B+ yearly losses; if core ads slow, this spend becomes much harder to justify.[file:28]  
+- Regulation: Ongoing privacy and antitrust pressure globally; potential restrictions on targeted ads.[file:28]  
+- Consumer fatigue: If Reels/feeds engagement structurally weakens, ad inventory and pricing will suffer.[file:28]  
 
-## Scaling State
-next_step: accumulate
+I’ll tolerate volatility driven by headlines or short‑term RL spend as long as: DAUs/engagement remain strong, ad revenue continues to grow, and efficiency discipline is maintained.[file:28]
 
-## Rotation Priority
-priority: low
+## Hard Exit / Trim Conditions
 
-## Exit Conditions
-- Azure growth structurally decelerates significantly below AWS and Google Cloud over multiple quarters.
-- AI monetization stalls, proving that enterprise adoption of Copilot tools was a temporary hype cycle rather than a permanent productivity paradigm shift.
-- A clearly superior capital deployment opportunity emerges in the mega-cap tech space with a substantially better risk/reward profile.
+I will trim or exit if:[file:28]
 
-## Review Log
-- 2026-04: Initiated. Monitoring Azure growth rates, capital expenditure efficiency, and enterprise Copilot adoption metrics.
+1. Ad revenue structurally declines over multiple quarters due to privacy/regulatory changes META cannot route around.  
+2. Zuckerberg abandons efficiency discipline and sharply accelerates RL spending without a clear path to returns.  
+3. Regulators force a breakup of key assets (e.g., Instagram or WhatsApp), permanently impairing the ad flywheel.  

@@ -38,30 +38,31 @@ class PositionValuation(BaseModel):
         ...,
         description="% below 52-week high. 0 = at high, positive = discounted. Pre-computed in Python.",
     )
-    signal: Literal["accumulate", "hold", "trim", "monitor"] = Field(
+    signal: Literal["ADD", "HOLD", "TRIM", "MONITOR", "EXIT"] = Field(
         ...,
-        description="Gemini valuation signal based on the pre-computed facts and thesis.",
-    )
-    verdict: Literal["HOLD", "TRIM", "ADD", "EXIT", "MONITOR"] = Field(
-        default="HOLD",
         description=(
-            "Uppercase verdict aligned with Thesis Screener vocabulary. "
-            "Mapped deterministically from signal in Python after Gemini returns: "
-            "accumulate→ADD, hold→HOLD, trim→TRIM, monitor→MONITOR. "
-            "Do NOT populate this field — it is overwritten post-LLM."
+            "Uppercase valuation signal aligned with Thesis Screener vocabulary. "
+            "ADD: significantly undervalued vs hist or asymmetric add spot. "
+            "HOLD: fair value or neutral trend. "
+            "TRIM: overvalued or profit-taking spot. "
+            "MONITOR: data gaps or trend transition. "
+            "EXIT: extreme overvaluation or thesis breach (if known)."
         ),
     )
     accumulation_plan: str | None = Field(
         default=None,
         description=(
-            "Small-step scaling plan when signal='accumulate'. "
+            "Small-step scaling plan when signal='ADD'. "
             "E.g. 'Scale in 10% on each 5% pullback, targeting 3 tranches'. "
-            "Must be None when signal != 'accumulate'."
+            "Must be None when signal != 'ADD'."
         ),
     )
     rationale: str = Field(
-        ..., min_length=30,
-        description="2-3 sentence narrative tying the metrics to the recommendation.",
+        ..., min_length=30, max_length=600,
+        description=(
+            "Narrative tying metrics to recommendation. MUST explicitly cite pre-computed numbers: "
+            "current P/E vs historical, 52w range position, and % discount from high."
+        ),
     )
     style_alignment: str = Field(
         ...,

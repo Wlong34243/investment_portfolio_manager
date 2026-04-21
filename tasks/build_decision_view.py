@@ -25,17 +25,16 @@ _ACTION_SEVERITIES = {"action", "alert", "data_quality"}
 
 def get_latest_agent_outputs(ws_agent):
     """
-    Reads Agent_Outputs and returns signals.
+    Reads Agent_Outputs and returns signals from the LATEST run only.
 
-    Handles both legacy 11-col format (run_id, run_ts, composite_hash, ...) and
+    Handles both legacy 11-col format (run_id, run_ts, ...) and
     compact 10-col format (run_date, run_id_short, ...) written by analyze-all.
-    Normalizes column names to a standard internal set.
     """
     all_values = ws_agent.get_all_values()
     if len(all_values) < 2:
         return pd.DataFrame()
 
-    # Detect header row (search first 5 rows for 'agent' column)
+    # Detect header row
     header_row_idx = -1
     for i, row in enumerate(all_values[:5]):
         if 'agent' in [str(h).strip().lower() for h in row]:
@@ -43,7 +42,6 @@ def get_latest_agent_outputs(ws_agent):
             break
 
     if header_row_idx == -1:
-        print("Warning: Could not find 'agent' column in first 5 rows of Agent_Outputs.")
         return pd.DataFrame()
 
     headers = [str(h).strip().lower() for h in all_values[header_row_idx]]
@@ -53,18 +51,23 @@ def get_latest_agent_outputs(ws_agent):
     if df.empty:
         return pd.DataFrame()
 
-    # Normalize column aliases: compact format → standard names
+    # Normalize column aliases
     rename_map = {
-        "run_date":      "run_ts",       # compact timestamp → sort key
+        "run_date":      "run_ts",
         "run_id_short":  "run_id",
-        "signal":        "signal_type",  # compact signal → signal_type
-        "narrative":     "rationale",    # compact narrative → rationale
+        "signal":        "signal_type",
+        "narrative":     "rationale",
     }
     df = df.rename(columns={k: v for k, v in rename_map.items() if k in df.columns})
 
-    # Sort by timestamp descending (most recent first)
-    df["run_ts"] = pd.to_datetime(df["run_ts"], errors="coerce")
-    df = df.sort_values(by="run_ts", ascending=False)
+    # Filter to LATEST run only (Task 3 fix)
+    df["run_ts_dt"] = pd.to_datetime(df["run_ts"], errors="coerce")
+    if not df["run_ts_dt"].dropna().empty:
+        latest_ts = df["run_ts_dt"].max()
+        # Get one of the run_ids from the latest timestamp
+        latest_run_id = df[df["run_ts_dt"] == latest_ts]["run_id"].iloc[0]
+        df = df[df["run_id"] == latest_run_id]
+        print(f"  ✓ Filtering Decision View to latest run: {latest_run_id} ({latest_ts})")
 
     return df
 

@@ -1,44 +1,75 @@
 ---
-ticker: ETN
-style: 
-framework_preference: 
-entry_date:
-last_reviewed:
+ticker: NVDA
+style: Hyper-Growth / AI Monopoly / "Picks & Shovels" Leader
+framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
+entry_date: 2026-04-20
+last_reviewed: 2026-04-20
+current_allocation: 2.5%
+cost_basis: 166.96   # post-split
+time_horizon: 3 to 5 years
+triggers:
+  fwd_pe_add_below: 30               # add only if multiple compresses but AI build-out intact
+  fwd_pe_trim_above: 45              # trim if priced for perfection + slowing fundamentals
+  fwd_pe_historical_median: null
+  price_add_below: null              # behavior-driven: focus on PE + CapEx/earnings, not levels
+  price_trim_above: null
+  discount_from_52w_high_add: null
+  revenue_growth_floor_pct: 20       # still want strong growth; below this = yellow flag
+  operating_margin_floor_pct: null   # focus on gross margin and DC segment margin
+  style_size_ceiling_pct: 4.0        # hyper-concentrated AI cyclical; cap exposure
+  current_weight_pct: 2.5
 ---
 
-# ETN — Investment Thesis
+# NVDA — Investment Thesis
 
-## Style
-GARP (Growth at a Reasonable Price) / Industrial Infrastructure / "Picks and Shovels" AI Play
+## Core Thesis (AI Compute Railroads View)
 
-## Core Thesis
-Buying the premier "picks and shovels" infrastructure provider for the AI data center and electrification supercycles. The upside is driven by an unprecedented surge in data center power density requirements, massive grid modernization efforts, and the reshoring of U.S. manufacturing. Eaton is transforming from a traditional, cyclical industrial components manufacturer into a high-margin, integrated "grid-to-chip" power management behemoth. The key question is whether hyperscaler demand and mega-projects can sustain this elevated growth long enough to justify its premium industrial valuation. Judgment: yes.
+I am owning **the dominant compute and software platform for the AI revolution**, after years of watching from the sidelines.. Upside is driven by the structural shift of a ~$1T data center installed base from CPU to accelerated computing, where Nvidia controls both the silicon and the CUDA software ecosystem..
 
-## Entry Context
-Cost basis: $347.30. With the stock currently trading north of $400 in early 2026, the $322 entry point provided a solid margin of safety before the market fully priced in the sheer velocity of AI infrastructure demand (highlighted by a recent 200% year-over-year surge in data center orders). Buying at that level captured the inflection point of their aggressive expansion—such as the recent $9.5 billion Boyd Thermal acquisition and the new Omaha switchgear plant—turning this from a value-add industrial play into a high-conviction, high-momentum hold.
+Nvidia is not just a chip designer; it is a full‑stack data center platform with rack‑scale systems, networking, and software, effectively the “railroad” for AI training and inference.. The key question is whether hyperscaler CapEx can remain high enough, for long enough, and whether CUDA remains the standard; I’m underwriting “yes,” while recognizing I’m paying for dominance and flawless execution..
 
-## Bull Case
-- **The AI Power Bottleneck:** The shift from standard cloud computing racks (10-15 kW) to next-generation AI processors (80-100 kW) requires entirely new electrical and infrastructure. Eaton is perfectly positioned as the dominant provider of switchgear, power distribution units, and uninterruptible power supplies (UPS).
-- **"Grid-to-Chip" Monopoly:** With the recent acquisition of Boyd Thermal (liquid cooling) and strategic partnerships with Nvidia, Eaton now owns the entire power management chain for hyperscalers—from the utility grid drop all the way down to cooling the actual silicon.
-- **Unprecedented Visibility:** Eaton is sitting on a record backlog (nearly $20 billion), providing massive visibility into future earnings. This is fueled by over $3 trillion in announced mega-projects across North America, where Eaton boasts an incredibly high win rate.
-- **Margin Expansion via Mix Shift:** Exiting lower-growth, cyclical legacy businesses (like standard vehicle/eMobility components) to double down on high-margin electrical and data center segments structurally lifts the company's return on invested capital (ROIC).
+## Entry Context & Valuation
 
-## Key Risks
-- **Valuation Multiple:** Trading at roughly 38x earnings, Eaton is priced for perfection. It is trading at tech-like multiples rather than industrial ones. Any slowdown in hyperscaler capital expenditures (CapEx) or delays in mega-projects would cause severe multiple compression.
-- **Execution & Capacity Squeeze:** Ramping up new facilities—like the $30 million Omaha switchgear plant—while managing heavy, multi-billion dollar capital investments creates near-term margin headwinds, labor availability issues, and operational bottlenecks. 
-- **Lumpy Project Demand:** If the AI data center buildout falters, or if projects get delayed because local utility companies simply cannot generate enough power to feed the grid, Eaton's aggressive capacity expansion could leave it with stranded costs.
+Cost basis: $166.96 (post‑split). At entry, NVDA was trading at a high but arguably reasonable forward multiple given the magnitude of its earnings explosion.. The market already prices in dominance in AI training and inferencing, so I am paying for **continued hyper‑growth and sustained margin power**, not a misunderstood value story..
 
-## Scaling State
-next_step: hold
+- Emotionally, this is a “I’m done missing it” position — I converted FOMO into a defined, sized exposure rather than a chase..  
+- Rationally, I am underwriting that current earnings levels and margins are not a peak‑cycle aberration but part of a multi‑year platform monetization phase.  
 
-## Rotation Priority
-priority: low
+## Bull Case (Why Own It Despite The Multiple)
 
-## Exit Conditions
-- Hyperscalers (Amazon, Google, Microsoft) signal a structural, sustained pullback in data center CapEx, indicating the peak of the AI infrastructure buildout has passed.
-- Eaton's massive backlog begins to rapidly deplete without replacement orders, or the book-to-bill ratio falls sustainably below 1.0.
-- A massive execution failure in integrating the Boyd Thermal liquid-cooling acquisition or ramping up new switchgear capacity severely compresses the Electrical America segment's margins.
-- A clearly superior capital deployment opportunity emerges in the industrials or infrastructure space at a much more reasonable valuation multiple.
+The thesis rests on Nvidia’s **ecosystem lock‑in and pace of innovation**, not just one chip generation..
 
-## Review Log
-- 2026-04: Initiated. Thesis intact. Up significantly from $322 cost basis. Monitoring the integration of Boyd Thermal, the ramp-up of the new Nebraska switchgear facility, and any margin pressure from capacity expansion spend.
+- CUDA moat: Millions of AI developers are locked into CUDA; this software and tooling ecosystem creates huge switching costs relative to cheaper hardware alternatives..  
+- Data center transformation: Global data centers are migrating to accelerated computing, and Nvidia is capturing the lion’s share of this multi‑year replacement cycle..  
+- Product cadence: Annual architecture cadence (Hopper → Blackwell → Rubin) keeps Nvidia structurally ahead, forcing customers to upgrade to minimize total cost of ownership..  
+- Margin profile: Rack‑scale systems and networking (InfiniBand/Ethernet) alongside GPUs push gross margins into software‑like territory (~75%+), generating enormous free cash flow..  
+
+## Behavioral Guardrails & Drawdown Tolerance
+
+Given the history of FOMO, I need **pre‑committed rules**.
+
+- I will tolerate a 30–40% drawdown from cost if:  
+  - The driver is market‑wide AI de‑rating or cyclical CapEx timing, and  
+  - Hyperscaler CapEx plans and Nvidia’s order book still support strong multi‑year demand..  
+- I will not add aggressively into every dip; adds must align with:  
+  - Forward P/E compressing into the low‑30s or below, and  
+  - No structural signs that custom ASICs or regulatory/geopolitical shocks are permanently impairing earnings power..  
+- I will not chase parabolic extensions above my fwd P/E trim band just to “stay in the story”; trims are allowed even if narrative remains euphoric.  
+
+## Key Risks I’m Actively Watching
+
+I’m explicitly monitoring the **three ways this can structurally break**, beyond short‑term volatility..
+
+- Hyperscaler CapEx pullback: If MSFT, META, GOOG, AMZN stop seeing acceptable ROI on AI, they will cut GPU orders, collapsing both earnings and the multiple..  
+- Custom silicon (ASICs): The real threat is in‑house chips like TPU, Trainium, Maia, which aim to reduce dependence on Nvidia’s expensive hardware..  
+- Geopolitics & supply chain: Dependence on TSMC in Taiwan plus export controls to China create tail risks that could disrupt supply or materially shrink key markets..  
+
+## Hard Exit / Major Trim Conditions
+
+I will exit or materially cut if the **core structural edge or demand environment** clearly shifts:.
+
+1. Major hyperscalers guide down AI infrastructure CapEx for multiple consecutive quarters, signaling a structural slowdown rather than a timing pause..  
+2. Gross margins structurally compress (not one quarter) due to pricing pressure from custom silicon or meaningful share gains by competitors like AMD..  
+3. A serious geopolitical disruption (e.g., blockade/invasion of Taiwan) cripples TSMC’s capacity and there is no credible near‑term mitigation path..  
+4. CUDA/software lock‑in erodes and developers materially pivot to alternative ecosystems, undermining Nvidia’s moat.  
+5. A superior, more reasonably valued AI infrastructure play emerges with a better risk‑adjusted IRR, making it rational to rotate out even with NVDA’s story intact..  

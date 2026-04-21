@@ -8,6 +8,7 @@ from earnings transcripts and cross-references them against original theses.
 import json
 import logging
 import re
+import sys
 import time
 import uuid
 from datetime import date, datetime, timezone
@@ -18,6 +19,12 @@ import typer
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
+
+# Add project root to path
+_HERE = Path(__file__).parent.resolve()
+_ROOT = _HERE.parent
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
 
 import config
 from agents.schemas.thesis_screener_schema import ThesisScreenerResponse, ManagementEvaluation
@@ -160,6 +167,9 @@ def _compute_thesis_facts(
         if doc.get("doc_type") == "transcript"
     }
 
+    # Current date for staleness check
+    TODAY = date(2026, 4, 20)
+
     # Use all tickers present in either thesis or transcript map
     all_tickers = set(thesis_map.keys()) | set(transcript_map.keys())
     
@@ -178,8 +188,21 @@ def _compute_thesis_facts(
         thesis_content = th.get("content", "") if th else ""
         frontmatter = parse_thesis_frontmatter(thesis_content) if thesis_content else None
         last_reviewed = frontmatter.last_reviewed if frontmatter else None
-        exit_conditions = _extract_exit_conditions(thesis_content)
-        stale_thesis = _is_stale_thesis(last_reviewed)
+        exit_conditions = frontmatter.exit_conditions if frontmatter and hasattr(frontmatter, 'exit_conditions') else []
+        if not exit_conditions:
+            # Fallback to text extraction if not in frontmatter
+            exit_conditions_text = _extract_exit_conditions(thesis_content)
+            exit_conditions = [exit_conditions_text] if exit_conditions_text else []
+
+        stale_thesis = False
+        if last_reviewed:
+            try:
+                rev_date = date.fromisoformat(str(last_reviewed))
+                stale_thesis = (TODAY - rev_date).days > 90
+            except (ValueError, TypeError):
+                stale_thesis = True
+        elif has_thesis:
+            stale_thesis = True # No date means stale
 
         # Parse quantitative triggers and evaluate against current bundle data
         triggers = _parse_thesis_triggers(thesis_content) if thesis_content else {}
@@ -193,7 +216,7 @@ def _compute_thesis_facts(
             "transcript_date": tr.get("metadata", {}).get("date") if tr else "N/A",
             "last_reviewed": str(last_reviewed) if last_reviewed else "unknown",
             "stale_thesis": stale_thesis,
-            "exit_conditions_summary": exit_conditions[:300] if exit_conditions else "none provided",
+            "exit_conditions": exit_conditions,
             "trigger_fired": trigger_fired,
             "trigger_missing": trigger_missing,
         })
@@ -244,6 +267,40 @@ def _result_to_sheet_rows(
 # Runner & CLI
 # ---------------------------------------------------------------------------
 
+from agents.utils.chunked_analysis import run_chunked_analysis
+
+def _build_thesis_user_prompt(chunk: list[dict], context: dict) -> str:
+    """Builds the prompt for a single chunk of positions."""
+    facts_table = dicts_to_markdown_table(chunk)
+    framework_text = context.get("framework_text", "")
+    composite_hash = context.get("composite_hash", "")
+    data_gaps = context.get("data_gaps", [])
+
+    return (
+        f"Analyze management candor and capital stewardship for the following {len(chunk)} positions.\n\n"
+        f"## Gautam Baid Framework (Joys of Compounding)\n"
+        f"{framework_text}\n\n"
+        f"## Pre-Computed Facts (thesis coverage, exit conditions, trigger status, staleness)\n"
+        f"{facts_table}\n\n"
+        "## Verdict Hierarchy & Discipline (STRICT RULES)\n"
+        "1. The Hard Stop (MONITOR): If has_thesis: false, the verdict MUST be MONITOR. Reasoning: 'Thesis file needs backfill before a verdict can be issued.'\n"
+        "2. The Exit (EXIT): Triggered if any condition in the exit_conditions field of the thesis file is met.\n"
+        "3. The Reduction (TRIM): Triggered if one exit condition is partially met, or if rotation_priority is High/Medium and thesis is weakening.\n"
+        "4. The Accumulation (ADD): Only if thesis is INTACT AND you identify a specific asymmetric improvement.\n"
+        "5. The Default (HOLD): Thesis is intact, and no exit conditions are triggered.\n\n"
+        "## Reasoning Constraints\n"
+        "- Your verdict_reasoning must explicitly cite the thesis file. Use 'Per the thesis file...' or 'The exit condition [X] is/is not triggered because...'\n"
+        "- If stale_thesis: true, you MUST append: 'WARNING: Thesis is stale (>90 days). Re-verify assumptions.'\n\n"
+        f"## Data Gaps (entire portfolio context)\n"
+        f"{', '.join(data_gaps) if data_gaps else 'None'}\n\n"
+        "## Instructions\n"
+        "1. For each ticker: compare behavior to original thesis.\n"
+        "2. Set 'verdict' as the FIRST field in the evaluation block.\n"
+        "3. Provide concise 'verdict_reasoning' (max 600 chars).\n"
+        f"4. bundle_hash (MUST echo): {composite_hash}\n"
+        "Produce a ThesisScreenerResponse JSON object."
+    )
+
 def run_thesis_agent(
     bundle_path: Path,
     run_id: str,
@@ -252,13 +309,14 @@ def run_thesis_agent(
     dry_run: bool = True,
 ) -> tuple[ThesisScreenerResponse, list[list]]:
     """
-    Orchestrates the Thesis Screener Agent analysis.
+    Orchestrates the Thesis Screener Agent analysis using chunked execution.
     """
     composite = load_composite_bundle(bundle_path)
     market = load_bundle(Path(composite["market_bundle_path"]))
     vault = load_vault_bundle(Path(composite["vault_bundle_path"]))
+    composite_hash = composite["composite_hash"]
 
-    # Build positions lookup for trigger evaluation (price, weight, discount)
+    # Build positions lookup for trigger evaluation
     positions_by_ticker = {p["ticker"]: p for p in market.get("positions", [])}
 
     # --- Pre-computation ---
@@ -267,57 +325,55 @@ def run_thesis_agent(
     if not facts:
         raise RuntimeError("No positions with thesis/transcript data to analyze.")
 
-    # --- Build user prompt ---
-    system_prompt_text = _SYSTEM_PROMPT_PATH.read_text(encoding="utf-8")
+    # --- Run Chunked Analysis ---
     framework_text = _FRAMEWORK_PATH.read_text(encoding="utf-8")
+    system_instruction = _SYSTEM_PROMPT_PATH.read_text(encoding="utf-8")
     
-    # Markdown optimization for flat list
-    facts_table = dicts_to_markdown_table(facts)
+    portfolio_context = {
+        "framework_text": framework_text,
+        "composite_hash": composite_hash,
+        "data_gaps": data_gaps
+    }
 
-    # Summarize trigger status for context
-    fired_summary = [
-        f"{f['ticker']}: {f['trigger_fired']}"
-        for f in facts if f.get("trigger_fired")
-    ]
-
-    user_prompt = (
-        f"Analyze management candor and capital stewardship against original theses.\n\n"
-        f"## Gautam Baid Framework (Joys of Compounding)\n"
-        f"{framework_text}\n\n"
-        f"## Pre-Computed Facts (thesis coverage, exit conditions, trigger status)\n"
-        f"{facts_table}\n\n"
-        f"## Quantitative Triggers Currently Firing\n"
-        f"{'; '.join(fired_summary) if fired_summary else 'None — no price/PE triggers breached'}\n\n"
-        f"## Trigger Precedence\n"
-        "Quantitative triggers from the thesis file (price levels, P/E thresholds, weight ceilings) "
-        "override narrative exit_conditions when they conflict. If trigger_fired is non-empty for a "
-        "position, the per_position_verdict MUST cite at least one fired trigger in verdict_reasoning.\n\n"
-        f"## Data Gaps\n"
-        f"{', '.join(data_gaps) if data_gaps else 'None'}\n\n"
-        "## Instructions\n"
-        "1. For each ticker: compare latest transcript behavior to the original thesis.\n"
-        "2. Score candor, stewardship, and alignment.\n"
-        "3. Provide final_recommendation (MAINTAIN_CONVICTION, WATCHLIST_DOWNGRADE, THESIS_VIOLATED).\n"
-        "4. Provide per_position_verdict (HOLD, TRIM, ADD, EXIT, MONITOR) per Verdict Discipline rules.\n"
-        f"5. bundle_hash (echo it): {composite['composite_hash']}\n"
-        "Produce a ThesisScreenerResponse JSON object."
-    )
-
-    # --- Call Gemini ---
-    # include_vault_context=False: the full thesis docs are already summarized in the
-    # facts_table above. Sending all 50+ thesis docs again in the bundle preamble
-    # would exceed Vertex AI TPM quota and cause 429s.
-    result: ThesisScreenerResponse | None = ask_gemini_composite(
-        prompt=user_prompt,
-        composite_bundle_path=bundle_path,
+    all_evals, excluded, coverage_warns, errors = run_chunked_analysis(
+        investable=facts,
+        bundle_path=bundle_path,
+        composite_hash=composite_hash,
+        build_user_prompt_fn=_build_thesis_user_prompt,
         response_schema=ThesisScreenerResponse,
-        system_instruction=system_prompt_text,
+        system_instruction=system_instruction,
+        portfolio_context=portfolio_context,
+        ask_gemini_fn=ask_gemini_composite,
         max_tokens=config.GEMINI_MAX_TOKENS_THESIS,
-        include_vault_context=False,
+        result_field="evaluations",
     )
 
-    if result is None:
-        raise RuntimeError("Gemini returned no result.")
+    if not all_evals:
+        raise RuntimeError(f"Thesis analysis failed for all chunks. Errors: {errors}")
+
+    # Map back to Pydantic
+    final_evals = []
+    violations = []
+    watchlists = []
+    for e in all_evals:
+        if isinstance(e, dict):
+            obj = ManagementEvaluation(**e)
+        else:
+            obj = e
+        final_evals.append(obj)
+        if obj.final_recommendation == "THESIS_VIOLATED":
+            violations.append(obj.ticker)
+        elif obj.final_recommendation == "WATCHLIST_DOWNGRADE":
+            watchlists.append(obj.ticker)
+
+    result = ThesisScreenerResponse(
+        bundle_hash=composite_hash,
+        analysis_timestamp_utc=run_ts,
+        evaluations=final_evals,
+        thesis_violations=violations,
+        watchlist_downgrades=watchlists,
+        portfolio_qualitative_summary="Thesis management audit complete via chunked execution.",
+    )
 
     sheet_rows = _result_to_sheet_rows(result, run_id, run_ts, dry_run)
     return result, sheet_rows

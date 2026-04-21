@@ -1,43 +1,66 @@
 ---
 ticker: IGV
-style: 
-framework_preference: 
-entry_date:
-last_reviewed:
+style: Thematic Growth / SaaS & Enterprise Software Compounder
+framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
+entry_date: 2026-04-20
+last_reviewed: 2026-04-20
+current_allocation: 3.0%
+cost_basis: 84.13
+time_horizon: 3 to 5 years
+triggers:
+  fwd_pe_add_below: null          # ETF; use macro/sector signals instead of PE
+  fwd_pe_trim_above: null
+  fwd_pe_historical_median: null
+  price_add_below: 80             # add if sector de-rates again but fundamentals intact
+  price_trim_above: 120           # trim if sector sentiment/euphoria runs far ahead of growth
+  discount_from_52w_high_add: null
+  revenue_growth_floor_pct: null  # focus on holdings' growth & margins, not ETF revenue
+  operating_margin_floor_pct: null
+  style_size_ceiling_pct: 5.0     # cap SaaS basket size; rest handled via core names (MSFT, etc.)
+  current_weight_pct: 3.0
 ---
 
 # IGV — Investment Thesis
 
-## Style
-Thematic Growth / SaaS & Enterprise Software Compounder
+## Core Thesis (Post‑Slaughter SaaS Basket)
 
-## Core Thesis
-Buying a diversified basket of the highest-margin, most scalable business models in the world without taking on single-stock execution risk. Upside is driven by the sticky, recurring nature of enterprise software subscriptions (SaaS) and the imminent monetization of the AI cycle at the application layer. While semiconductor companies built the AI infrastructure, software companies (like Microsoft, Salesforce, ServiceNow) will capture massive value by embedding AI "copilots" into the tools that white-collar workers use every day. The key question is whether corporate IT budgets will expand enough to absorb higher software pricing without triggering massive vendor consolidation. Judgment: yes.
+I bought IGV as a **diversified way to capitalize on the SaaS slaughter**, capturing under‑appreciated value in mission‑critical software that is deeply embedded in enterprise workflows (MSFT, NOW, CRWD‑type products).[file:26] Upside is driven by sticky, recurring subscription revenues and the monetization of AI copilots and automation at the application layer, where software vendors can raise prices or add tiers without heavy capex.[file:26]
 
-## Entry Context
-Cost basis: $84.13. At entry, IGV provides exposure to a sector that historically commands premium multiples due to its high gross margins and predictable recurring revenue. Buying at this level secures a solid foundation in the "operating system" of the global economy, recognizing that while individual software names may rise and fall, the structural shift toward cloud-based software and AI integration is permanent.
+Rather than trying to perfectly time or select individual SaaS names after a brutal drawdown, IGV lets me own the ecosystem of entrenched software platforms that power day‑to‑day business operations.[file:26]
 
-## Bull Case
-- **Mission-Critical Moats:** Enterprise software is notoriously "sticky." Once a company integrates tools like Salesforce, Oracle, or Adobe into its daily workflows, the switching costs are astronomically high, leading to extremely low churn and high pricing power.
-- **AI Monetization:** Software is where AI reaches the end-user. IGV's top holdings are perfectly positioned to up-sell their massive existing customer bases on premium, AI-enhanced tiers, driving top-line growth without requiring massive physical capital expenditures.
-- **Margin Power:** Software companies boast some of the highest gross margins in the public markets (often 70-80%+). As revenue scales, massive free cash flow drops straight to the bottom line, fueling further R&D or aggressive share buybacks.
-- **No Single-Point Failure:** Tech moves fast; today's software darling can be tomorrow's legacy dinosaur. IGV eliminates the risk of picking the wrong horse by owning the entire ecosystem.
+## Entry Context & Why ETF vs Single Names
 
-## Key Risks
-- **Valuation Headwinds:** Because these are high-growth, long-duration assets, the ETF's multiple is highly sensitive to interest rates. A structural return to high inflation and high rates will heavily compress valuations across the board.
-- **IT Budget Squeeze:** If the macro economy enters a severe recession, corporations will aggressively look to consolidate software vendors and cut "nice-to-have" SaaS subscriptions, driving down seat counts and revenue.
-- **AI Disruption (The Bear Case):** A rising fear that AI might become so good at writing code that it lowers the barrier to entry, allowing startups to easily build cheap clones of expensive, legacy SaaS platforms, thereby destroying their pricing power.
+Cost basis: 84.13.[file:26] Entry gave me exposure to a sector that historically commands premium multiples due to high gross margins and predictable recurring revenue, but had just been repriced by higher rates and growth scares.[file:26]
 
-## Scaling State
-next_step: hold
+- Motivation: Post‑slaughter, I wanted to **buy the category** (mission‑critical SaaS) without over‑concentrating in any one stock or trying to perfectly rank MSFT/NOW/CRWD/etc.[file:26]  
+- View: The structural shift to cloud‑based software and AI‑enabled workflows is permanent, even if individual winners rotate.[file:26]  
 
-## Rotation Priority
-priority: low
+## Bull Case (Why Hold IGV Specifically)
 
-## Exit Conditions
-- Structural, sector-wide multiple compression driven by a permanent shift to a high-interest-rate regime.
-- A severe macro recession that forces major Fortune 500 companies into sustained, multi-year IT budget contractions.
-- Valuations reach euphoric, late-1990s dot-com levels where the math completely detaches from underlying cash flows.
+IGV is my **application‑layer AI and software basket**.[file:26]
 
-## Review Log
-- 2026-04: Initiated. Thesis intact. Monitoring corporate IT spending trends, AI copilot adoption rates, and software vendor consolidation.
+- Mission‑critical stickiness: Once a company bakes in Salesforce, ServiceNow, Adobe, or similar tools, switching costs are huge, driving low churn and pricing power.[file:26]  
+- AI monetization: These vendors can bolt AI copilots and automation onto existing products and sell higher‑priced tiers to large installed bases, boosting growth without heavy physical investment.[file:26]  
+- Margin power: Many holdings have 70–80%+ gross margins; scale turns incremental revenue into substantial free cash flow.[file:26]  
+- No single‑point failure: Tech rotates quickly; IGV avoids the risk of picking the wrong SaaS winner by owning the leading cluster.[file:26]  
+
+## Key Risks & How I’ll Treat Drawdowns
+
+- Duration/valuation risk: High‑growth, long‑duration software is very sensitive to interest‑rate regimes; a structurally higher‑rate world can keep multiples compressed.[file:26]  
+- IT budget squeeze: In a severe recession, enterprises consolidate vendors and cut non‑essential SaaS, pressuring seat counts and expansions.[file:26]  
+- AI disruption from below: AI‑assisted coding may enable new entrants to clone legacy SaaS cheaper, eroding incumbents’ pricing power.[file:26]  
+
+Behaviorally:
+- I will tolerate sector drawdowns if:  
+  - Core metrics (enterprise SaaS revenue growth, retention, net dollar retention) for top holdings remain healthy, and  
+  - The hit is clearly macro/valuation, not a structural collapse in software demand.  
+- I will **not** chase euphoric ramps where IGV trades as if all SaaS is “the next NVDA”; above my trim band I’m willing to take some off the table.  
+
+## Hard Exit / Rotation Conditions
+
+I’ll consider exiting or cutting IGV if:[file:26]
+
+1. We see sustained, sector‑wide multiple compression tied to a durable high‑rate regime and slower growth, driving forward returns toward low single digits.  
+2. A major, prolonged recession forces multi‑year IT budget shrinkage and aggressive vendor consolidation, with top holdings showing weakening retention and growth.[file:26]  
+3. Valuations return to late‑90s‑style euphoria, where price clearly decouples from realistic cash‑flow growth.  
+4. I can build a higher‑conviction basket of specific software/AI applications (e.g., MSFT, NOW, CRWD) at attractive valuations, making IGV redundant as a broad proxy.  

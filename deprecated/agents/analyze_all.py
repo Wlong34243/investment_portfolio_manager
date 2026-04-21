@@ -55,11 +55,12 @@ console = Console()
 # the manifest summary, but its rows are NOT in the standard batch write.
 
 _STANDARD_AGENTS = [
-    "tax",
+    "thesis",
     "valuation",
+    "new_idea",
+    "tax",
     "concentration",
     "macro",
-    "thesis",
     "bagger",
     "value",
 ]
@@ -199,6 +200,7 @@ def _load_agent_module(agent_name: str):
         "thesis":        "agents.thesis_screener",
         "bagger":        "agents.bagger_screener",
         "value":         "agents.value_investing_screener",
+        "new_idea":      "agents.new_idea_screener",
     }
     mod_path = module_map.get(agent_name)
     if not mod_path:
@@ -218,6 +220,7 @@ def _load_schema_class(agent_name: str):
         "thesis":        ("agents.schemas.thesis_screener_schema","ThesisScreenerResponse"),
         "bagger":        ("agents.schemas.bagger_schema",         "BaggerScreenerResponse"),
         "value":         ("agents.schemas.value_investing_schema", "ValueInvestingResponse"),
+        "new_idea":      ("agents.schemas.new_idea_schema",       "NewIdeaScreenerOutput"),
     }
     mod_path, class_name = schema_map[agent_name]
     mod = importlib.import_module(mod_path)
@@ -262,15 +265,19 @@ def _run_one_agent(
         mod = _load_agent_module(agent_name)
         
         # Determine the runner function name
-        runner_name = f"run_{agent_name}_agent"
-        if agent_name == "rebuy": runner_name = "run_rebuy_analyst"
-        if agent_name == "valuation": runner_name = "run_valuation_agent"
-        if agent_name == "bagger": runner_name = "run_bagger_agent"
-        if agent_name == "macro": runner_name = "run_macro_agent"
-        if agent_name == "thesis": runner_name = "run_thesis_agent"
-        if agent_name == "tax": runner_name = "run_tax_agent"
-        if agent_name == "concentration": runner_name = "run_concentration_agent"
-        if agent_name == "behavioral": runner_name = "run_behavioral_agent"
+        runner_map = {
+            "rebuy": "run_rebuy_analyst",
+            "valuation": "run_valuation_agent",
+            "bagger": "run_bagger_agent",
+            "macro": "run_macro_agent",
+            "thesis": "run_thesis_agent",
+            "tax": "run_tax_agent",
+            "concentration": "run_concentration_agent",
+            "behavioral": "run_behavioral_agent",
+            "new_idea": "run_new_idea_screener",
+            "value": "run_value_investing_agent",
+        }
+        runner_name = runner_map.get(agent_name, f"run_{agent_name}_agent")
         
         runner_fn = getattr(mod, runner_name)
         
@@ -354,6 +361,84 @@ def _build_fresh_bundles() -> Path:
     return composite_path
 
 
+_RETIRED_AGENTS = ["rebuy", "tax", "concentration", "macro", "bagger"]
+
+# ---------------------------------------------------------------------------
+# Disagreement logic
+# ---------------------------------------------------------------------------
+
+def _is_disagreement(thesis_signal: str, valuation_signal: str) -> bool:
+    """
+    Check for conflicting signals between Thesis and Valuation.
+    Thesis: MAINTAIN_CONVICTION, WATCHLIST_DOWNGRADE, THESIS_VIOLATED
+    Valuation: ADD, HOLD, TRIM, MONITOR, EXIT
+    """
+    ts = thesis_signal # Already uppercase Literals from schema
+    vs = valuation_signal
+    
+    # Severe Conflicts
+    if ts == "THESIS_VIOLATED" and vs in ("ADD", "HOLD"):
+        return True
+    if ts == "MAINTAIN_CONVICTION" and vs == "EXIT":
+        return True
+    
+    # Moderate Conflicts
+    if ts == "THESIS_VIOLATED" and vs == "MONITOR":
+        return True
+    if ts == "WATCHLIST_DOWNGRADE" and vs == "ADD":
+        return True
+        
+    return False
+
+def _print_disagreements(thesis_by_ticker: dict, valuation_by_ticker: dict, market_bundle: dict, live: bool = False, run_id: str = "", run_ts: str = ""):
+    """Render disagreement table at end of CLI run and optionally log to Sheets."""
+    disagreements = []
+    
+    # Weights for sorting
+    weights = {p["ticker"]: p.get("weight_pct", 0.0) for p in market_bundle.get("positions", [])}
+    
+    for ticker in sorted(set(thesis_by_ticker.keys()) & set(valuation_by_ticker.keys())):
+        t = thesis_by_ticker[ticker]
+        v = valuation_by_ticker[ticker]
+        if _is_disagreement(t, v):
+            disagreements.append((ticker, t, v, weights.get(ticker, 0.0)))
+            
+    if not disagreements:
+        console.print("\n[green]No Thesis/Valuation disagreements this run.[/]")
+        return
+
+    # Sort by weight descending
+    disagreements.sort(key=lambda x: x[3], reverse=True)
+
+    table = Table(title="Disagreements (Thesis vs Valuation)", border_style="red")
+    table.add_column("Ticker", style="bold")
+    table.add_column("Thesis", style="magenta")
+    table.add_column("Valuation", style="cyan")
+    table.add_column("Weight %", justify="right")
+
+    for ticker, t, v, weight in disagreements:
+        table.add_row(ticker, t, v, f"{weight:.2f}%")
+
+    console.print("\n")
+    console.print(table)
+
+    if live and disagreements:
+        try:
+            from utils.sheet_readers import get_gspread_client
+            client = get_gspread_client()
+            ss = client.open_by_key(config.PORTFOLIO_SHEET_ID)
+            ws = ss.worksheet(config.TAB_DISAGREEMENTS)
+            
+            # Format: [Date, Run ID, Ticker, Thesis Signal, Valuation Signal, Weight %]
+            sheet_rows = [
+                [run_ts[:10], run_id[:8], d[0], d[1], d[2], f"{d[3]:.2f}%"]
+                for d in disagreements
+            ]
+            ws.append_rows(sheet_rows, value_input_option="USER_ENTERED")
+            console.print(f"[green]Logged {len(disagreements)} disagreement(s) to {config.TAB_DISAGREEMENTS}.[/]")
+        except Exception as e:
+            console.print(f"[yellow]! Failed to log disagreements to Sheets: {e}[/]")
+
 # ---------------------------------------------------------------------------
 # Main orchestration entry point
 # ---------------------------------------------------------------------------
@@ -369,6 +454,10 @@ def run_analyze_all(
     """
     run_ts = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     run_id = str(uuid.uuid4())
+
+    # --- Resolved data ---
+    thesis_by_ticker = {}
+    valuation_by_ticker = {}
 
     # Banner
     if live:
@@ -422,8 +511,6 @@ def run_analyze_all(
     composite_hash = composite_data["composite_hash"]
     console.print(f"[dim]Composite hash: {composite_hash[:16]}...[/]")
 
-    bundle_str = str(composite_path)
-
     # Run all requested agents
     errors: list[str] = []
     all_standard_rows: list[list] = []
@@ -441,6 +528,7 @@ def run_analyze_all(
             errors=errors,
         )
         summaries.append(summary)
+        
         if summary.status == "success":
             succeeded.append(agent_name)
             if agent_name in _STANDARD_AGENTS:
@@ -448,10 +536,21 @@ def run_analyze_all(
         else:
             failed.append(agent_name)
 
-    for agent_name in skipped:
-        summaries.append(AgentRunSummary(agent=agent_name, status="skipped"))
+    # Post-analysis scan for signals for the Disagreement Table
+    for r in all_standard_rows:
+        # thesis signal is at index 8 (final_recommendation)
+        if r[3] == "thesis":
+            thesis_by_ticker[r[5]] = r[8]
+        # valuation signal is at index 4 (signal)
+        if r[3] == "valuation":
+            valuation_by_ticker[r[5]] = r[4]
 
     console.print(Rule("[bold]analyze-all complete", style="green"))
+
+    # Print Disagreement Table
+    from core.bundle import load_bundle as _load_b
+    market_bundle_data = _load_b(Path(composite_data["market_bundle_path"]))
+    _print_disagreements(thesis_by_ticker, valuation_by_ticker, market_bundle_data)
 
     # Transform raw 11-col rows → compact 10-col readable format
     run_id_short = run_id[:8]
@@ -468,12 +567,7 @@ def run_analyze_all(
         ss = client.open_by_key(config.PORTFOLIO_SHEET_ID)
         archive_and_overwrite_agent_outputs(ss, compact_rows, run_ts, _COMPACT_HEADERS)
     elif live and not compact_rows:
-        console.print("[yellow]LIVE: no standard rows to write (all agents failed or produced no output).[/]")
-    else:
-        console.print(
-            f"[dim]DRY RUN: {total_rows} compact row(s) from {len(all_standard_rows)} raw rows "
-            f"across {len(succeeded)} agent(s) — not written. Use --live to write.[/]"
-        )
+        console.print("[yellow]LIVE: no standard rows to write.[/]")
 
     # Write manifest to bundles/runs/
     RUNS_DIR.mkdir(parents=True, exist_ok=True)
@@ -491,6 +585,7 @@ def run_analyze_all(
         agents_succeeded=succeeded,
         agents_failed=failed,
         agents_skipped=skipped,
+        retired_agents=_RETIRED_AGENTS,
         agent_summaries=summaries,
         total_sheet_rows=total_rows,
         errors=errors,
@@ -514,20 +609,13 @@ def run_analyze_all(
         findings = str(s.findings_count) if s.status == "success" else "—"
         rows_col = str(s.sheet_rows) if s.status == "success" else "—"
         top = (s.top_action or s.error_msg or "")[:60]
-        summary_table.add_row(
-            s.agent,
-            f"[{color}]{s.status.upper()}[/]",
-            findings,
-            rows_col,
-            top,
-        )
+        summary_table.add_row(s.agent, f"[{color}]{s.status.upper()}[/]", findings, rows_col, top)
 
     console.print(summary_table)
     console.print(
         f"\n[bold]Run ID:[/] {run_id[:8]}...  "
         f"[bold]Hash:[/] {composite_hash[:12]}...  "
         f"[bold]Agents:[/] {len(succeeded)}/{len(requested_agents)} succeeded  "
-        f"[bold]Rows:[/] {total_rows}  "
         f"[bold]Mode:[/] {'LIVE' if live else 'DRY RUN'}"
     )
 
@@ -535,9 +623,3 @@ def run_analyze_all(
         console.print(f"\n[bold red]Failed agents:[/] {', '.join(failed)}")
         for err in errors:
             console.print(f"  [red]•[/] {err}")
-
-    if fresh_bundle:
-        console.print(
-            "\n[yellow]Note: rebuy agent uses a legacy write schema and is included in the "
-            "manifest but NOT in the standard Agent_Outputs batch write.[/]"
-        )

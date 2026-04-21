@@ -1,42 +1,66 @@
 ---
-ticker: VEU
-style: 
-framework_preference: 
-entry_date:
-last_reviewed:
+ticker: IFRA
+style: Thematic Value / Policy Tailwinds / Tangible AI-Linked Infrastructure
+framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
+entry_date: 2026-04-20
+last_reviewed: 2026-04-20
+current_allocation: 3.0%
+cost_basis: 56.69
+time_horizon: 3 to 7 years
+triggers:
+  fwd_pe_add_below: null              # ETF; focus on macro and project pipeline, not PE
+  fwd_pe_trim_above: null
+  fwd_pe_historical_median: null
+  price_add_below: 52                 # add if sentiment weak but funding/AI build-out intact
+  price_trim_above: 70                # trim if infra/AI hype rich vs earnings & backlogs
+  discount_from_52w_high_add: null
+  revenue_growth_floor_pct: null
+  operating_margin_floor_pct: null
+  style_size_ceiling_pct: 5.0         # core-ish thematic; below broad SPY/VOO sleeve
+  current_weight_pct: 3.0
 ---
 
-# VEU — Investment Thesis
+# IFRA — Investment Thesis
 
-## Style
-Passive Core / Global Ex-US / Total International Diversification
+## Core Thesis (Physical Backbone of AI & Reshoring)
 
-## Core Thesis
-*(Note: VEU is essentially VEA + Emerging Markets).* Buying the absolute entirety of the global equity market outside of the United States in a single ticker. Upside is driven by the cheap valuations of developed Europe and Japan, combined with the explosive demographic and consumption growth of emerging markets like India, Taiwan, and Brazil. VEU is the ultimate "set it and forget it" hedge against US market concentration. The key question is whether the inclusion of volatile emerging markets provides enough growth to offset their geopolitical risks. Judgment: yes, for total global coverage.
+I own IFRA as a **tangible, policy‑backed way to play the AI and reshoring build‑out**, not just generic “value.”. Upside is driven by trillions in committed US infrastructure and industrial policy (IIJA, CHIPS Act, IRA) plus corporate reshoring and grid upgrades needed to power AI data centers, fabs, and EVs..
 
-## Entry Context
-Cost basis: ~$73.07 (Assumed). Like VEA, buying VEU is a purely passive, asset-allocation play. At this level, you are capturing a massive, global dividend yield and securing exposure to the rising middle class in the developing world, while mitigating the extreme concentration risk of the top 5 tech stocks in the S&P 500.
+IFRA concentrates the companies doing the physical work — construction, engineering, rail, utilities, grid equipment, materials — making it my “steel and concrete” complement to semis and cloud in the AI theme..
 
-## Bull Case
-- **Total Coverage:** With nearly 4,000 holdings, VEU guarantees you own every successful company outside the US borders, from Swiss pharmaceuticals to Taiwanese semiconductor foundries to Indian banks.
-- **The Emerging Market Kicker:** Unlike VEA, VEU allocates roughly 25% of its weight to emerging markets. This provides a structural growth engine fueled by young populations, rapid urbanization, and a rising middle class in Asia and Latin America.
-- **Valuation & Reversion:** The entire ex-US market is priced for mediocrity. Even a slight positive surprise in global GDP growth or a peaceful resolution to current geopolitical conflicts would trigger a massive, multiple-expanding relief rally.
-- **Currency Hedge:** By holding assets denominated in Euros, Yen, Rupees, and Yuan, VEU acts as a massive, natural hedge against the structural devaluation or collapse of the US Dollar.
+## Entry Context & Why IFRA vs Just More SPY
 
-## Key Risks
-- **The China Weighting:** VEU holds a significant allocation to Chinese equities. If the CCP enacts draconian regulations, or if a geopolitical conflict over Taiwan erupts, this segment of the ETF will be severely impaired.
-- **"Diworsification":** By owning *everything*, you own the bad along with the good. The hyper-growth of TSMC and Novo Nordisk is often dragged down by the sluggish performance of state-owned Brazilian oil companies and over-regulated European utilities.
-- **Strong Dollar Headwinds:** As an unhedged fund, a structurally strong US Dollar automatically suppresses the returns of every asset inside VEU.
+Cost basis: 56.69.. At this level I am not chasing high‑flying growth; I’m buying a dividend‑paying basket with deep order backlogs that front‑runs federal and corporate capex rolling out over many years..
 
-## Scaling State
-next_step: hold / dollar-cost average
+Why IFRA instead of just the rest in SPY:
+- SPY: broad, cap‑weighted US; lots of tech and financials; infrastructure exposure diluted.  
+- IFRA: explicit tilt to **real‑asset beneficiaries** of policy and AI power demand; more direct exposure to the picks‑and‑shovels of reshoring and grid modernization..  
 
-## Rotation Priority
-priority: very low (core foundational holding)
+I treat IFRA as a **targeted factor/sector overlay** on top of broad market exposure, not a replacement for SPY.
 
-## Exit Conditions
-- A massive, global geopolitical conflict (e.g., WWIII) completely shatters international trade and the global supply chain, rendering international investing functionally dead.
-- You decide to tactically split your international exposure by selling VEU and individually buying VEA (Developed) and EMXC (Emerging Ex-China) to manually control your risk.
+## Bull Case (Why I Feel Good Owning This 3%)
 
-## Review Log
-- 2026-04: Initiated. Thesis intact. Monitoring US Dollar Index (DXY), emerging market GDP growth, and global geopolitical stability.
+- Legislative tailwinds: Over $1T legally committed to roads, bridges, broadband, and grid; this creates inelastic, multi‑year revenue pipelines relatively insulated from normal cycles..  
+- Reshoring mega‑trend: Fabs, battery plants, and manufacturing moving back to North America require huge amounts of construction, engineering, and localized power..  
+- Grid modernization: AI data centers, EVs, and electrification push an aging grid to its limits, forcing decades of upgrades for utilities and equipment makers..  
+- Inflation linkage: Hard‑asset businesses with pricing power can pass on higher costs, making IFRA a decent inflation hedge relative to pure growth equities..  
+
+## Key Risks & Guardrails
+
+- Labor / supply bottlenecks: Skilled labor shortages or materials issues can delay projects and compress margins despite strong demand..  
+- Red tape and timing risk: Permitting, NEPA reviews, and local politics can slow or stall projects, pushing out revenue recognition..  
+- Cost of capital: Infrastructure is capex heavy; sustained high rates raise financing costs for utilities and constructors..  
+
+Behaviorally:
+- I will treat IFRA as a **steady, policy‑anchored thematic** holding, accepting slower, grind‑higher returns vs my AI semis.  
+- I will not panic‑sell over near‑term project delays as long as funding and long‑term demand drivers (AI build‑out, grid stress, reshoring) remain intact.  
+
+## Hard Exit / Trim Conditions
+
+I will trim or reconsider IFRA (vs just owning more SPY/VOO) if:.
+
+1. A major political shift leads to repeal/defunding of big infrastructure/industrial bills, structurally shrinking the pipeline of projects.  
+2. Chronic labor shortages and runaway costs turn big contracts into low‑margin or loss‑making projects across the portfolio, with no sign of improvement..  
+3. Rates stay high and financing conditions tighten enough that utilities and infra names struggle to fund their capex plans.  
+4. My portfolio already has substantial infra/real‑asset exposure through other names (ETN, XOM, utilities, etc.), making IFRA redundant relative to simply adding to broad SPY.  
+5. A clearly superior infra/AI‑linked vehicle (e.g., more focused grid/AI infra ETF at similar or lower cost) appears with better risk/reward.  

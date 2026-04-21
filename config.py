@@ -75,7 +75,7 @@ GEMINI_MAX_TOKENS_THESIS        = 32000   # 50+ tickers × management candor ana
 # ---------------------------------------------------------------------------
 # These are used to filter positions out of specific analysis tracks.
 CASH_TICKERS     = ['CASH', 'SGOV', 'CASH_MANUAL', 'MMDA', 'REDEEMED', 'QACDS', 'CASH & CASH INVESTMENTS']
-VALUATION_SKIP   = ['SGOV', 'JPIE', 'Fixed Income', 'CASH', 'QACDS', 'MMDA']
+VALUATION_SKIP   = ['SGOV', 'JPIE', 'Fixed Income', 'CASH', 'QACDS', 'MMDA', 'CASH_MANUAL']
 VALUATION_SKIP_TICKERS = ['SGOV', 'CASH_MANUAL']
 BETA_EXCLUDE     = ['CASH', 'Fixed Income', 'MMDA', 'REDEEMED', 'SGOV']
 
@@ -107,6 +107,7 @@ TAB_CONFIG = "Config"
 TAB_LOGS = "Logs"
 TAB_AGENT_OUTPUTS = "Agent_Outputs"
 TAB_AGENT_OUTPUTS_ARCHIVE = "Agent_Outputs_Archive"
+TAB_DISAGREEMENTS = "Disagreements"
 TAB_AI_SUGGESTED_ALLOCATION = "AI_Suggested_Allocation"
 TAB_DECISION_LOG = "Decision_Log"
 TAB_TRADE_LOG = "Trade_Log"

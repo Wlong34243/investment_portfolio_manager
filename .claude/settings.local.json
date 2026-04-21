@@ -21,7 +21,8 @@
       "Bash(ls utils/agents/)",
       "Bash(xargs grep *)",
       "Bash(git add *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "mcp__google-sheets__get_sheet_data"
     ]
   }
 }
