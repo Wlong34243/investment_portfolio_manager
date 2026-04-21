@@ -1,5 +1,32 @@
 # Changelog
 
+## [2026-04-21] Phase 1.4 — Add health command
+
+### Added
+- **`tasks/health.py`** — 10 independent health checks, all run in parallel via
+  `ThreadPoolExecutor`.  Each check is isolated: one failure cannot affect others.
+
+  Critical (exit 1 if any fail):
+    - `schwab_token_accounts` — GCS token present + >15 min until expiry
+    - `schwab_token_market`   — same for market-data token
+    - `schwab_api_positions`  — live `get_accounts()` call succeeds
+    - `sheet_reachable`       — portfolio Sheet opens by ID
+    - `latest_bundle_exists`  — at least one `bundle_*.json` in `bundles/`
+
+  Warning (exit 2 if any fail, no critical failure):
+    - `latest_bundle_age`        — bundle < 24h (pass), 24–72h (warn), > 72h (fail)
+    - `fmp_cache_coverage`       — ≥80% of non-cash positions have valid `_bndl.json`
+    - `yfinance_connectivity`    — test fetch of SPY last price succeeds
+    - `transactions_freshness`   — most recent row in Transactions tab ≤ 10 days ago
+    - `thesis_coverage`          — ≥90% of positions >2% weight have `_thesis.md`
+
+- **`manager.py health`** — top-level CLI command, Rich table output (Check / Status /
+  Detail), summary line, `--verbose` / `-v` flag for expanded per-check detail.
+  Exit codes: 0 all green, 1 critical failure, 2 warnings only.
+  Verified: `python manager.py health --help` registers correctly.
+
+---
+
 ## [2026-04-21] Phase 1.3 — Add tax-lot ingestion to snapshot
 
 ### Added

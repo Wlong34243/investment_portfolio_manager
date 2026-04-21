@@ -277,6 +277,83 @@ def journal_rotation(
             raise typer.Exit(code=1)
 
 @app.command()
+def health(
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Show expanded detail for each check."),
+):
+    """
+    Run pipeline health checks — Schwab tokens, API connectivity, Sheet, bundle age,
+    FMP cache coverage, yfinance, transactions freshness, thesis coverage.
+
+    Exit codes:  0 = all green  |  1 = critical failure  |  2 = warnings only
+    """
+    from tasks.health import run_all_checks, exit_code, CRITICAL, WARNING, PASS, WARN, FAIL
+    from rich.text import Text
+
+    console.print()
+    with console.status("[cyan]Running health checks in parallel…"):
+        results = run_all_checks()
+
+    # --- Build Rich table ---
+    table = Table(
+        title="Pipeline Health",
+        show_header=True,
+        header_style="bold cyan",
+        box=None,
+        padding=(0, 1),
+    )
+    table.add_column("Check",  style="cyan",  no_wrap=True, min_width=30)
+    table.add_column("Status", justify="center", no_wrap=True, min_width=6)
+    table.add_column("Detail", style="white")
+
+    for r in results:
+        if r.status == PASS:
+            status_cell = Text("✓", style="bold green")
+        elif r.status == WARN:
+            status_cell = Text("⚠", style="bold yellow")
+        else:
+            status_cell = Text("✗", style="bold red")
+
+        level_marker = "" if r.level == CRITICAL else "[dim](W)[/dim] "
+        name_cell = f"{level_marker}[cyan]{r.name}[/cyan]"
+
+        if r.status == FAIL and r.level == CRITICAL:
+            detail_style = "red"
+        elif r.status in (FAIL, WARN):
+            detail_style = "yellow"
+        else:
+            detail_style = "white"
+
+        table.add_row(name_cell, status_cell, f"[{detail_style}]{r.detail}[/{detail_style}]")
+
+    console.print(table)
+
+    # --- Verbose expansion ---
+    if verbose:
+        console.print()
+        console.rule("[dim]Verbose Detail[/dim]")
+        for r in results:
+            if r.verbose:
+                console.print(f"[cyan]{r.name}[/cyan]")
+                for line in r.verbose.splitlines():
+                    console.print(f"  [dim]{line}[/dim]")
+
+    # --- Summary line ---
+    n_pass  = sum(1 for r in results if r.status == PASS)
+    n_warn  = sum(1 for r in results if r.status == WARN)
+    n_fail  = sum(1 for r in results if r.status == FAIL)
+    console.print()
+    summary_parts = [f"[green]{n_pass} passed[/green]"]
+    if n_warn:
+        summary_parts.append(f"[yellow]{n_warn} warning(s)[/yellow]")
+    if n_fail:
+        summary_parts.append(f"[red]{n_fail} failed[/red]")
+    console.print("  ".join(summary_parts))
+    console.print()
+
+    raise typer.Exit(code=exit_code(results))
+
+
+@app.command()
 def snapshot(
     source: str = typer.Option(
         "auto", "--source",
