@@ -1,5 +1,39 @@
 # Changelog
 
+## [2026-04-21] Phase 1.2 — Bake FMP fundamentals into bundle at snapshot time
+
+### Added
+- **`tasks/enrich_fmp.py`** — new enrichment task that runs at snapshot time (default-on).
+  For each non-excluded position: calls FMP `key-metrics-ttm` + `ratios-ttm` (14-day disk
+  cache), computes `revenue_growth_yoy` from cached income statements, and writes a
+  `fmp_fundamentals` dict into the bundle position.  Re-hashes the bundle on write.
+  Fields: `pe_ratio`, `forward_pe`, `peg_ratio`, `debt_to_equity`, `roic`,
+  `revenue_growth_yoy`, `gross_margin`, `net_margin`, `dividend_yield`, `payout_ratio`,
+  `market_cap`.  Per-ticker failure writes `{"error": reason, "fetched_at": ts}` and
+  continues — one bad ticker does not abort the run.
+- **`utils/fmp_client.get_fmp_fundamentals_bundle()`** — new cached function that combines
+  `key-metrics-ttm` + `ratios-ttm` + income-statement growth into one bundle-ready dict.
+  Cache file: `data/fmp_cache/{TICKER}_bndl.json` (14-day TTL).
+
+### Changed
+- **`utils/fmp_client.FMP_CACHE_TTL_DAYS`** — extended from 7 to 14 days.
+- **`manager.py snapshot`**:
+  - `--enrich-atr` and `--enrich-technicals` are now **default-on**; disable with
+    `--no-enrich-atr` / `--no-enrich-technicals`.
+  - **`--enrich-fmp`** added (default-on), disable with `--no-enrich-fmp` for offline testing.
+  - FMP enrichment runs after `enrich_fundamentals`, before ATR/technicals.
+- **`tasks/build_valuation_card.py`** — fully rewritten to read FMP data from bundle:
+  - Loads the latest market bundle at startup.
+  - `fmp_fundamentals` dict from bundle is the authoritative source for
+    `pe_ratio`, `forward_pe`, `peg_ratio`, `gross_margin`, `roic`, etc.
+  - yfinance is used only for price, 52-week range, and fields absent from FMP.
+  - **No live FMP calls during dashboard refresh.**
+  - `Valuation_Signal = MONITOR` when `fmp_fundamentals` is missing or contains `error`.
+  - New columns: `Forward P/E (FMP)`, `Forward P/E (yf)`, `Gross Margin`, `ROIC`,
+    `Rev Growth YoY`, `Payout Ratio`, `FMP_Data_Available`.
+
+---
+
 ## [2026-04-21] Phase 1.1 — Harden transaction sync (pagination, fingerprint, retry)
 
 ### Fixed

@@ -294,14 +294,19 @@ def snapshot(
         help="Manual cash position (USD). Ignored on Schwab path if fetch_positions returns cash from account balances."
     ),
     enrich_atr: bool = typer.Option(
-        False, "--enrich-atr",
-        help="After building the snapshot, find the latest composite bundle and inject ATR stops. "
-             "Requires a composite bundle to already exist (run 'manager.py bundle composite' first).",
+        True, "--enrich-atr/--no-enrich-atr",
+        help="Inject ATR stops into the latest composite bundle (default: on). "
+             "Requires a composite bundle to exist (run 'manager.py bundle composite' first).",
     ),
     enrich_technicals: bool = typer.Option(
-        False, "--enrich-technicals",
-        help="After building the snapshot, inject Murphy TA indicators (MA/RSI/MACD/volume) "
-             "into the latest composite bundle. Requires composite bundle to exist.",
+        True, "--enrich-technicals/--no-enrich-technicals",
+        help="Inject Murphy TA indicators into the latest composite bundle (default: on). "
+             "Requires composite bundle to exist.",
+    ),
+    enrich_fmp: bool = typer.Option(
+        True, "--enrich-fmp/--no-enrich-fmp",
+        help="Bake FMP fundamentals into the market bundle (default: on). "
+             "Disable with --no-enrich-fmp for offline testing.",
     ),
     live: bool = typer.Option(False, "--live", help="Enable live mode. Default is DRY RUN."),
 ):
@@ -369,7 +374,6 @@ def snapshot(
     with console.status("[cyan]Enriching with fundamentals (Tiered: Schwab -> yfinance -> FMP)..."):
         try:
             enriched = enrich_bundle_fundamentals(path)
-            # Update the displayed hash if it changed
             new_hash = enriched.get("bundle_hash", "")
             if new_hash and new_hash != bundle.bundle_hash:
                 console.print(f"[green]Bundle enriched and re-hashed:[/] [bold green]{new_hash}[/]")
@@ -382,7 +386,24 @@ def snapshot(
         for err in bundle.enrichment_errors[:10]:
             console.print(f"  [yellow]•[/] {err}")
 
-    # ATR enrichment — optional post-snapshot step
+    # FMP fundamentals enrichment (default-on; disable with --no-enrich-fmp)
+    if enrich_fmp:
+        from tasks.enrich_fmp import enrich_bundle_fmp
+        with console.status("[cyan]Enriching with FMP fundamentals (14-day cache)..."):
+            try:
+                fmp_result = enrich_bundle_fmp(path)
+                fmp_positions = fmp_result.get("positions", [])
+                fmp_ok    = sum(1 for p in fmp_positions if isinstance(p.get("fmp_fundamentals"), dict) and "error" not in p.get("fmp_fundamentals", {}))
+                fmp_err   = sum(1 for p in fmp_positions if isinstance(p.get("fmp_fundamentals"), dict) and "error" in p.get("fmp_fundamentals", {}))
+                console.print(
+                    f"[green]FMP fundamentals baked into bundle:[/] "
+                    f"{fmp_ok} enriched, {fmp_err} errors. "
+                    f"Hash: [bold green]{fmp_result.get('bundle_hash', '')[:16]}…[/]"
+                )
+            except Exception as e:
+                console.print(f"[red]FMP enrichment failed: {e}[/]")
+
+    # ATR enrichment (default-on; disable with --no-enrich-atr)
     if enrich_atr:
         from tasks.enrich_atr import enrich_composite_bundle as _enrich_atr
         composite_candidates = sorted(

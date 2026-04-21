@@ -26,7 +26,7 @@ _fmp_earnings_404_logged: bool = False   # gate for the one-time warning log
 # Cache + rate-limiter config
 # ---------------------------------------------------------------------------
 FMP_CACHE_DIR = Path("data/fmp_cache")
-FMP_CACHE_TTL_DAYS = 7
+FMP_CACHE_TTL_DAYS = 14
 FMP_MIN_CALL_INTERVAL = 2.5   # seconds between live FMP HTTP calls (~24/min to stay under free-tier burst)
 
 _fmp_last_call_time: float = 0.0
@@ -697,6 +697,171 @@ def get_fundamentals(ticker: str, bundle_quote: dict = None, asset_class: str = 
     result["earnings_growth_rate_3yr"] = result.get("earnings_growth")
 
     return {k: v for k, v in result.items() if v is not None}
+
+
+# ---------------------------------------------------------------------------
+# Bundle-time FMP enrichment  (Phase 1.2)
+# Called once per ticker at snapshot time; cache key {TICKER}_bndl.json (14d).
+# Consumers read position["fmp_fundamentals"] — never call FMP live at dashboard time.
+# ---------------------------------------------------------------------------
+
+def get_fmp_fundamentals_bundle(ticker: str, asset_class: str = "", forward_pe_override: float | None = None) -> dict:
+    """
+    Fetch all bundle-time FMP fundamentals for one ticker.  14-day disk cache.
+
+    Calls two FMP endpoints per ticker (key-metrics-ttm + ratios-ttm) plus the
+    cached income-statement endpoint for revenue_growth_yoy.  Rate limiter fires
+    only on real HTTP calls; cache hits bypass it entirely.
+
+    Returns a dict with fields:
+        pe_ratio, forward_pe, peg_ratio, debt_to_equity, roic,
+        revenue_growth_yoy, gross_margin, net_margin, dividend_yield,
+        payout_ratio, market_cap, fetched_at
+
+    Returns {"error": reason, "fetched_at": ts} only on complete API failure.
+    ETFs / fixed-income receive partial results (nulls are expected; no error flag).
+    """
+    path = _cache_path(ticker, "_bndl")
+    if _cache_valid(path):
+        try:
+            cached = json.loads(path.read_text())
+            if isinstance(cached, dict):
+                # Inject caller-supplied forward_pe if the cached entry lacks it
+                if forward_pe_override is not None and cached.get("forward_pe") is None:
+                    cached["forward_pe"] = forward_pe_override
+                return cached
+        except Exception:
+            pass
+
+    now_ts = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+    ac_upper = asset_class.upper().replace(" ", "_")
+    is_equity_like = ac_upper not in _FMP_SKIP_ASSET_CLASSES
+
+    api_key = get_fmp_api_key()
+    if not api_key:
+        err = {"error": "no_fmp_api_key", "fetched_at": now_ts}
+        try:
+            path.write_text(json.dumps(err))
+        except Exception:
+            pass
+        return err
+
+    result: dict = {
+        "fetched_at":         now_ts,
+        "pe_ratio":           None,
+        "forward_pe":         forward_pe_override,
+        "peg_ratio":          None,
+        "debt_to_equity":     None,
+        "roic":               None,
+        "revenue_growth_yoy": None,
+        "gross_margin":       None,
+        "net_margin":         None,
+        "dividend_yield":     None,
+        "payout_ratio":       None,
+        "market_cap":         None,
+    }
+    fetch_errors: list[str] = []
+    endpoints_ok = 0
+
+    # ------------------------------------------------------------------ #
+    # key-metrics-ttm  →  pe, peg, d/e, roic, market_cap, dividend_yield  #
+    # ------------------------------------------------------------------ #
+    try:
+        _fmp_rate_limit()
+        r = requests.get(
+            f"{BASE_URL}/key-metrics-ttm?symbol={ticker}&apikey={api_key}",
+            timeout=10,
+        )
+        if r.status_code in (402, 429):
+            fetch_errors.append(f"key-metrics-ttm: HTTP {r.status_code}")
+        elif r.ok:
+            km_raw = r.json()
+            m = (km_raw[0] if isinstance(km_raw, list) and km_raw
+                 else km_raw if isinstance(km_raw, dict) else {})
+            if m:
+                endpoints_ok += 1
+                pe = _safe_float(m.get("peRatioTTM"))
+                if not pe:
+                    ey = _safe_float(m.get("earningsYieldTTM"))
+                    pe = (1.0 / ey) if ey else None
+                result["pe_ratio"]       = pe
+                result["peg_ratio"]      = _safe_float(m.get("pegRatioTTM"))
+                result["debt_to_equity"] = _safe_float(m.get("debtToEquityTTM"))
+                result["roic"]           = _safe_float(m.get("roicTTM"))
+                result["market_cap"]     = _safe_float(m.get("marketCapTTM"))
+                raw_dy = _safe_float(m.get("dividendYieldPercentageTTM"))
+                if raw_dy is not None:
+                    result["dividend_yield"] = raw_dy / 100.0
+        else:
+            fetch_errors.append(f"key-metrics-ttm: HTTP {r.status_code}")
+    except Exception as e:
+        fetch_errors.append(f"key-metrics-ttm: {e}")
+
+    # ------------------------------------------------------------------ #
+    # ratios-ttm  →  gross_margin, net_margin, payout_ratio               #
+    # ------------------------------------------------------------------ #
+    try:
+        _fmp_rate_limit()
+        r = requests.get(
+            f"{BASE_URL}/ratios-ttm?symbol={ticker}&apikey={api_key}",
+            timeout=10,
+        )
+        if r.status_code in (402, 429):
+            fetch_errors.append(f"ratios-ttm: HTTP {r.status_code}")
+        elif r.ok:
+            rt_raw = r.json()
+            m = (rt_raw[0] if isinstance(rt_raw, list) and rt_raw
+                 else rt_raw if isinstance(rt_raw, dict) else {})
+            if m:
+                endpoints_ok += 1
+                result["gross_margin"] = _safe_float(m.get("grossProfitMarginTTM"))
+                result["net_margin"]   = _safe_float(m.get("netProfitMarginTTM"))
+                result["payout_ratio"] = _safe_float(m.get("payoutRatioTTM"))
+                if result["pe_ratio"] is None:
+                    result["pe_ratio"] = _safe_float(m.get("priceEarningsRatioTTM"))
+        else:
+            fetch_errors.append(f"ratios-ttm: HTTP {r.status_code}")
+    except Exception as e:
+        fetch_errors.append(f"ratios-ttm: {e}")
+
+    # ------------------------------------------------------------------ #
+    # revenue_growth_yoy — equities only, from cached income statements   #
+    # ------------------------------------------------------------------ #
+    if is_equity_like:
+        try:
+            stmts = get_income_statements_cached(ticker, limit=2)
+            if len(stmts) >= 2:
+                rev_new = (_safe_float(stmts[0].get("revenue"))
+                           or _safe_float(stmts[0].get("totalRevenue"))
+                           or 0.0)
+                rev_old = (_safe_float(stmts[1].get("revenue"))
+                           or _safe_float(stmts[1].get("totalRevenue"))
+                           or 0.0)
+                if rev_old and rev_old != 0.0:
+                    result["revenue_growth_yoy"] = round(
+                        (rev_new - rev_old) / abs(rev_old), 4
+                    )
+        except Exception as e:
+            fetch_errors.append(f"income-statement: {e}")
+
+    if fetch_errors:
+        result["fetch_warnings"] = fetch_errors
+
+    # If both primary endpoints failed hard (auth/rate), signal as error
+    if endpoints_ok == 0 and len(fetch_errors) >= 2:
+        err_result = {"error": "; ".join(fetch_errors), "fetched_at": now_ts}
+        try:
+            path.write_text(json.dumps(err_result))
+        except Exception:
+            pass
+        return err_result
+
+    try:
+        path.write_text(json.dumps(result, default=str))
+    except Exception:
+        pass
+
+    return result
 
 
 if __name__ == "__main__":
