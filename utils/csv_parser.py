@@ -251,11 +251,15 @@ def parse_schwab_csv(file_bytes: bytes) -> pd.DataFrame:
             if gain_val_col:
                 pos['unrealized_gl'] = clean_numeric(row.iloc[col_indices[gain_val_col]])
             if gain_pct_col:
-                pos['unrealized_gl_pct'] = clean_numeric(row.iloc[col_indices[gain_pct_col]])
+                # Goal 2: Divide by 100 for raw decimal
+                raw_gl_pct = clean_numeric(row.iloc[col_indices[gain_pct_col]])
+                pos['unrealized_gl_pct'] = raw_gl_pct / 100.0 if raw_gl_pct is not None else 0.0
             if 'est annual income' in col_indices:
                 pos['est_annual_income'] = clean_numeric(row.iloc[col_indices['est annual income']])
             if 'dividend yield' in col_indices:
-                pos['dividend_yield'] = clean_numeric(row.iloc[col_indices['dividend yield']])
+                # Goal 2: Divide by 100 for raw decimal
+                raw_div_yield = clean_numeric(row.iloc[col_indices['dividend yield']])
+                pos['dividend_yield'] = raw_div_yield / 100.0 if raw_div_yield is not None else 0.0
             if 'acquisition date' in col_indices:
                 pos['acquisition_date'] = str(row.iloc[col_indices['acquisition date']]).strip()
                 
@@ -328,8 +332,8 @@ def inject_cash_manual(df: pd.DataFrame, cash_amount: float) -> pd.DataFrame:
         'unit_cost': 1.0,
         'unrealized_gl': 0.0,
         'unrealized_gl_pct': 0.0,
-        'est_annual_income': float(cash_amount) * (config.DEFAULT_CASH_YIELD_PCT / 100),
-        'dividend_yield': config.DEFAULT_CASH_YIELD_PCT,
+        'est_annual_income': float(cash_amount) * (config.DEFAULT_CASH_YIELD_PCT / 100.0),
+        'dividend_yield': config.DEFAULT_CASH_YIELD_PCT / 100.0,
         'is_cash': True,
         'asset_class': 'Cash',
         'asset_strategy': 'Cash'

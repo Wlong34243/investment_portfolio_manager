@@ -1,13 +1,18 @@
 """
 tasks/format_sheets_dashboard_v2.py — Applies V2 formatting to all tabs.
+
+Design Intent:
+- Valuation/Decision: Standardize signals (green/red/yellow), apply strict percentage formatting based on CSV export.
+- Agent Outputs: Support long, wrapped text for readability of LLM rationales.
+- Holdings/Realized: Emphasize global KPIs, P&L gradients, and highlight wash sales.
 """
 
 import time
 import os
 import sys
 import typer
-from typing import List, Optional
-from gspread.cell import Cell
+from typing import List, Optional, Any
+from functools import wraps
 
 # Add project root to path
 _HERE = os.path.dirname(os.path.abspath(__file__))
@@ -18,14 +23,18 @@ if _ROOT not in sys.path:
 import config
 from utils.sheet_readers import get_gspread_client
 
+# Defensive gspread import for typing
+try:
+    from gspread import Worksheet
+except ImportError:
+    Worksheet = Any
+
 try:
     from gspread_formatting import (
-        CellFormat, Color, TextFormat, Border, Borders,
-        format_cell_range, set_frozen, NumberFormat,
-        set_column_width, set_column_widths, set_row_height, set_row_heights,
-        ConditionalFormatRule, BooleanRule,
+        CellFormat, Color, TextFormat, ConditionalFormatRule, BooleanRule,
         BooleanCondition, GradientRule, InterpolationPoint,
-        get_conditional_format_rules, GridRange
+        format_cell_range, set_frozen, NumberFormat,
+        set_column_widths, set_row_height, get_conditional_format_rules, GridRange
     )
     HAS_FORMATTING = True
 except ImportError:
@@ -34,18 +43,36 @@ except ImportError:
 app = typer.Typer()
 
 # --- Shared Colors ---
-COLOR_NAVY = Color(0.10, 0.15, 0.27)  # #1a2744
-COLOR_WHITE = Color(1, 1, 1)
-COLOR_GREY_LIGHT = Color(0.95, 0.95, 0.95)  # #f3f3f3
-COLOR_RED_DARK = Color(0.92, 0.26, 0.21)    # #ea4335
-COLOR_RED_LIGHT = Color(0.99, 0.91, 0.90)   # #fce8e6
-COLOR_GREEN_DARK = Color(0.20, 0.66, 0.33)  # #34a853
-COLOR_GREEN_LIGHT = Color(0.85, 0.92, 0.83) # #d9ead3
-COLOR_YELLOW_LIGHT = Color(1.0, 0.95, 0.80) # #fff2cc
-COLOR_BLUE_LIGHT = Color(0.81, 0.89, 0.95)  # #cfe2f3
-COLOR_ORANGE = Color(1.0, 0.60, 0.0)        # #ff9900
+COLOR_NAVY = Color(0.10, 0.15, 0.27)         # #1a2744
+COLOR_WHITE = Color(1, 1, 1)                 # #ffffff
+COLOR_GREY_LIGHT = Color(0.95, 0.95, 0.95)   # #f3f3f3
+COLOR_RED_DARK = Color(0.92, 0.26, 0.21)     # #ea4335
+COLOR_RED_LIGHT = Color(0.99, 0.91, 0.90)    # #fce8e6
+COLOR_GREEN_DARK = Color(0.20, 0.66, 0.33)   # #34a853
+COLOR_GREEN_LIGHT = Color(0.85, 0.92, 0.83)  # #d9ead3
+COLOR_YELLOW_LIGHT = Color(1.0, 0.95, 0.80)  # #fff2cc
+COLOR_BLUE_LIGHT = Color(0.81, 0.89, 0.95)   # #cfe2f3
+COLOR_ORANGE = Color(1.0, 0.60, 0.0)         # #ff9900
 
-def safe_api_call(func, *args, retries=3, **kwargs):
+# --- Constants ---
+MAX_DATA_ROWS = 200
+MAX_DAILY_ROWS = 500
+MAX_AGENT_ROWS = 1000
+
+# ==========================================
+# API Quota Helpers
+# ==========================================
+
+def require_formatting(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        if not HAS_FORMATTING:
+            print(f"  ⚠ Skipping {func.__name__} (gspread_formatting not installed)")
+            return
+        return func(*args, **kwargs)
+    return wrapper
+
+def safe_api_call(func, *args, retries: int = 3, **kwargs) -> Any:
     """Generic wrapper for gspread/formatting calls with retry logic."""
     for i in range(retries):
         try:
@@ -58,15 +85,15 @@ def safe_api_call(func, *args, retries=3, **kwargs):
             else:
                 raise e
 
-def safe_format(ws, range_name, fmt, retries=3):
+def safe_format(ws: Worksheet, range_name: str, fmt: 'CellFormat', retries: int = 3) -> None:
     """Applies formatting with retry logic for API quota limits."""
-    return safe_api_call(format_cell_range, ws, range_name, fmt, retries=retries)
+    safe_api_call(format_cell_range, ws, range_name, fmt, retries=retries)
 
-def save_rules(ws, rules):
+def save_rules(ws: Worksheet, rules: Any) -> None:
     """Robustly saves conditional format rules to the worksheet."""
     try:
         safe_api_call(rules.save)
-        # Add a sleep after every rule update as it is a heavy API call
+        # Heavy API call, sleep to respect quotas
         time.sleep(3)
     except Exception as e:
         if "429" in str(e):
@@ -74,169 +101,165 @@ def save_rules(ws, rules):
         else:
             raise e
 
-def apply_alternating_banding(ws, start_row, end_row):
-    """Applies alternating row banding."""
+# ==========================================
+# Formatting Builders & Generators
+# ==========================================
+
+def build_header_format(font_size: int = 10) -> 'CellFormat':
+    """Returns a standardized navy header format."""
+    return CellFormat(
+        backgroundColor=COLOR_NAVY,
+        textFormat=TextFormat(bold=True, foregroundColor=COLOR_WHITE, fontSize=font_size),
+        horizontalAlignment="CENTER",
+        verticalAlignment="MIDDLE"
+    )
+
+def build_boolean_rule(ws, range_a1, condition, values, bg_color=None, text_color=None, bold=False):
+    """Helper to cleanly build standard boolean conditional formats."""
+    text_fmt_args = {}
+    if text_color: text_fmt_args['foregroundColor'] = text_color
+    if bold: text_fmt_args['bold'] = True
+
+    fmt_args = {}
+    if bg_color: fmt_args['backgroundColor'] = bg_color
+    if text_fmt_args: fmt_args['textFormat'] = TextFormat(**text_fmt_args)
+
+    return ConditionalFormatRule(
+        ranges=[GridRange.from_a1_range(range_a1, ws)],
+        booleanRule=BooleanRule(
+            condition=BooleanCondition(condition, values),
+            format=CellFormat(**fmt_args) if fmt_args else CellFormat()
+        )
+    )
+
+def build_gradient_rule(ws, range_a1, min_color, mid_color, max_color):
+    """Helper to build a 0.0 - 1.0 NUMBER gradient rule."""
+    return ConditionalFormatRule(
+        ranges=[GridRange.from_a1_range(range_a1, ws)],
+        gradientRule=GradientRule(
+            minpoint=InterpolationPoint(color=min_color, type="NUMBER", value="0"),
+            midpoint=InterpolationPoint(color=mid_color, type="NUMBER", value="0.5"),
+            maxpoint=InterpolationPoint(color=max_color, type="NUMBER", value="1.0")
+        )
+    )
+
+def apply_alternating_banding(ws: Worksheet, start_row: int, end_row: int) -> None:
+    """Applies alternating row banding, avoiding duplicate rules."""
     rules = safe_api_call(get_conditional_format_rules, ws)
-    # Remove existing banding rules to prevent duplication
+    
+    # Filter out existing banding to prevent accumulation
     new_rules = [r for r in rules if not (isinstance(r.booleanRule, BooleanRule) and "ISEVEN(ROW())" in str(r.booleanRule.condition.values))]
     
-    # We must append the rule and clear the old ones safely in the rules object
     rules.clear()
-    for r in new_rules:
-        rules.append(r)
-        
-    rules.append(ConditionalFormatRule(
-        ranges=[GridRange.from_a1_range(f"A{start_row}:Z{end_row}", ws)],
-        booleanRule=BooleanRule(
-            condition=BooleanCondition("CUSTOM_FORMULA", [f"=ISEVEN(ROW())"]),
-            format=CellFormat(backgroundColor=COLOR_GREY_LIGHT)
-        )
-    ))
+    for r in new_rules: rules.append(r)
     
+    rules.append(build_boolean_rule(ws, f"A{start_row}:Z{end_row}", "CUSTOM_FORMULA", ["=ISEVEN(ROW())"], bg_color=COLOR_GREY_LIGHT))
     save_rules(ws, rules)
 
-def format_valuation_card(spreadsheet):
-    """Part 1: Valuation_Card formatting"""
+def format_standard_table(ws, header_range, header_row, data_start, data_end, freeze_cols=1):
+    """Helper to set freeze panes, header format, and alternating row banding."""
+    safe_api_call(set_frozen, ws, rows=header_row, cols=freeze_cols)
+    safe_format(ws, header_range, build_header_format())
+    apply_alternating_banding(ws, data_start, data_end)
+
+# ==========================================
+# Tab Specific Formatting Functions
+# ==========================================
+
+@require_formatting
+def format_valuation_card(spreadsheet) -> None:
+    """Part 1: Valuation_Card formatting (Uses Snippet 1's A-W columns based on CSV headers)"""
     tab_name = "Valuation_Card"
     try:
         ws = spreadsheet.worksheet(tab_name)
-        safe_api_call(set_frozen, ws, rows=1, cols=1)
         
+        # Updated to cover A through W based on the actual CSV headers
         widths = [
-            ("A", 70), ("B", 180), ("C", 110), ("D", 75), ("E", 95),
-            ("F", 95), ("G", 70), ("H", 70), ("I", 80), ("J", 80),
-            ("K", 110), ("L", 130), ("M", 90), ("N", 70), ("O", 70), ("P", 110)
+            ("A", 70), ("B", 180), ("C", 110), ("D", 90), ("E", 75), ("F", 80), 
+            ("G", 80), ("H", 80), ("I", 70), ("J", 70), ("K", 90), ("L", 90), 
+            ("M", 70), ("N", 90), ("O", 80), ("P", 80), ("Q", 70), ("R", 70),
+            ("S", 100), ("T", 100), ("U", 110), ("V", 100), ("W", 120)
         ]
         safe_api_call(set_column_widths, ws, widths)
-            
-        header_fmt = CellFormat(
-            backgroundColor=COLOR_NAVY,
-            textFormat=TextFormat(bold=True, foregroundColor=COLOR_WHITE, fontSize=10),
-            horizontalAlignment="CENTER"
-        )
-        safe_format(ws, "A1:R1", header_fmt)
+        format_standard_table(ws, header_range="A1:W1", header_row=1, data_start=2, data_end=MAX_DATA_ROWS)
         
+        # Apply strict Percentage Number Formatting to correct columns
+        pct_fmt = CellFormat(numberFormat=NumberFormat(type="PERCENT", pattern="0.00%"))
+        # Gross Margin(K), ROIC(L), Rev Growth(N), Div Yield(O), Payout Ratio(P), 52w Pos(S), Discount(T)
+        for col in ["K", "L", "N", "O", "P", "S", "T"]:
+            safe_format(ws, f"{col}2:{col}{MAX_DATA_ROWS}", pct_fmt)
+
         rules = safe_api_call(get_conditional_format_rules, ws)
         rules.clear()
         
-        # 52w Position % color scale: values are raw decimals 0.0–1.0 (build_valuation_card.py)
-        # 0.0=red (at 52w low), 0.5=white (midpoint), 1.0=green (at 52w high)
-        rules.append(ConditionalFormatRule(
-            ranges=[GridRange.from_a1_range("K2:K200", ws)],
-            gradientRule=GradientRule(
-                minpoint=InterpolationPoint(color=COLOR_RED_DARK,   type="NUMBER", value="0"),
-                midpoint=InterpolationPoint(color=COLOR_WHITE,      type="NUMBER", value="0.5"),
-                maxpoint=InterpolationPoint(color=COLOR_GREEN_DARK, type="NUMBER", value="1.0")
-            )
-        ))
-        # Discount from 52w High %: raw decimal (e.g. 0.20 = 20% below high)
-        # >0.30 = meaningful discount → green; <0.10 = near high, no discount → red
-        rules.append(ConditionalFormatRule(
-            ranges=[GridRange.from_a1_range("L2:L200", ws)],
-            booleanRule=BooleanRule(condition=BooleanCondition("NUMBER_GREATER", ["0.30"]), format=CellFormat(backgroundColor=COLOR_GREEN_LIGHT))
-        ))
-        rules.append(ConditionalFormatRule(
-            ranges=[GridRange.from_a1_range("L2:L200", ws)],
-            booleanRule=BooleanRule(condition=BooleanCondition("NUMBER_LESS", ["0.10"]), format=CellFormat(backgroundColor=COLOR_RED_LIGHT))
-        ))
-        #Trailiing P/E: >40 light red, <15 light green
-        rules.append(ConditionalFormatRule(
-            ranges=[GridRange.from_a1_range("E2:E200", ws)],
-            booleanRule=BooleanRule(condition=BooleanCondition("NUMBER_GREATER", ["40"]), format=CellFormat(backgroundColor=COLOR_RED_LIGHT))
-        ))
-        rules.append(ConditionalFormatRule(
-            ranges=[GridRange.from_a1_range("E2:E200", ws)],
-            booleanRule=BooleanRule(condition=BooleanCondition("NUMBER_LESS", ["15"]), format=CellFormat(backgroundColor=COLOR_GREEN_LIGHT))
-        ))
-        # PEG: >2 light red, <1 light green
-        rules.append(ConditionalFormatRule(
-            ranges=[GridRange.from_a1_range("H2:H200", ws)],
-            booleanRule=BooleanRule(condition=BooleanCondition("NUMBER_GREATER", ["2"]), format=CellFormat(backgroundColor=COLOR_RED_LIGHT))
-        ))
-        rules.append(ConditionalFormatRule(
-            ranges=[GridRange.from_a1_range("H2:H200", ws)],
-            booleanRule=BooleanRule(condition=BooleanCondition("NUMBER_LESS", ["1"]), format=CellFormat(backgroundColor=COLOR_GREEN_LIGHT))
-        ))
-        save_rules(ws, rules)
+        # 52w Position % (Column S)
+        rules.append(build_gradient_rule(ws, f"S2:S{MAX_DATA_ROWS}", COLOR_RED_DARK, COLOR_WHITE, COLOR_GREEN_DARK))
         
-        apply_alternating_banding(ws, 2, 200)
+        # Discount from 52w High % (Column T)
+        rules.append(build_boolean_rule(ws, f"T2:T{MAX_DATA_ROWS}", "NUMBER_GREATER", ["0.30"], bg_color=COLOR_GREEN_LIGHT))
+        rules.append(build_boolean_rule(ws, f"T2:T{MAX_DATA_ROWS}", "NUMBER_LESS", ["0.10"], bg_color=COLOR_RED_LIGHT))
+        
+        # Trailing P/E (Column F)
+        rules.append(build_boolean_rule(ws, f"F2:F{MAX_DATA_ROWS}", "NUMBER_GREATER", ["40"], bg_color=COLOR_RED_LIGHT))
+        rules.append(build_boolean_rule(ws, f"F2:F{MAX_DATA_ROWS}", "NUMBER_LESS", ["15"], bg_color=COLOR_GREEN_LIGHT))
+        
+        # PEG (Column J)
+        rules.append(build_boolean_rule(ws, f"J2:J{MAX_DATA_ROWS}", "NUMBER_GREATER", ["2"], bg_color=COLOR_RED_LIGHT))
+        rules.append(build_boolean_rule(ws, f"J2:J{MAX_DATA_ROWS}", "NUMBER_LESS", ["1"], bg_color=COLOR_GREEN_LIGHT))
+        
+        save_rules(ws, rules)
         print(f"  ✓ formatted {tab_name}")
     except Exception as e:
         print(f"  ⚠ Failed to format {tab_name}: {e}")
 
-def format_decision_view(spreadsheet):
-    """Part 2: Decision_View formatting"""
+@require_formatting
+def format_decision_view(spreadsheet) -> None:
+    """Part 2: Decision_View formatting (Uses Snippet 1's 10-column layout)"""
     tab_name = "Decision_View"
     try:
         ws = spreadsheet.worksheet(tab_name)
-        safe_api_call(set_frozen, ws, rows=1, cols=1)
         
+        # Assuming 10 columns now: Ticker(A), Weight(B), MV(C), UGL%(D), DayChg%(E), 
+        # FwdPE(F), 52wPos%(G), Disc(H), ValSignal(I), Rationale(J)
         widths = [
             ("A", 70), ("B", 70), ("C", 110), ("D", 100), ("E", 90),
-            ("F", 80), ("G", 90), ("H", 100), ("I", 120), ("J", 200),
-            ("K", 200), ("L", 90), ("M", 400)
+            ("F", 80), ("G", 100), ("H", 110), ("I", 120), ("J", 500)
         ]
         safe_api_call(set_column_widths, ws, widths)
-            
-        header_fmt = CellFormat(
-            backgroundColor=COLOR_NAVY,
-            textFormat=TextFormat(bold=True, foregroundColor=COLOR_WHITE, fontSize=10),
-            horizontalAlignment="CENTER"
-        )
-        safe_format(ws, "A1:M1", header_fmt)
+        format_standard_table(ws, header_range="A1:J1", header_row=1, data_start=2, data_end=MAX_DATA_ROWS)
         
-        safe_api_call(set_row_height, ws, "2:200", 60)
-        wrap_fmt = CellFormat(wrapStrategy="WRAP", verticalAlignment="MIDDLE")
-        safe_format(ws, "A2:M200", wrap_fmt)
+        safe_api_call(set_row_height, ws, f"2:{MAX_DATA_ROWS}", 60)
+        safe_format(ws, f"A2:J{MAX_DATA_ROWS}", CellFormat(wrapStrategy="WRAP", verticalAlignment="MIDDLE"))
         
+        # Percentage formats
+        pct_fmt = CellFormat(wrapStrategy="WRAP", verticalAlignment="MIDDLE", numberFormat=NumberFormat(type="PERCENT", pattern="0.00%"))
+        for col in ["B", "D", "E", "G", "H"]:
+            safe_format(ws, f"{col}2:{col}{MAX_DATA_ROWS}", pct_fmt)
+
         rules = safe_api_call(get_conditional_format_rules, ws)
         rules.clear()
         
-        # TLH Flag: red bg, white bold
-        rules.append(ConditionalFormatRule(
-            ranges=[GridRange.from_a1_range("L2:L200", ws)],
-            booleanRule=BooleanRule(condition=BooleanCondition("TEXT_CONTAINS", ["TLH"]), format=CellFormat(backgroundColor=COLOR_RED_DARK, textFormat=TextFormat(bold=True, foregroundColor=COLOR_WHITE)))
-        ))
-        # Highlight full row if TLH
-        rules.append(ConditionalFormatRule(
-            ranges=[GridRange.from_a1_range("A2:M200", ws)],
-            booleanRule=BooleanRule(condition=BooleanCondition("CUSTOM_FORMULA", ['=ISNUMBER(SEARCH("TLH", $L2))']), format=CellFormat(backgroundColor=COLOR_YELLOW_LIGHT, textFormat=TextFormat(bold=True)))
-        ))
-        # Valuation Signal colors
-        signal_map = {"accumulate": COLOR_GREEN_LIGHT, "trim": COLOR_RED_LIGHT, "hold": COLOR_YELLOW_LIGHT, "monitor": COLOR_BLUE_LIGHT}
+        # Valuation Signals (Column I)
+        signal_map = {"accumulate": COLOR_GREEN_LIGHT, "trim": COLOR_RED_LIGHT, "hold": COLOR_YELLOW_LIGHT, "monitor": COLOR_BLUE_LIGHT, "add": COLOR_GREEN_LIGHT}
         for val, color in signal_map.items():
-            rules.append(ConditionalFormatRule(
-                ranges=[GridRange.from_a1_range("I2:I200", ws)],
-                booleanRule=BooleanRule(condition=BooleanCondition("TEXT_EQ", [val]), format=CellFormat(backgroundColor=color))
-            ))
-        # Unreal G/L %: green font if > 0, red if < 0
-        rules.append(ConditionalFormatRule(
-            ranges=[GridRange.from_a1_range("D2:D200", ws)],
-            booleanRule=BooleanRule(condition=BooleanCondition("NUMBER_GREATER", ["0"]), format=CellFormat(textFormat=TextFormat(foregroundColor=COLOR_GREEN_DARK)))
-        ))
-        rules.append(ConditionalFormatRule(
-            ranges=[GridRange.from_a1_range("D2:D200", ws)],
-            booleanRule=BooleanRule(condition=BooleanCondition("NUMBER_LESS", ["0"]), format=CellFormat(textFormat=TextFormat(foregroundColor=COLOR_RED_DARK)))
-        ))
-        # 52w Pos % color scale: raw decimals 0.0–1.0 (low=green means near 52w low = cheaper)
-        rules.append(ConditionalFormatRule(
-            ranges=[GridRange.from_a1_range("G2:G200", ws)],
-            gradientRule=GradientRule(
-                minpoint=InterpolationPoint(color=COLOR_GREEN_DARK, type="NUMBER", value="0"),
-                midpoint=InterpolationPoint(color=COLOR_WHITE,      type="NUMBER", value="0.5"),
-                maxpoint=InterpolationPoint(color=COLOR_RED_DARK,   type="NUMBER", value="1.0")
-            )
-        ))
-        save_rules(ws, rules)
+            rules.append(build_boolean_rule(ws, f"I2:I{MAX_DATA_ROWS}", "TEXT_EQ", [val], bg_color=color))
+            
+        # Unreal G/L % (Column D)
+        rules.append(build_boolean_rule(ws, f"D2:D{MAX_DATA_ROWS}", "NUMBER_GREATER", ["0"], text_color=COLOR_GREEN_DARK))
+        rules.append(build_boolean_rule(ws, f"D2:D{MAX_DATA_ROWS}", "NUMBER_LESS", ["0"], text_color=COLOR_RED_DARK))
         
-        apply_alternating_banding(ws, 2, 200)
+        # 52w Pos % (Column G)
+        rules.append(build_gradient_rule(ws, f"G2:G{MAX_DATA_ROWS}", COLOR_GREEN_DARK, COLOR_WHITE, COLOR_RED_DARK))
+        
+        save_rules(ws, rules)
         print(f"  ✓ formatted {tab_name}")
     except Exception as e:
         print(f"  ⚠ Failed to format {tab_name}: {e}")
 
+@require_formatting
 def format_agent_outputs_v2(spreadsheet):
     """Part 3: Agent_Outputs revised formatting with READABILITY focus"""
-    tab_name = config.TAB_AGENT_OUTPUTS
+    tab_name = getattr(config, 'TAB_AGENT_OUTPUTS', 'Agent_Outputs')
     try:
         ws = spreadsheet.worksheet(tab_name)
         all_values = ws.get_all_values()
@@ -246,100 +269,76 @@ def format_agent_outputs_v2(spreadsheet):
         if first_cell and "Accumulate:" not in str(first_cell):
             safe_api_call(ws.insert_row, [""], 1)
             time.sleep(1)
-            all_values = ws.get_all_values() # Refresh
+            all_values = ws.get_all_values()
             
-        # Detect where headers are (usually Row 2 now)
-        header_row_idx = 1
-        headers = all_values[header_row_idx]
+        headers = all_values[1] # Usually Row 2 now
         
-        def get_col_letter(name):
+        def get_col(name: str, fallback_let: str) -> str:
             try:
-                idx = next(i for i, h in enumerate(headers) if h.strip().lower() == name.lower())
-                return chr(ord('A') + idx), idx + 1
+                idx = next(i for i, h in enumerate(headers) if h.strip().lower() in name.lower().split('|'))
+                return chr(ord('A') + idx)
             except StopIteration:
-                return None, None
+                return fallback_let
 
-        col_agent_let, col_agent_idx = get_col_letter('agent')
-        col_signal_let, col_signal_idx = get_col_letter('signal') # Note: Check for 'signal' or 'signal_type'
-        if not col_signal_let: col_signal_let, col_signal_idx = get_col_letter('signal_type')
+        col_signal = get_col('signal|signal_type', 'D')
         
-        col_action_let, col_action_idx = get_col_letter('action')
-        col_narrative_let, col_narrative_idx = get_col_letter('narrative')
-        if not col_narrative_let: col_narrative_let, col_narrative_idx = get_col_letter('rationale')
-        
-        # Default fallback indices if detection fails
-        col_agent_let = col_agent_let or 'C'
-        col_signal_let = col_signal_let or 'D'
-        col_action_let = col_action_let or 'F'
-        col_narrative_let = col_narrative_let or 'G'
-        
-        # --- READABILITY FIXES START ---
         # 1. Column Widths (Surgical Control)
-        # Assuming compact format: A:Date, B:ID, C:Agent, D:Signal, E:Ticker, F:Action, G:Narrative, H:Scale, I:Severity, J:Score
         widths = [
-            ("A", 100), ("B", 70),  ("C", 90),  ("D", 80),  ("E", 80),
-            ("F", 350), # action (Narrative-heavy)
-            ("G", 550), # narrative (LLM reasoning)
-            ("H", 120), ("I", 100), ("J", 80)
+            ("A", 100), ("B", 70), ("C", 90), ("D", 80), ("E", 80),
+            ("F", 350), ("G", 550), ("H", 120), ("I", 100), ("J", 80)
         ]
         safe_api_call(set_column_widths, ws, widths)
 
         # 2. Row heights and global alignment
-        safe_api_call(set_row_height, ws, "3:1000", 60)
-        content_fmt = CellFormat(
-            wrapStrategy="WRAP",
-            verticalAlignment="TOP",
-            horizontalAlignment="LEFT",
-            textFormat=TextFormat(fontSize=10)
-        )
-        safe_format(ws, "A3:K1000", content_fmt)
-        # --- READABILITY FIXES END ---
+        safe_api_call(set_row_height, ws, f"3:{MAX_AGENT_ROWS}", 60)
+        content_fmt = CellFormat(wrapStrategy="WRAP", verticalAlignment="TOP", horizontalAlignment="LEFT", textFormat=TextFormat(fontSize=10))
+        safe_format(ws, f"A3:K{MAX_AGENT_ROWS}", content_fmt)
 
         # Summary Row (Row 1)
         summary_formula = (
-            f'="Accumulate: "&COUNTIF({col_signal_let}3:{col_signal_let}1000,"ADD")&'
-            f'" | Trim: "&COUNTIF({col_signal_let}3:{col_signal_let}1000,"TRIM")&'
-            f'" | Hold: "&COUNTIF({col_signal_let}3:{col_signal_let}1000,"HOLD")&'
-            f'" | Exit: "&COUNTIF({col_signal_let}3:{col_signal_let}1000,"EXIT")&'
-            f'" | Monitor: "&COUNTIF({col_signal_let}3:{col_signal_let}1000,"MONITOR")'
+            f'="Accumulate: "&COUNTIF({col_signal}3:{col_signal}{MAX_AGENT_ROWS},"ADD")&'
+            f'" | Trim: "&COUNTIF({col_signal}3:{col_signal}{MAX_AGENT_ROWS},"TRIM")&'
+            f'" | Hold: "&COUNTIF({col_signal}3:{col_signal}{MAX_AGENT_ROWS},"HOLD")&'
+            f'" | Exit: "&COUNTIF({col_signal}3:{col_signal}{MAX_AGENT_ROWS},"EXIT")&'
+            f'" | Monitor: "&COUNTIF({col_signal}3:{col_signal}{MAX_AGENT_ROWS},"MONITOR")'
         )
         safe_api_call(ws.update, [[summary_formula]], 'A1', value_input_option="USER_ENTERED")
         
         # Split merge to avoid "You can't merge frozen and non-frozen columns" error
-        # Freezing cols A-E (indices 1-5). A-E are frozen, F-K are NOT.
         try:
-            safe_api_call(ws.merge_cells, "A1:E1") # All frozen
-            safe_api_call(ws.merge_cells, "F1:K1") # All non-frozen
+            safe_api_call(ws.merge_cells, "A1:E1")
+            safe_api_call(ws.merge_cells, "F1:K1")
         except Exception as _me:
-            print(f"  ! merge_cells skipped (already merged?): {_me}")
+            pass
             
-        safe_format(ws, "A1:K1", CellFormat(backgroundColor=COLOR_NAVY, textFormat=TextFormat(bold=True, foregroundColor=COLOR_WHITE, fontSize=12), horizontalAlignment="CENTER"))
-        
-        safe_format(ws, "A2:K2", CellFormat(backgroundColor=COLOR_NAVY, textFormat=TextFormat(bold=True, foregroundColor=COLOR_WHITE), horizontalAlignment="CENTER"))
-        safe_api_call(set_frozen, ws, rows=2, cols=5) # Freeze up to Ticker
+        safe_format(ws, "A1:K1", build_header_format(font_size=12))
+        safe_format(ws, "A2:K2", build_header_format())
+        safe_api_call(set_frozen, ws, rows=2, cols=5) 
         
         rules = safe_api_call(get_conditional_format_rules, ws)
         rules.clear()
         
         # Signal Type Colors
-        rules.append(ConditionalFormatRule(ranges=[GridRange.from_a1_range(f"{col_signal_let}3:{col_signal_let}1000", ws)], booleanRule=BooleanRule(condition=BooleanCondition("TEXT_EQ", ["ADD"]), format=CellFormat(backgroundColor=COLOR_GREEN_LIGHT))))
-        rules.append(ConditionalFormatRule(ranges=[GridRange.from_a1_range(f"{col_signal_let}3:{col_signal_let}1000", ws)], booleanRule=BooleanRule(condition=BooleanCondition("TEXT_EQ", ["TRIM"]), format=CellFormat(backgroundColor=COLOR_RED_LIGHT))))
-        rules.append(ConditionalFormatRule(ranges=[GridRange.from_a1_range(f"{col_signal_let}3:{col_signal_let}1000", ws)], booleanRule=BooleanRule(condition=BooleanCondition("TEXT_EQ", ["HOLD"]), format=CellFormat(backgroundColor=COLOR_YELLOW_LIGHT))))
-        rules.append(ConditionalFormatRule(ranges=[GridRange.from_a1_range(f"{col_signal_let}3:{col_signal_let}1000", ws)], booleanRule=BooleanRule(condition=BooleanCondition("TEXT_EQ", ["MONITOR"]), format=CellFormat(backgroundColor=COLOR_BLUE_LIGHT))))
-        rules.append(ConditionalFormatRule(ranges=[GridRange.from_a1_range(f"{col_signal_let}3:{col_signal_let}1000", ws)], booleanRule=BooleanRule(condition=BooleanCondition("TEXT_EQ", ["EXIT"]), format=CellFormat(backgroundColor=COLOR_RED_DARK, textFormat=TextFormat(foregroundColor=COLOR_WHITE)))))
+        sig_range = f"{col_signal}3:{col_signal}{MAX_AGENT_ROWS}"
+        rules.append(build_boolean_rule(ws, sig_range, "TEXT_EQ", ["ADD"], bg_color=COLOR_GREEN_LIGHT))
+        rules.append(build_boolean_rule(ws, sig_range, "TEXT_EQ", ["TRIM"], bg_color=COLOR_RED_LIGHT))
+        rules.append(build_boolean_rule(ws, sig_range, "TEXT_EQ", ["HOLD"], bg_color=COLOR_YELLOW_LIGHT))
+        rules.append(build_boolean_rule(ws, sig_range, "TEXT_EQ", ["MONITOR"], bg_color=COLOR_BLUE_LIGHT))
+        rules.append(build_boolean_rule(ws, sig_range, "TEXT_EQ", ["EXIT"], bg_color=COLOR_RED_DARK, text_color=COLOR_WHITE))
         
         save_rules(ws, rules)
         print(f"  ✓ formatted {tab_name}")
     except Exception as e:
         print(f"  ⚠ Failed to format {tab_name}: {e}")
 
+@require_formatting
 def format_holdings_current_v2(spreadsheet):
     """Part 4: Holdings_Current KPI and Readability Fix"""
-    tab_name = config.TAB_HOLDINGS_CURRENT
+    tab_name = getattr(config, 'TAB_HOLDINGS_CURRENT', 'Holdings_Current')
     try:
         ws = spreadsheet.worksheet(tab_name)
         
-        # 1. ULTIMATE UNMERGE (Must happen before any read/write to avoid gspread bugs)
+        # ULTIMATE UNMERGE (Must happen before any read/write to avoid gspread bugs)
         for merge_range in ["A1:B1", "C1:D1", "E1:F1", "G1:H1", "I1:J1", "K1:L1"]:
             try:
                 ws.unmerge_cells(merge_range)
@@ -349,7 +348,7 @@ def format_holdings_current_v2(spreadsheet):
 
         all_values = ws.get_all_values()
         
-        # 2. Ensure KPI row exists without overwriting headers
+        # Ensure KPI row exists without overwriting headers
         first_cell = all_values[0][0] if all_values and all_values[0] else None
         if first_cell and "PORTFOLIO SNAPSHOT" not in str(first_cell):
             safe_api_call(ws.insert_row, [""], 1)
@@ -364,61 +363,56 @@ def format_holdings_current_v2(spreadsheet):
             for i, row in enumerate(all_values[:5]):
                 if 'Ticker' in row or 'ticker' in [str(h).strip().lower() for h in row]:
                     header_row_idx = i
+                    headers = all_values[header_row_idx]
+                    data_start_row = header_row_idx + 2
                     break
-            if header_row_idx != -1:
-                headers = all_values[header_row_idx]
-                data_start_row = header_row_idx + 2
 
-        def get_col_letter(name):
+        def get_col(name: str, fallback: str) -> str:
             try:
                 idx = next(i for i, h in enumerate(headers) if h.strip().lower() == name.lower())
                 return chr(ord('A') + idx)
             except StopIteration:
-                return None
+                return fallback
 
-        col_ticker = get_col_letter('Ticker') or 'A'
-        col_mv = get_col_letter('Market Value') or 'G'
-        col_cb = get_col_letter('Cost Basis') or 'H'
-        col_ugl = get_col_letter('Unrealized G/L') or 'J'
+        col_ticker = get_col('Ticker', 'A')
+        col_mv = get_col('Market Value', 'G')
+        col_cb = get_col('Cost Basis', 'H')
+        col_ugl = get_col('Unrealized G/L', 'J')
         
-        # Core conditional rules
         rules = safe_api_call(get_conditional_format_rules, ws)
         rules.clear()
-        rules.append(ConditionalFormatRule(ranges=[GridRange.from_a1_range(f"{col_ugl}{data_start_row}:{col_ugl}200", ws)], booleanRule=BooleanRule(condition=BooleanCondition("NUMBER_GREATER", ["0"]), format=CellFormat(textFormat=TextFormat(foregroundColor=COLOR_GREEN_DARK)))))
-        rules.append(ConditionalFormatRule(ranges=[GridRange.from_a1_range(f"{col_ugl}{data_start_row}:{col_ugl}200", ws)], booleanRule=BooleanRule(condition=BooleanCondition("NUMBER_LESS", ["0"]), format=CellFormat(textFormat=TextFormat(foregroundColor=COLOR_RED_DARK)))))
+        
+        ugl_range = f"{col_ugl}{data_start_row}:{col_ugl}{MAX_DATA_ROWS}"
+        rules.append(build_boolean_rule(ws, ugl_range, "NUMBER_GREATER", ["0"], text_color=COLOR_GREEN_DARK))
+        rules.append(build_boolean_rule(ws, ugl_range, "NUMBER_LESS", ["0"], text_color=COLOR_RED_DARK))
         save_rules(ws, rules)
         
         # Formatting
         safe_api_call(set_frozen, ws, rows=2, cols=0)
-        header_range = f"A{header_row_idx+1}:T{header_row_idx+1}" 
-        safe_format(ws, header_range, CellFormat(backgroundColor=COLOR_NAVY, textFormat=TextFormat(bold=True, foregroundColor=COLOR_WHITE, fontSize=10), horizontalAlignment="CENTER"))
-        apply_alternating_banding(ws, data_start_row, 200)
+        safe_format(ws, f"A{header_row_idx+1}:T{header_row_idx+1}", build_header_format())
+        apply_alternating_banding(ws, data_start_row, MAX_DATA_ROWS)
 
-        # --- FINAL KPI WRITE (Combined Label + Formula in one cell to survive merging) ---
-        # 1. Prepare Combined Formulas (Label + Value using TEXT for formatting)
-        # Using SUMIF(TickerRange, "*", ValueRange) to ignore ghost rows with blank tickers.
+        # FINAL KPI WRITE
+        drange = f"{data_start_row}:{MAX_DATA_ROWS}" # e.g. "3:200"
         kpi_formulas = [
             ("A1", "📊 PORTFOLIO SNAPSHOT"),
-            ("C1", f'="Total Value: "&TEXT(SUMIF({col_ticker}{data_start_row}:{col_ticker}200, "*", {col_mv}{data_start_row}:{col_mv}200), "$#,##0")'),
-            ("E1", f'="Dry Powder: "&TEXT(SUMIF({col_ticker}{data_start_row}:{col_ticker}200,"CASH_MANUAL",{col_mv}{data_start_row}:{col_mv}200)+SUMIF({col_ticker}{data_start_row}:{col_ticker}200,"SGOV",{col_mv}{data_start_row}:{col_mv}200), "$#,##0")'),
-            ("G1", f'="Cash + SGOV: "&TEXT(SUMIF({col_ticker}{data_start_row}:{col_ticker}200,"CASH_MANUAL",{col_mv}{data_start_row}:{col_mv}200)+SUMIF({col_ticker}{data_start_row}:{col_ticker}200,"SGOV",{col_mv}{data_start_row}:{col_mv}200)+SUMIF({col_ticker}{data_start_row}:{col_ticker}200,"QACDS",{col_mv}{data_start_row}:{col_mv}200), "$#,##0")'),
-            ("I1", f'="G/L %: "&TEXT(IF(SUMIF({col_ticker}{data_start_row}:{col_ticker}200, "*", {col_cb}{data_start_row}:{col_cb}200)=0, 0, SUMIF({col_ticker}{data_start_row}:{col_ticker}200, "*", {col_ugl}{data_start_row}:{col_ugl}200)/SUMIF({col_ticker}{data_start_row}:{col_ticker}200, "*", {col_cb}{data_start_row}:{col_cb}200)), "0.00%")'),
-            ("K1", f'="Positions: "&(COUNTA({col_ticker}{data_start_row}:{col_ticker}200)-COUNTIF({col_ticker}{data_start_row}:{col_ticker}200,"CASH_MANUAL")-COUNTIF({col_ticker}{data_start_row}:{col_ticker}200,"QACDS"))')
+            ("C1", f'="Total Value: "&TEXT(SUMIF({col_ticker}{drange}, "*", {col_mv}{drange}), "$#,##0")'),
+            ("E1", f'="Dry Powder: "&TEXT(SUMIF({col_ticker}{drange},"CASH_MANUAL",{col_mv}{drange})+SUMIF({col_ticker}{drange},"SGOV",{col_mv}{drange}), "$#,##0")'),
+            ("G1", f'="Cash + SGOV: "&TEXT(SUMIF({col_ticker}{drange},"CASH_MANUAL",{col_mv}{drange})+SUMIF({col_ticker}{drange},"SGOV",{col_mv}{drange})+SUMIF({col_ticker}{drange},"QACDS",{col_mv}{drange}), "$#,##0")'),
+            ("I1", f'="G/L %: "&TEXT(IF(SUMIF({col_ticker}{drange}, "*", {col_cb}{drange})=0, 0, SUMIF({col_ticker}{drange}, "*", {col_ugl}{drange})/SUMIF({col_ticker}{drange}, "*", {col_cb}{drange})), "0.00%")'),
+            ("K1", f'="Positions: "&(COUNTA({col_ticker}{drange})-COUNTIF({col_ticker}{drange},"CASH_MANUAL")-COUNTIF({col_ticker}{drange},"QACDS"))')
         ]
 
-        # Clear Row 1 to avoid conflicts
-        ws.update("A1:T1", [["" for _ in range(20)]])
+        ws.update(range_name="A1:T1", values=[["" for _ in range(20)]])
         time.sleep(2)
 
-        # Write combined formulas
         for cell, val in kpi_formulas:
             ws.update_acell(cell, val)
         time.sleep(3)
 
-        # 3. Final KPI Row Formatting (Centered)
-        safe_format(ws, "A1:L1", CellFormat(backgroundColor=COLOR_NAVY, textFormat=TextFormat(bold=True, foregroundColor=COLOR_WHITE, fontSize=11), verticalAlignment="MIDDLE", horizontalAlignment="CENTER"))
+        safe_format(ws, "A1:L1", build_header_format(font_size=11))
 
-        # 4. Merging
+        # Re-merge
         for merge_range in ["A1:B1", "C1:D1", "E1:F1", "G1:H1", "I1:J1", "K1:L1"]:
             try:
                 ws.merge_cells(merge_range)
@@ -429,74 +423,65 @@ def format_holdings_current_v2(spreadsheet):
     except Exception as e:
         print(f"  ⚠ Failed to update KPI for {tab_name}: {e}")
 
+@require_formatting
 def format_realized_gl_v2(spreadsheet):
     """Part 5: Realized_GL Wash Sale UI"""
-    tab_name = config.TAB_REALIZED_GL
+    tab_name = getattr(config, 'TAB_REALIZED_GL', 'Realized_GL')
     try:
         ws = spreadsheet.worksheet(tab_name)
         
-        # Ensure second KPI row
         row2_val = safe_api_call(ws.cell, 2, 1).value
         if row2_val and "WASH SALE RISK" not in str(row2_val):
             safe_api_call(ws.insert_row, [""], 2)
             time.sleep(1)
             
-        # Row 1 formatting update for Disallowed Loss
-        # Assuming Disallowed Loss Label is in I1 and Value in J1 (based on previous format_realized_gl)
-        safe_format(ws, "J1", CellFormat(textFormat=TextFormat(bold=True, foregroundColor=COLOR_RED_DARK, fontSize=12), numberFormat=NumberFormat(type="CURRENCY", pattern='"$"#,##0')))
+        safe_format(ws, "J1", CellFormat(
+            textFormat=TextFormat(bold=True, foregroundColor=COLOR_RED_DARK, fontSize=12), 
+            numberFormat=NumberFormat(type="CURRENCY", pattern='"$"#,##0')
+        ))
         
         # Row 2 Wash Sale Warning
         safe_api_call(ws.update, [["⚠️ WASH SALE RISK: Review before year-end. Disallowed losses cannot offset gains."]], "A2", value_input_option="USER_ENTERED")
         safe_api_call(ws.merge_cells, "A2:S2")
         safe_format(ws, "A2:S2", CellFormat(backgroundColor=COLOR_ORANGE, textFormat=TextFormat(bold=True, foregroundColor=COLOR_WHITE), horizontalAlignment="CENTER"))
         
-        # Row 3 is now Header, Data starts at Row 4
         safe_api_call(set_frozen, ws, rows=3, cols=0)
         
         rules = safe_api_call(get_conditional_format_rules, ws)
         rules.clear()
         
-        # Flag rows where Disallowed Loss > 0 (Col R)
-        rules.append(ConditionalFormatRule(
-            ranges=[GridRange.from_a1_range("A4:S500", ws)],
-            booleanRule=BooleanRule(condition=BooleanCondition("CUSTOM_FORMULA", ["=$R4>0"]), format=CellFormat(backgroundColor=COLOR_YELLOW_LIGHT))
-        ))
-        # Red border on Disallowed Loss cell (Col R)
-        # Borders can't be easily applied via conditional formatting in gspread-formatting currently
-        # but we can do a background color change
-        rules.append(ConditionalFormatRule(
-            ranges=[GridRange.from_a1_range("R4:R500", ws)],
-            booleanRule=BooleanRule(condition=BooleanCondition("NUMBER_GREATER", ["0"]), format=CellFormat(backgroundColor=COLOR_RED_LIGHT, textFormat=TextFormat(bold=True, foregroundColor=COLOR_RED_DARK)))
-        ))
-        save_rules(ws, rules)
+        # Disallowed Loss Highlighting
+        rules.append(build_boolean_rule(ws, f"A4:S{MAX_DAILY_ROWS}", "CUSTOM_FORMULA", ["=$R4>0"], bg_color=COLOR_YELLOW_LIGHT))
+        rules.append(build_boolean_rule(ws, f"R4:R{MAX_DAILY_ROWS}", "NUMBER_GREATER", ["0"], bg_color=COLOR_RED_LIGHT, text_color=COLOR_RED_DARK, bold=True))
         
+        save_rules(ws, rules)
         print(f"  ✓ formatted {tab_name}")
     except Exception as e:
         print(f"  ⚠ Failed to format {tab_name}: {e}")
 
+@require_formatting
 def format_daily_snapshots_v2(spreadsheet):
     """Part 6: Daily_Snapshots formatting"""
-    tab_name = config.TAB_DAILY_SNAPSHOTS
+    tab_name = getattr(config, 'TAB_DAILY_SNAPSHOTS', 'Daily_Snapshots')
     try:
         ws = spreadsheet.worksheet(tab_name)
         try:
             safe_api_call(set_frozen, ws, rows=2)
-        except Exception as _fe:
-            print(f"  ! set_frozen skipped: {_fe}")
+        except Exception:
+            pass
             
         widths = [
             ("A", 100), ("B", 120), ("C", 120), ("D", 140), ("E", 110),
             ("F", 120), ("G", 90), ("H", 100), ("I", 150)
         ]
         safe_api_call(set_column_widths, ws, widths)
-            
-        header_fmt = CellFormat(backgroundColor=COLOR_NAVY, textFormat=TextFormat(bold=True, foregroundColor=COLOR_WHITE), horizontalAlignment="CENTER")
-        safe_format(ws, "A2:I2", header_fmt)
+        safe_format(ws, "A2:I2", build_header_format())
         
-        apply_alternating_banding(ws, 3, 500)
+        apply_alternating_banding(ws, 3, MAX_DAILY_ROWS)
         print(f"  ✓ formatted {tab_name}")
     except Exception as e:
         print(f"  ⚠ Failed to format {tab_name}: {e}")
+
 
 @app.command()
 def main(
@@ -514,6 +499,7 @@ def main(
     spreadsheet = gc.open_by_key(config.PORTFOLIO_SHEET_ID)
     print(f"Formatting spreadsheet: {spreadsheet.title} ({config.PORTFOLIO_SHEET_ID})")
     
+    # Run formatting and sleep between tabs to respect strict Sheets API quotas
     format_valuation_card(spreadsheet)
     print("  ... Resting 30s for quota reset ...")
     time.sleep(30)

@@ -183,7 +183,7 @@ def _check_schwab_api_positions() -> CheckResult:
             result.detail = "Schwab client returned None (token missing?)"
             return result
 
-        r = client.get_accounts()
+        r = client.get_accounts(fields=client.Account.Fields.POSITIONS)
         r.raise_for_status()
         accounts = r.json()
         if not isinstance(accounts, list):
@@ -233,7 +233,7 @@ def _check_latest_bundle_exists() -> CheckResult:
     )
     try:
         candidates = sorted(
-            Path("bundles").glob("bundle_*.json"),
+            Path("bundles").glob("context_bundle_*.json"),
             key=lambda p: p.stat().st_mtime,
         )
         if not candidates:
@@ -261,7 +261,7 @@ def _check_latest_bundle_age() -> CheckResult:
     )
     try:
         candidates = sorted(
-            Path("bundles").glob("bundle_*.json"),
+            Path("bundles").glob("context_bundle_*.json"),
             key=lambda p: p.stat().st_mtime,
         )
         if not candidates:
@@ -301,7 +301,7 @@ def _check_fmp_cache_coverage() -> CheckResult:
 
         # Get tickers from latest bundle
         candidates = sorted(
-            Path("bundles").glob("bundle_*.json"),
+            Path("bundles").glob("context_bundle_*.json"),
             key=lambda p: p.stat().st_mtime,
         )
         if not candidates:
@@ -450,7 +450,7 @@ def _check_thesis_coverage() -> CheckResult:
     try:
         # Load latest bundle for positions + weights
         candidates = sorted(
-            Path("bundles").glob("bundle_*.json"),
+            Path("bundles").glob("context_bundle_*.json"),
             key=lambda p: p.stat().st_mtime,
         )
         if not candidates:

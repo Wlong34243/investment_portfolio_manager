@@ -2,6 +2,7 @@
 import os
 import sys
 from datetime import datetime, timedelta
+import pandas as pd
 
 # Add project root to path
 sys.path.insert(0, os.getcwd())
@@ -40,6 +41,13 @@ def update_portfolio(tx_days: int = 90):
         print("Enriching positions (metadata & smart mapping)...")
         raw_positions = enrich_positions(raw_positions)
         raw_positions = apply_smart_categorization(raw_positions)
+
+        # Fix 100x percentage bug (Google Sheets formatting)
+        for col in ['Dividend Yield', 'Daily Change %', 'Unrealized G/L %', 'dividend_yield', 'daily_change_pct', 'unrealized_gl_pct']:
+            if col in raw_positions.columns:
+                raw_positions[col] = pd.to_numeric(raw_positions[col], errors='coerce').fillna(0)
+                if raw_positions[col].abs().max() > 1.0:
+                    raw_positions[col] = raw_positions[col] / 100.0
 
         print("Normalizing positions for sheet schema...")
         today_iso = datetime.now().strftime("%Y-%m-%d")

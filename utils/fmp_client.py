@@ -738,14 +738,7 @@ def get_fmp_fundamentals_bundle(ticker: str, asset_class: str = "", forward_pe_o
     is_equity_like = ac_upper not in _FMP_SKIP_ASSET_CLASSES
 
     api_key = get_fmp_api_key()
-    if not api_key:
-        err = {"error": "no_fmp_api_key", "fetched_at": now_ts}
-        try:
-            path.write_text(json.dumps(err))
-        except Exception:
-            pass
-        return err
-
+    
     result: dict = {
         "fetched_at":         now_ts,
         "pe_ratio":           None,
@@ -760,6 +753,19 @@ def get_fmp_fundamentals_bundle(ticker: str, asset_class: str = "", forward_pe_o
         "payout_ratio":       None,
         "market_cap":         None,
     }
+
+    if not is_equity_like:
+        # Skip FMP for ETFs/Funds/Fixed Income to save quota
+        # No error, just empty results as expected for these types
+        return result
+
+    if not api_key:
+        err = {"error": "no_fmp_api_key", "fetched_at": now_ts}
+        try:
+            path.write_text(json.dumps(err))
+        except Exception:
+            pass
+        return err
     fetch_errors: list[str] = []
     endpoints_ok = 0
 

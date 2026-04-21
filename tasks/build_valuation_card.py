@@ -42,7 +42,7 @@ EXCLUDE_TICKERS = set(config.VALUATION_SKIP)
 def _load_latest_bundle() -> dict | None:
     """Return latest market bundle dict, or None if not found."""
     candidates = sorted(
-        Path("bundles").glob("bundle_*.json"),
+        Path("bundles").glob("context_bundle_*.json"),
         key=lambda p: p.stat().st_mtime,
     )
     if not candidates:
@@ -143,23 +143,32 @@ def fetch_ticker_valuation(
         debt_to_equity = fmp_data.get("debt_to_equity")   or fundamentals.get("debt_to_equity")
 
         # Valuation_Signal determination (CHEAP / FAIR / RICH / MONITOR)
-        if fmp_missing:
-            valuation_signal = "MONITOR"
-        else:
-            pe_val = trailing_pe if trailing_pe and trailing_pe != "N/A" else None
-            try:
-                pe_float = float(pe_val) if pe_val is not None else None
-            except (TypeError, ValueError):
-                pe_float = None
+        # A ticker is marked MONITOR if we have NO P/E data from any source
+        pe_val = trailing_pe if trailing_pe and trailing_pe != "N/A" else None
+        try:
+            pe_float = float(pe_val) if pe_val is not None else None
+        except (TypeError, ValueError):
+            pe_float = None
 
-            if pe_float is None:
-                valuation_signal = "MONITOR"
-            elif pe_float < 15:
-                valuation_signal = "CHEAP"
-            elif pe_float > 30:
-                valuation_signal = "RICH"
-            else:
-                valuation_signal = "FAIR"
+        if pe_float is None:
+            valuation_signal = "MONITOR"
+        elif pe_float < 15:
+            valuation_signal = "CHEAP"
+        elif pe_float > 30:
+            valuation_signal = "RICH"
+        else:
+            valuation_signal = "FAIR"
+
+        # Ensure Div Yield is raw decimal
+        raw_div_yield = fmp_data.get("dividend_yield") or info.get("dividendYield")
+        if raw_div_yield is not None:
+             try:
+                 raw_div_yield = float(raw_div_yield)
+                 # If value is > 0.5, it's likely a percentage (e.g. 2.5 for 2.5%), so divide by 100
+                 if raw_div_yield > 0.5:
+                      raw_div_yield = raw_div_yield / 100.0
+             except (TypeError, ValueError):
+                 raw_div_yield = None
 
         return {
             "Ticker":               ticker_symbol,
@@ -176,7 +185,7 @@ def fetch_ticker_valuation(
             "ROIC":                 roic,
             "D/E":                  debt_to_equity,
             "Rev Growth YoY":       rev_growth,
-            "Div Yield %":          fmp_data.get("dividend_yield") or info.get("dividendYield"),
+            "Div Yield %":          raw_div_yield,
             "Payout Ratio":         fmp_data.get("payout_ratio")   or info.get("payoutRatio"),
             "52w Low":              low,
             "52w High":             high,

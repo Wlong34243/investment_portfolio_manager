@@ -35,8 +35,7 @@ if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
 import config
-from core.composite_bundle import load_composite_bundle
-from core.bundle import load_bundle
+from core.bundle import load_bundle, _sha256_canonical, _hashable_payload
 
 logger = logging.getLogger(__name__)
 
@@ -403,27 +402,50 @@ def compute_technicals(positions: list[dict]) -> list[dict]:
 # Bundle injection
 # ---------------------------------------------------------------------------
 
-def enrich_composite_bundle(composite_path: Path) -> dict:
+def enrich_composite_bundle(bundle_path: Path) -> dict:
     """
-    Load the composite bundle, compute technical indicators for all positions,
+    Load the bundle (context or composite), compute technical indicators for all positions,
     inject `calculated_technicals` into the JSON, and write it back.
 
-    Returns the updated composite bundle dict.
+    If it's a context bundle (has positions at root), it re-hashes the bundle.
+    If it's a composite bundle, it just appends the metadata.
     """
-    composite = load_composite_bundle(composite_path)
-    market    = load_bundle(Path(composite["market_bundle_path"]))
-    positions = market.get("positions", [])
+    with open(bundle_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    # 1. Resolve positions
+    if "positions" in data:
+        # Context/Market bundle
+        positions = data["positions"]
+        is_context = True
+    elif "market_bundle_path" in data:
+        # Composite bundle
+        market_path = Path(data["market_bundle_path"])
+        if not market_path.is_absolute():
+             market_path = bundle_path.parent / market_path
+        market = load_bundle(market_path)
+        positions = market.get("positions", [])
+        is_context = False
+    else:
+        raise ValueError(f"File at {bundle_path} does not appear to be a context or composite bundle.")
 
     technicals = compute_technicals(positions)
 
-    composite["calculated_technicals"]        = technicals
-    composite["technicals_enriched_at"]       = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-    composite["technicals_indicator_version"] = "murphy_v1"
+    # 3. Inject into dict
+    data["calculated_technicals"]        = technicals
+    data["technicals_enriched_at"]       = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    data["technicals_indicator_version"] = "murphy_v1"
 
-    with open(composite_path, "w") as f:
-        json.dump(composite, f, indent=2)
+    # 4. Re-hash if context bundle
+    if is_context:
+        payload = _hashable_payload(data)
+        data["bundle_hash"] = _sha256_canonical(payload)
 
-    return composite
+    # 5. Write back
+    with open(bundle_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
+
+    return data
 
 
 # ---------------------------------------------------------------------------
@@ -437,17 +459,17 @@ def main(bundle_path: Optional[str] = None) -> None:
         path = Path(bundle_path)
     else:
         candidates = sorted(
-            Path("bundles").glob("composite_bundle_*.json"),
+            Path("bundles").glob("context_bundle_*.json"),
             key=lambda p: p.stat().st_mtime,
         )
         if not candidates:
-            print("ERROR: No composite bundles found in bundles/. Run: python manager.py bundle composite")
+            print("ERROR: No context bundles found in bundles/.")
             sys.exit(1)
         path = candidates[-1]
 
-    print(f"Enriching composite bundle: {path.name}")
-    composite  = enrich_composite_bundle(path)
-    technicals = composite.get("calculated_technicals", [])
+    print(f"Enriching bundle: {path.name}")
+    bundle = enrich_composite_bundle(path)
+    technicals = bundle.get("calculated_technicals", [])
 
     data_gaps = [e for e in technicals if e.get("data_gap")]
     print(f"Technical indicators computed for {len(technicals)} position(s).")

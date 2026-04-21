@@ -77,7 +77,7 @@ def compute_metrics(holdings_df: pd.DataFrame, snapshots_df: pd.DataFrame) -> di
     # --- 2. Dry Powder (Cash + SGOV, per config.CASH_TICKERS) ---
     dp_mask     = holdings_df['Ticker'].isin(DRY_POWDER_TICKERS)
     dry_powder  = float(holdings_df.loc[dp_mask, 'Market Value'].sum())
-    dp_pct      = (dry_powder / total_value * 100) if total_value > 0 else 0.0
+    dp_pct      = (dry_powder / total_value) if total_value > 0 else 0.0
 
     # --- 3. Invested capital (excluding dry powder) ---
     invested_df    = holdings_df[~dp_mask].copy()
@@ -92,7 +92,7 @@ def compute_metrics(holdings_df: pd.DataFrame, snapshots_df: pd.DataFrame) -> di
             .sum()
             .sort_values(ascending=False)
         )
-        top3_sectors: pd.Series = (sector_mv / invested_value * 100).round(2).head(3)
+        top3_sectors: pd.Series = (sector_mv / invested_value).round(4).head(3)
     else:
         top3_sectors = pd.Series(dtype=float)
 
@@ -105,7 +105,7 @@ def compute_metrics(holdings_df: pd.DataFrame, snapshots_df: pd.DataFrame) -> di
 
     # --- 6. Blended yield (income / total_value) ---
     total_income   = float(holdings_df['Est Annual Income'].sum()) if 'Est Annual Income' in holdings_df.columns else 0.0
-    blended_yield  = (total_income / total_value * 100) if total_value > 0 else 0.0
+    blended_yield  = (total_income / total_value) if total_value > 0 else 0.0
 
     return {
         "total_value":     total_value,
@@ -145,9 +145,9 @@ def build_rows(metrics: dict) -> list[list]:
         ["SUMMARY",               "Value",                    ""],
         ["Total Portfolio Value",  f"${tv:,.2f}",              ""],
         ["Total Invested",         f"${inv:,.2f}",             ""],
-        ["Total Dry Powder",       f"${dp:,.2f}",              f"{dppc:.1f}% of portfolio"],
+        ["Total Dry Powder",       f"${dp:,.2f}",              f"{dppc:.2%} of portfolio"],
         ["Position Count",         pc,                         ""],
-        ["Blended Yield",          f"{by:.2f}%",               "(est. annual income / total value)"],
+        ["Blended Yield",          f"{by:.2%}",               "(est. annual income / total value)"],
         ["", "", ""],
 
         # ── Sector block ───────────────────────────────────────────
@@ -156,7 +156,7 @@ def build_rows(metrics: dict) -> list[list]:
 
     if not metrics["top3_sectors"].empty:
         for sector, pct in metrics["top3_sectors"].items():
-            rows.append([str(sector), f"{pct:.2f}%", ""])
+            rows.append([str(sector), f"{pct:.2%}", ""])
     else:
         rows.append(["No sector data available", "", ""])
 
@@ -207,11 +207,12 @@ def create_dashboard(live: bool = False) -> None:
 
     print(f"  Total Value:   ${metrics['total_value']:,.2f}")
     print(f"  Invested:      ${metrics['invested_value']:,.2f}")
-    print(f"  Dry Powder:    ${metrics['dry_powder']:,.2f}  ({metrics['dp_pct']:.1f}%)")
-    print(f"  Blended Yield: {metrics['blended_yield']:.2f}%")
+    print(f"  Dry Powder:    ${metrics['dry_powder']:,.2f}  ({metrics['dp_pct']:.2%})")
+    print(f"  Blended Yield: {metrics['blended_yield']:.2%}")
     if not metrics['top3_sectors'].empty:
         for sector, pct in metrics['top3_sectors'].items():
-            print(f"  {sector:<30} {pct:.2f}%")
+            print(f"  {sector:<30} {pct:.2%}")
+
 
     # 3. Dry-run gate — print preview and exit
     if dry_run:

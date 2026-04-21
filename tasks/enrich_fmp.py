@@ -126,7 +126,7 @@ if __name__ == "__main__":
         bundle_path = _Path(args.bundle)
     else:
         candidates = sorted(
-            _Path("bundles").glob("bundle_*.json"),
+            _Path("bundles").glob("context_bundle_*.json"),
             key=lambda p: p.stat().st_mtime,
         )
         if not candidates:

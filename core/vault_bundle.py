@@ -56,7 +56,6 @@ class VaultBundle:
     theses_missing: list[str]   # tickers with no thesis file
     vault_doc_count: int
     vault_skip_log: list[str]   # files skipped (size cap or parse error)
-    frameworks: list[dict]      # parsed framework JSON files from frameworks/ subdir
     environment: dict
 
 def _sha256_text(text: str) -> str:
@@ -165,62 +164,6 @@ def _load_vault_document(
         skipped=False
     )
 
-def _load_frameworks() -> list[dict]:
-    """
-    Load all framework JSON files from vault/frameworks/.
-
-    Returns a list of dicts. Each dict is the parsed JSON plus two
-    audit fields added by the loader:
-      - _framework_file_path: relative path for provenance
-      - _framework_content_sha256: SHA256 of file contents for tamper detection
-
-    Malformed framework JSON raises ValueError — frameworks are too
-    important to fail silently.
-    """
-    frameworks_dir = VAULT_DIR / "frameworks"
-    if not frameworks_dir.exists():
-        return []
-
-    frameworks = []
-    for path in sorted(frameworks_dir.glob("*.json")):
-        try:
-            with open(path, "rb") as f:
-                content_bytes = f.read()
-            data = json.loads(content_bytes.decode("utf-8"))
-        except (json.JSONDecodeError, UnicodeDecodeError) as e:
-            raise ValueError(
-                f"Framework file {path.name} is malformed: {e}. "
-                "Frameworks must be valid JSON."
-            )
-
-        if "framework_id" not in data:
-            raise ValueError(
-                f"Framework file {path.name} is missing required field 'framework_id'."
-            )
-        if "framework_version" not in data:
-            raise ValueError(
-                f"Framework file {path.name} is missing required field 'framework_version'."
-            )
-
-        data["_framework_file_path"] = str(path.relative_to(VAULT_DIR))
-        data["_framework_content_sha256"] = hashlib.sha256(content_bytes).hexdigest()
-        frameworks.append(data)
-
-    return frameworks
-
-
-def _discover_vault_files() -> dict[str, list[Path]]:
-    """Discovers all files in the vault subdirectories."""
-    THESES_DIR.mkdir(parents=True, exist_ok=True)
-    TRANSCRIPTS_DIR.mkdir(parents=True, exist_ok=True)
-    RESEARCH_DIR.mkdir(parents=True, exist_ok=True)
-    
-    return {
-        "theses": sorted(list(THESES_DIR.glob("*_thesis.md"))),
-        "transcripts": sorted(list(TRANSCRIPTS_DIR.glob("*.md")) + list(TRANSCRIPTS_DIR.glob("*.txt"))),
-        "research": sorted(list(RESEARCH_DIR.glob("*.md"))),
-    }
-
 def build_vault_bundle(
     ticker_list: list[str] | None = None,
     include_drive: bool = False,
@@ -230,9 +173,6 @@ def build_vault_bundle(
     """
     if include_drive:
         logging.info("Drive fallback not yet implemented — continuing with local files only.")
-
-    # Load frameworks
-    frameworks = _load_frameworks()
 
     # 1. Discover files
     files = _discover_vault_files()
@@ -299,7 +239,6 @@ def build_vault_bundle(
         "theses_missing": sorted(theses_missing),
         "vault_doc_count": len(documents),
         "vault_skip_log": vault_skip_log,
-        "frameworks": frameworks,
         "environment": _capture_environment()
     }
 

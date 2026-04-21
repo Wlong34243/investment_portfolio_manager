@@ -16,6 +16,7 @@ import json
 import time
 from datetime import datetime, date
 from pathlib import Path
+from typing import Optional, List
 
 import typer
 from rich.console import Console
@@ -484,7 +485,7 @@ def snapshot(
     if enrich_atr:
         from tasks.enrich_atr import enrich_composite_bundle as _enrich_atr
         composite_candidates = sorted(
-            Path("bundles").glob("composite_bundle_*.json"),
+            Path("bundles").glob("context_bundle_*.json"),
             key=lambda p: p.stat().st_mtime,
         )
         if not composite_candidates:
@@ -518,7 +519,7 @@ def snapshot(
         from tasks.enrich_technicals import enrich_composite_bundle as _enrich_technicals
         from collections import Counter
         composite_candidates = sorted(
-            Path("bundles").glob("composite_bundle_*.json"),
+            Path("bundles").glob("context_bundle_*.json"),
             key=lambda p: p.stat().st_mtime,
         )
         if not composite_candidates:
@@ -547,6 +548,11 @@ def snapshot(
                             console.print(f"  [dim]{label:<20}[/] {dist[label]}")
                 except Exception as e:
                     console.print(f"[red]Technical enrichment failed: {e}[/]")
+
+    # 8. Push to Sheets if --live
+    if live:
+        console.print("\n[cyan]Step 8: Pushing enriched bundle to Google Sheets...[/]")
+        bundle_push(path=path, live=True)
 
 
 # --- VAULT GROUP ---
@@ -844,6 +850,64 @@ def bundle_composite(
     
     table.add_row("Bundle Path", str(path))
     console.print(table)
+
+@bundle_app.command("push")
+def bundle_push(
+    path: Optional[Path] = typer.Option(None, "--path", help="Path to context bundle JSON. Defaults to latest."),
+    live: bool = typer.Option(False, "--live", help="Perform live Sheet writes."),
+):
+    """
+    Push a context bundle's position data to Google Sheets.
+    Updates Holdings_Current, Holdings_History, and Daily_Snapshots.
+    """
+    from core.bundle import load_bundle
+    import pipeline
+    import pandas as pd
+
+    if path is None:
+        candidates = sorted(
+            Path("bundles").glob("context_bundle_*.json"),
+            key=lambda p: p.stat().st_mtime,
+        )
+        if not candidates:
+            console.print("[red]ERROR: No context bundles found in bundles/.[/]")
+            raise typer.Exit(code=1)
+        path = candidates[-1]
+
+    console.print(f"[cyan]Pushing bundle to Sheets:[/] {path.name}")
+    try:
+        data = load_bundle(path)
+        positions = data.get("positions", [])
+        if not positions:
+            console.print("[yellow]Warning: Bundle has no positions. Nothing to push.[/]")
+            return
+
+        df = pd.DataFrame(positions)
+        
+        # Ensure 'weight' column exists for pipeline (bundle uses 'weight_pct')
+        if 'weight_pct' in df.columns and 'weight' not in df.columns:
+            df['weight'] = df['weight_pct'] / 100.0
+        
+        # pipeline.write_to_sheets expects the DataFrame to have 'import_date'
+        if 'import_date' not in df.columns:
+            df['import_date'] = data.get('timestamp_utc', '')[:10]
+
+        # Use pipeline's orchestration logic
+        results = pipeline.write_to_sheets(
+            df, 
+            cash_amount=data.get('cash_manual', 0.0), 
+            dry_run=not live
+        )
+
+        if live:
+            console.print(f"[bold green]SUCCESS:[/] Pushed {results['holdings_written']} positions to Sheets.")
+        else:
+            console.print(f"[yellow]DRY RUN:[/] Would push {results['holdings_written']} positions to Sheets.")
+
+    except Exception as e:
+        console.print(f"[red]ERROR: Failed to push bundle: {e}[/]")
+        raise typer.Exit(code=1)
+
 
 @bundle_app.command("verify")
 def bundle_verify(

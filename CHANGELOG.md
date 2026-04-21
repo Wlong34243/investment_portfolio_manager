@@ -1,5 +1,29 @@
 # Changelog
 
+## [2026-04-21] Phase 2.0 — Architectural Pivot & Pipeline Hardening
+
+### Decommissioned (Phase 0)
+- **Stashed Legacy AI Layer**: Moved `agents/`, `vault/frameworks/`, and legacy `.github/workflows/` to `deprecated/`.
+- **Headless CLI**: Stripped `manager.py` of all `agent` and `analyze-all` commands. The system is now a deterministic data pipeline.
+- **Podcast Extraction**: Extracted pure transcript-fetching to `tasks/podcast_fetcher.py`.
+
+### Hardened Pipeline (Phase 1)
+- **Schwab API Identity Fix**: Resolved `accountNumber` vs `hashValue` mismatch. System now correctly identifies accounts for transactions and tax-lot ingestion.
+- **Transaction Quality**: 
+    - Resolved 400 Bad Request errors by using `date` objects.
+    - Improved ticker extraction from `transferItems`.
+    - Hardened noise filtering (excludes "Journal", "Transfer", and "USD" noise).
+- **Immutable Context Bundles**:
+    - Unified all market/context snapshots under `context_bundle_*.json`.
+    - Integrated FMP Deep Data (ROIC, Margins), ATR stops, and Murphy technical indicators directly into the snapshot process.
+    - Added `python manager.py bundle push --live` to sync bundles to Google Sheets.
+- **100x Percentage Bug Fix**: 
+    - Standardized yield and G/L metrics to raw decimals across `pipeline.py`, `tasks/create_dashboard.py`, and `utils/csv_parser.py`.
+    - Injected self-healing logic in `scripts/live_update.py` to detect and correct 100x formatting errors before sheet writes.
+- **Decision View Clean-up**: Finalized schema by removing obsolete agent flags. Now focused on: Ticker, Weight, MV, Unreal G/L, Daily Chg, P/E, 52w Pos, Discount, Signal, and Rationale.
+
+---
+
 ## [2026-04-21] Phase 1.4 — Add health command
 
 ### Added
@@ -123,6 +147,14 @@ Transactions history using `utils.tax.reconstruct_lots_fifo()`.
   gate criteria.
 
 ---
+
+## [2026-04-21] Phase 1 — Pipeline Hardening
+- **Schwab Sync Fix**: Resolved critical `hashValue` vs `accountNumber` mismatch for the transactions endpoint. Transactions now correctly use the long hash from `get_account_numbers()` and pass `date` objects (instead of `datetime` or strings) to satisfy strict API requirements.
+- **Context Bundle Evolution**: Unified Market/Context bundles under a single `context_bundle_*.json` naming convention.
+- **Enrichment Integration**: Baked FMP fundamentals (ROIC, Margins, Growth), ATR stops, and Murphy technical indicators (MA, RSI, MACD) directly into the context bundle at snapshot time.
+- **Tax Lot Ingestion**: Enabled synthetic tax lot extraction (aggregate cost basis per account/ticker) during snapshot.
+- **Health Command Hardening**: Corrected exit code logic for critical vs. warning checks; fixed bundle discovery patterns.
+- **Podcast Fetcher**: Extracted pure transcript-fetching logic into `tasks/podcast_fetcher.py`.
 
 ## [2026-04-21] Phase 0 — Architectural pivot executed.
 Decommissioned 12-agent squad, vault frameworks, and podcast Gemini summarizer. All stashed in deprecated/. System is now pure data pipeline + Sheets dashboard. Export engine (Phase 4) will replace agent reasoning with manual paste to external frontier LLMs. See CLAUDE.md for the new philosophy.

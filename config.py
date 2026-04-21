@@ -379,7 +379,7 @@ TOP_N_ENRICH = 50
 # ---------------------------------------------------------------------------
 TICKER_OVERRIDES = {
     'ET': {
-        'dividend_yield': 8.5,  # Schwab/YFinance often miss LP distribution yields
+        'dividend_yield': 0.085,  # Schwab/YFinance often miss LP distribution yields (raw decimal: 8.5%)
     },
     'BABA': {
         'asset_class': 'International', # Ensure BABA isn't just 'Other' or 'Equity'

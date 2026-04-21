@@ -199,6 +199,7 @@ def main(live: bool = typer.Option(False, "--live", help="Write to Google Sheets
                 top_rationale = rat[:120]
                 break
 
+        # Goal 1: Map results and ensure raw decimals for percentages
         results.append({
             'Ticker': ticker,
             'Weight %': row_h.get('Weight', 0.0),
@@ -209,19 +210,13 @@ def main(live: bool = typer.Option(False, "--live", help="Write to Google Sheets
             '52w Pos %': val_data['52w Pos %'],
             'Disc from High %': val_data['Disc from High %'],
             'Valuation Signal': val_signal,
-            'Macro Signal': macro_signal,
-            'Thesis Signal': thesis_signal,
-            'Conc Flag': conc_flag,
-            'TLH Flag': tlh_flag,
             'Top Rationale': top_rationale,
         })
             
     df_decision = pd.DataFrame(results)
     
-    # Sorting: TLH first, then Weight % descending
-    df_decision['is_tlh'] = df_decision['TLH Flag'].apply(lambda x: 1 if x else 0)
-    df_decision = df_decision.sort_values(by=['is_tlh', 'Weight %'], ascending=[False, False])
-    df_decision = df_decision.drop(columns=['is_tlh'])
+    # Sorting: Weight % descending
+    df_decision = df_decision.sort_values(by=['Weight %'], ascending=[False])
     
     # Final data cleaning for display (format percentages/currency if desired, 
     # but GSheets formatting usually handles this better if kept numeric)

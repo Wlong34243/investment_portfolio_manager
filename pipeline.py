@@ -287,10 +287,12 @@ def append_daily_snapshot(ws, df: pd.DataFrame, existing_fps: set = None) -> boo
     position_count = int(len(df))
 
     # Task 5: Sum (Market Value * Dividend Yield) across ALL positions for Authoritative Income
-    # Task 2: Pass as raw decimal (remove any remaining * 100)
+    # Task 2: Pass as raw decimal
     if 'Dividend Yield' in df.columns:
         dy = pd.to_numeric(df['Dividend Yield'], errors='coerce').fillna(0.0)
-        # Assuming dy is already raw decimal in df (Step 2 enforces this)
+        # Ensure raw decimal by checking if mean > 0.5 (likely 100x format)
+        if dy.mean() > 0.5:
+             dy = dy / 100.0
         total_income = (df['Market Value'] * dy).sum()
     else:
         total_income = float(df['Est Annual Income'].sum() if 'Est Annual Income' in df.columns else 0.0)
@@ -344,6 +346,8 @@ def calculate_income_metrics(df: pd.DataFrame) -> dict:
     # Task 5: Authoritative Income Sum
     if 'Dividend Yield' in df.columns:
         dy = pd.to_numeric(df['Dividend Yield'], errors='coerce').fillna(0.0)
+        if dy.mean() > 0.5:
+             dy = dy / 100.0
         projected_annual_income = (df['Market Value'] * dy).sum()
     else:
         projected_annual_income  = float(df['Est Annual Income'].sum())

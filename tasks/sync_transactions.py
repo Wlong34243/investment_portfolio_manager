@@ -195,42 +195,47 @@ def sync_transactions(days: int = 90, live: bool = False, reconcile: bool = Fals
 
     # 5. Dry-Run Gate
     if not live:
-        print("\n--- DRY RUN COMPLETE --- Use --live to overwrite the Sheet.")
-        if not combined_df.empty:
-            print(f"Sample unique transactions (top 5):\n{combined_df.head(5).to_string()}")
+        print("\n--- DRY RUN COMPLETE --- Use --live to append new transactions to the Sheet.")
+        if not new_rows_df.empty:
+            print(f"New transactions found (top 5):\n{new_rows_df.head(5).to_string()}")
+        else:
+            print("No new transactions found in the specified range.")
         return True
 
-    # 6. Archive and Overwrite
-    print(f"\n--- LIVE MODE --- Preparing to update {config.TAB_TRANSACTIONS}...")
+    # 6. Live Mode: Append Only
+    print(f"\n--- LIVE MODE --- Preparing to append new transactions to {config.TAB_TRANSACTIONS}...")
 
-    if existing_data:
-        ws_logs = ss.worksheet(config.TAB_LOGS)
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        ws_logs.append_row([
-            timestamp,
-            "INFO",
-            "Sync_Transactions",
-            f"Archiving {len(existing_data)} rows before overwrite refresh.",
-            f"New total: {len(combined_df)}",
-        ])
-        print(f"Archived {len(existing_data)} rows metadata to Logs.")
-        time.sleep(1.0)
+    # Identify which rows are actually new
+    existing_fps = set(sheet_df['Fingerprint'].astype(str).tolist()) if 'Fingerprint' in sheet_df.columns else set()
+    new_rows_df = new_tx_df[~new_tx_df['Fingerprint'].astype(str).isin(existing_fps)].copy()
+    
+    if new_rows_df.empty:
+        print("✅ No new unique transactions to append.")
+        return True
 
-    print(f"Clearing and writing {len(combined_df)} rows to {config.TAB_TRANSACTIONS}...")
-    ws.clear()
-    time.sleep(1.0)
+    print(f"Found {len(new_rows_df)} new transactions to append.")
 
-    data_to_write = pipeline.sanitize_dataframe_for_sheets(
-        combined_df, config.TRANSACTION_COLUMNS, config.TRANSACTION_COL_MAP
+    data_to_append = pipeline.sanitize_dataframe_for_sheets(
+        new_rows_df, config.TRANSACTION_COLUMNS, config.TRANSACTION_COL_MAP
     )
 
-    ws.update(
-        range_name="A1",
-        values=[config.TRANSACTION_COLUMNS] + data_to_write,
+    ws.append_rows(
+        values=data_to_append,
         value_input_option='USER_ENTERED',
     )
 
-    print(f"✅ SUCCESS: {len(combined_df)} transactions written.")
+    # Optional: Log the append
+    ws_logs = ss.worksheet(config.TAB_LOGS)
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    ws_logs.append_row([
+        timestamp,
+        "INFO",
+        "Sync_Transactions",
+        f"Appended {len(data_to_append)} new transactions.",
+        f"Total unique now approx: {len(sheet_df) + len(data_to_append)}",
+    ])
+
+    print(f"✅ SUCCESS: {len(data_to_append)} transactions appended.")
     return True
 
 

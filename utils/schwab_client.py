@@ -15,6 +15,7 @@ allowed are this docstring and comments. Any other match is a bug.
 
 import pandas as pd
 import logging
+import time
 from datetime import datetime, timedelta
 import schwab.auth
 import schwab.client
@@ -325,6 +326,9 @@ _SCHWAB_ACTION_MAP = {
     "CASH_IN_OR_CASH_OUT":  "Transfer",
     "RECEIVE_AND_DELIVER":  "Transfer",
     "JOURNAL":              "Journal",
+    "MEMORANDUM":           "Journal",
+}
+
 }
 
 
@@ -366,8 +370,9 @@ def _fetch_account_transactions(
         try:
             r_tx = client.get_transactions(
                 acct_hash,
-                start_datetime=start_date,
-                end_datetime=end_date,
+                start_date=start_date.date(),
+                end_date=end_date.date(),
+                transaction_types=None
             )
             if r_tx.status_code == 429 or r_tx.status_code >= 500:
                 delay = base_delay * (2 ** attempt)
@@ -411,34 +416,35 @@ def _fetch_account_transactions(
 def fetch_transactions(client: "schwab.client.Client", start_date=None, end_date=None) -> pd.DataFrame:
     """
     Fetch transaction history for ALL linked Schwab accounts.
-    Each account is fetched independently with retry so one failure does not
-    discard data already collected from other accounts.
+    Uses get_account_numbers() to retrieve the hashValue required for the
+    transactions endpoint.
     """
     if not start_date:
         start_date = datetime.now() - timedelta(days=30)
     if not end_date:
         end_date = datetime.now()
 
-    # Enumerate accounts — fail fast if this call fails (nothing to iterate)
+    # Get account hashes — required for the transactions endpoint
     try:
-        r_accounts = client.get_accounts()
-        r_accounts.raise_for_status()
-        accounts = r_accounts.json()
+        r_nums = client.get_account_numbers()
+        r_nums.raise_for_status()
+        account_mappings = r_nums.json()
     except Exception as e:
-        logging.error("fetch_transactions: failed to list accounts: %s", e)
+        logging.error("fetch_transactions: failed to list account numbers: %s", e)
         return pd.DataFrame(columns=config.TRANSACTION_COLUMNS)
 
     all_transactions: list[dict] = []
     accounts_ok = 0
     accounts_failed = 0
 
-    for acc in accounts:
-        acct_hash = acc.get('hashValue')
+    for mapping in account_mappings:
+        acct_hash = mapping.get('hashValue')
+        acct_num  = mapping.get('accountNumber')
         if not acct_hash:
             logging.warning("fetch_transactions: account missing hashValue, skipping")
             continue
 
-        masked = f"...{acct_hash[-4:]}"
+        masked = f"...{str(acct_num)[-4:]}" if acct_num else "...????"
         txns = _fetch_account_transactions(client, acct_hash, start_date, end_date)
 
         if txns is None:
@@ -454,38 +460,46 @@ def fetch_transactions(client: "schwab.client.Client", start_date=None, end_date
 
             action = _normalize_action(t_type, transfer_items, net_amount)
 
-            # Extract ticker and per-share price from transferItems when available.
-            # For TRADE transactions, transferItems[0].amount = share quantity.
-            # For non-trade types (dividends, transfers), amount is a dollar figure
-            # that would pollute the Quantity column — default to 0.0 instead.
+            # Goal 3: Extract actual equity symbol, filtering out CURRENCY_USD
             ticker = ""
             qty = 0.0
             price = 0.0
 
             if transfer_items:
-                item = transfer_items[0]
-                instr = item.get('instrument', {})
-                ticker = instr.get('symbol', '') or ""
-                price = float(item.get('price', 0) or 0)
-                if t_type == "TRADE":
-                    qty = float(item.get('amount', 0) or 0)
+                # Find first item that is NOT CURRENCY_USD
+                equity_item = None
+                for item in transfer_items:
+                    instr = item.get('instrument', {})
+                    sym = instr.get('symbol', '')
+                    if sym and sym != "CURRENCY_USD":
+                        equity_item = item
+                        break
+                
+                # Fallback to first item if all are CURRENCY_USD (e.g. pure cash transfer)
+                if not equity_item:
+                    equity_item = transfer_items[0]
 
-            # Fallback ticker: parse description only as last resort; log the fallback.
-            if not ticker:
+                instr = equity_item.get('instrument', {})
+                ticker = instr.get('symbol', '') or ""
+                price = float(equity_item.get('price', 0) or 0)
+                if t_type == "TRADE":
+                    qty = float(equity_item.get('amount', 0) or 0)
+
+            # Fallback ticker: parse description only as last resort
+            if not ticker or ticker == "CURRENCY_USD":
                 raw_desc = t.get('description', '') or ''
+                # Example: "QUALCOMM INC COM" -> QUALCOMM
                 candidate = raw_desc.split(' ')[0] if raw_desc else ''
-                if candidate and len(candidate) <= 6 and candidate.isalpha():
+                if candidate and len(candidate) <= 6 and candidate.isalpha() and candidate != "USD":
                     ticker = candidate
-                    logging.debug(
-                        "fetch_transactions: %s ticker inferred from description '%s' → '%s'",
-                        masked, raw_desc[:60], ticker,
-                    )
                 else:
-                    logging.warning(
-                        "fetch_transactions: %s type=%s, no ticker found — description='%s', skipped",
-                        masked, t_type, raw_desc[:80],
-                    )
-                    continue
+                    # If still no ticker and it's a dividend/trade, we might want it, 
+                    # but if it's CURRENCY_USD it will be filtered out below.
+                    pass
+
+            # Filter Goal 3: Drop CURRENCY_USD noise and Journal/Transfer entries
+            if ticker in ["CURRENCY_USD", "USD", ""] or action in ["Journal", "Transfer"]:
+                continue
 
             trade_date = (t.get('transactionDate') or t.get('time') or '')[:10]
             settlement_date = (t.get('settlementDate') or '')[:10]
