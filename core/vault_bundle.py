@@ -299,8 +299,9 @@ def build_vault_bundle(
         "environment": _capture_environment()
     }
 
-    # 6. Compute hash
-    vault_hash = _sha256_canonical(payload)
+    # 6. Compute hash (exclude timestamp_utc for stability)
+    hash_payload = {k: v for k, v in payload.items() if k != "timestamp_utc"}
+    vault_hash = _sha256_canonical(hash_payload)
 
     return VaultBundle(
         vault_hash=vault_hash,
@@ -331,9 +332,9 @@ def load_vault_bundle(path: Path) -> dict:
     if not stored_hash:
         raise ValueError(f"Vault bundle missing vault_hash: {path.name}")
         
-    # Recompute hash to verify
-    payload = {k: v for k, v in data.items() if k != "vault_hash"}
-    expected_hash = _sha256_canonical(payload)
+    # Recompute hash to verify (exclude vault_hash and timestamp_utc)
+    hash_payload = {k: v for k, v in data.items() if k not in ("vault_hash", "timestamp_utc")}
+    expected_hash = _sha256_canonical(hash_payload)
     
     if stored_hash != expected_hash:
         raise ValueError(
