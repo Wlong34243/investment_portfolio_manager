@@ -1,5 +1,22 @@
 # Changelog
 
+## [2026-04-23] Phase 2.3 — Surface Trim Target / Add Target on dashboard
+
+### Added
+- **`tasks/build_valuation_card.py`**:
+    - Added `Trim Target` and `Add Target` columns immediately to the right of the `Price` column.
+    - Sourced data via `CompositeBundle.get_ticker_triggers()`.
+- **`tasks/build_decision_view.py`**:
+    - Added `Price`, `Trim Target`, and `Add Target` columns to the dashboard.
+    - Sourced trigger data via `CompositeBundle.get_ticker_triggers()`.
+- **`PORTFOLIO_SHEET_SCHEMA.md`**:
+    - Documented new columns for `Valuation_Card` and `Decision_View` tabs.
+    - Added full tab schemas for these two writers.
+
+### Changed
+- **`tasks/build_valuation_card.py`**: Now uses `CompositeBundle` to unify data sourcing.
+- **`tasks/build_decision_view.py`**: Now uses `CompositeBundle` to unify data sourcing.
+
 ## [2026-04-23] Phase 2.2 — Propagate price triggers through composite bundle
 
 ### Added

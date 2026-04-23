@@ -39,6 +39,22 @@ EXCLUDE_TICKERS = set(config.VALUATION_SKIP)
 # Bundle helpers
 # ---------------------------------------------------------------------------
 
+def _load_latest_composite_bundle():
+    """Return latest CompositeBundle object, or None if not found."""
+    from core.composite_bundle import resolve_latest_bundles, load_composite_bundle, CompositeBundle
+    from dataclasses import fields
+    try:
+        market_path, vault_path = resolve_latest_bundles()
+        # We need a way to get the CompositeBundle object. 
+        # build_composite_bundle returns the object. 
+        # load_composite_bundle returns a dict.
+        from core.composite_bundle import build_composite_bundle
+        return build_composite_bundle(market_path, vault_path)
+    except Exception as e:
+        logger.warning("Could not load composite bundle: %s", e)
+        return None
+
+
 def _load_latest_bundle() -> dict | None:
     """Return latest market bundle dict, or None if not found."""
     candidates = sorted(
@@ -86,12 +102,14 @@ def fetch_ticker_valuation(
     ticker_symbol: str,
     fmp_data: dict | None = None,
     fundamentals: dict | None = None,
+    composite_bundle = None,
 ):
     """
     Build a valuation row for one ticker.
 
     fmp_data       — from bundle's fmp_fundamentals (may be empty dict or error dict)
     fundamentals   — from bundle's fundamentals (yfinance-sourced, already baked in)
+    composite_bundle — CompositeBundle object for trigger lookups
 
     No live FMP calls are made here.  yfinance is used only for price and
     52-week data that may not be in the bundle.
@@ -109,6 +127,11 @@ def fetch_ticker_valuation(
         high = info.get("fiftyTwoWeekHigh")
         low  = info.get("fiftyTwoWeekLow")
         price = info.get("currentPrice") or info.get("regularMarketPrice")
+
+        # Get triggers from composite bundle
+        triggers = {"price_trim_above": None, "price_add_below": None}
+        if composite_bundle:
+            triggers = composite_bundle.get_ticker_triggers(ticker_symbol)
 
         pos_52w = None
         if high and low and price and (high - low) != 0:
@@ -176,6 +199,8 @@ def fetch_ticker_valuation(
             "Sector":               info.get("sector", ""),
             "Market Cap":           fmp_data.get("market_cap") or info.get("marketCap"),
             "Price":                price,
+            "Trim Target":          triggers.get("price_trim_above"),
+            "Add Target":           triggers.get("price_add_below"),
             "Trailing P/E":         trailing_pe,
             "Forward P/E (FMP)":    fmp_data.get("forward_pe"),
             "Forward P/E (yf)":     info.get("forwardPE"),
@@ -208,7 +233,10 @@ def fetch_ticker_valuation(
 def main(live: bool = typer.Option(False, "--live", help="Write to Google Sheets")):
     print(f"Building Valuation Card (Live={live})...")
 
-    # --- Load bundle for FMP + fundamentals data ---
+    # --- Load bundles for FMP + fundamentals + triggers data ---
+    composite_bundle = _load_latest_composite_bundle()
+    
+    # Still load market bundle dict for fmp_map/fund_map logic as written
     bundle = _load_latest_bundle()
     if bundle is None:
         print("Warning: No market bundle found — FMP data will be unavailable. "
@@ -256,6 +284,7 @@ def main(live: bool = typer.Option(False, "--live", help="Write to Google Sheets
             t,
             fmp_data=fmp_map.get(t),
             fundamentals=fund_map.get(t),
+            composite_bundle=composite_bundle,
         )
         if val:
             results.append(val)

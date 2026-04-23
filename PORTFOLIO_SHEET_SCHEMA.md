@@ -213,6 +213,68 @@ strategic holds. Append-only — never overwrite or delete rows.
 
 ---
 
+### Tab: Valuation_Card
+**Purpose:** Fundamental and technical valuation analysis. Overwritten on each run.
+
+**Source:** Derived from Market Bundle + Vault Bundle (via Composite Bundle) + yfinance.
+
+| Column | Header | Type | Example | Notes |
+|--------|--------|------|---------|-------|
+| A | Ticker | String | `AAPL` | Primary key |
+| B | Name | String | `Apple Inc.` | From yfinance |
+| C | Sector | String | `Technology` | From yfinance |
+| D | Market Cap | Float | `3000000000000` | From FMP / yf |
+| E | Price | Float | `185.20` | Current market price |
+| F | Trim Target | Float | `220.00` | Sourced from `{TICKER}_thesis.md` triggers. Empty = no trigger. |
+| G | Add Target | Float | `150.00` | Sourced from `{TICKER}_thesis.md` triggers. Empty = no trigger. |
+| H | Trailing P/E | Float | `28.5` | |
+| I | Forward P/E (FMP) | Float | `25.2` | |
+| J | Forward P/E (yf) | Float | `26.0` | |
+| K | P/B | Float | `45.0` | |
+| L | PEG | Float | `1.5` | |
+| M | Gross Margin | Float | `0.45` | |
+| N | ROIC | Float | `0.35` | |
+| O | D/E | Float | `0.15` | |
+| P | Rev Growth YoY | Float | `0.05` | |
+| Q | Div Yield % | Float | `0.005` | |
+| R | Payout Ratio | Float | `0.15` | |
+| S | 52w Low | Float | `125.0` | |
+| T | 52w High | Float | `199.0` | |
+| U | 52w Position % | Float | `0.85` | |
+| V | Discount from 52w High % | Float | `0.07` | |
+| W | Valuation_Signal | String | `FAIR` | Logic: CHEAP (<15 P/E) / RICH (>30) / FAIR / MONITOR |
+| X | FMP_Data_Available | Boolean | `TRUE` | |
+| Y | Last Updated | String | `2026-04-23 10:30` | |
+
+**Write pattern:** Clear tab, write fresh batch. derive from Composite Bundle.
+
+---
+
+### Tab: Decision_View
+**Purpose:** High-level dashboard combining holdings and agent signals. Overwritten on each run.
+
+**Source:** Derived from Holdings_Current + Valuation_Card + Agent_Outputs + Composite Bundle.
+
+| Column | Header | Type | Example | Notes |
+|--------|--------|------|---------|-------|
+| A | Ticker | String | `UNH` | Primary key |
+| B | Weight % | Float | `5.2` | From Holdings_Current |
+| C | Market Value | Float | `25000.0` | |
+| D | Unreal G/L % | Float | `12.5` | |
+| E | Daily Chg % | Float | `-1.2` | |
+| F | Price | Float | `305.50` | Current market price |
+| G | Trim Target | Float | `380.00` | Sourced from `{TICKER}_thesis.md` triggers. Empty = no trigger. |
+| H | Add Target | Float | `280.00` | Sourced from `{TICKER}_thesis.md` triggers. Empty = no trigger. |
+| I | Fwd P/E | Float | `16.5` | From Valuation_Card |
+| J | 52w Pos % | Float | `0.35` | From Valuation_Card |
+| K | Disc from High % | Float | `0.45` | From Valuation_Card |
+| L | Valuation Signal | String | `BUY` | From Agent_Outputs (valuation) |
+| M | Top Rationale | String | `Regulatory risk fully priced...` | Highest severity rationale across agents |
+
+**Write pattern:** Clear tab, write fresh batch. derive from Composite Bundle + Sheets.
+
+---
+
 ## Cross-Reference: RE Dashboard Sheet (READ ONLY)
 **Sheet ID:** `1DXuY1iBo2GqZCCSZ7OrUa4iaunb5s8Kf1Rms8Z237rQ`
 

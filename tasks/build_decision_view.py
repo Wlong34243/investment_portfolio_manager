@@ -18,6 +18,38 @@ if _ROOT not in sys.path:
 import config
 from utils.sheet_readers import get_gspread_client
 
+# ---------------------------------------------------------------------------
+# Bundle helpers
+# ---------------------------------------------------------------------------
+
+def _load_latest_composite_bundle():
+    """Return latest CompositeBundle object, or None if not found."""
+    from core.composite_bundle import resolve_latest_bundles, load_composite_bundle, CompositeBundle
+    from core.composite_bundle import build_composite_bundle
+    try:
+        market_path, vault_path = resolve_latest_bundles()
+        return build_composite_bundle(market_path, vault_path)
+    except Exception as e:
+        print(f"Warning: Could not load composite bundle for Decision_View: {e}")
+        return None
+
+def _load_latest_market_bundle() -> dict | None:
+    """Return latest market bundle dict, or None if not found."""
+    from pathlib import Path
+    import json
+    candidates = sorted(
+        Path("bundles").glob("context_bundle_*.json"),
+        key=lambda p: p.stat().st_mtime,
+    )
+    if not candidates:
+        return None
+    try:
+        with open(candidates[-1], "r", encoding="utf-8") as fh:
+            return json.load(fh)
+    except Exception as e:
+        print(f"Warning: Could not load market bundle: {e}")
+        return None
+
 app = typer.Typer()
 
 _ACTION_SEVERITIES = {"action", "alert", "data_quality"}
@@ -74,6 +106,9 @@ def get_latest_agent_outputs(ws_agent):
 @app.command()
 def main(live: bool = typer.Option(False, "--live", help="Write to Google Sheets")):
     print(f"Building Decision View (Live={live})...")
+    
+    # --- Load bundles ---
+    composite_bundle = _load_latest_composite_bundle()
     
     gc = get_gspread_client()
     spreadsheet = gc.open_by_key(config.PORTFOLIO_SHEET_ID)
@@ -206,6 +241,9 @@ def main(live: bool = typer.Option(False, "--live", help="Write to Google Sheets
             'Market Value': row_h.get('Market Value', 0.0),
             'Unreal G/L %': row_h.get('Unrealized G/L %', 0.0),
             'Daily Chg %': row_h.get('Daily Change %', 0.0),
+            'Price': row_h.get('Price', 0.0),
+            'Trim Target': composite_bundle.get_ticker_triggers(ticker).get('price_trim_above') if composite_bundle else None,
+            'Add Target': composite_bundle.get_ticker_triggers(ticker).get('price_add_below') if composite_bundle else None,
             'Fwd P/E': val_data['Fwd P/E'],
             '52w Pos %': val_data['52w Pos %'],
             'Disc from High %': val_data['Disc from High %'],
