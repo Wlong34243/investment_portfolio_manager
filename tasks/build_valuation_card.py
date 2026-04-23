@@ -230,8 +230,11 @@ def fetch_ticker_valuation(
 # ---------------------------------------------------------------------------
 
 @app.command()
-def main(live: bool = typer.Option(False, "--live", help="Write to Google Sheets")):
-    print(f"Building Valuation Card (Live={live})...")
+def main(
+    live: bool = typer.Option(False, "--live", help="Write to Google Sheets"),
+    include_all: bool = typer.Option(True, "--all", help="Include all tickers, ignoring VALUATION_SKIP"),
+):
+    print(f"Building Valuation Card (Live={live}, All={include_all})...")
 
     # --- Load bundles for FMP + fundamentals + triggers data ---
     composite_bundle = _load_latest_composite_bundle()
@@ -272,7 +275,10 @@ def main(live: bool = typer.Option(False, "--live", help="Write to Google Sheets
     df_holdings = ensure_display_columns(df_holdings)
 
     tickers = df_holdings["Ticker"].unique()
-    tickers = [t for t in tickers if t and t not in EXCLUDE_TICKERS]
+    if not include_all:
+        tickers = [t for t in tickers if t and t not in EXCLUDE_TICKERS]
+    else:
+        tickers = [t for t in tickers if t]
 
     print(f"Fetching valuation data for {len(tickers)} tickers "
           f"({len([t for t in tickers if fmp_map.get(t)])} have FMP data in bundle)...")

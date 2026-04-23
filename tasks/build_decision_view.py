@@ -18,6 +18,19 @@ if _ROOT not in sys.path:
 import config
 from utils.sheet_readers import get_gspread_client
 
+try:
+    from gspread_formatting import (
+        format_cell_range, CellFormat, NumberFormat,
+        set_frozen, TextFormat, Color
+    )
+    HAS_FORMATTING = True
+except ImportError:
+    HAS_FORMATTING = False
+
+# --- Colors ---
+COLOR_NAVY = Color(0.10, 0.15, 0.27)
+COLOR_WHITE = Color(1, 1, 1)
+
 # ---------------------------------------------------------------------------
 # Bundle helpers
 # ---------------------------------------------------------------------------
@@ -235,18 +248,25 @@ def main(live: bool = typer.Option(False, "--live", help="Write to Google Sheets
                 break
 
         # Goal 1: Map results and ensure raw decimals for percentages
+        def to_pct_float(val):
+            if val is None or val == "": return 0.0
+            try:
+                s = str(val).replace("%", "").strip()
+                return float(s) / 100.0 if float(s) > 1.0 or "%" in str(val) else float(s)
+            except: return 0.0
+
         results.append({
             'Ticker': ticker,
-            'Weight %': row_h.get('Weight', 0.0),
-            'Market Value': row_h.get('Market Value', 0.0),
-            'Unreal G/L %': row_h.get('Unrealized G/L %', 0.0),
-            'Daily Chg %': row_h.get('Daily Change %', 0.0),
-            'Price': row_h.get('Price', 0.0),
+            'Weight %': to_pct_float(row_h.get('Weight')),
+            'Market Value': pd.to_numeric(row_h.get('Market Value'), errors='coerce') or 0.0,
+            'Unreal G/L %': to_pct_float(row_h.get('Unrealized G/L %')),
+            'Daily Chg %': to_pct_float(row_h.get('Daily Change %')),
+            'Price': pd.to_numeric(row_h.get('Price'), errors='coerce') or 0.0,
             'Trim Target': composite_bundle.get_ticker_triggers(ticker).get('price_trim_above') if composite_bundle else None,
             'Add Target': composite_bundle.get_ticker_triggers(ticker).get('price_add_below') if composite_bundle else None,
             'Fwd P/E': val_data['Fwd P/E'],
-            '52w Pos %': val_data['52w Pos %'],
-            'Disc from High %': val_data['Disc from High %'],
+            '52w Pos %': to_pct_float(val_data['52w Pos %']),
+            'Disc from High %': to_pct_float(val_data['Disc from High %']),
             'Valuation Signal': val_signal,
             'Top Rationale': top_rationale,
         })
@@ -255,10 +275,6 @@ def main(live: bool = typer.Option(False, "--live", help="Write to Google Sheets
     
     # Sorting: Weight % descending
     df_decision = df_decision.sort_values(by=['Weight %'], ascending=[False])
-    
-    # Final data cleaning for display (format percentages/currency if desired, 
-    # but GSheets formatting usually handles this better if kept numeric)
-    # We will keep them numeric for GSheets formatting.
     
     if not live:
         print("\nDRY RUN: Decision View Preview")
@@ -273,12 +289,41 @@ def main(live: bool = typer.Option(False, "--live", help="Write to Google Sheets
     except:
         ws_dec = spreadsheet.add_worksheet(title=tab_name, rows=100, cols=20)
         
-    # Clean NaNs
-    df_decision = df_decision.fillna('')
+    # Data to write (handle nulls as empty strings for GSheets)
+    # Ensure numeric columns remain numeric
+    df_write = df_decision.copy()
     
-    data_to_write = [df_decision.columns.tolist()] + df_decision.values.tolist()
+    data_to_write = [df_write.columns.tolist()] + df_write.values.tolist()
+    # Replace None/NaN with ""
+    data_to_write = [[(v if pd.notnull(v) else "") for v in row] for row in data_to_write]
+    
     ws_dec.update(range_name='A1', values=data_to_write)
     
+    # Apply Formatting if available
+    if HAS_FORMATTING:
+        print(f"  Applying formatting to {tab_name}...")
+        
+        # Header Format
+        header_fmt = CellFormat(
+            backgroundColor=COLOR_NAVY,
+            textFormat=TextFormat(bold=True, foregroundColor=COLOR_WHITE),
+            horizontalAlignment="CENTER"
+        )
+        format_cell_range(ws_dec, "A1:M1", header_fmt)
+        set_frozen(ws_dec, rows=1)
+        
+        # Numeric Formats
+        fmt_pct = CellFormat(numberFormat=NumberFormat(type='PERCENT', pattern='0.00%'))
+        fmt_curr = CellFormat(numberFormat=NumberFormat(type='CURRENCY', pattern='$#,##0.00'))
+        
+        # Weight % (B), Unreal G/L % (D), Daily Chg % (E), 52w Pos % (J), Disc from High % (K)
+        for col_let in ["B", "D", "E", "J", "K"]:
+            format_cell_range(ws_dec, f"{col_let}2:{col_let}200", fmt_pct)
+            
+        # Market Value (C), Price (F), Trim Target (G), Add Target (H)
+        for col_let in ["C", "F", "G", "H"]:
+            format_cell_range(ws_dec, f"{col_let}2:{col_let}200", fmt_curr)
+
     print(f"\n✅ Successfully wrote {len(df_decision)} rows to {tab_name}")
 
 if __name__ == "__main__":
