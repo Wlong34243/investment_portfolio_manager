@@ -386,6 +386,10 @@ def snapshot(
         help="Bake FMP fundamentals into the market bundle (default: on). "
              "Disable with --no-enrich-fmp for offline testing.",
     ),
+    enrich_styles: bool = typer.Option(
+        True, "--enrich-styles/--no-enrich-styles",
+        help="Stamp GARP/THEME/BORING/ETF style onto each position from data/ticker_strategies.json (default: on).",
+    ),
     live: bool = typer.Option(False, "--live", help="Enable live mode. Default is DRY RUN."),
 ):
     """Freeze current market state to an immutable context bundle."""
@@ -457,6 +461,20 @@ def snapshot(
                 console.print(f"[green]Bundle enriched and re-hashed:[/] [bold green]{new_hash}[/]")
         except Exception as e:
             console.print(f"[red]Fundamental enrichment failed: {e}[/]")
+
+    # Style enrichment (GARP/THEME/BORING/ETF) from data/ticker_strategies.json
+    if enrich_styles:
+        from tasks.enrich_styles import enrich_bundle_styles
+        try:
+            styles_result = enrich_bundle_styles(path)
+            positions_with_styles = styles_result.get("positions", [])
+            unknown = [p.get("ticker") for p in positions_with_styles if p.get("asset_strategy") == "UNKNOWN"]
+            if unknown:
+                console.print(f"[yellow]⚠ Style unknown for: {', '.join(unknown)} — add to data/ticker_strategies.json[/]")
+            else:
+                console.print(f"[green]Styles applied:[/] all {len(positions_with_styles)} positions classified.")
+        except Exception as e:
+            console.print(f"[red]Style enrichment failed: {e}[/]")
 
     # Enrichment errors — visible, not silent
     if getattr(bundle, "enrichment_errors", None):
@@ -612,6 +630,18 @@ def vault_snapshot(
     missing_style = "yellow" if bundle.theses_missing else "white"
     missing_str = f"[{missing_style}]{len(bundle.theses_missing)} ({', '.join(bundle.theses_missing[:5])}{'...' if len(bundle.theses_missing) > 5 else ''})[/]"
     table.add_row("Theses Missing", missing_str)
+
+    # Calculate triggers coverage for Prompt 2.1
+    theses_with_triggers = 0
+    total_theses = len(bundle.theses_present)
+    for doc in bundle.documents:
+        if doc.get("doc_type") == "thesis" and doc.get("thesis_present"):
+            trigs = doc.get("triggers", {})
+            if trigs.get("price_trim_above") is not None or trigs.get("price_add_below") is not None:
+                theses_with_triggers += 1
+    
+    trigger_color = "green" if theses_with_triggers == total_theses and total_theses > 0 else ("yellow" if theses_with_triggers > 0 else "red")
+    table.add_row("Price Triggers", f"[{trigger_color}]{theses_with_triggers} / {total_theses} theses populated[/]")
     
     skip_style = "yellow" if bundle.vault_skip_log else "white"
     table.add_row("Skipped Files", f"[{skip_style}]{len(bundle.vault_skip_log)}[/]")
@@ -950,10 +980,15 @@ def sync_transactions_cmd(
     days: int = typer.Option(90, "--days", help="Number of days to sync."),
     live: bool = typer.Option(False, "--live", help="Perform live sheet write."),
     reconcile: bool = typer.Option(False, "--reconcile", help="Diff-only: compare Schwab vs Sheet, no writes."),
+    clean: bool = typer.Option(False, "--clean", help="Remove CURRENCY_USD junk rows from the sheet."),
 ):
     """Sync Schwab transaction history to Google Sheets (merged archive-overwrite)."""
-    from tasks.sync_transactions import sync_transactions
-    success = sync_transactions(days=days, live=live, reconcile=reconcile)
+    if clean:
+        from tasks.sync_transactions import clean_junk_tickers
+        success = clean_junk_tickers(live=live)
+    else:
+        from tasks.sync_transactions import sync_transactions
+        success = sync_transactions(days=days, live=live, reconcile=reconcile)
     if not success:
         raise typer.Exit(code=1)
 

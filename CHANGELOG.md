@@ -1,5 +1,24 @@
 # Changelog
 
+## [2026-04-23] Phase 2.1 — Extract price triggers into vault bundle
+
+### Added
+- **`core/vault_bundle.py`**:
+    - Added structured `triggers` dict to `VaultDocument` dataclass containing `price_trim_above` and `price_add_below`.
+    - Implemented `_parse_thesis_fields` to extract these triggers from the machine-readable `triggers:` YAML block in thesis files using regex and PyYAML.
+    - Added `_discover_vault_files` to systematically scan `vault/theses`, `vault/transcripts`, and `vault/research`.
+    - Hardened `build_vault_bundle` to catch YAML parse errors, log them to `vault_skip_log`, and continue without aborting.
+- **`manager.py vault snapshot`**:
+    - Added "Price Triggers" coverage row to the Rich table output, showing count of theses with populated triggers and color-coded status (green/yellow/red) consistent with `thesis-audit`.
+- **`tests/test_vault_bundle_smoke.py`**:
+    - New unit tests covering YAML present/populated, YAML present/null, YAML missing, and YAML malformed scenarios.
+
+### Changed
+- **`vault/theses/UNH_thesis.md`**:
+    - Updated to match the canonical template (proper frontmatter and `## Quantitative Triggers` section) to serve as a reference for Phase 2.
+
+---
+
 ## [2026-04-21] Phase 2.0 — Architectural Pivot & Pipeline Hardening
 
 ### Decommissioned (Phase 0)

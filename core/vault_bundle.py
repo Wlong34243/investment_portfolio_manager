@@ -14,7 +14,9 @@ auditability.
 
 import hashlib
 import json
+import logging
 import platform
+import re
 import sys
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
@@ -22,6 +24,12 @@ from pathlib import Path
 from typing import Any
 
 import pandas as pd  # version capture only
+
+try:
+    import yaml as _yaml
+    _YAML_AVAILABLE = True
+except ImportError:
+    _YAML_AVAILABLE = False
 
 # Constants
 VAULT_DIR = Path("vault")
@@ -45,6 +53,7 @@ class VaultDocument:
     rotation_priority: str | None  # parsed from ## Rotation Priority
     size_bytes: int
     skipped: bool               # True if over MAX_FILE_BYTES
+    triggers: dict = field(default_factory=lambda: {"price_trim_above": None, "price_add_below": None})
 
 @dataclass
 class VaultBundle:
@@ -82,42 +91,73 @@ def _capture_environment() -> dict:
         "schema_version": VAULT_SCHEMA_VERSION
     }
 
+def _safe_float(v) -> float | None:
+    if v is None:
+        return None
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return None
+
+
 def _parse_thesis_fields(content: str) -> dict:
     """
     Parse the _thesis.md template fields.
-    Looks for Style, Scaling State, and Rotation Priority sections.
+    Looks for Style, Scaling State, Rotation Priority sections,
+    and the ```yaml triggers: block for price_trim_above / price_add_below.
+
+    On malformed YAML, triggers defaults to nulls and a "__parse_error__"
+    sentinel key is set so build_vault_bundle can log it to vault_skip_log.
     """
     lines = content.splitlines()
     result = {
         "style": None,
         "scaling_state": None,
-        "rotation_priority": None
+        "rotation_priority": None,
+        "triggers": {"price_trim_above": None, "price_add_below": None},
     }
-    
+
     for i, line in enumerate(lines):
         line = line.strip()
         if line == "## Style":
-            # Next non-blank, non-comment line
             for j in range(i + 1, len(lines)):
                 val = lines[j].strip()
                 if val and not val.startswith("<!--"):
                     result["style"] = val
                     break
         elif line == "## Scaling State":
-            # Extract next_step value
             for j in range(i + 1, len(lines)):
                 val = lines[j].strip()
                 if val.startswith("next_step:"):
                     result["scaling_state"] = val.replace("next_step:", "").strip()
                     break
         elif line == "## Rotation Priority":
-            # Extract priority value
             for j in range(i + 1, len(lines)):
                 val = lines[j].strip()
                 if val.startswith("priority:"):
                     result["rotation_priority"] = val.replace("priority:", "").strip()
                     break
-                    
+
+    # Extract price triggers from the ```yaml triggers: block
+    trig_match = re.search(
+        r"```yaml\s*\ntriggers:\s*\n(.*?)```",
+        content,
+        re.DOTALL,
+    )
+    if trig_match:
+        if not _YAML_AVAILABLE:
+            result["triggers"]["__parse_error__"] = "PyYAML not installed"
+        else:
+            try:
+                trig_data = _yaml.safe_load("triggers:\n" + trig_match.group(1)) or {}
+                raw = trig_data.get("triggers", {}) or {}
+                result["triggers"] = {
+                    "price_trim_above": _safe_float(raw.get("price_trim_above")),
+                    "price_add_below":  _safe_float(raw.get("price_add_below")),
+                }
+            except Exception as exc:
+                result["triggers"]["__parse_error__"] = str(exc)
+
     return result
 
 def _load_vault_document(
@@ -148,8 +188,9 @@ def _load_vault_document(
     if doc_type == "thesis":
         parsed = _parse_thesis_fields(text)
     else:
-        parsed = {"style": None, "scaling_state": None, "rotation_priority": None}
-        
+        parsed = {"style": None, "scaling_state": None, "rotation_priority": None,
+                  "triggers": {"price_trim_above": None, "price_add_below": None}}
+
     return VaultDocument(
         ticker=ticker,
         doc_type=doc_type,
@@ -161,8 +202,17 @@ def _load_vault_document(
         scaling_state=parsed["scaling_state"],
         rotation_priority=parsed["rotation_priority"],
         size_bytes=size_bytes,
-        skipped=False
+        skipped=False,
+        triggers=parsed["triggers"],
     )
+
+def _discover_vault_files() -> dict[str, list[Path]]:
+    """Scans local vault directories for relevant files."""
+    return {
+        "theses": sorted(list(THESES_DIR.glob("*_thesis.md"))),
+        "transcripts": sorted(list(TRANSCRIPTS_DIR.glob("*.md"))),
+        "research": sorted(list(RESEARCH_DIR.glob("*.md"))),
+    }
 
 def build_vault_bundle(
     ticker_list: list[str] | None = None,
@@ -186,6 +236,13 @@ def build_vault_bundle(
         # TICKER_thesis.md -> TICKER
         ticker = path.name.split("_")[0].upper()
         doc = _load_vault_document(path, "thesis", ticker)
+        
+        # Check for trigger parse errors
+        if "__parse_error__" in doc.triggers:
+            vault_skip_log.append(f"Trigger parse error in {path.name}: {doc.triggers['__parse_error__']}")
+            # Remove sentinel before bundling
+            del doc.triggers["__parse_error__"]
+
         documents.append(asdict(doc))
         if doc.skipped:
             vault_skip_log.append(f"Skipped {path.name}: over size cap")
