@@ -130,6 +130,64 @@ triggers:
     assert tsla["triggers"] == {"price_add_below": None, "price_trim_above": None}
     assert any("Trigger parse error in TSLA_thesis.md" in log for log in bundle.vault_skip_log)
 
+from core.composite_bundle import (
+    build_composite_bundle, write_composite_bundle, load_composite_bundle,
+    CompositeBundle
+)
+from core.bundle import build_bundle, write_bundle
+
+@pytest.fixture
+def mock_market_bundle(tmp_path, monkeypatch):
+    """Create a minimal market bundle."""
+    bundle_dir = tmp_path / "bundles"
+    bundle_dir.mkdir(exist_ok=True)
+    monkeypatch.setattr("core.bundle.BUNDLE_DIR", bundle_dir)
+    
+    # Create a dummy CSV for build_bundle to read
+    csv_path = tmp_path / "positions.csv"
+    csv_path.write_text("Ticker,Quantity\nAAPL,10")
+    
+    # Use real build_bundle to ensure hash matches
+    bundle = build_bundle(csv_path=csv_path, cash_manual=100.0)
+    path = write_bundle(bundle)
+    return path
+
+def test_composite_trigger_accessor(temp_vault, mock_market_bundle, monkeypatch):
+    # 1. Setup vault with AAPL triggers
+    (temp_vault["theses"] / "AAPL_thesis.md").write_text("""# AAPL
+## Quantitative Triggers
+```yaml
+triggers:
+  price_add_below: 150.0
+  price_trim_above: 200.0
+```
+""")
+    monkeypatch.setattr("core.composite_bundle.COMPOSITE_BUNDLE_DIR", temp_vault["bundles"])
+    monkeypatch.setattr("utils.sheet_readers.get_trade_log", lambda: type('obj', (object,), {'empty': True})())
+
+    vault_bundle = build_vault_bundle()
+    vault_path = write_vault_bundle(vault_bundle)
+    
+    # 2. Build composite
+    composite = build_composite_bundle(mock_market_bundle, vault_path)
+    
+    # 3. Test accessor (Populated)
+    aapl_trigs = composite.get_ticker_triggers("AAPL")
+    assert aapl_trigs == {"price_add_below": 150.0, "price_trim_above": 200.0}
+    
+    # 4. Test accessor (Missing ticker)
+    goog_trigs = composite.get_ticker_triggers("GOOG")
+    assert goog_trigs == {"price_add_below": None, "price_trim_above": None}
+    
+    # 5. Roundtrip test
+    comp_path = write_composite_bundle(composite)
+    loaded_data = load_composite_bundle(comp_path)
+    assert loaded_data["composite_hash"] == composite.composite_hash
+    
+    # Verify hash stability (composite hash should be deterministic)
+    composite2 = build_composite_bundle(mock_market_bundle, vault_path)
+    assert composite.composite_hash == composite2.composite_hash
+
 def test_vault_hash_stability(temp_vault):
     (temp_vault["theses"] / "AAPL_thesis.md").write_text("# AAPL")
     

@@ -875,6 +875,20 @@ def bundle_composite(
     table.add_row("Positions", str(composite.position_count))
     table.add_row("Vault Docs", str(composite.vault_doc_count))
     
+    # Calculate triggers coverage
+    from core.vault_bundle import load_vault_bundle
+    vault_data = load_vault_bundle(Path(composite.vault_bundle_path))
+    theses_with_triggers = 0
+    total_theses = len(composite.theses_present)
+    for doc in vault_data.get("documents", []):
+        if doc.get("doc_type") == "thesis" and doc.get("thesis_present"):
+            trigs = doc.get("triggers", {})
+            if trigs.get("price_trim_above") is not None or trigs.get("price_add_below") is not None:
+                theses_with_triggers += 1
+    
+    trigger_color = "green" if theses_with_triggers == total_theses and total_theses > 0 else ("yellow" if theses_with_triggers > 0 else "red")
+    table.add_row("Price Triggers", f"[{trigger_color}]{theses_with_triggers} / {total_theses} theses populated[/]")
+
     missing_style = "yellow" if composite.theses_missing else "white"
     table.add_row("Theses Missing", f"[{missing_style}]{len(composite.theses_missing)}[/]")
     

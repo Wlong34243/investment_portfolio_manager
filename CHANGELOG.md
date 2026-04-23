@@ -1,5 +1,20 @@
 # Changelog
 
+## [2026-04-23] Phase 2.2 — Propagate price triggers through composite bundle
+
+### Added
+- **`core/composite_bundle.py`**:
+    - Added `get_ticker_triggers(ticker)` accessor to `CompositeBundle` class.
+    - Implemented lazy-loading of vault bundle data into an internal `_vault_data` cache to source triggers without data duplication in the serialized composite artifact.
+    - Returns `{"price_trim_above": float|None, "price_add_below": float|None}` for any ticker, handling missing theses gracefully.
+- **`manager.py bundle composite`**:
+    - Added "Price Triggers" coverage row to the summary table, matching the "Price Triggers" row in `vault snapshot`.
+- **`tests/test_vault_bundle_smoke.py`**:
+    - Added `test_composite_trigger_accessor` to verify trigger propagation from vault to composite via the new accessor.
+
+### Changed
+- **`core/composite_bundle.py`**: Added `dataclasses.field` to support internal non-serialized cache.
+
 ## [2026-04-23] Phase 2.1 — Extract price triggers into vault bundle
 
 ### Added

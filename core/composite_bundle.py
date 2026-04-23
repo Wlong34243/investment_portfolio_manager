@@ -13,7 +13,7 @@ raises ValueError before writing anything.
 
 import hashlib
 import json
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, field
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -38,6 +38,36 @@ class CompositeBundle:
     theses_present: list[str]
     theses_missing: list[str]
     recent_rotations: list[dict] # From Trade_Log Sheet tab
+    
+    # Internal cache for resolved sub-bundles (not serialized)
+    _market_data: dict = field(default_factory=dict, repr=False)
+    _vault_data: dict = field(default_factory=dict, repr=False)
+
+    def get_ticker_triggers(self, ticker: str) -> dict[str, float | None]:
+        """
+        Per-ticker accessor for price triggers.
+        Returns {"price_trim_above": float|None, "price_add_below": float|None}.
+        Sourced from the vault bundle. Returns nulls if ticker or thesis missing.
+        """
+        if not self._vault_data:
+            # Lazy load if needed (though build/load should have populated it)
+            try:
+                self._vault_data = load_vault_bundle(Path(self.vault_bundle_path))
+            except Exception:
+                import logging
+                logging.debug(f"Could not load vault data for trigger lookup: {ticker}")
+                return {"price_trim_above": None, "price_add_below": None}
+
+        ticker_upper = ticker.upper()
+        for doc in self._vault_data.get("documents", []):
+            if doc.get("doc_type") == "thesis" and doc.get("ticker") == ticker_upper:
+                trigs = doc.get("triggers", {})
+                return {
+                    "price_trim_above": trigs.get("price_trim_above"),
+                    "price_add_below": trigs.get("price_add_below")
+                }
+        
+        return {"price_trim_above": None, "price_add_below": None}
 
 def _composite_hash(market_hash: str, vault_hash: str, recent_rotations: list[dict] = None) -> str:
     """Compute SHA256 hex digest of (market_hash + vault_hash + rotations)."""
