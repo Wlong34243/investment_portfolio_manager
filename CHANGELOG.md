@@ -1,5 +1,23 @@
 # Changelog
 
+## [2026-04-24] Phase 2.4 — Conditional formatting for thesis action zones
+
+### Added
+- **`tasks/format_sheets_dashboard_v2.py`**:
+    - Added two CUSTOM_FORMULA conditional formatting rules to `Valuation_Card` (Price=E) and `Decision_View` (Price=F):
+        - **Trim zone** (red): price cell turns bold + `COLOR_RED_LIGHT` bg + `COLOR_RED_DARK` text when `Price >= Trim Target` and Trim Target is populated.
+        - **Add zone** (green): price cell turns bold + `COLOR_GREEN_LIGHT` bg + `COLOR_GREEN_DARK` text when `Price <= Add Target` and Add Target is populated.
+    - Rules use existing palette constants — no new hex codes introduced.
+    - Idempotent: `rules.clear()` + full re-add on every run prevents rule accumulation.
+
+### Fixed
+- **`tasks/format_sheets_dashboard_v2.py`**:
+    - Corrected stale column letter references in `format_valuation_card` that predated the Phase 2.3 column insertions (Price/Trim Target/Add Target shifted columns H onward by 3).
+    - Updated `format_decision_view` column widths and header range from pre-2.3 10-column layout to post-2.3 13-column layout (A–M).
+    - Fixed percent-format columns in `Valuation_Card` to M/N/P/Q/R/U/V (were K/L/N/O/P/S/T).
+    - Fixed P/E and PEG conditional rules to H/L (were F/J).
+    - Fixed 52w Position % gradient to U (was S), Discount to V (was T).
+
 ## [2026-04-23] Phase 2.3 — Surface Trim Target / Add Target on dashboard
 
 ### Added

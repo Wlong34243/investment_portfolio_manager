@@ -173,40 +173,61 @@ def format_valuation_card(spreadsheet) -> None:
     try:
         ws = spreadsheet.worksheet(tab_name)
         
-        # Updated to cover A through W based on the actual CSV headers
+        # Post-2.3 layout (A–Y, 25 cols):
+        # Ticker(A), Name(B), Sector(C), MarketCap(D), Price(E),
+        # Trim Target(F), Add Target(G), TrailingPE(H), FwdPE_FMP(I), FwdPE_yf(J),
+        # PB(K), PEG(L), GrossMargin(M), ROIC(N), DE(O), RevGrowth(P),
+        # DivYield(Q), PayoutRatio(R), 52wLow(S), 52wHigh(T),
+        # 52wPos%(U), Discount%(V), ValSignal(W), FMP_Avail(X), LastUpdated(Y)
         widths = [
-            ("A", 70), ("B", 180), ("C", 110), ("D", 90), ("E", 75), ("F", 80), 
-            ("G", 80), ("H", 80), ("I", 70), ("J", 70), ("K", 90), ("L", 90), 
-            ("M", 70), ("N", 90), ("O", 80), ("P", 80), ("Q", 70), ("R", 70),
-            ("S", 100), ("T", 100), ("U", 110), ("V", 100), ("W", 120)
+            ("A", 70),  ("B", 180), ("C", 110), ("D", 90),  ("E", 80),
+            ("F", 90),  ("G", 90),  ("H", 80),  ("I", 90),  ("J", 90),
+            ("K", 70),  ("L", 70),  ("M", 90),  ("N", 90),  ("O", 70),
+            ("P", 90),  ("Q", 80),  ("R", 80),  ("S", 80),  ("T", 80),
+            ("U", 110), ("V", 110), ("W", 120), ("X", 80),  ("Y", 120),
         ]
         safe_api_call(set_column_widths, ws, widths)
-        format_standard_table(ws, header_range="A1:W1", header_row=1, data_start=2, data_end=MAX_DATA_ROWS)
+        format_standard_table(ws, header_range="A1:Y1", header_row=1, data_start=2, data_end=MAX_DATA_ROWS)
         
-        # Apply strict Percentage Number Formatting to correct columns
+        # Percentage columns — letters reflect post-2.3 layout
+        # (Price=E, Trim=F, Add=G shifted H onward by 3 vs pre-2.3)
+        # Gross Margin(M), ROIC(N), Rev Growth(P), Div Yield(Q), Payout Ratio(R), 52w Pos(U), Discount(V)
         pct_fmt = CellFormat(numberFormat=NumberFormat(type="PERCENT", pattern="0.00%"))
-        # Gross Margin(K), ROIC(L), Rev Growth(N), Div Yield(O), Payout Ratio(P), 52w Pos(S), Discount(T)
-        for col in ["K", "L", "N", "O", "P", "S", "T"]:
+        for col in ["M", "N", "P", "Q", "R", "U", "V"]:
             safe_format(ws, f"{col}2:{col}{MAX_DATA_ROWS}", pct_fmt)
 
         rules = safe_api_call(get_conditional_format_rules, ws)
         rules.clear()
         
-        # 52w Position % (Column S)
-        rules.append(build_gradient_rule(ws, f"S2:S{MAX_DATA_ROWS}", COLOR_RED_DARK, COLOR_WHITE, COLOR_GREEN_DARK))
-        
-        # Discount from 52w High % (Column T)
-        rules.append(build_boolean_rule(ws, f"T2:T{MAX_DATA_ROWS}", "NUMBER_GREATER", ["0.30"], bg_color=COLOR_GREEN_LIGHT))
-        rules.append(build_boolean_rule(ws, f"T2:T{MAX_DATA_ROWS}", "NUMBER_LESS", ["0.10"], bg_color=COLOR_RED_LIGHT))
-        
-        # Trailing P/E (Column F)
-        rules.append(build_boolean_rule(ws, f"F2:F{MAX_DATA_ROWS}", "NUMBER_GREATER", ["40"], bg_color=COLOR_RED_LIGHT))
-        rules.append(build_boolean_rule(ws, f"F2:F{MAX_DATA_ROWS}", "NUMBER_LESS", ["15"], bg_color=COLOR_GREEN_LIGHT))
-        
-        # PEG (Column J)
-        rules.append(build_boolean_rule(ws, f"J2:J{MAX_DATA_ROWS}", "NUMBER_GREATER", ["2"], bg_color=COLOR_RED_LIGHT))
-        rules.append(build_boolean_rule(ws, f"J2:J{MAX_DATA_ROWS}", "NUMBER_LESS", ["1"], bg_color=COLOR_GREEN_LIGHT))
-        
+        # 52w Position % (Column U — shifted after Price/Trim/Add insertion in 2.3)
+        rules.append(build_gradient_rule(ws, f"U2:U{MAX_DATA_ROWS}", COLOR_RED_DARK, COLOR_WHITE, COLOR_GREEN_DARK))
+
+        # Discount from 52w High % (Column V)
+        rules.append(build_boolean_rule(ws, f"V2:V{MAX_DATA_ROWS}", "NUMBER_GREATER", ["0.30"], bg_color=COLOR_GREEN_LIGHT))
+        rules.append(build_boolean_rule(ws, f"V2:V{MAX_DATA_ROWS}", "NUMBER_LESS", ["0.10"], bg_color=COLOR_RED_LIGHT))
+
+        # Trailing P/E (Column H — shifted)
+        rules.append(build_boolean_rule(ws, f"H2:H{MAX_DATA_ROWS}", "NUMBER_GREATER", ["40"], bg_color=COLOR_RED_LIGHT))
+        rules.append(build_boolean_rule(ws, f"H2:H{MAX_DATA_ROWS}", "NUMBER_LESS", ["15"], bg_color=COLOR_GREEN_LIGHT))
+
+        # PEG (Column L — shifted)
+        rules.append(build_boolean_rule(ws, f"L2:L{MAX_DATA_ROWS}", "NUMBER_GREATER", ["2"], bg_color=COLOR_RED_LIGHT))
+        rules.append(build_boolean_rule(ws, f"L2:L{MAX_DATA_ROWS}", "NUMBER_LESS", ["1"], bg_color=COLOR_GREEN_LIGHT))
+
+        # Phase 2.4 — Price trigger action zones (Price=E, Trim Target=F, Add Target=G)
+        # Trim zone: price has reached or exceeded Bill's trim target → bold red
+        rules.append(build_boolean_rule(
+            ws, f"E2:E{MAX_DATA_ROWS}", "CUSTOM_FORMULA",
+            [f"=AND(E2<>\"\",F2<>\"\",E2>=F2)"],
+            bg_color=COLOR_RED_LIGHT, text_color=COLOR_RED_DARK, bold=True,
+        ))
+        # Add zone: price has dropped to or below Bill's add target → bold green
+        rules.append(build_boolean_rule(
+            ws, f"E2:E{MAX_DATA_ROWS}", "CUSTOM_FORMULA",
+            [f"=AND(E2<>\"\",G2<>\"\",E2<=G2)"],
+            bg_color=COLOR_GREEN_LIGHT, text_color=COLOR_GREEN_DARK, bold=True,
+        ))
+
         save_rules(ws, rules)
         print(f"  ✓ formatted {tab_name}")
     except Exception as e:
@@ -219,21 +240,24 @@ def format_decision_view(spreadsheet) -> None:
     try:
         ws = spreadsheet.worksheet(tab_name)
         
-        # Assuming 10 columns now: Ticker(A), Weight(B), MV(C), UGL%(D), DayChg%(E), 
-        # FwdPE(F), 52wPos%(G), Disc(H), ValSignal(I), Rationale(J)
+        # Post-2.3 layout (13 cols):
+        # Ticker(A), Weight%(B), MV(C), UGL%(D), DayChg%(E),
+        # Price(F), Trim Target(G), Add Target(H), FwdPE(I),
+        # 52wPos%(J), Disc%(K), ValSignal(L), Rationale(M)
         widths = [
             ("A", 70), ("B", 70), ("C", 110), ("D", 100), ("E", 90),
-            ("F", 80), ("G", 100), ("H", 110), ("I", 120), ("J", 500)
+            ("F", 90), ("G", 100), ("H", 100), ("I", 80),
+            ("J", 100), ("K", 110), ("L", 120), ("M", 400),
         ]
         safe_api_call(set_column_widths, ws, widths)
-        format_standard_table(ws, header_range="A1:J1", header_row=1, data_start=2, data_end=MAX_DATA_ROWS)
-        
+        format_standard_table(ws, header_range="A1:M1", header_row=1, data_start=2, data_end=MAX_DATA_ROWS)
+
         safe_api_call(set_row_height, ws, f"2:{MAX_DATA_ROWS}", 60)
-        safe_format(ws, f"A2:J{MAX_DATA_ROWS}", CellFormat(wrapStrategy="WRAP", verticalAlignment="MIDDLE"))
-        
-        # Percentage formats
+        safe_format(ws, f"A2:M{MAX_DATA_ROWS}", CellFormat(wrapStrategy="WRAP", verticalAlignment="MIDDLE"))
+
+        # Percentage formats — Weight%(B), UGL%(D), DayChg%(E), 52wPos%(J), Disc%(K)
         pct_fmt = CellFormat(wrapStrategy="WRAP", verticalAlignment="MIDDLE", numberFormat=NumberFormat(type="PERCENT", pattern="0.00%"))
-        for col in ["B", "D", "E", "G", "H"]:
+        for col in ["B", "D", "E", "J", "K"]:
             safe_format(ws, f"{col}2:{col}{MAX_DATA_ROWS}", pct_fmt)
 
         rules = safe_api_call(get_conditional_format_rules, ws)
@@ -247,10 +271,24 @@ def format_decision_view(spreadsheet) -> None:
         # Unreal G/L % (Column D)
         rules.append(build_boolean_rule(ws, f"D2:D{MAX_DATA_ROWS}", "NUMBER_GREATER", ["0"], text_color=COLOR_GREEN_DARK))
         rules.append(build_boolean_rule(ws, f"D2:D{MAX_DATA_ROWS}", "NUMBER_LESS", ["0"], text_color=COLOR_RED_DARK))
-        
-        # 52w Pos % (Column G)
-        rules.append(build_gradient_rule(ws, f"G2:G{MAX_DATA_ROWS}", COLOR_GREEN_DARK, COLOR_WHITE, COLOR_RED_DARK))
-        
+
+        # 52w Pos % (Column J — post-2.3 layout)
+        rules.append(build_gradient_rule(ws, f"J2:J{MAX_DATA_ROWS}", COLOR_GREEN_DARK, COLOR_WHITE, COLOR_RED_DARK))
+
+        # Phase 2.4 — Price trigger action zones (Price=F, Trim Target=G, Add Target=H)
+        # Trim zone: price has reached or exceeded Bill's trim target → bold red
+        rules.append(build_boolean_rule(
+            ws, f"F2:F{MAX_DATA_ROWS}", "CUSTOM_FORMULA",
+            [f"=AND(F2<>\"\",G2<>\"\",F2>=G2)"],
+            bg_color=COLOR_RED_LIGHT, text_color=COLOR_RED_DARK, bold=True,
+        ))
+        # Add zone: price has dropped to or below Bill's add target → bold green
+        rules.append(build_boolean_rule(
+            ws, f"F2:F{MAX_DATA_ROWS}", "CUSTOM_FORMULA",
+            [f"=AND(F2<>\"\",H2<>\"\",F2<=H2)"],
+            bg_color=COLOR_GREEN_LIGHT, text_color=COLOR_GREEN_DARK, bold=True,
+        ))
+
         save_rules(ws, rules)
         print(f"  ✓ formatted {tab_name}")
     except Exception as e:
