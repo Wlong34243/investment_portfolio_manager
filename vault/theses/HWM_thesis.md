@@ -1,11 +1,14 @@
 ---
 ticker: HWM
-style: 
-framework_preference: 
-entry_date:
-last_reviewed:
+style: GARP
+framework_preference: null
+entry_date: null
+last_reviewed: '2026-05-03'
+triggers:
+  price_trim_above: 266.89
+cost_basis: 4527.71
+current_allocation: 0.66%
 ---
-
 # HWM — Investment Thesis
 
 ## Style
@@ -41,3 +44,28 @@ priority: low
 
 ## Review Log
 - 2026-04: Initiated. Thesis intact. Monitoring Boeing build rates, commercial airline passenger volumes, and aftermarket margin expansion.
+
+<!-- region:position_state -->
+**Current Allocation:** 0.66%
+**Cost Basis:** $4,527.71
+<!-- endregion:position_state -->
+
+<!-- region:sizing -->
+**Style:** GARP
+**Size Ceiling:** 9.00%
+**Drift:** -8.34%
+<!-- endregion:sizing -->
+
+<!-- region:transaction_log -->
+- 2026-04-22: Buy 4.0 @ $237.59
+- 2026-04-21: Buy 5.0 @ $246.68
+- 2026-04-07: Buy 10.0 @ $234.40
+<!-- endregion:transaction_log -->
+
+<!-- region:realized_gl -->
+No realized G/L history.
+<!-- endregion:realized_gl -->
+
+<!-- region:change_log -->
+2026-05-03 14:58: Auto-sync allocation 0.66%, drift -8.34%
+<!-- endregion:change_log -->

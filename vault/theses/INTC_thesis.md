@@ -1,11 +1,14 @@
 ---
 ticker: INTC
-style: 
-framework_preference: 
-entry_date:
-last_reviewed:
+style: THEME
+framework_preference: null
+entry_date: null
+last_reviewed: '2026-05-03'
+triggers:
+  price_trim_above: 82.00
+cost_basis: 443.67
+current_allocation: 14.47%
 ---
-
 # INTC — Investment Thesis
 
 ## Style
@@ -41,3 +44,30 @@ priority: high (requires intense monitoring of quarterly gross margins and found
 
 ## Review Log
 - 2026-04: Initiated. Thesis intact but under pressure. Monitoring 18A execution, CHIPS Act funding dispersal, and data center market share.
+
+<!-- region:position_state -->
+**Current Allocation:** 14.47%
+**Cost Basis:** $443.67
+<!-- endregion:position_state -->
+
+<!-- region:sizing -->
+**Style:** THEME
+**Size Ceiling:** 3.00%
+**Drift:** +11.47%
+<!-- endregion:sizing -->
+
+<!-- region:transaction_log -->
+- 2026-04-24: Sell -50.0 @ $80.97
+- 2026-03-17: Buy 10.0 @ $44.37
+- 2026-03-17: Buy 10.0 @ $45.09
+- 2026-03-13: Buy 10.0 @ $45.89
+- 2026-03-12: Buy 15.0 @ $45.52
+<!-- endregion:transaction_log -->
+
+<!-- region:realized_gl -->
+Total Realized G/L: $-48.00 over 2 closed lots. Total Proceeds: $1,067.00.
+<!-- endregion:realized_gl -->
+
+<!-- region:change_log -->
+2026-05-03 14:58: Auto-sync allocation 14.47%, drift +11.47%
+<!-- endregion:change_log -->

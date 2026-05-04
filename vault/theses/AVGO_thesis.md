@@ -1,11 +1,14 @@
 ---
 ticker: AVGO
-style: 
-framework_preference: 
-entry_date:
-last_reviewed:
+style: GARP
+framework_preference: null
+entry_date: null
+last_reviewed: '2026-05-03'
+triggers:
+  price_trim_above: 195.00
+cost_basis: 8891.31
+current_allocation: 1.83%
 ---
-
 # AVGO — Investment Thesis
 
 ## Style
@@ -41,3 +44,27 @@ priority: medium
 
 ## Review Log
 - 2026-04: Initiated. Thesis intact. Monitoring VMware subscription transition progress, Custom ASIC revenue growth, and debt paydown pace.
+
+<!-- region:position_state -->
+**Current Allocation:** 1.83%
+**Cost Basis:** $8,891.31
+<!-- endregion:position_state -->
+
+<!-- region:sizing -->
+**Style:** GARP
+**Size Ceiling:** 9.00%
+**Drift:** -7.17%
+<!-- endregion:sizing -->
+
+<!-- region:transaction_log -->
+- 2026-04-10: Buy 5.0 @ $371.55
+- 2026-04-09: Buy 10.0 @ $354.87
+<!-- endregion:transaction_log -->
+
+<!-- region:realized_gl -->
+No realized G/L history.
+<!-- endregion:realized_gl -->
+
+<!-- region:change_log -->
+2026-05-03 14:58: Auto-sync allocation 1.83%, drift -7.17%
+<!-- endregion:change_log -->

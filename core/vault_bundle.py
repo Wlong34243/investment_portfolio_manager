@@ -138,25 +138,40 @@ def _parse_thesis_fields(content: str) -> dict:
                     result["rotation_priority"] = val.replace("priority:", "").strip()
                     break
 
-    # Extract price triggers from the ```yaml triggers: block
+    if not _YAML_AVAILABLE:
+        return result
+
+    # Strategy 1: fenced ```yaml triggers: block (canonical add-thesis template)
     trig_match = re.search(
         r"```yaml\s*\ntriggers:\s*\n(.*?)```",
         content,
         re.DOTALL,
     )
     if trig_match:
-        if not _YAML_AVAILABLE:
-            result["triggers"]["__parse_error__"] = "PyYAML not installed"
-        else:
-            try:
-                trig_data = _yaml.safe_load("triggers:\n" + trig_match.group(1)) or {}
-                raw = trig_data.get("triggers", {}) or {}
+        try:
+            trig_data = _yaml.safe_load("triggers:\n" + trig_match.group(1)) or {}
+            raw = trig_data.get("triggers", {}) or {}
+            result["triggers"] = {
+                "price_trim_above": _safe_float(raw.get("price_trim_above")),
+                "price_add_below":  _safe_float(raw.get("price_add_below")),
+            }
+        except Exception as exc:
+            result["triggers"]["__parse_error__"] = str(exc)
+        return result
+
+    # Strategy 2: triggers nested inside frontmatter YAML (older thesis format)
+    fm_match = re.match(r"^---\n(.*?)\n---", content, re.DOTALL)
+    if fm_match:
+        try:
+            fm_data = _yaml.safe_load(fm_match.group(1)) or {}
+            raw = fm_data.get("triggers", {}) or {}
+            if raw:
                 result["triggers"] = {
                     "price_trim_above": _safe_float(raw.get("price_trim_above")),
                     "price_add_below":  _safe_float(raw.get("price_add_below")),
                 }
-            except Exception as exc:
-                result["triggers"]["__parse_error__"] = str(exc)
+        except Exception as exc:
+            result["triggers"]["__parse_error__"] = str(exc)
 
     return result
 

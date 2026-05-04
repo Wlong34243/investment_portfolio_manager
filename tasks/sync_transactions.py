@@ -239,12 +239,80 @@ def sync_transactions(days: int = 90, live: bool = False, reconcile: bool = Fals
     return True
 
 
+def clean_junk_tickers(live: bool = False) -> bool:
+    """
+    Remove rows from the Transactions sheet where Ticker is CURRENCY_USD, USD,
+    or other known non-ticker placeholders written by older code versions.
+
+    Reads all rows, filters junk, rewrites in a single batch (archive-before-overwrite).
+    With live=False: prints a dry-run summary only.
+    """
+    JUNK_TICKERS = {"CURRENCY_USD", "USD", ""}
+
+    print("--- Clean Junk Tickers (Transactions tab) ---")
+    gc = get_gspread_client()
+    ss = gc.open_by_key(config.PORTFOLIO_SHEET_ID)
+    ws = ss.worksheet(config.TAB_TRANSACTIONS)
+
+    all_values = ws.get_all_values()
+    if not all_values or len(all_values) < 2:
+        print("Sheet is empty — nothing to clean.")
+        return True
+
+    headers = all_values[0]
+    rows = all_values[1:]
+
+    try:
+        ticker_col = headers.index("Ticker")
+    except ValueError:
+        print("ERROR: 'Ticker' column not found in sheet headers.")
+        return False
+
+    clean_rows = [r for r in rows if r[ticker_col] not in JUNK_TICKERS]
+    junk_rows  = [r for r in rows if r[ticker_col] in JUNK_TICKERS]
+
+    print(f"  Total rows:   {len(rows)}")
+    print(f"  Junk rows:    {len(junk_rows)}  (ticker in {JUNK_TICKERS})")
+    print(f"  Clean rows:   {len(clean_rows)}")
+
+    if not junk_rows:
+        print("✅ No junk ticker rows found.")
+        return True
+
+    if not live:
+        print("\n--- DRY RUN --- Pass --clean --live to apply.")
+        print("Sample junk rows (first 10):")
+        for r in junk_rows[:10]:
+            print("  ", r[:5])
+        return True
+
+    # Archive existing sheet to a backup tab before overwriting
+    import time as _time
+    from datetime import datetime as _dt
+    archive_tab = f"Transactions_Archive_{_dt.now().strftime('%Y%m%d_%H%M%S')}"
+    ws_arc = ss.add_worksheet(title=archive_tab, rows=len(rows) + 10, cols=len(headers))
+    _time.sleep(1)
+    ws_arc.update(range_name="A1", values=[headers] + rows, value_input_option="USER_ENTERED")
+    print(f"  Archived {len(rows)} rows → '{archive_tab}'")
+    _time.sleep(1)
+
+    ws.clear()
+    _time.sleep(1)
+    ws.update(range_name="A1", values=[headers] + clean_rows, value_input_option="USER_ENTERED")
+    print(f"✅ Rewrote {len(clean_rows)} clean rows. Removed {len(junk_rows)} junk rows.")
+    return True
+
+
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description="Sync Schwab Transactions")
     parser.add_argument("--days", type=int, default=90, help="Number of days to fetch")
     parser.add_argument("--live", action="store_true", help="Perform live sheet write")
     parser.add_argument("--reconcile", action="store_true", help="Diff-only mode, no writes")
+    parser.add_argument("--clean", action="store_true", help="Remove CURRENCY_USD junk rows from the sheet")
     args = parser.parse_args()
 
-    sync_transactions(days=args.days, live=args.live, reconcile=args.reconcile)
+    if args.clean:
+        clean_junk_tickers(live=args.live)
+    else:
+        sync_transactions(days=args.days, live=args.live, reconcile=args.reconcile)

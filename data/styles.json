@@ -1,0 +1,18 @@
+{
+  "GARP": {
+    "size_ceiling_pct": 9.0,
+    "description": "Growth at a Reasonable Price"
+  },
+  "THEME": {
+    "size_ceiling_pct": 3.0,
+    "description": "Thematic Specialists"
+  },
+  "FUND": {
+    "size_ceiling_pct": 5.0,
+    "description": "Boring Fundamentals"
+  },
+  "ETF": {
+    "size_ceiling_pct": 8.0,
+    "description": "Sector/Thematic ETFs"
+  }
+}

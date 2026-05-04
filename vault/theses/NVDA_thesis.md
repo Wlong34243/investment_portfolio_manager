@@ -1,11 +1,14 @@
 ---
 ticker: NVDA
-style: 
-framework_preference: 
-entry_date:
-last_reviewed:
+style: GARP
+framework_preference: null
+entry_date: null
+last_reviewed: '2026-05-03'
+triggers:
+  price_trim_above: 265.00
+cost_basis: 11890.5
+current_allocation: 2.10%
 ---
-
 # NVDA — Investment Thesis
 
 ## Style
@@ -41,3 +44,28 @@ priority: low
 
 ## Review Log
 - 2026-04: Initiated. Thesis intact. Monitoring Blackwell architecture deployment, hyperscaler CapEx guidance, and gross margin resilience.
+
+<!-- region:position_state -->
+**Current Allocation:** 2.10%
+**Cost Basis:** $11,890.50
+<!-- endregion:position_state -->
+
+<!-- region:sizing -->
+**Style:** GARP
+**Size Ceiling:** 9.00%
+**Drift:** -6.90%
+<!-- endregion:sizing -->
+
+<!-- region:transaction_log -->
+- 2026-03-17: Buy 5.0 @ $183.22
+- 2026-03-17: Buy 10.0 @ $183.13
+- 2026-01-23: Buy 5.0 @ $186.94
+<!-- endregion:transaction_log -->
+
+<!-- region:realized_gl -->
+No realized G/L history.
+<!-- endregion:realized_gl -->
+
+<!-- region:change_log -->
+2026-05-03 14:58: Auto-sync allocation 2.10%, drift -6.90%
+<!-- endregion:change_log -->

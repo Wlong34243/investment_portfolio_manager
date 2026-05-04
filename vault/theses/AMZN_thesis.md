@@ -1,25 +1,24 @@
 ---
 ticker: COF
-style: GARP / Financial Compounder
+style: GARP
 framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: 2026-04-20
-current_allocation: 4.7%
-cost_basis: 220.37
+last_reviewed: '2026-05-03'
+current_allocation: 5.24%
+cost_basis: 30572.04
 time_horizon: 3 to 5 years
 triggers:
   fwd_pe_add_below: 9                # add when market prices in "credit disaster"
   fwd_pe_trim_above: 13              # trim when network + cycle optimism fully priced
   fwd_pe_historical_median: null
   price_add_below: 200               # reload if selloff is macro/credit, not execution failure
-  price_trim_above: 260              # reconsider size as network rerating plays out
+  price_trim_above: 245.00              # reconsider size as network rerating plays out
   discount_from_52w_high_add: null
   revenue_growth_floor_pct: 5        # mature financial; focus is EPS & ROE, not topline sprint
   operating_margin_floor_pct: null   # monitor ROE and efficiency ratio instead
   style_size_ceiling_pct: 7.0        # cyclicality + regulatory + integration risk
   current_weight_pct: null
 ---
-
 # COF — Investment Thesis
 
 ## Core Thesis (Network Pivot & Transformation View)
@@ -70,3 +69,30 @@ I will exit or materially cut the position if the **structural** elements of the
 2. Management indicates material delays, cost overruns, or architectural roadblocks in moving COF’s portfolios onto the Discover network, calling into question the synergy and network‑economics thesis.[file:2]  
 3. The CFPB or lawmakers implement draconian caps on interchange or card APRs that structurally impair the new network‑centric business model.[file:2]  
 4. A clearly superior risk‑adjusted opportunity in financials or payments emerges, where capital can earn a higher through‑the‑cycle IRR with less integration and regulatory complexity.[file:2]  
+
+<!-- region:position_state -->
+**Current Allocation:** 5.24%
+**Cost Basis:** $30,572.04
+<!-- endregion:position_state -->
+
+<!-- region:sizing -->
+**Style:** GARP
+**Size Ceiling:** 9.00%
+**Drift:** -3.76%
+<!-- endregion:sizing -->
+
+<!-- region:transaction_log -->
+- 2026-04-15: Buy 5.0 @ $247.57
+- 2026-02-09: Buy 5.0 @ $207.14
+- 2026-02-06: Buy 5.0 @ $207.85
+- 2026-02-06: Buy 3.0 @ $205.12
+- 2026-02-05: Buy 3.0 @ $222.26
+<!-- endregion:transaction_log -->
+
+<!-- region:realized_gl -->
+No realized G/L history.
+<!-- endregion:realized_gl -->
+
+<!-- region:change_log -->
+2026-05-03 14:58: Auto-sync allocation 5.24%, drift -3.76%
+<!-- endregion:change_log -->

@@ -36,3 +36,24 @@ bundles/
 data/fmp_cache/
 
 Books/
+
+# Phase 4 Exports
+exports/
+
+# Podcast bundles — transient convenience artifacts, not committed
+data/podcast_bundles/
+
+# Vault thesis backups — archive-before-overwrite artifacts, regenerable
+vault/theses/*.bak.*
+
+# Excel files
+*.xlsx
+
+# Build artifacts
+*.egg-info/
+
+# One-off audit artifacts
+audit_results.txt
+
+# Podcast transcripts — large data files, not committed
+data/podcast_transcripts/

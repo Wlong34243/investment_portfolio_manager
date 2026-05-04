@@ -1,11 +1,11 @@
 ---
 ticker: IGV
-style: Thematic Growth / SaaS & Enterprise Software Compounder
+style: ETF
 framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: 2026-04-20
-current_allocation: 3.0%
-cost_basis: 84.13
+last_reviewed: '2026-05-03'
+current_allocation: 2.36%
+cost_basis: 15855.4
 time_horizon: 3 to 5 years
 triggers:
   fwd_pe_add_below: null          # ETF; use macro/sector signals instead of PE
@@ -19,7 +19,6 @@ triggers:
   style_size_ceiling_pct: 5.0     # cap SaaS basket size; rest handled via core names (MSFT, etc.)
   current_weight_pct: 3.0
 ---
-
 # IGV — Investment Thesis
 
 ## Core Thesis (Post‑Slaughter SaaS Basket)
@@ -64,3 +63,30 @@ I’ll consider exiting or cutting IGV if:[file:26]
 2. A major, prolonged recession forces multi‑year IT budget shrinkage and aggressive vendor consolidation, with top holdings showing weakening retention and growth.[file:26]  
 3. Valuations return to late‑90s‑style euphoria, where price clearly decouples from realistic cash‑flow growth.  
 4. I can build a higher‑conviction basket of specific software/AI applications (e.g., MSFT, NOW, CRWD) at attractive valuations, making IGV redundant as a broad proxy.  
+
+<!-- region:position_state -->
+**Current Allocation:** 2.36%
+**Cost Basis:** $15,855.40
+<!-- endregion:position_state -->
+
+<!-- region:sizing -->
+**Style:** ETF
+**Size Ceiling:** 8.00%
+**Drift:** -5.64%
+<!-- endregion:sizing -->
+
+<!-- region:transaction_log -->
+- 2026-04-30: Sell -10.0 @ $83.47
+- 2026-04-30: Sell -10.0 @ $83.73
+- 2026-04-20: Sell -25.0 @ $85.33
+- 2026-04-16: Buy 15.0 @ $84.11
+- 2026-04-15: Buy 50.0 @ $82.48
+<!-- endregion:transaction_log -->
+
+<!-- region:realized_gl -->
+Total Realized G/L: $-563.00 over 14 closed lots. Total Proceeds: $16,609.00.
+<!-- endregion:realized_gl -->
+
+<!-- region:change_log -->
+2026-05-03 14:58: Auto-sync allocation 2.36%, drift -5.64%
+<!-- endregion:change_log -->

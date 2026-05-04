@@ -109,7 +109,7 @@ def build_composite_bundle(
     # 4. Extract metadata
     timestamp_utc = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     
-    return CompositeBundle(
+    cb = CompositeBundle(
         composite_schema_version=COMPOSITE_SCHEMA_VERSION,
         timestamp_utc=timestamp_utc,
         composite_hash=comp_hash,
@@ -121,8 +121,12 @@ def build_composite_bundle(
         vault_doc_count=vault_data["vault_doc_count"],
         theses_present=vault_data["theses_present"],
         theses_missing=vault_data["theses_missing"],
-        recent_rotations=recent_rotations
+        recent_rotations=recent_rotations,
     )
+    # Pre-populate caches so get_ticker_triggers() never re-reads from disk
+    cb._vault_data = vault_data
+    cb._market_data = market_data
+    return cb
 
 def write_composite_bundle(bundle: CompositeBundle) -> Path:
     """Writes the composite bundle to COMPOSITE_BUNDLE_DIR as a JSON file."""

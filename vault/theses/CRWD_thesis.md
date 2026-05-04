@@ -1,11 +1,14 @@
 ---
 ticker: CRWD
-style: 
-framework_preference: 
-entry_date:
-last_reviewed:
+style: GARP
+framework_preference: null
+entry_date: null
+last_reviewed: '2026-05-03'
+triggers:
+  price_trim_above: 430.00
+cost_basis: 7564.41
+current_allocation: 1.06%
 ---
-
 # CRWD — Investment Thesis
 
 ## Style
@@ -41,3 +44,27 @@ priority: low
 
 ## Review Log
 - 2026-04: Initiated. Thesis intact. Monitoring Net New ARR, module adoption rates (deals with 5+ modules), and free cash flow margins.
+
+<!-- region:position_state -->
+**Current Allocation:** 1.06%
+**Cost Basis:** $7,564.41
+<!-- endregion:position_state -->
+
+<!-- region:sizing -->
+**Style:** GARP
+**Size Ceiling:** 9.00%
+**Drift:** -7.94%
+<!-- endregion:sizing -->
+
+<!-- region:transaction_log -->
+- 2026-04-16: Buy 5.0 @ $414.78
+- 2026-03-20: Buy 2.0 @ $413.00
+<!-- endregion:transaction_log -->
+
+<!-- region:realized_gl -->
+No realized G/L history.
+<!-- endregion:realized_gl -->
+
+<!-- region:change_log -->
+2026-05-03 14:58: Auto-sync allocation 1.06%, drift -7.94%
+<!-- endregion:change_log -->

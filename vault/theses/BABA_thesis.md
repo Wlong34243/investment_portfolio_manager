@@ -1,25 +1,24 @@
 ---
 ticker: BABA
-style: Deep Value / Contrarian Turnaround (High China Risk)
+style: THEME
 framework_preference: lynch_garp_v1, psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: 2026-04-20
-current_allocation: 1.8%
-cost_basis: 117.43
+last_reviewed: '2026-05-03'
+current_allocation: 1.24%
+cost_basis: 7989.7
 time_horizon: 3 to 5 years (but with tight risk guardrails)
 triggers:
   fwd_pe_add_below: 8                # add only if China risk is priced as "uninvestable"
   fwd_pe_trim_above: 14              # trim if sentiment normalizes but risks unchanged
   fwd_pe_historical_median: null
   price_add_below: null              # decisions driven by risk/positioning, not price levels
-  price_trim_above: null
+  price_trim_above: 110.00
   discount_from_52w_high_add: null
   revenue_growth_floor_pct: 3        # need at least low growth; flat/decline is a warning
   operating_margin_floor_pct: null   # focus on FCF and buyback intensity
   style_size_ceiling_pct: 2.0        # low-conviction, China-regulatory tail risk
   current_weight_pct: 1.8
 ---
-
 # BABA — Investment Thesis
 
 ## Core Thesis (Cheap Optionality, Not a Core AI Pillar)
@@ -79,3 +78,26 @@ Given the lack of conviction, I will be **faster to rotate out of BABA** than my
 3. Management walks back the aggressive buyback/capital return stance and appears to prioritize low‑return, state‑mandated projects.[file:9]  
 4. China macro clearly shifts toward a structural stagnation scenario with no policy support for consumption.  
 5. A cleaner, higher‑conviction AI or EM exposure (US or ex‑China) with better governance and risk profile emerges, making rotation an obvious upgrade.  
+
+<!-- region:position_state -->
+**Current Allocation:** 1.24%
+**Cost Basis:** $7,989.70
+<!-- endregion:position_state -->
+
+<!-- region:sizing -->
+**Style:** THEME
+**Size Ceiling:** 3.00%
+**Drift:** -1.76%
+<!-- endregion:sizing -->
+
+<!-- region:transaction_log -->
+- 2026-04-16: Buy 10.0 @ $139.24
+<!-- endregion:transaction_log -->
+
+<!-- region:realized_gl -->
+No realized G/L history.
+<!-- endregion:realized_gl -->
+
+<!-- region:change_log -->
+2026-05-03 14:58: Auto-sync allocation 1.24%, drift -1.76%
+<!-- endregion:change_log -->

@@ -1,11 +1,12 @@
 ---
 ticker: PPA
-style: 
-framework_preference: 
-entry_date:
-last_reviewed:
+style: ETF
+framework_preference: null
+entry_date: null
+last_reviewed: '2026-05-03'
+cost_basis: 3045.12
+current_allocation: 0.53%
 ---
-
 # PPA — Investment Thesis
 
 ## Style
@@ -41,3 +42,26 @@ priority: low (serves as a core portfolio hedge)
 
 ## Review Log
 - 2026-04: Initiated. Thesis intact. Monitoring NATO defense spending targets, US defense budget appropriations, and supply chain health.
+
+<!-- region:position_state -->
+**Current Allocation:** 0.53%
+**Cost Basis:** $3,045.12
+<!-- endregion:position_state -->
+
+<!-- region:sizing -->
+**Style:** ETF
+**Size Ceiling:** 8.00%
+**Drift:** -7.47%
+<!-- endregion:sizing -->
+
+<!-- region:transaction_log -->
+- 2026-02-09: Buy 7.0 @ $177.21
+<!-- endregion:transaction_log -->
+
+<!-- region:realized_gl -->
+No realized G/L history.
+<!-- endregion:realized_gl -->
+
+<!-- region:change_log -->
+2026-05-03 14:58: Auto-sync allocation 0.53%, drift -7.47%
+<!-- endregion:change_log -->

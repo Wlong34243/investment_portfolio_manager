@@ -1,5 +1,315 @@
 # Changelog
 
+## [2026-05-03] — Hardening & Risk Management Bridge (Phase 6.1)
+
+### Features & Architecture
+- **Thesis Manager Utility**: Introduced `utils/thesis_utils.py` with `ThesisManager` for surgical updates to Markdown/YAML/Region blocks.
+- **Vault Sync Workflow**: Implemented `pm vault sync` to bridge quantitative Sheets data (allocation, drift, cost basis) into qualitative thesis files.
+- **Van Tharp Risk Sizing**: Ported `compute_van_tharp_sizing` to `utils/risk.py` and integrated ATR-based '1R' units into `export deep-dive`.
+- **Context Batching**: Added `--chunk-size` (default 15) to `export technical-scan` to prevent Gemini truncation on full-portfolio analysis.
+- **API Resilience**: Integrated `yfinance` multi-source fallback into `get_fmp_fundamentals_bundle` to handle FMP 402/Quota errors gracefully.
+
+### Data Integrity & Coverage
+- **100% Thesis Coverage**: Generated missing thesis shells for `APA`, `BX`, `GILD`, `GLD`, `LRCX` and synced them with live data.
+- **Drift Loop Closed**: `export tax-rebalance` now consumes qualitative `drift_pct` from vault theses, allowing AI rebalancing to honor thesis ceilings.
+- **YAML Formatting**: Enhanced `ThesisManager` to preserve comments and correctly handle `null` representations during round-trip edits.
+
+### Fixes
+- **Windows File Compatibility**: Fixed backup naming collision (colons replaced with dashes) in `ThesisManager`.
+- **Header Detection**: Improved `read_gsheet_robust` to correctly handle tabs with KPI strips in Row 1.
+
+## [Unreleased] — Fix: Daily Change % populated in Holdings_Current and Decision_View
+
+### Fixed
+- `utils/schwab_client.py:fetch_positions` was reading the non-existent JSON key `dailyChange`. Schwab returns this value under `currentDayProfitLossPercentage`. Replacing the key restores Daily Change % across Holdings_Current (column Q) and Decision_View (column E). Selected unit handling: **Case A** (divided by 100) based on observed raw values from `scripts/diagnose_daily_change.py` Stage 1 output for UNH, GOOG, and JPIE.
+- Added a debug log in `fetch_positions` gated by `PORTFOLIO_DEBUG_DAILY_CHANGE` for easier verification of raw vs stored values.
+
+### Diagnosis
+Identified by `scripts/diagnose_daily_change.py`. Stage 1 raw-JSON inspection showed `dailyChange` was absent from every position record; `currentDayProfitLossPercentage` was present and populated.
+
+### Known Issue
+`core/bundle.py` currently overwrites `daily_change_pct` with values from the Schwab Market Data API (`netPercentChange`). During testing, the Market Data API returned `0.0` for all tickers, causing the Sheet to still show 0.0% even after the fix. A future fix should update `core/bundle.py` to either prioritize the `/positions` value or only overwrite if the new value is non-zero.
+
+**Status:** safe to ship. One-line change in fetch_positions. Behavior verified end-to-end via diagnostic + dry-run snapshot + live snapshot + sheet read.
+
+## [Unreleased] — User docs: Files & Data section
+
+### Added
+- portfolio_manager_user_docs.html — new "Files & Data" section catalogs every artifact the system creates (bundles, vault docs, podcast pipeline outputs, Sheet tabs, token storage, exports, logs). Includes sharing-risk legend, regenerable-vs-permanent classification, quick lookup table, and a practical "handing artifacts to an external LLM" subsection.
+
+### Context
+The system spans local files, Sheet tabs, and GCS blobs. Bill encountered confusion when finding a bundle JSON and being unsure how to handle it. The new section is the single reference, integrated into the doc he actually opens.
+
+**Status:** documentation only.
+
+## [Unreleased] — `pm morning` single command for market open
+
+### Added
+- `pm morning` — orchestrates health check → Schwab transaction sync → snapshot → dashboard refresh as a single command. Designed for one daily invocation at market open.
+- Defaults: dry-run, --tx-days=7, health-warnings non-blocking. Use `--live` to write, `--strict` to halt on warnings, `--skip-transactions` when the Schwab transaction endpoint is flaky.
+- Halts on health-critical failures (Schwab tokens, API connectivity, Sheet access) before any sync runs.
+- Snapshot failure halts the run; transaction-sync failure does not.
+
+### Reframed
+The daily routine is now `pm morning --live`. The composite commands (`pm sync transactions`, `pm dashboard refresh --update`) remain available unchanged for ad-hoc use and for any composition `pm morning` doesn't fit.
+
+**Status:** safe to ship. Pure orchestration over existing functions; no new write paths.
+
+## [Unreleased] — `pm podcast` command group
+
+### Added
+- `pm podcast fetch <video_id>` — download a single transcript to `data/podcast_transcripts/`. No AI, no Sheets.
+- `pm podcast bundle` — concatenate recent transcripts into a single markdown file with an investor-style-aware analysis prompt prefix. Default: last 5 episodes. Output: `data/podcast_bundles/`.
+- `portfolio_manager_user_docs.html` — added Podcast Workflow section covering transcript collection, AI-bundle preparation, and the optional Gemini analysis path. Sidebar nav updated. Version bumped to 3.1.
+- `pm podcast batch` — scan all configured channels via RSS and download transcripts for new episodes. Dedup log updates only with `--live`.
+- `pm podcast batch --analyze` — also run Gemini analysis (dry-run print by default; `--live` writes to AI_Suggested_Allocation).
+- `pm podcast batch --channel "<name>"` — process only one named channel.
+- `pm podcast list` — show configured channels and recent transcript files.
+- `pm podcast clean --days N` — purge old transcripts.
+
+### Reframed
+The default workflow is now transcript collection. AI analysis is opt-in via `--analyze`. This matches Bill's actual usage: collect transcripts, paste them into an external LLM for recommendations. The Gemini-to-Sheet pipeline remains available unchanged but is no longer the default code path.
+
+### Unchanged
+- `python tasks/batch_podcast_sync.py --live` continues to work; the GitHub Actions cron is not affected.
+- Dedup-on-dry-run fix preserved (`save_processed_videos` only runs with `--live`).
+- PODCAST_CHANNELS configuration, `processed_videos.json` location, and AI_Suggested_Allocation schema all untouched.
+
+**Status:** safe to ship. New commands are additive.
+
+## [Unreleased] — Podcast pipeline restored
+
+### Restored
+- `utils/agents/podcast_analyst.py` — Gemini-powered transcript analyzer (PodcastStrategy / SectorTarget Pydantic schemas).
+- `tasks/weekly_podcast_sync.py` — single-video orchestrator (transcript → Gemini → AI_Suggested_Allocation).
+- `tasks/batch_podcast_sync.py` — multi-channel orchestrator driven by YouTube RSS feeds with processed_videos.json dedup.
+- `utils/podcast_digest.py` — markdown digest writer to data/podcast_summaries/ with 7-day auto-purge.
+- `.github/workflows/podcast_sync.yml` — Friday 22:00 UTC cron + workflow_dispatch.
+- `utils/agents/__init__.py` — package marker (was missing).
+
+### Fixed
+- `config.GEMINI_MAX_TOKENS_PODCAST = 8000` added to match the per-agent budget pattern; the deprecated hardcoded value of 4000 caused truncation on real full-episode transcripts (10k+ words).
+- Import path corrected in `tasks/weekly_podcast_sync.py`: `agents.podcast_analyst` → `utils.agents.podcast_analyst`.
+
+### Context
+These files were stashed in `deprecated/` during the 2026-04-21 Phase 0 architectural pivot and not re-integrated. `tasks/stax_sync.py` has been failing on import since then because it depends on `utils.agents.podcast_analyst`; that import now resolves.
+
+### Invariants preserved
+- Sheet writes target AI_Suggested_Allocation only; Target_Allocation is never touched by this pipeline.
+- DRY_RUN is the default; --live flag is required for any Sheet write.
+- Archive-before-overwrite pattern is preserved (previous rows logged to Logs tab before clear).
+
+**Status:** safe to ship after dry-run verification on at least one episode from each of the three configured channels (Forward Guidance, The Compound, Risk Reversal).
+
+## [Unreleased] — CLI ergonomics: `pm` console script
+
+### Added
+- `pyproject.toml` with `[project.scripts]` exposing `pm = "manager:app"`. After `pip install -e .`, the CLI is invoked as `pm <command>` instead of `python manager.py <command>`.
+
+### Unchanged
+- `manager.py` — Typer app object and all subcommand wiring untouched.
+- GitHub Actions workflows continue to use `python manager.py ...` for explicit interpreter binding in CI.
+- `python manager.py ...` invocation continues to work for users who haven't run `pip install -e .`.
+
+**Status:** safe to ship. No runtime behavior change. New `pm` shortcut activates only after the user runs `pip install -e .` once.
+
+## [2026-04-27] Phase 6.4 — Final documentation cleanup and architecture notes
+
+### Added
+- Phase 6.4: Created a clean 60-second quick-start `README.md` at the project root.
+- Phase 6.4: Added `docs/architecture/` with five focused architectural decision records.
+- Phase 6.4: Established `docs/phase-prompts/` for historical reference of project requirements.
+
+### Fixed
+- Phase 6.4: Consolidated all completed phase prompts and legacy docs into `docs/archive/`.
+- Phase 6.4: Cleaned up project root from orphan files.
+
+> **Phase 6 Summary:** Phase 6 marks the maturity of the Investment Portfolio Manager from a collection of tools into a documented system. The Version 3.0 Authority Manual, combined with consolidated schemas and architectural notes, ensures that the system is self-sustaining and professional-grade.
+
+## [2026-04-27] Phase 6.1 & 6.2 — Documentation consolidation and CLAUDE.md rewrite
+
+### Added
+- Phase 6.1: Rewrote `portfolio_manager_user_docs.html` to Version 3.0, providing a single authoritative manual.
+- Phase 6.1: Archived legacy documentation to `docs/archive/`.
+- Phase 6.2: Rewrote `CLAUDE.md` to reflect the post-pivot reality and core invariants.
+- Phase 6.3: Consolidated `PORTFOLIO_SHEET_SCHEMA.md` with Tab Authority Matrix and current column definitions.
+
+### Fixed
+- Phase 6.2: Archived legacy `CLAUDE.md` to `docs/archive/CLAUDE_md_pre_phase6.md`.
+
+## [2026-04-27] Phase 5.5 — Decision review user docs and workflow integration
+
+### Added
+- Phase 5.5: Updated `portfolio_manager_user_docs.html` to Version 2.3 with "Decision Review & Market Timing" section.
+- Phase 5.5: Integrated monthly retrospective cadence into `tasks/templates/WEEKLY_WORKFLOW.md`.
+- Phase 5.5: Added new trade review commands to the CLI documentation.
+
+> **Phase 5 Summary:** Phase 5 closes the loop on rotation-based investing. The Trade_Log is now a tuning instrument, not just a record. Decision context captured at the moment of decision means attribution is never guesswork. The monthly retrospective is where market timing actually improves.
+
+## [2026-04-27] Phase 5.4 — Rotation retrospective export scenario
+
+### Added
+- Phase 5.4: Added `manager.py export rotation-retrospective` command for frontier LLM pattern analysis.
+- Phase 5.4: Created `tasks/templates/rotation_retrospective_v1.md` prompt template.
+- Phase 5.4: Implemented summary statistic pre-computation (median returns, hit rates) for retrospective analysis.
+
+## [2026-04-27] Phase 5.3 — Post-hoc P&L attribution
+
+### Added
+- Phase 5.3: Created `tasks/compute_rotation_attribution.py` to calculate 30/90/180 day performance.
+- Phase 5.3: Added `manager.py trade review` command to refresh rotation performance metrics.
+- Phase 5.3: Added `Rotation_Review` tab with clear-and-rebuild pattern and caching.
+- Phase 5.3: Implemented performance-based conditional formatting for `Rotation_Review`.
+- Phase 5.3: Added `DEFAULT_CASH_YIELD_PCT` to `config.py` for pro-rated cash return calculation.
+
+## [2026-04-27] Phase 5.2 — Capture decision context at rotation time
+
+### Added
+- Phase 5.2: Extended `tasks/derive_rotations.py` to capture RSI, Trend, and MA200 snapshots at trade time.
+- Phase 5.2: Updated `manager.py journal promote` to pass technical context through to `Trade_Log`.
+- Phase 5.2: Created `scripts/backfill_trade_log_decision_context.py` for legacy data enrichment.
+- Phase 5.2: Updated `PORTFOLIO_SHEET_SCHEMA.md` with technical snapshot columns.
+
+## [2026-04-27] Phase 5.1 — Fix derive_rotations column mismatch + validation
+
+### Added
+- Phase 5.1: Added `--dry-run-verify` flag to `tasks/derive_rotations.py` for visual preview of rotation candidates.
+- Phase 5.1: Implemented Rich table display for rotation candidates.
+- Phase 5.1: Added defensive validation and 3x sanity check for rotations in `tasks/derive_rotations.py`.
+- Phase 5.1: Created `scripts/repair_trade_log.py` for manual data cleanup support.
+- Phase 5.1: Added documentation for rotation capture hardening in `docs/phase5/derive_rotations_fix.md`.
+
+### Fixed
+- Phase 5.1: Audited and verified `Sell_Proceeds` / `Buy_Amount` column alignment in `tasks/derive_rotations.py`.
+
+## [2026-04-24] Phase 4.6 — Template refinement and user documentation
+
+### Added
+- **`tasks/templates/preamble.md`**:
+    - Consistent paragraph defining Bill's investment styles and philosophy.
+    - Prepended to all export scenarios to ensure LLM alignment.
+- **`tasks/templates/WEEKLY_WORKFLOW.md`**:
+    - Step-by-step operational guide for the full morning cycle and periodic maintenance.
+- **`manager.py`**:
+    - Grouped `export list` output by category (Decision Support vs. Portfolio Review).
+    - Added `export cleanup` command to manage local package directories.
+- **`portfolio_manager_user_docs.html`**:
+    - Added "Deep Analysis Workflow" section with a scenario catalog.
+    - Updated version to 2.2.
+- **`tasks/export_package.py`**:
+    - Enhanced `README.md` generation with explicit "How to use" instructions for LLM chats.
+
+## [2026-04-24] Phase 4.5 — Remaining export scenarios
+
+### Added
+- **`tasks/templates/`**:
+    - `tax_rebalance_v1.md`: Focuses on TLH candidates that don't violate thesis zones.
+    - `macro_review_v1.md`: Checks for alignment between positioning and macro views.
+    - `concentration_v1.md`: Identifies correlated clusters and drawdown behavior.
+    - `thesis_health_v1.md`: Audits thesis coverage and stale action zone targets.
+- **`manager.py`**:
+    - Implemented `export tax-rebalance`, `export macro-review`, `export concentration`, and `export thesis-health` commands.
+    - Each command automates scenario-specific data gathering from market bundles, vault bundles, tax control, and trade logs.
+
+## [2026-04-24] Phase 4.4 — Technical scan export scenario
+
+### Added
+- **`tasks/templates/technical_scan_v1.md`**:
+    - Prompt template for portfolio-wide technical snapshots.
+    - Focuses on identifying overbought positions, add-zone candidates, and style imbalances.
+- **`manager.py`**:
+    - Implemented `export technical-scan` command.
+    - Automated gathering of technical data (RSI, trend labels, prices) and thesis action zones for all positions.
+    - Added support for filtering by investment style and minimum position weight.
+    - Generates a compact markdown table for high-signal LLM analysis.
+
+## [2026-04-24] Phase 4.3 — Deep-dive export scenario
+
+### Added
+- **`tasks/templates/deep_dive_v1.md`**:
+    - Prompt template for single-position deep dives.
+    - Focuses on user-specific questions, thesis intactness, and technical/fundamental grounding.
+- **`manager.py`**:
+    - Implemented `export deep-dive` command.
+    - Automated gathering of position state, technicals, fundamentals, triggers, and personal history (rotations and realized G/L).
+
+## [2026-04-24] Phase 4.2 — Rotation analysis export scenario
+
+### Added
+- **`tasks/templates/rotation_v1.md`**:
+    - Comprehensive prompt template for rotation analysis.
+    - Encodes Bill's investment styles, tax-aware framing, and "no price target" hard rules.
+- **`manager.py`**:
+    - Implemented `export rotation` command.
+    - Automated data gathering from the latest composite bundle, tax control, and trade logs.
+    - Contextualized prompt generation with sell-side tax estimates and recent rotation history.
+
+## [2026-04-24] Phase 4.1 — Export command scaffold and package primitives
+
+### Added
+- **`config.py`**:
+    - Added `EXPORTS_DIR` and `EXPORT_SCENARIOS` configuration.
+- **`manager.py`**:
+    - Added `export` Typer group.
+    - Added `export list` command to show available scenarios.
+    - Added `export inspect` command to preview package contents.
+    - Added `export rotation` placeholder command.
+- **`tasks/export_package.py`**:
+    - Primitives for creating timestamped/hashed package directories.
+    - Helpers for writing `manifest.json`, `context.json`, `README.md`, and `prompt.md`.
+    - Automated thesis file copying from the vault.
+- **`.gitignore`**: Added `exports/` to ignore generated context packages.
+
+## [2026-04-24] Phase 3.4 — Dashboard integration and documentation
+
+### Added
+- **`manager.py`**:
+    - Integrated `Tax_Control` refresh as Step 3 in the `dashboard refresh` command.
+    - Added `--skip-tax` flag to the `dashboard refresh` command for faster runs.
+- **`tasks/health.py`**:
+    - Added `tax_control_freshness` check to the global health suite.
+- **`portfolio_manager_user_docs.html`**:
+    - Added a dedicated "Tax Visibility & Control (Phase 3)" section.
+    - Bumped documentation version to 2.1.
+
+## [2026-04-24] Phase 3.3 — Conditional formatting for Tax_Control
+
+### Added
+- **`tasks/format_sheets_dashboard_v2.py`**:
+    - Added `format_tax_control` function to apply Phase 3 color discipline.
+    - KPI strip highlighting: Green for positive LT gains and tax offset capacity, Red for disallowed wash loss and high estimated tax, Amber for net ST gains and high wash sale counts.
+    - Lots table: Full-row light red highlighting for wash sale lots, Green/Red text for Gain/Loss values.
+    - Wired into the main formatting pipeline.
+- **`scripts/apply_tax_formatting.py`**:
+    - Utility script for surgical application of Tax_Control formatting.
+
+## [2026-04-24] Phase 3.2 — Build Tax_Control KPIs and lots table
+
+### Added
+- **`tasks/build_tax_control.py`**:
+    - Core computation engine for tax KPIs: Net ST/LT, Disallowed Wash Loss, Est. Fed Cap Gains Tax, and Tax Offset Capacity.
+    - Robust `Realized_GL` reader that handles multiple headers and descriptive text.
+    - Single-batch write logic for `Tax_Control` sheet refresh.
+    - Exportable `compute_tax_control_data()` helper for future use by the Export Engine.
+- **`manager.py`**:
+    - Added `tax` Typer group.
+    - Added `tax refresh` command with Rich table output for dry-run verification.
+- **`scripts/fix_tax_config.py`**:
+    - Utility script to initialize tax rates and thresholds in the `Config` tab.
+
+## [2026-04-24] Phase 3.1 — Tax_Control tab schema and constants
+
+### Added
+- **`config.py`**:
+    - Added `TAB_TAX_CONTROL` constant.
+    - Added `TAX_CONTROL_KPI_LABELS` for the KPI strip.
+    - Added `TAX_CONTROL_LOTS_COLUMNS` for the tax-relevant lots table.
+- **`create_portfolio_sheet.py`**:
+    - Registered `Tax_Control` tab in `SCHEMA` with a descriptive placeholder header.
+    - Added `Tax_Control` to `TABS_TO_FREEZE`.
+- **`PORTFOLIO_SHEET_SCHEMA.md`**:
+    - Documented the new `Tax_Control` tab structure, including KPI strip, bridge row, and lots table.
+
 ## [2026-04-24] Phase 2.4 — Conditional formatting for thesis action zones
 
 ### Added

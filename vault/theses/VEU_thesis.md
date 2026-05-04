@@ -1,11 +1,11 @@
 ---
 ticker: IFRA
-style: Thematic Value / Policy Tailwinds / Tangible AI-Linked Infrastructure
+style: ETF
 framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: 2026-04-20
-current_allocation: 3.0%
-cost_basis: 56.69
+last_reviewed: '2026-05-03'
+current_allocation: 0.65%
+cost_basis: 4261.98
 time_horizon: 3 to 7 years
 triggers:
   fwd_pe_add_below: null              # ETF; focus on macro and project pipeline, not PE
@@ -19,7 +19,6 @@ triggers:
   style_size_ceiling_pct: 5.0         # core-ish thematic; below broad SPY/VOO sleeve
   current_weight_pct: 3.0
 ---
-
 # IFRA — Investment Thesis
 
 ## Core Thesis (Physical Backbone of AI & Reshoring)
@@ -64,3 +63,30 @@ I will trim or reconsider IFRA (vs just owning more SPY/VOO) if:.
 3. Rates stay high and financing conditions tighten enough that utilities and infra names struggle to fund their capex plans.  
 4. My portfolio already has substantial infra/real‑asset exposure through other names (ETN, XOM, utilities, etc.), making IFRA redundant relative to simply adding to broad SPY.  
 5. A clearly superior infra/AI‑linked vehicle (e.g., more focused grid/AI infra ETF at similar or lower cost) appears with better risk/reward.  
+
+<!-- region:position_state -->
+**Current Allocation:** 0.65%
+**Cost Basis:** $4,261.98
+<!-- endregion:position_state -->
+
+<!-- region:sizing -->
+**Style:** ETF
+**Size Ceiling:** 8.00%
+**Drift:** -7.35%
+<!-- endregion:sizing -->
+
+<!-- region:transaction_log -->
+- 2026-04-09: Buy 20.0 @ $78.45
+- 2026-04-01: Sell -20.0 @ $76.02
+- 2026-03-10: Buy 5.0 @ $77.35
+- 2026-03-06: Sell -175.0 @ $76.17
+- 2026-01-28: Buy 10.0 @ $78.58
+<!-- endregion:transaction_log -->
+
+<!-- region:realized_gl -->
+Total Realized G/L: $665.00 over 11 closed lots. Total Proceeds: $14,849.00.
+<!-- endregion:realized_gl -->
+
+<!-- region:change_log -->
+2026-05-03 14:58: Auto-sync allocation 0.65%, drift -7.35%
+<!-- endregion:change_log -->

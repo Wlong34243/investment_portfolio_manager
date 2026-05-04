@@ -1,3 +1,15 @@
+---
+ticker: MSFT
+style: GARP
+framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
+entry_date: 2026-04-20
+last_reviewed: '2026-05-03'
+current_allocation: 2.40%
+cost_basis: 17437.06
+time_horizon: 5+ years
+triggers:
+  price_trim_above: 587.00
+---
 # META — Investment Thesis
 
 ## Core Thesis (AI-Supercharged Ad Engine)
@@ -35,3 +47,30 @@ I will trim or exit if:[file:28]
 1. Ad revenue structurally declines over multiple quarters due to privacy/regulatory changes META cannot route around.  
 2. Zuckerberg abandons efficiency discipline and sharply accelerates RL spending without a clear path to returns.  
 3. Regulators force a breakup of key assets (e.g., Instagram or WhatsApp), permanently impairing the ad flywheel.  
+
+<!-- region:position_state -->
+**Current Allocation:** 2.40%
+**Cost Basis:** $17,437.06
+<!-- endregion:position_state -->
+
+<!-- region:sizing -->
+**Style:** GARP
+**Size Ceiling:** 9.00%
+**Drift:** -6.60%
+<!-- endregion:sizing -->
+
+<!-- region:transaction_log -->
+- 2026-04-30: Buy 2.0 @ $404.65
+- 2026-04-30: Buy 3.0 @ $404.65
+- 2026-04-27: Buy 5.0 @ $420.00
+- 2026-04-23: Buy 5.0 @ $419.93
+- 2026-04-20: Buy 5.0 @ $418.16
+<!-- endregion:transaction_log -->
+
+<!-- region:realized_gl -->
+Total Realized G/L: $1.00 over 3 closed lots. Total Proceeds: $3,708.00.
+<!-- endregion:realized_gl -->
+
+<!-- region:change_log -->
+2026-05-03 14:58: Auto-sync allocation 2.40%, drift -6.60%
+<!-- endregion:change_log -->

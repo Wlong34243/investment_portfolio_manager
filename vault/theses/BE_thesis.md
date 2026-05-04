@@ -1,11 +1,14 @@
 ---
 ticker: BE
-style: 
-framework_preference: 
-entry_date:
-last_reviewed:
+style: THEME
+framework_preference: null
+entry_date: null
+last_reviewed: '2026-05-03'
+triggers:
+  price_trim_above: 21.00
+cost_basis: 2497.8
+current_allocation: 0.64%
 ---
-
 # BE — Investment Thesis
 
 ## Style
@@ -41,3 +44,27 @@ priority: high (requires intense monitoring of quarterly cash flow and data cent
 
 ## Review Log
 - 2026-04: Initiated. Speculative thesis. Monitoring data center contract announcements, GAAP gross margins, and cash burn rate.
+
+<!-- region:position_state -->
+**Current Allocation:** 0.64%
+**Cost Basis:** $2,497.80
+<!-- endregion:position_state -->
+
+<!-- region:sizing -->
+**Style:** THEME
+**Size Ceiling:** 3.00%
+**Drift:** -2.36%
+<!-- endregion:sizing -->
+
+<!-- region:transaction_log -->
+- 2026-04-17: Buy 5.0 @ $203.46
+- 2026-03-06: Buy 10.0 @ $148.05
+<!-- endregion:transaction_log -->
+
+<!-- region:realized_gl -->
+No realized G/L history.
+<!-- endregion:realized_gl -->
+
+<!-- region:change_log -->
+2026-05-03 14:58: Auto-sync allocation 0.64%, drift -2.36%
+<!-- endregion:change_log -->

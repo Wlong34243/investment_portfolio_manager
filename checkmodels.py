@@ -48,7 +48,7 @@ def check_my_gemini_access():
             print("")
 
         # Simple test generation
-        test_model = getattr(config, 'GEMINI_MODEL', 'gemini-2.5-flash')
+        test_model = getattr(config, 'GEMINI_MODEL', 'gemini-3.1-pro-preview-customtools')
         print(f"--- Running Test Generation with {test_model} ---")
         response = client.models.generate_content(
             model=test_model,

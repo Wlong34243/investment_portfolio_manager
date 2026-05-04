@@ -1,11 +1,14 @@
 ---
 ticker: SNPS
-style: 
-framework_preference: 
-entry_date:
-last_reviewed:
+style: GARP
+framework_preference: null
+entry_date: null
+last_reviewed: '2026-05-03'
+triggers:
+  price_trim_above: 680.00
+cost_basis: 7044.17
+current_allocation: 1.21%
 ---
-
 # SNPS — Investment Thesis
 
 ## Style
@@ -41,3 +44,28 @@ priority: low
 
 ## Review Log
 - 2026-04: Initiated. Thesis intact. Monitoring Ansys acquisition closure, semiconductor R&D spend, and Elliott Management's strategic involvement.
+
+<!-- region:position_state -->
+**Current Allocation:** 1.21%
+**Cost Basis:** $7,044.17
+<!-- endregion:position_state -->
+
+<!-- region:sizing -->
+**Style:** GARP
+**Size Ceiling:** 9.00%
+**Drift:** -7.79%
+<!-- endregion:sizing -->
+
+<!-- region:transaction_log -->
+- 2026-04-09: Buy 5.0 @ $403.96
+- 2026-02-06: Buy 7.0 @ $420.94
+- 2026-02-04: Buy 5.0 @ $415.55
+<!-- endregion:transaction_log -->
+
+<!-- region:realized_gl -->
+No realized G/L history.
+<!-- endregion:realized_gl -->
+
+<!-- region:change_log -->
+2026-05-03 14:58: Auto-sync allocation 1.21%, drift -7.79%
+<!-- endregion:change_log -->

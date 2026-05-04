@@ -1,11 +1,14 @@
 ---
 ticker: CORZ
-style: 
-framework_preference: 
-entry_date:
-last_reviewed:
+style: THEME
+framework_preference: null
+entry_date: null
+last_reviewed: '2026-05-03'
+triggers:
+  price_trim_above: 14.00
+cost_basis: 2382.99
+current_allocation: 0.44%
 ---
-
 # CORZ — Investment Thesis
 
 ## Style
@@ -41,3 +44,27 @@ priority: medium (requires monitoring of AI hosting execution)
 
 ## Review Log
 - 2026-04: Initiated. Thesis intact. Monitoring AI megawatt deployment schedule, Bitcoin hash rate profitability, and capital expenditure levels.
+
+<!-- region:position_state -->
+**Current Allocation:** 0.44%
+**Cost Basis:** $2,382.99
+<!-- endregion:position_state -->
+
+<!-- region:sizing -->
+**Style:** THEME
+**Size Ceiling:** 3.00%
+**Drift:** -2.56%
+<!-- endregion:sizing -->
+
+<!-- region:transaction_log -->
+- 2026-03-12: Buy 50.0 @ $15.90
+- 2026-03-06: Buy 100.0 @ $15.88
+<!-- endregion:transaction_log -->
+
+<!-- region:realized_gl -->
+No realized G/L history.
+<!-- endregion:realized_gl -->
+
+<!-- region:change_log -->
+2026-05-03 14:58: Auto-sync allocation 0.44%, drift -2.56%
+<!-- endregion:change_log -->

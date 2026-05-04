@@ -4,6 +4,7 @@ All settings centralized here. Reads from .env file for development and producti
 """
 
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
 # Load environment variables from .env
@@ -55,9 +56,17 @@ SCHWAB_ALERT_BLOB          = "schwab_alert.json"
 SCHWAB_CLIENT_CACHE_TTL = 1500   # 25 min
 
 # ---------------------------------------------------------------------------
+# Vault & Research Paths
+# ---------------------------------------------------------------------------
+VAULT_DIR = Path("vault")
+THESES_DIR = VAULT_DIR / "theses"
+TRANSCRIPTS_DIR = VAULT_DIR / "transcripts"
+RESEARCH_DIR = VAULT_DIR / "research"
+
+# ---------------------------------------------------------------------------
 # AI Model Configuration
 # ---------------------------------------------------------------------------
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")  # Vertex AI confirmed accessible on re-property-manager-487122
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.1-pro-preview-customtools")  # Vertex AI confirmed accessible on re-property-manager-487122
 GEMINI_MAX_TOKENS = int(os.getenv("GEMINI_MAX_TOKENS", "2000"))  # default for lightweight agents
 
 # Per-agent token budgets — overrides for agents that return large structured JSON.
@@ -69,6 +78,7 @@ GEMINI_MAX_TOKENS_MACRO         = 16000   # Increased from 8000 due to truncatio
 GEMINI_MAX_TOKENS_REBUY         = 10000    # Increased from 6000
 GEMINI_MAX_TOKENS_BAGGER        = 24000   # 50+ tickers × compounder gate narrative (raised from 16000)
 GEMINI_MAX_TOKENS_THESIS        = 32000   # 50+ tickers × management candor analysis (raised from 16000; unchunked)
+GEMINI_MAX_TOKENS_PODCAST       = 8000    # full-episode transcripts (10k+ words) → structured JSON with 8–12 sectors
 
 # ---------------------------------------------------------------------------
 # Centralized Exclusions (Phase 5-Hardening)
@@ -112,6 +122,32 @@ TAB_AI_SUGGESTED_ALLOCATION = "AI_Suggested_Allocation"
 TAB_DECISION_LOG = "Decision_Log"
 TAB_TRADE_LOG = "Trade_Log"
 TAB_TRADE_LOG_STAGING = "Trade_Log_Staging"
+TAB_ROTATION_REVIEW   = "Rotation_Review"
+TAB_TAX_CONTROL = "Tax_Control"
+
+# Tax_Control has two zones: KPI strip (top) and tax-relevant lots table (bottom).
+# We model it as a single tab with section headers, not two tabs.
+TAX_CONTROL_KPI_LABELS = [
+    "Net ST (YTD)",
+    "Net LT (YTD)",
+    "Disallowed Wash Loss (YTD)",
+    "Est. Fed Cap Gains Tax",
+    "Tax Offset Capacity",
+    "Wash Sale Count",
+    "Last Updated",
+]
+
+TAX_CONTROL_LOTS_COLUMNS = [
+    "Closed Date",
+    "Ticker",
+    "Account",
+    "Term",
+    "Gain Loss",
+    "ST Gain Loss",
+    "LT Gain Loss",
+    "Wash Sale",
+    "Disallowed Loss",
+]
 
 # ---------------------------------------------------------------------------
 # Schwab CSV Parsing
@@ -262,6 +298,12 @@ TRADE_LOG_COLUMNS = [
     'Implicit_Bet',
     'Thesis_Brief',
     'Rotation_Type',
+    'Sell_RSI_At_Decision',
+    'Sell_Trend_At_Decision',
+    'Sell_Price_vs_MA200_At_Decision',
+    'Buy_RSI_At_Decision',
+    'Buy_Trend_At_Decision',
+    'Buy_Price_vs_MA200_At_Decision',
     'Trade_Log_ID',
     'Fingerprint',
 ]
@@ -280,6 +322,36 @@ TRADE_LOG_STAGING_COLUMNS = [
     'Cluster_Window_Days',
     'Sell_Dates',
     'Buy_Dates',
+    'Sell_RSI_At_Decision',
+    'Sell_Trend_At_Decision',
+    'Sell_Price_vs_MA200_At_Decision',
+    'Buy_RSI_At_Decision',
+    'Buy_Trend_At_Decision',
+    'Buy_Price_vs_MA200_At_Decision',
+    'Fingerprint',
+]
+
+ROTATION_REVIEW_COLUMNS = [
+    'Trade_Log_ID',
+    'Date',
+    'Sell_Ticker',
+    'Buy_Ticker',
+    'Rotation_Type',
+    'Implicit_Bet',
+    'Sell_RSI_At_Decision',
+    'Buy_RSI_At_Decision',
+    'Sell_Trend_At_Decision',
+    'Buy_Trend_At_Decision',
+    'Sell_Return_30d',
+    'Sell_Return_90d',
+    'Sell_Return_180d',
+    'Buy_Return_30d',
+    'Buy_Return_90d',
+    'Buy_Return_180d',
+    'Pair_Return_30d',
+    'Pair_Return_90d',
+    'Pair_Return_180d',
+    'Attribution_As_Of',
     'Fingerprint',
 ]
 
@@ -401,6 +473,8 @@ TLH_LOSS_THRESHOLD_USD = -500.0          # minimum unrealized loss to surface as
 # Rebalancing threshold (used by tax_agent)
 REBALANCE_THRESHOLD_PCT = 5.0            # drift % to trigger rebalance action
 
+DEFAULT_CASH_YIELD_PCT = 4.5
+
 # Phase 5-J: Add-Candidate sizing
 ADD_CANDIDATE_STYLE_PCT = {
     "GARP":  0.030,   # 3% of dry powder as starter add
@@ -426,3 +500,22 @@ TA_VOLUME_HIGH_RATIO   = 1.5   # volume_ratio above this → "high"
 TA_VOLUME_LOW_RATIO    = 0.5   # volume_ratio below this → "low"
 TA_CROSS_LOOKBACK_DAYS = 20    # days to look back for golden/death cross detection
 TA_MACD_CROSS_LOOKBACK = 5     # days to look back for MACD signal cross
+
+# --- Phase 4: Export Engine ---
+EXPORTS_DIR = Path("exports")
+PROMPT_TEMPLATE_VERSION_ROTATION = "1.0.0"
+PROMPT_TEMPLATE_VERSION_DEEP_DIVE = "1.0.0"
+PROMPT_TEMPLATE_VERSION_TECHNICAL_SCAN = "1.0.0"
+PROMPT_TEMPLATE_VERSION_TAX_REBALANCE = "1.0.0"
+PROMPT_TEMPLATE_VERSION_MACRO_REVIEW = "1.0.0"
+PROMPT_TEMPLATE_VERSION_CONCENTRATION = "1.0.0"
+PROMPT_TEMPLATE_VERSION_THESIS_HEALTH = "1.0.0"
+EXPORT_SCENARIOS = {
+    "rotation": "Should I rotate X into Y? (thesis + tax + technicals)",
+    "deep-dive": "Full picture on one position (thesis + behavior + drift)",
+    "tax-rebalance": "Harvest candidates given YTD tax posture",
+    "technical-scan": "Overbought/oversold + action zones across the book",
+    "macro-review": "Is my positioning consistent with a macro view?",
+    "concentration": "Hidden concentrations and drawdown behavior",
+    "thesis-health": "Which theses are stale / violated / need re-reading?",
+}

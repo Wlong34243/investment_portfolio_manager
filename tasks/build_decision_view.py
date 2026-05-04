@@ -123,6 +123,19 @@ def main(live: bool = typer.Option(False, "--live", help="Write to Google Sheets
     # --- Load bundles ---
     composite_bundle = _load_latest_composite_bundle()
     
+    # Technical Indicators map
+    tech_map = {}
+    if composite_bundle:
+        # CompositeBundle object stores full market data in _market_data
+        tech_list = composite_bundle._market_data.get('calculated_technicals', [])
+        tech_map = {t['ticker']: t for t in tech_list}
+    else:
+        # Fallback to market bundle dict
+        m_bundle = _load_latest_market_bundle()
+        if m_bundle:
+            tech_list = m_bundle.get('calculated_technicals', [])
+            tech_map = {t['ticker']: t for t in tech_list}
+    
     gc = get_gspread_client()
     spreadsheet = gc.open_by_key(config.PORTFOLIO_SHEET_ID)
     
@@ -179,7 +192,7 @@ def main(live: bool = typer.Option(False, "--live", help="Write to Google Sheets
         if not df_val.empty and ticker in df_val['Ticker'].values:
             row_v = df_val[df_val['Ticker'] == ticker].iloc[0]
             val_data = {
-                'Fwd P/E': row_v.get('Forward P/E', ''),
+                'Fwd P/E': row_v.get('Forward P/E (FMP)') or row_v.get('Forward P/E (yf)') or '',
                 '52w Pos %': row_v.get('52w Position %', ''),
                 'Disc from High %': row_v.get('Discount from 52w High %', '')
             }
@@ -255,12 +268,22 @@ def main(live: bool = typer.Option(False, "--live", help="Write to Google Sheets
                 return float(s) / 100.0 if float(s) > 1.0 or "%" in str(val) else float(s)
             except: return 0.0
 
+        # Technical Data (RSI, MA200, better Daily Change)
+        tech_data = tech_map.get(ticker, {})
+        rsi_val = tech_data.get('rsi_14')
+        
+        # Use technicals daily_change if holdings is 0.0
+        h_daily = to_pct_float(row_h.get('Daily Change %'))
+        t_daily = tech_data.get('daily_change_pct', 0.0)
+        daily_chg = t_daily if (h_daily == 0.0 and t_daily != 0.0) else h_daily
+
         results.append({
             'Ticker': ticker,
             'Weight %': to_pct_float(row_h.get('Weight')),
             'Market Value': pd.to_numeric(row_h.get('Market Value'), errors='coerce') or 0.0,
             'Unreal G/L %': to_pct_float(row_h.get('Unrealized G/L %')),
-            'Daily Chg %': to_pct_float(row_h.get('Daily Change %')),
+            'Daily Chg %': daily_chg,
+            'RSI': rsi_val,
             'Price': pd.to_numeric(row_h.get('Price'), errors='coerce') or 0.0,
             'Trim Target': composite_bundle.get_ticker_triggers(ticker).get('price_trim_above') if composite_bundle else None,
             'Add Target': composite_bundle.get_ticker_triggers(ticker).get('price_add_below') if composite_bundle else None,

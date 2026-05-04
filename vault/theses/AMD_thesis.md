@@ -1,25 +1,24 @@
 ---
 ticker: AMD
-style: GARP / "Number Two" AI Play / Data Center Share Taker
+style: GARP
 framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: 2026-04-20
-current_allocation: 2.2%
-cost_basis: 183.32
+last_reviewed: '2026-05-03'
+current_allocation: 1.94%
+cost_basis: 6606.04
 time_horizon: 3 to 5 years
 triggers:
   fwd_pe_add_below: 25               # add if de-rated but AI/DC thesis intact
   fwd_pe_trim_above: 38              # trim if priced as flawless NVDA-lite
   fwd_pe_historical_median: null
   price_add_below: null              # focus on PE + data center signals
-  price_trim_above: null
+  price_trim_above: 240.00
   discount_from_52w_high_add: null
   revenue_growth_floor_pct: 15       # still want mid-teens+ given AI ramp
   operating_margin_floor_pct: null   # watch DC segment margins and mix
   style_size_ceiling_pct: 4.0        # high beta / dual-front-competition risk
   current_weight_pct: 2.2
 ---
-
 # AMD — Investment Thesis
 
 ## Core Thesis (Smart Second-Source AI View)
@@ -66,3 +65,27 @@ I will exit or materially cut if the **“smart second‑source” and share‑g
 2. Intel executes a real turnaround in data center CPUs (e.g., Sierra Forest / Granite Rapids) and stops or reverses AMD’s share gains.[file:7]  
 3. Hyperscalers pivot primarily to their own ASICs for internal workloads, relegating AMD to a small, low‑value niche in AI compute.  
 4. A superior, more attractively priced AI accelerator or semiconductor compounder emerges, offering a better risk‑adjusted IRR.  
+
+<!-- region:position_state -->
+**Current Allocation:** 1.94%
+**Cost Basis:** $6,606.04
+<!-- endregion:position_state -->
+
+<!-- region:sizing -->
+**Style:** GARP
+**Size Ceiling:** 9.00%
+**Drift:** -7.06%
+<!-- endregion:sizing -->
+
+<!-- region:transaction_log -->
+- 2026-04-24: Sell -8.0 @ $344.10
+- 2026-02-04: Buy 8.0 @ $205.40
+<!-- endregion:transaction_log -->
+
+<!-- region:realized_gl -->
+Total Realized G/L: $1,110.00 over 1 closed lots. Total Proceeds: $2,753.00.
+<!-- endregion:realized_gl -->
+
+<!-- region:change_log -->
+2026-05-03 14:58: Auto-sync allocation 1.94%, drift -7.06%
+<!-- endregion:change_log -->

@@ -1,11 +1,12 @@
 ---
 ticker: VTI
-style: Passive Index / Broad Market Core
-framework_preference:
-entry_date:
-last_reviewed: 2026-04
+style: ETF
+framework_preference: null
+entry_date: null
+last_reviewed: '2026-05-03'
+cost_basis: 20193.26
+current_allocation: 3.09%
 ---
-
 # VTI — Investment Thesis
 
 ## Style
@@ -40,3 +41,30 @@ priority: lowest
 
 ## Review Log
 - 2026-04: Initiated. Maintaining position to capture baseline market growth and prevent cash drag.
+
+<!-- region:position_state -->
+**Current Allocation:** 3.09%
+**Cost Basis:** $20,193.26
+<!-- endregion:position_state -->
+
+<!-- region:sizing -->
+**Style:** ETF
+**Size Ceiling:** 8.00%
+**Drift:** -4.91%
+<!-- endregion:sizing -->
+
+<!-- region:transaction_log -->
+- 2026-04-30: Sell -2.0 @ $351.70
+- 2026-04-24: Buy 8.0 @ $350.69
+- 2026-04-24: Buy 5.0 @ $349.86
+- 2026-04-20: Buy 3.0 @ $349.82
+- 2026-04-20: Buy 3.0 @ $349.76
+<!-- endregion:transaction_log -->
+
+<!-- region:realized_gl -->
+Total Realized G/L: $1,965.00 over 29 closed lots. Total Proceeds: $52,444.00.
+<!-- endregion:realized_gl -->
+
+<!-- region:change_log -->
+2026-05-03 14:58: Auto-sync allocation 3.09%, drift -4.91%
+<!-- endregion:change_log -->

@@ -1,11 +1,14 @@
 ---
 ticker: NEE
-style: 
-framework_preference: 
-entry_date:
-last_reviewed:
+style: FUND
+framework_preference: null
+entry_date: null
+last_reviewed: '2026-05-03'
+triggers:
+  price_trim_above: 90.00
+cost_basis: 4586.97
+current_allocation: 0.84%
 ---
-
 # NEE — Investment Thesis
 
 ## Style
@@ -42,3 +45,29 @@ priority: low
 
 ## Review Log
 - 2026-04: Initiated. Thesis intact. Monitoring the 10-year Treasury yield, FPL rate case outcomes, and the NEER project backlog execution.
+
+<!-- region:position_state -->
+**Current Allocation:** 0.84%
+**Cost Basis:** $4,586.97
+<!-- endregion:position_state -->
+
+<!-- region:sizing -->
+**Style:** FUND
+**Size Ceiling:** 5.00%
+**Drift:** -4.16%
+<!-- endregion:sizing -->
+
+<!-- region:transaction_log -->
+- 2026-04-30: Sell -15.0 @ $96.73
+- 2026-03-10: Buy 20.0 @ $91.77
+- 2026-02-09: Sell -40.0 @ $89.04
+- 2026-02-09: Sell -40.0 @ $89.03
+<!-- endregion:transaction_log -->
+
+<!-- region:realized_gl -->
+Total Realized G/L: $1,421.00 over 4 closed lots. Total Proceeds: $7,122.00.
+<!-- endregion:realized_gl -->
+
+<!-- region:change_log -->
+2026-05-03 14:58: Auto-sync allocation 0.84%, drift -4.16%
+<!-- endregion:change_log -->

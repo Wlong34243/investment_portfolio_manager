@@ -46,7 +46,7 @@ def _build_genai_client():
       genai.Client(vertexai=True, ...) lets the SDK discover ADC automatically.
       No explicit credentials object needed; gcloud auth application-default
       login is sufficient. Model strings must use Vertex AI naming convention
-      (e.g. "gemini-2.5-flash", NOT "gemini-2.5-flash-latest").
+      (e.g. "gemini-3.1-pro-preview-customtools", NOT "gemini-3.1-pro-preview-customtools-latest").
 
     Path 2 — API key / AI Studio (Streamlit Cloud):
       Falls back to GEMINI_API_KEY from env var or Streamlit secrets when ADC
@@ -99,7 +99,7 @@ def ask_gemini(prompt: str, system_instruction: str = None, json_mode: bool = Fa
     if not client:
         return "" if not response_schema else None
         
-    model_name = getattr(config, 'GEMINI_MODEL', 'gemini-3.1-pro-preview')
+    model_name = getattr(config, 'GEMINI_MODEL', 'gemini-3.1-pro-preview-customtools')
     
     full_system_instruction = SAFETY_PREAMBLE
     if system_instruction:

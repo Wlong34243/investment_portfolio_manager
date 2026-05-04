@@ -1,11 +1,14 @@
 ---
 ticker: PANW
-style: 
-framework_preference: 
-entry_date:
-last_reviewed:
+style: GARP
+framework_preference: null
+entry_date: null
+last_reviewed: '2026-05-03'
+triggers:
+  price_trim_above: 385.00
+cost_basis: 3554.81
+current_allocation: 0.53%
 ---
-
 # PANW — Investment Thesis
 
 ## Style
@@ -41,3 +44,26 @@ priority: low
 
 ## Review Log
 - 2026-04: Initiated. Thesis intact. Monitoring platform consolidation win rates, billings growth, and Next-Generation Security (NGS) ARR.
+
+<!-- region:position_state -->
+**Current Allocation:** 0.53%
+**Cost Basis:** $3,554.81
+<!-- endregion:position_state -->
+
+<!-- region:sizing -->
+**Style:** GARP
+**Size Ceiling:** 9.00%
+**Drift:** -8.47%
+<!-- endregion:sizing -->
+
+<!-- region:transaction_log -->
+- 2026-04-16: Buy 10.0 @ $165.84
+<!-- endregion:transaction_log -->
+
+<!-- region:realized_gl -->
+No realized G/L history.
+<!-- endregion:realized_gl -->
+
+<!-- region:change_log -->
+2026-05-03 14:58: Auto-sync allocation 0.53%, drift -8.47%
+<!-- endregion:change_log -->

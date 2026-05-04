@@ -258,6 +258,61 @@ def concentration_alerts(df) -> list[str]:
         
     return alerts
 
+# ---------------------------------------------------------------------------
+# Van Tharp position sizing (pure Python — never delegated to LLM)
+# ---------------------------------------------------------------------------
+
+def compute_van_tharp_sizing(
+    atr_14: float,
+    entry_price: float,
+    portfolio_equity: float,
+    risk_pct: float = 0.01,
+    atr_multiplier: float = 3.0,
+) -> dict:
+    """
+    Compute Van Tharp R-multiple position sizing from ATR data.
+
+    All arithmetic is pure Python — results are passed as facts to agents;
+    Gemini NEVER computes these values.
+
+    Args:
+        atr_14:          14-day Average True Range in dollars.
+        entry_price:     Current price or intended entry price in dollars.
+        portfolio_equity: Total liquid portfolio value in dollars.
+        risk_pct:        Fraction of portfolio equity to risk per trade (default: 1% = 0.01).
+        atr_multiplier:  ATR multiplier for 1R calculation (default: 3.0 per Van Tharp).
+
+    Returns dict with sizing metrics or sizing_valid=False if inputs are invalid.
+    """
+    if atr_14 <= 0 or entry_price <= 0 or portfolio_equity <= 0:
+        return {
+            "per_share_risk_1r": 0.0,
+            "stop_loss_price": 0.0,
+            "total_allowable_risk_usd": 0.0,
+            "position_size_units": 0,
+            "position_size_usd": 0.0,
+            "sizing_valid": False
+        }
+
+    per_share_risk_1r = atr_14 * atr_multiplier
+    stop_loss_price = max(0.0, entry_price - per_share_risk_1r)
+    total_allowable_risk_usd = portfolio_equity * risk_pct
+    
+    # Units = Total Risk / Risk Per Share
+    units = int(total_allowable_risk_usd / per_share_risk_1r) if per_share_risk_1r > 0 else 0
+    pos_size_usd = units * entry_price
+
+    return {
+        "per_share_risk_1r": round(per_share_risk_1r, 2),
+        "stop_loss_price": round(stop_loss_price, 2),
+        "total_allowable_risk_usd": round(total_allowable_risk_usd, 2),
+        "position_size_units": units,
+        "position_size_usd": round(pos_size_usd, 2),
+        "sizing_valid": True,
+        "risk_pct": risk_pct,
+        "atr_multiplier": atr_multiplier
+    }
+
 if __name__ == "__main__":
     import pandas as pd
     from utils.csv_parser import parse_schwab_csv, inject_cash_manual

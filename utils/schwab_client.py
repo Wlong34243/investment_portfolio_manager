@@ -13,6 +13,7 @@ Code review checkpoint: grep this file for "order" — only matches
 allowed are this docstring and comments. Any other match is a bug.
 '''
 
+import os
 import pandas as pd
 import logging
 import time
@@ -171,6 +172,12 @@ def fetch_positions(client: schwab.client.Client) -> pd.DataFrame:
                 # Track account sources for post-aggregation tax-treatment merge audit
                 _acct_sources.setdefault(ticker, []).append(f"{masked_acct}/{tax_treatment}")
 
+                daily_change_raw = p.get('currentDayProfitLossPercentage', 0)
+                daily_change_val = float(daily_change_raw or 0) / 100.0
+                
+                if os.environ.get("PORTFOLIO_DEBUG_DAILY_CHANGE"):
+                    logging.info(f"DEBUG: {ticker} raw_daily={daily_change_raw} stored={daily_change_val}")
+
                 all_rows.append({
                     'Ticker':         ticker,
                     'Description':    instr.get('description', ''),
@@ -188,7 +195,7 @@ def fetch_positions(client: schwab.client.Client) -> pd.DataFrame:
                     'Acquisition Date':  '',    # Not in positions summary endpoint
                     'Wash Sale':   False,
                     'Is Cash':     False,
-                    'Daily Change %': float(p.get('dailyChange', 0) or 0) / 100.0,
+                    'Daily Change %': daily_change_val,
                     'Weight':      0.0,         # Computed by normalize_positions
                     'Tax Treatment': tax_treatment,
                     '_acct_idx':   acct_idx,    # Internal only — dropped before return
@@ -321,14 +328,13 @@ _SCHWAB_ACTION_MAP = {
     "ELECTRONIC_FUND":      "Transfer",
     "ACH_RECEIPT":          "Transfer",
     "ACH_DISBURSEMENT":     "Transfer",
+    "CASH_RECEIPT":         "Transfer",
     "WIRE_IN":              "Transfer",
     "WIRE_OUT":             "Transfer",
     "CASH_IN_OR_CASH_OUT":  "Transfer",
     "RECEIVE_AND_DELIVER":  "Transfer",
     "JOURNAL":              "Journal",
     "MEMORANDUM":           "Journal",
-}
-
 }
 
 

@@ -1,18 +1,18 @@
 ---
 ticker: GOOG
-style: GARP / Tech Compounder
+style: GARP
 framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: 2026-04-20
-current_allocation: 5.7%
-cost_basis: 210.64
+last_reviewed: '2026-05-03'
+current_allocation: 5.56%
+cost_basis: 21122.69
 time_horizon: 3 to 5 years
 triggers:
   fwd_pe_add_below: 18              # add when AI/reg fears dominate sentiment
   fwd_pe_trim_above: 28             # trim if re-rated to rich mega-cap AI multiple
   fwd_pe_historical_median: null
   price_add_below: 195              # lean in if panic is headline-driven, not structural
-  price_trim_above: 260             # reconsider size as optimism about AI/Cloud is fully priced
+  price_trim_above: 215.00             # reconsider size as optimism about AI/Cloud is fully priced
   discount_from_52w_high_add: null
   revenue_growth_floor_pct: 8       # mature, but still solid top-line plus mix shift
   operating_margin_floor_pct: null  # focus on FCF margin and Cloud margins
@@ -21,7 +21,6 @@ triggers:
 drawdown_tolerance_pct: 0.30           # 30% drawdown from cost is within thesis
 panic_buy_trigger_drawdown_pct: 0.20   # If panic-driven and >20% drawdown, lean ADD
 ---
-
 # GOOG — Investment Thesis
 
 ## Core Thesis (AI Super‑Cycle & Ecosystem View)
@@ -74,3 +73,29 @@ I will exit or sharply reduce if the **structural moat** is clearly impaired:[fi
 
 - Next step: hold; bias to add on AI/regulatory panic if fundamentals remain intact.[file:3]  
 - Rotation priority: low; GOOG remains a core, multi‑engine AI and infrastructure compounder in the portfolio.[file:3]  
+
+<!-- region:position_state -->
+**Current Allocation:** 5.56%
+**Cost Basis:** $21,122.69
+<!-- endregion:position_state -->
+
+<!-- region:sizing -->
+**Style:** GARP
+**Size Ceiling:** 9.00%
+**Drift:** -3.44%
+<!-- endregion:sizing -->
+
+<!-- region:transaction_log -->
+- 2026-03-16: Buy 0.0622 @ $304.52
+- 2025-12-15: Buy 0.0816 @ $309.05
+- 2025-09-15: Buy 0.1343 @ $250.24
+- 2025-06-16: Buy 0.0737 @ $177.26
+<!-- endregion:transaction_log -->
+
+<!-- region:realized_gl -->
+Total Realized G/L: $4,583.00 over 4 closed lots. Total Proceeds: $9,669.00.
+<!-- endregion:realized_gl -->
+
+<!-- region:change_log -->
+2026-05-03 14:58: Auto-sync allocation 5.56%, drift -3.44%
+<!-- endregion:change_log -->

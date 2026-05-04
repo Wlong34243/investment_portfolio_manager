@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "investment-portfolio-manager"
+version = "0.1.0"
+description = "CLI-first portfolio operating system with Google Sheets as authoritative frontend."
+requires-python = ">=3.11"
+dynamic = ["dependencies"]
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+
+[tool.setuptools]
+py-modules = ["manager"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["core*", "tasks*", "utils*", "agents*"]
+exclude = ["docs*", "deprecated*", "tests*", "bundles*", "data*", "vault*"]
+
+[project.scripts]
+pm = "manager:app"

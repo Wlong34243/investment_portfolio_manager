@@ -1,11 +1,12 @@
 ---
 ticker: XLE
-style: 
-framework_preference: 
-entry_date:
-last_reviewed:
+style: ETF
+framework_preference: null
+entry_date: null
+last_reviewed: '2026-05-03'
+cost_basis: 7518.3
+current_allocation: 1.15%
 ---
-
 # XLE — Investment Thesis
 
 ## Style
@@ -41,3 +42,30 @@ priority: low (serves as a core inflation hedge)
 
 ## Review Log
 - 2026-04: Initiated. Thesis intact. Massive unrealized gains. Monitoring global oil inventory levels, sector-wide capital expenditure (CapEx) trends, and inflation data.
+
+<!-- region:position_state -->
+**Current Allocation:** 1.15%
+**Cost Basis:** $7,518.30
+<!-- endregion:position_state -->
+
+<!-- region:sizing -->
+**Style:** ETF
+**Size Ceiling:** 8.00%
+**Drift:** -6.85%
+<!-- endregion:sizing -->
+
+<!-- region:transaction_log -->
+- 2026-04-17: Buy 15.0 @ $54.43
+- 2026-04-17: Buy 20.0 @ $54.09
+- 2026-04-14: Buy 10.0 @ $56.24
+- 2026-04-14: Buy 50.0 @ $55.60
+- 2026-04-10: Buy 20.0 @ $56.95
+<!-- endregion:transaction_log -->
+
+<!-- region:realized_gl -->
+No realized G/L history.
+<!-- endregion:realized_gl -->
+
+<!-- region:change_log -->
+2026-05-03 14:58: Auto-sync allocation 1.15%, drift -6.85%
+<!-- endregion:change_log -->

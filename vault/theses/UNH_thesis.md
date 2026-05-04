@@ -1,25 +1,24 @@
 ---
 ticker: UNH
-style: GARP / Defensive Compounder
+style: GARP
 framework_preference: lynch_garp_v1, psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: 2026-04-20
-current_allocation: TBD
-cost_basis: 296.97
+last_reviewed: '2026-05-03'
+current_allocation: 6.15%
+cost_basis: 36428.15
 time_horizon: 3 to 5 years
 triggers:
   fwd_pe_add_below: 14                # add when market prices in "permanently impaired"
   fwd_pe_trim_above: 20               # trim if multiple fully normalizes ahead of fundamentals
-  fwd_pe_historical_median: null
+  fwd_pe_historical_median:
   price_add_below: 280                # reload if panic + no structural break
-  price_trim_above: 380               # reconsider size as valuation closes gap to prior range
-  discount_from_52w_high_add: null
+  price_trim_above: 615.00               # reconsider size as valuation closes gap to prior range
+  discount_from_52w_high_add:
   revenue_growth_floor_pct: 5         # this is a defensive compounder, not a hyper-growth story
-  operating_margin_floor_pct: null    # more about normalization trajectory than level in any one quarter
+  operating_margin_floor_pct:         # more about normalization trajectory than level in any one quarter
   style_size_ceiling_pct: 7.0         # defensive, but still single-name/regulatory risk
-  current_weight_pct: null
+  current_weight_pct:
 ---
-
 # UNH — Investment Thesis
 
 ## Core Thesis (“Quality On Sale” View)
@@ -77,21 +76,48 @@ I will exit or materially reduce the position if the thesis breaks in a **struct
 
 ```yaml
 triggers:
-  # Valuation triggers (GARP, FUND)
+        # Valuation triggers (GARP, FUND)
   fwd_pe_add_below: 14
   fwd_pe_trim_above: 20
   fwd_pe_historical_median: null
-
-  # Price/technical triggers (all styles)
+  
+        # Price/technical triggers (all styles)
   price_add_below: 280.0
-  price_trim_above: 380.0
+  price_trim_above: 615.00
   discount_from_52w_high_add: null
-
-  # Fundamental triggers (GARP, FUND)
+  
+        # Fundamental triggers (GARP, FUND)
   revenue_growth_floor_pct: 5
   operating_margin_floor_pct: null
-
-  # Position management
-  style_size_ceiling_pct: 7.0
-  current_weight_pct: null
+  
+        # Position management
+  style_size_ceiling_pct: 9.0
+  current_weight_pct: 6.154931914125764
 ```
+
+<!-- region:position_state -->
+**Current Allocation:** 6.15%
+**Cost Basis:** $36,428.15
+<!-- endregion:position_state -->
+
+<!-- region:sizing -->
+**Style:** GARP
+**Size Ceiling:** 9.00%
+**Drift:** -2.85%
+<!-- endregion:sizing -->
+
+<!-- region:transaction_log -->
+- 2026-04-24: Sell -10.0 @ $354.18
+- 2026-04-23: Sell -5.0 @ $354.30
+- 2026-04-16: Buy 20.0 @ $317.00
+- 2026-04-16: Buy 10.0 @ $317.53
+- 2026-04-10: Sell -1.0 @ $305.20
+<!-- endregion:transaction_log -->
+
+<!-- region:realized_gl -->
+Total Realized G/L: $3,103.00 over 24 closed lots. Total Proceeds: $27,523.00.
+<!-- endregion:realized_gl -->
+
+<!-- region:change_log -->
+2026-05-03 14:58: Auto-sync allocation 6.15%, drift -2.85%
+<!-- endregion:change_log -->

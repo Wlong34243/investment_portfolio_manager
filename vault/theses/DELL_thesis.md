@@ -1,11 +1,14 @@
 ---
 ticker: DELL
-style: 
-framework_preference: 
-entry_date:
-last_reviewed:
+style: GARP
+framework_preference: null
+entry_date: null
+last_reviewed: '2026-05-03'
+triggers:
+  price_trim_above: 165.00
+cost_basis: 3881.19
+current_allocation: 0.95%
 ---
-
 # DELL — Investment Thesis
 
 ## Style
@@ -42,3 +45,29 @@ priority: low
 
 ## Review Log
 - 2026-04: Initiated. Thesis intact. Monitoring AI server backlog conversion, ISG operating margins, and early enterprise adoption of AI PCs.
+
+<!-- region:position_state -->
+**Current Allocation:** 0.95%
+**Cost Basis:** $3,881.19
+<!-- endregion:position_state -->
+
+<!-- region:sizing -->
+**Style:** GARP
+**Size Ceiling:** 9.00%
+**Drift:** -8.05%
+<!-- endregion:sizing -->
+
+<!-- region:transaction_log -->
+- 2026-04-24: Sell -10.0 @ $216.48
+- 2026-01-30: Dividend 0.0 @ $0.00
+- 2026-01-30: Dividend 0.0 @ $0.00
+- 2026-01-30: Dividend 0.0 @ $0.00
+<!-- endregion:transaction_log -->
+
+<!-- region:realized_gl -->
+Total Realized G/L: $1,223.00 over 7 closed lots. Total Proceeds: $8,169.00.
+<!-- endregion:realized_gl -->
+
+<!-- region:change_log -->
+2026-05-03 14:58: Auto-sync allocation 0.95%, drift -8.05%
+<!-- endregion:change_log -->

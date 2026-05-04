@@ -15,9 +15,14 @@ def safe_execute(func, *args, **kwargs):
         try:
             return func(*args, **kwargs)
         except Exception as e:
-            if "429" in str(e) and i < retries - 1:
-                wait = (i + 1) * 10
-                logger.warning(f"Quota exceeded (429), waiting {wait}s before retry {i+1}/{retries}...")
+            err = str(e)
+            is_429 = "429" in err
+            is_503 = "503" in err
+            if (is_429 or is_503) and i < retries - 1:
+                # 503: Google-side outage — back off more aggressively
+                wait = (i + 1) * 30 if is_503 else (i + 1) * 10
+                label = "Service unavailable (503)" if is_503 else "Quota exceeded (429)"
+                logger.warning(f"{label}, waiting {wait}s before retry {i+1}/{retries}...")
                 time.sleep(wait)
             else:
                 raise e

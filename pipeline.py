@@ -580,11 +580,13 @@ def write_to_sheets(df: pd.DataFrame, cash_amount: float, dry_run: bool = True) 
         return results
 
     from utils.sheet_readers import get_gspread_client
-    client      = get_gspread_client()
-    spreadsheet = client.open_by_key(config.PORTFOLIO_SHEET_ID)
 
-    for attempt in range(3):
+    max_attempts = 5
+    for attempt in range(max_attempts):
         try:
+            client      = get_gspread_client()
+            spreadsheet = client.open_by_key(config.PORTFOLIO_SHEET_ID)
+
             ws_current  = spreadsheet.worksheet(config.TAB_HOLDINGS_CURRENT)
             write_holdings_current(ws_current, data_list)
             results["holdings_written"] = len(data_list)
@@ -605,11 +607,13 @@ def write_to_sheets(df: pd.DataFrame, cash_amount: float, dry_run: bool = True) 
             break
 
         except gspread.exceptions.APIError as e:
-            if attempt < 2:
-                write_pipeline_log("WARNING", source, f"API Error, retrying in 60s... {e}", dry_run=dry_run)
-                time.sleep(60)
+            if attempt < max_attempts - 1:
+                # Exponential backoff: 60s, 120s, 180s, 240s
+                wait = 60 * (attempt + 1)
+                write_pipeline_log("WARNING", source, f"API Error, retrying in {wait}s... {e}", dry_run=dry_run)
+                time.sleep(wait)
             else:
-                write_pipeline_log("ERROR", source, f"Ingestion failed after 3 attempts: {e}", dry_run=dry_run)
+                write_pipeline_log("ERROR", source, f"Ingestion failed after {max_attempts} attempts: {e}", dry_run=dry_run)
                 raise
 
     return results

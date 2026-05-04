@@ -228,11 +228,14 @@ def parse_realized_gl(file_or_path) -> pd.DataFrame:
                 continue
 
             lot["holding_days"]  = _holding_days(lot["opened_date"], lot["closed_date"])
-            lot["is_primary_acct"] = (
-                "individual" in section["account"].lower() 
-                and "401" not in section["account"].lower() 
-                and "contributory" not in section["account"].lower()
-            )
+            # Protected = tax-deferred or tax-advantaged accounts where cap gains are NOT owed.
+            # Taxable = any account where realized gains trigger a federal tax liability.
+            _PROTECTED_KEYWORDS = {
+                "401", "ira", "roth", "sep", "simple", "hsa",
+                "rollover", "beneficiary", "custodial", "contributory",
+            }
+            acct_lower = section["account"].lower()
+            lot["is_primary_acct"] = not any(kw in acct_lower for kw in _PROTECTED_KEYWORDS)
             lot["fingerprint"]   = _make_fingerprint(lot)
             lot["winner"] = lot["gain_loss_dollars"] > 0
 

@@ -1,11 +1,12 @@
 ---
 ticker: XLF
-style: 
-framework_preference: 
-entry_date:
-last_reviewed:
+style: ETF
+framework_preference: null
+entry_date: null
+last_reviewed: '2026-05-03'
+cost_basis: 4274.6
+current_allocation: 0.60%
 ---
-
 # XLF — Investment Thesis
 
 ## Style
@@ -41,3 +42,30 @@ priority: low
 
 ## Review Log
 - 2026-04: Initiated. Thesis intact. Monitoring the 2-year/10-year Treasury yield curve, consumer credit card delinquency rates, and M&A volume.
+
+<!-- region:position_state -->
+**Current Allocation:** 0.60%
+**Cost Basis:** $4,274.60
+<!-- endregion:position_state -->
+
+<!-- region:sizing -->
+**Style:** ETF
+**Size Ceiling:** 8.00%
+**Drift:** -7.40%
+<!-- endregion:sizing -->
+
+<!-- region:transaction_log -->
+- 2026-03-20: Buy 15.0 @ $48.92
+- 2026-03-03: Buy 10.0 @ $50.37
+- 2026-02-11: Sell -100.0 @ $53.00
+- 2026-02-09: Buy 20.0 @ $54.22
+- 2026-01-23: Buy 30.0 @ $53.07
+<!-- endregion:transaction_log -->
+
+<!-- region:realized_gl -->
+Total Realized G/L: $27.00 over 7 closed lots. Total Proceeds: $5,300.00.
+<!-- endregion:realized_gl -->
+
+<!-- region:change_log -->
+2026-05-03 14:58: Auto-sync allocation 0.60%, drift -7.40%
+<!-- endregion:change_log -->

@@ -853,8 +853,28 @@ def get_fmp_fundamentals_bundle(ticker: str, asset_class: str = "", forward_pe_o
     if fetch_errors:
         result["fetch_warnings"] = fetch_errors
 
-    # If both primary endpoints failed hard (auth/rate), signal as error
+    # If both primary endpoints failed hard (auth/rate), signal as error and try yfinance
     if endpoints_ok == 0 and len(fetch_errors) >= 2:
+        logging.warning("FMP hard failure for %s, trying yfinance fallback", ticker)
+        yf_data = _fetch_yf_fallback(ticker)
+        if yf_data:
+            result.update({
+                "pe_ratio": yf_data.get("pe_ratio"),
+                "forward_pe": yf_data.get("forward_pe") or forward_pe_override,
+                "peg_ratio": yf_data.get("peg_ratio"),
+                "market_cap": yf_data.get("market_cap"),
+                "beta": yf_data.get("beta"),
+                "dividend_yield": yf_data.get("dividend_yield"),
+                "debt_to_equity": yf_data.get("debt_to_equity"),
+                "roic": yf_data.get("roe"), # proxy
+            })
+            # Cache the fallback result
+            try:
+                path.write_text(json.dumps(result, default=str))
+            except Exception:
+                pass
+            return result
+
         err_result = {"error": "; ".join(fetch_errors), "fetched_at": now_ts}
         try:
             path.write_text(json.dumps(err_result))

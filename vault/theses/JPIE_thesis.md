@@ -1,25 +1,24 @@
 ---
 ticker: JPIE
-style: Active Fixed Income / Monthly Yield / Dry Powder Sleeve
+style: ETF
 framework_preference: psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: 2026-04-20
-current_allocation: 8.5%
-cost_basis: 46.34
+last_reviewed: '2026-05-03'
+current_allocation: 7.32%
+cost_basis: 50646.29
 time_horizon: 0 to 3 years (tactical cash & ballast)
 triggers:
-  fwd_pe_add_below: null
-  fwd_pe_trim_above: null
-  fwd_pe_historical_median: null
+  fwd_pe_add_below:
+  fwd_pe_trim_above:
+  fwd_pe_historical_median:
   price_add_below: 45.0        # opportunistic adds only if discount + spreads widen
   price_trim_above: 47.5       # happy to trim/harvest near top of historical range
-  discount_from_52w_high_add: null
-  revenue_growth_floor_pct: null
-  operating_margin_floor_pct: null
+  discount_from_52w_high_add:
+  revenue_growth_floor_pct:
+  operating_margin_floor_pct:
   style_size_ceiling_pct: 10.0 # cap “dry powder with risk” so equities still drive returns
   current_weight_pct: 8.5
 ---
-
 # JPIE — Investment Thesis
 
 ## Core Thesis (Dry Powder With Yield)
@@ -66,3 +65,30 @@ I will reduce or exit JPIE and move to simpler cash/T‑bills if:
 2. Credit spreads widen sharply, signaling rising default risk in MBS/credit that could lead to sustained NAV drawdowns.[file:10][web:18]  
 3. The Fed cuts rates aggressively and JPIE’s yield drifts down toward money‑market levels, removing its edge.[file:10][web:16][web:18]  
 4. I want to fund a large, high‑conviction equity purchase during a major dislocation; JPIE is a first source of liquidity.  
+
+<!-- region:position_state -->
+**Current Allocation:** 7.32%
+**Cost Basis:** $50,646.29
+<!-- endregion:position_state -->
+
+<!-- region:sizing -->
+**Style:** ETF
+**Size Ceiling:** 8.00%
+**Drift:** -0.68%
+<!-- endregion:sizing -->
+
+<!-- region:transaction_log -->
+- 2026-04-17: Sell -75.0 @ $46.25
+- 2026-04-16: Buy 200.0 @ $46.16
+- 2026-04-16: Buy 100.0 @ $46.16
+- 2026-04-16: Buy 200.0 @ $46.16
+- 2026-04-10: Sell -500.0 @ $46.09
+<!-- endregion:transaction_log -->
+
+<!-- region:realized_gl -->
+Total Realized G/L: $30.00 over 35 closed lots. Total Proceeds: $47,152.00.
+<!-- endregion:realized_gl -->
+
+<!-- region:change_log -->
+2026-05-03 14:58: Auto-sync allocation 7.32%, drift -0.68%
+<!-- endregion:change_log -->

@@ -509,6 +509,58 @@ def _check_thesis_coverage() -> CheckResult:
     return result
 
 
+def _check_tax_control_freshness() -> CheckResult:
+    result = CheckResult(
+        name="tax_control_freshness",
+        label="tax_control_freshness",
+        level=WARNING, status=WARN,
+        detail="Could not read Tax_Control tab",
+    )
+    try:
+        import config
+        from utils.sheet_readers import get_gspread_client
+
+        gc = get_gspread_client()
+        ss = gc.open_by_key(config.PORTFOLIO_SHEET_ID)
+        ws = ss.worksheet(config.TAB_TAX_CONTROL)
+
+        # "Last Updated" is in Col G, Row 3
+        # col_values(7) gives G
+        dates_raw = ws.col_values(7)
+        if len(dates_raw) < 3:
+            result.detail = "Tax_Control KPI row is empty"
+            return result
+        
+        last_updated_str = dates_raw[2] # G3
+        if not last_updated_str or last_updated_str == "N/A":
+            result.detail = "Tax_Control 'Last Updated' is empty/NA"
+            return result
+
+        try:
+            # Format in build_tax_control is %Y-%m-%d
+            last_updated = datetime.strptime(last_updated_str, "%Y-%m-%d").date()
+        except ValueError:
+            result.detail = f"Could not parse date: {last_updated_str}"
+            return result
+
+        today = datetime.now().date()
+        days_ago = (today - last_updated).days
+
+        if days_ago <= 7:
+            result.status = PASS
+            result.detail = f"Fresh: {last_updated_str} ({days_ago} days ago)"
+        elif days_ago <= 30:
+            result.status = WARN
+            result.detail = f"Warning: {last_updated_str} ({days_ago} days ago) — Consider refresh"
+        else:
+            result.status = FAIL
+            result.detail = f"STALE: {last_updated_str} ({days_ago} days ago) — Refresh required"
+
+    except Exception as e:
+        result.detail = f"Tax control check failed: {e}"
+    return result
+
+
 # ---------------------------------------------------------------------------
 # Runner
 # ---------------------------------------------------------------------------
@@ -525,6 +577,7 @@ _ALL_CHECKS: list[Callable[[], CheckResult]] = [
     _check_yfinance_connectivity,
     _check_transactions_freshness,
     _check_thesis_coverage,
+    _check_tax_control_freshness,
 ]
 
 _CHECK_ORDER = {fn.__name__.lstrip("_"): i for i, fn in enumerate(_ALL_CHECKS)}

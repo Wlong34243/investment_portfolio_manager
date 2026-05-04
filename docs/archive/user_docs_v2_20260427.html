@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Investment Portfolio Manager | User Documentation & Reasoning Guide</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #1a2744;
+            --secondary: #2c3e50;
+            --accent: #3498db;
+            --bg: #f8f9fa;
+            --text: #333;
+            --border: #e1e4e8;
+            --code-bg: #f1f3f5;
+            --sidebar-width: 280px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background-color: var(--bg);
+            margin: 0;
+            display: flex;
+        }
+
+        /* Sidebar Navigation */
+        nav {
+            width: var(--sidebar-width);
+            background: var(--primary);
+            color: white;
+            height: 100vh;
+            position: sticky;
+            top: 0;
+            padding: 2rem 1rem;
+            overflow-y: auto;
+        }
+
+        nav h2 {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 0.5rem;
+        }
+
+        nav ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        nav li {
+            margin-bottom: 0.8rem;
+        }
+
+        nav a {
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            font-size: 0.95rem;
+            transition: color 0.2s;
+        }
+
+        nav a:hover {
+            color: white;
+        }
+
+        /* Main Content */
+        main {
+            flex: 1;
+            padding: 3rem 4rem;
+            max-width: 1000px;
+            background: white;
+            min-height: 100vh;
+            box-shadow: -5px 0 15px rgba(0,0,0,0.05);
+        }
+
+        h1 { font-size: 2.5rem; color: var(--primary); margin-top: 0; }
+        h2 { font-size: 1.8rem; color: var(--secondary); margin-top: 3rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; }
+        h3 { font-size: 1.4rem; color: var(--primary); margin-top: 2rem; }
+
+        p { margin-bottom: 1.2rem; }
+
+        code {
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--code-bg);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+
+        pre {
+            background: #282c34;
+            color: #abb2bf;
+            padding: 1.5rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin-bottom: 1.5rem;
+        }
+
+        pre code {
+            background: transparent;
+            color: inherit;
+            padding: 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2rem 0;
+            font-size: 0.95rem;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 12px 15px;
+            border: 1px solid var(--border);
+        }
+
+        th {
+            background-color: #f1f3f5;
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-live { background: #e6fffa; color: #2c7a7b; border: 1px solid #81e6d9; }
+        .badge-dry { background: #fffaf0; color: #9c4221; border: 1px solid #fbd38d; }
+
+        .callout {
+            padding: 1.5rem;
+            border-left: 5px solid var(--accent);
+            background: #eef2f7;
+            margin: 2rem 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        /* Print Styles */
+        @media print {
+            nav { display: none; }
+            main { padding: 0; box-shadow: none; max-width: 100%; }
+            body { background: white; }
+            h2, h3 { page-break-after: avoid; }
+            table { page-break-inside: auto; }
+            tr { page-break-inside: avoid; page-break-after: auto; }
+            pre { white-space: pre-wrap; word-wrap: break-word; background: #eee; color: #000; border: 1px solid #ccc; }
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <h2>Documentation</h2>
+        <ul>
+            <li><a href="#overview">System Overview</a></li>
+            <li><a href="#architecture">Architecture & Bundles</a></li>
+            <li><a href="#cli-reference">CLI Command Reference</a></li>
+            <li><a href="#reasoning">Reasoning Strategy</a></li>
+            <li><a href="#maintenance">Maintenance Workflows</a></li>
+        </ul>
+    </nav>
+
+    <main>
+        <header>
+            <h1>Investment Portfolio Manager</h1>
+            <p><strong>Version 2.3 (Decision Review)</strong> | Operator Manual & Reasoning Guide</p>
+        </header>
+
+        <section id="overview">
+            <h2>1. System Overview</h2>
+            <p>The <strong>Investment Portfolio Manager</strong> is a production-grade, headless CLI tool designed to move financial data through an automated enrichment pipeline. Following the April 2026 architectural pivot, the system adheres to a strict mandate: <strong>APIs calculate locally, LLMs reason externally.</strong></p>
+
+            <h3>The Headless Philosophy</h3>
+            <p>This system prioritizes <strong>accuracy and deterministic logic</strong> over aesthetic or autonomous automation. Local agents have been decommissioned in favor of a clean data pipeline that feeds frontier LLMs (like Claude, Gemini, or Perplexity) for high-quality, human-in-the-loop reasoning. The Google Sheets dashboard provides a passive, color-coded view layer for rapid 30-second scans.</p>
+        </section>
+
+        <section id="decision-review">
+            <h2>2. Decision Review & Market Timing (Phase 5)</h2>
+            <p>Phase 5 closes the loop on rotation-based investing. The system now automatically captures <strong>Decision Context</strong> at the moment of trade and calculates <strong>Post-hoc P&L Attribution</strong> to help you tune your market timing skill.</p>
+
+            <h3>The Rotation Lifecycle</h3>
+            <ol>
+                <li><strong>Derive:</strong> <code>tasks/derive_rotations.py</code> clusters transactions into candidate rotations and captures RSI, Trend, and MA200 snapshots.</li>
+                <li><strong>Enrich:</strong> You fill in the <em>Implicit_Bet</em> and <em>Thesis_Brief</em> in the <strong>Trade_Log_Staging</strong> tab.</li>
+                <li><strong>Promote:</strong> <code>manager.py journal promote --live</code> moves approved rows to the permanent <strong>Trade_Log</strong>.</li>
+                <li><strong>Attribute:</strong> <code>manager.py trade review --live</code> calculates how those decisions performed 30, 90, and 180 trading days later.</li>
+            </ol>
+
+            <div class="callout">
+                <strong>Why Attribution?</strong> By comparing the "Buy Side" return vs. the "Sell Side" return (the Pair Return), you can see if your rotations are actually additive or if you would have been better off doing nothing.
+            </div>
+
+            <h3>Monthly Retrospective Workflow</h3>
+            <p>Once a month, use the Export Engine to analyze patterns in your trade history:</p>
+            <pre><code>python manager.py export rotation-retrospective --last-n 20</code></pre>
+            <p>This packages your recent attribution data for a frontier LLM to identify timing biases (e.g., "I consistently rotate out of winners too early when RSI > 70").</p>
+        </section>
+
+        <section id="deep-analysis">
+            <h2>3. Deep Analysis Workflow (Phase 4)</h2>
+            <p>While the dashboard identifies <em>what</em> is happening, the <strong>Export Engine</strong> helps you understand <em>why</em> and what to do next. It packages everything an LLM needs to give a grounded, professional opinion without hallucinating your portfolio state.</p>
+
+            <div class="note">
+                <strong>Scenario Catalog:</strong> Choose the right tool for the question.
+            </div>
+
+            <table style="width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.9rem;">
+                <thead>
+                    <tr style="background: var(--bg-card); border-bottom: 2px solid var(--border);">
+                        <th style="padding: 0.5rem; text-align: left;">Scenario</th>
+                        <th style="padding: 0.5rem; text-align: left;">Question it Answers</th>
+                        <th style="padding: 0.5rem; text-align: left;">Best LLM For It</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr style="border-bottom: 1px solid var(--border);">
+                        <td style="padding: 0.5rem;"><code>rotation</code></td>
+                        <td>"Should I rotate X into Y?" (thesis + tax + tech)</td>
+                        <td>Claude 3.5/Gemini 1.5</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid var(--border);">
+                        <td style="padding: 0.5rem;"><code>deep-dive</code></td>
+                        <td>"Full picture on one position (thesis + behavior + drift)"</td>
+                        <td>Claude 3.5</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid var(--border);">
+                        <td style="padding: 0.5rem;"><code>tax-rebalance</code></td>
+                        <td>"Harvest candidates given YTD tax posture"</td>
+                        <td>Claude (tax nuance)</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid var(--border);">
+                        <td style="padding: 0.5rem;"><code>technical-scan</code></td>
+                        <td>"Overbought/oversold + action zones across the book"</td>
+                        <td>Gemini (pattern logic)</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid var(--border);">
+                        <td style="padding: 0.5rem;"><code>macro-review</code></td>
+                        <td>"Is my positioning consistent with a macro view?"</td>
+                        <td>Gemini / Perplexity</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid var(--border);">
+                        <td style="padding: 0.5rem;"><code>concentration</code></td>
+                        <td>"Hidden concentrations and drawdown behavior"</td>
+                        <td>Claude 3.5</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid var(--border);">
+                        <td style="padding: 0.5rem;"><code>thesis-health</code></td>
+                        <td>"Which theses are stale / violated / need re-reading?"</td>
+                        <td>Claude 3.5</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid var(--border);">
+                        <td style="padding: 0.5rem;"><code>rotation-retrospective</code></td>
+                        <td>"Pattern analysis on my recent trade history"</td>
+                        <td>Claude 3.5 / Gemini 2.0</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>How to use an Export Package</h3>
+            <ol>
+                <li>Run the export command: <code>python manager.py export rotation --sell UNH --buy VEA</code></li>
+                <li>Navigate to the printed <code>exports/</code> directory.</li>
+                <li>Copy <code>prompt.md</code> and paste it as your first message to the LLM.</li>
+                <li>Attach <code>context.json</code> and any files in <code>theses/</code> to the chat.</li>
+                <li>Review the structured reasoning and record any decisions in the <strong>Decision_Journal</strong>.</li>
+            </ol>
+        </section>
+
+        <section id="tax-visibility">
+            <h2>4. Tax Visibility & Control (Phase 3)</h2>
+
+            <p>The system provides a dedicated <strong>Tax_Control</strong> view to manage realized tax liability and identify harvesting opportunities. This is <em>not</em> tax advice, but a planning tool built from realized trade data.</p>
+
+            <ul>
+                <li><strong>Net ST/LT (YTD):</strong> Realized posture for the current calendar year.</li>
+                <li><strong>Est. Fed Cap Gains Tax:</strong> A conservative calculation using rates defined in the <code>Config</code> tab.</li>
+                <li><strong>Tax Offset Capacity:</strong> The "behavioral leverage" number—exactly how much in gains can still be offset by harvesting losses.</li>
+                <li><strong>Wash Sale Sentinel:</strong> Aggressive red highlighting for disallowed losses that are dragging on performance.</li>
+            </ul>
+        </section>
+
+        <section id="architecture">
+            <h2>5. Architecture & Bundles</h2>
+
+            <p>The system is built around <strong>Immutable Context Bundles</strong>. A bundle is a JSON snapshot of the world (prices, technicals, fundamentals, tax lots) at a specific moment in time. This ensures that any reasoning performed is tied to a frozen state, preventing "state leakage" and providing a full audit trail via SHA256 hashes.</p>
+
+            <div class="callout">
+                <strong>Why Bundles?</strong> By freezing data into a hashed file, the AI's "rationale" is anchored to a specific set of facts. You can verify any analysis by inspecting the exact bundle used for that session.
+            </div>
+
+            <ul>
+                <li><strong>Market Bundle:</strong> Prices, quantities, P/E, ATR stops, technical indicators, and tax lots. Built via <code>manager.py snapshot</code>.</li>
+                <li><strong>Vault Bundle:</strong> Local markdown theses and qualitative research. Built via <code>manager.py vault snapshot</code>.</li>
+                <li><strong>Composite Bundle:</strong> The "Master View" that joins Market and Vault data for analysis.</li>
+            </ul>
+        </section>
+
+        <section id="cli-reference">
+            <h2>6. CLI Command Reference</h2>
+            <p>All operations are managed through <code>python manager.py</code>. By default, all commands are <strong>Dry-Run</strong> (read-only) unless <code>--live</code> is specified.</p>
+
+            <h3>Core Commands</h3>
+
+            <h4><code>health</code></h4>
+            <p>Runs pipeline health checks (Schwab tokens, API connectivity, Sheet, bundle age, thesis coverage).</p>
+            <pre><code>python manager.py health</code></pre>
+
+            <h4><code>snapshot</code></h4>
+            <p>Freezes current market state, enriches with deep data (ATR/TA/FMP), and pushes to Sheets.</p>
+            <pre><code>python manager.py snapshot --live</code></pre>
+
+            <h4><code>sync transactions</code></h4>
+            <p>Fetches Schwab trade history and updates the <em>Transactions</em> tab.</p>
+            <pre><code>python manager.py sync transactions --live</code></pre>
+
+            <h4><code>dashboard refresh</code></h4>
+            <p>Rebuilds high-level dashboard views and applies professional formatting.</p>
+            <pre><code>python manager.py dashboard refresh --live</code></pre>
+
+            <h3>Trade & Journaling</h3>
+
+            <h4><code>journal promote</code></h4>
+            <p>Moves <em>approved</em> rows from Staging to the permanent <em>Trade_Log</em>.</p>
+            <pre><code>python manager.py journal promote --live</code></pre>
+
+            <h4><code>trade review</code></h4>
+            <p>Refreshes the <em>Rotation_Review</em> tab with fresh P&L attribution.</p>
+            <pre><code>python manager.py trade review --live</code></pre>
+
+            <h4><code>export rotation-retrospective</code></h4>
+            <p>Packages recent trade history for pattern analysis.</p>
+            <pre><code>python manager.py export rotation-retrospective --last-n 20</code></pre>
+        </section>
+
+        <section id="reasoning">
+            <h2>7. Reasoning Strategy</h2>
+            <p>Autonomous local agents were decommissioned in April 2026. Reasoning is now performed by the operator using <strong>Gemini CLI</strong> as a reasoning engine. This approach leverages the highest-capability frontier models while eliminating the overhead of maintaining local agent code.</p>
+
+            <h3>Collaborative Reasoning Workflow</h3>
+            <ol>
+                <li><strong>Data Export:</strong> Use the dashboard (Google Sheets) to scan for "broken" or "interesting" positions (red RSI, price < MA200, etc.).</li>
+                <li><strong>Context Injection:</strong> Provide Gemini CLI with the data from the relevant dashboard row or thesis file.</li>
+                <li><strong>Interactive Analysis:</strong> Use Gemini CLI's <em>Plan Mode</em> and <em>Chapters</em> to walk through complex decisions (e.g., "Analyze the tax impact of rotating UNH into more VEA given our YTD gains").</li>
+            </ol>
+        </section>
+
+        <section id="maintenance">
+            <h2>8. Maintenance Workflows</h2>
+            <h3>Weekly Operational Cycle</h3>
+            <ol>
+                <li><strong>Check:</strong> Run <code>python manager.py health</code>.</li>
+                <li><strong>Ingest:</strong> Run <code>python manager.py snapshot --live</code> and <code>python manager.py sync transactions --live</code>.</li>
+                <li><strong>Derive:</strong> Run <code>python tasks/derive_rotations.py</code> to identify new trade clusters.</li>
+                <li><strong>Dashboard:</strong> Run <code>python manager.py dashboard refresh --live</code>.</li>
+                <li><strong>Analyze:</strong> Review <em>Decision_View</em>. Review <em>Trade_Log_Staging</em> and approve rotations.</li>
+                <li><strong>Record:</strong> Run <code>python manager.py journal promote --live</code>.</li>
+            </ol>
+
+            <h3>Monthly Retrospective (First Saturday)</h3>
+            <ol>
+                <li><strong>Refresh:</strong> Run <code>python manager.py trade review --live</code> to update attribution.</li>
+                <li><strong>Retrospective:</strong> Run <code>python manager.py export rotation-retrospective --last-n 20</code>.</li>
+                <li><strong>Tune:</strong> Paste into Claude/Gemini and identify behavioral biases in rotation timing.</li>
+            </ol>
+        </section>
+
+        <footer style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); color: #777; font-size: 0.8rem;">
+            Generated for: Bill (CPA) | Investment Portfolio Manager CLI | System Date: April 2026
+        </footer>
+    </main>
+</body>
+</html>

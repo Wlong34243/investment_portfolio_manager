@@ -22,7 +22,10 @@
       "Bash(xargs grep *)",
       "Bash(git add *)",
       "Bash(git commit *)",
-      "mcp__google-sheets__get_sheet_data"
+      "mcp__google-sheets__get_sheet_data",
+      "Bash(claude doctor *)",
+      "Bash(pm podcast *)",
+      "Bash(echo \"exit: $?\")"
     ]
   }
 }

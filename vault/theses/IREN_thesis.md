@@ -1,11 +1,14 @@
 ---
 ticker: IREN
-style: 
-framework_preference: 
-entry_date:
-last_reviewed:
+style: THEME
+framework_preference: null
+entry_date: null
+last_reviewed: '2026-05-03'
+triggers:
+  price_trim_above: 16.50
+cost_basis: 3508.6
+current_allocation: 0.56%
 ---
-
 # IREN — Investment Thesis
 
 ## Style
@@ -41,3 +44,30 @@ priority: high (requires constant monitoring of dilution and cloud contracts)
 
 ## Review Log
 - 2026-04: Initiated. Thesis intact. Monitoring AI cloud revenue mix, GPU utilization rates, and outstanding share count (dilution tracking).
+
+<!-- region:position_state -->
+**Current Allocation:** 0.56%
+**Cost Basis:** $3,508.60
+<!-- endregion:position_state -->
+
+<!-- region:sizing -->
+**Style:** THEME
+**Size Ceiling:** 3.00%
+**Drift:** -2.44%
+<!-- endregion:sizing -->
+
+<!-- region:transaction_log -->
+- 2026-04-21: Buy 25.0 @ $46.00
+- 2026-04-09: Buy 15.0 @ $36.45
+- 2026-03-19: Buy 15.0 @ $40.05
+- 2026-03-17: Buy 10.0 @ $43.79
+- 2026-03-06: Buy 20.0 @ $38.66
+<!-- endregion:transaction_log -->
+
+<!-- region:realized_gl -->
+No realized G/L history.
+<!-- endregion:realized_gl -->
+
+<!-- region:change_log -->
+2026-05-03 14:58: Auto-sync allocation 0.56%, drift -2.44%
+<!-- endregion:change_log -->

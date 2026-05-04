@@ -275,10 +275,19 @@ def main(
     df_holdings = ensure_display_columns(df_holdings)
 
     tickers = df_holdings["Ticker"].unique()
+    
+    # Filter out invalid tickers (headers, manual cash, etc.)
+    def is_valid_ticker(t):
+        if not t: return False
+        t_str = str(t).strip()
+        if any(x in t_str for x in ["📊", "SNAPSHOT", "TICKER", "CASH_MANUAL"]): return False
+        if t_str.lower() in ["ticker", "cash", "total"]: return False
+        return True
+        
+    tickers = [t for t in tickers if is_valid_ticker(t)]
+    
     if not include_all:
-        tickers = [t for t in tickers if t and t not in EXCLUDE_TICKERS]
-    else:
-        tickers = [t for t in tickers if t]
+        tickers = [t for t in tickers if t not in EXCLUDE_TICKERS]
 
     print(f"Fetching valuation data for {len(tickers)} tickers "
           f"({len([t for t in tickers if fmp_map.get(t)])} have FMP data in bundle)...")
@@ -322,8 +331,54 @@ def main(
     except Exception:
         ws_val = spreadsheet.add_worksheet(title=tab_name, rows=100, cols=30)
 
-    data_to_write = [df_val.columns.tolist()] + df_val.values.tolist()
+    # Data to write (handle nulls as empty strings for GSheets)
+    df_write = df_val.copy()
+    data_to_write = [df_write.columns.tolist()] + df_write.values.tolist()
+    data_to_write = [[(v if pd.notnull(v) and v != "" else "") for v in row] for row in data_to_write]
+
     ws_val.update(range_name="A1", values=data_to_write)
+    
+    # Apply Formatting if available
+    try:
+        from gspread_formatting import (
+            format_cell_range, CellFormat, NumberFormat,
+            set_frozen, TextFormat, Color
+        )
+        # --- Colors ---
+        COLOR_NAVY = Color(0.10, 0.15, 0.27)
+        COLOR_WHITE = Color(1, 1, 1)
+
+        print(f"  Applying formatting to {tab_name}...")
+        
+        # Header Format
+        header_fmt = CellFormat(
+            backgroundColor=COLOR_NAVY,
+            textFormat=TextFormat(bold=True, foregroundColor=COLOR_WHITE),
+            horizontalAlignment="CENTER"
+        )
+        format_cell_range(ws_val, "A1:Y1", header_fmt)
+        set_frozen(ws_val, rows=1)
+        
+        # Numeric Formats
+        fmt_curr = CellFormat(numberFormat=NumberFormat(type='CURRENCY', pattern='$#,##0.00'))
+        fmt_num = CellFormat(numberFormat=NumberFormat(type='NUMBER', pattern='0.00'))
+        fmt_pct = CellFormat(numberFormat=NumberFormat(type='PERCENT', pattern='0.00%'))
+        
+        # Price (E), Trim (F), Add (G), 52w Low (S), 52w High (T)
+        for col_let in ["E", "F", "G", "S", "T"]:
+            format_cell_range(ws_val, f"{col_let}2:{col_let}200", fmt_curr)
+            
+        # P/E Ratios (H, I, J), P/B (K), PEG (L), D/E (O)
+        for col_let in ["H", "I", "J", "K", "L", "O"]:
+            format_cell_range(ws_val, f"{col_let}2:{col_let}200", fmt_num)
+
+        # Margins/Growth/Yield (M, N, P, Q, R, U, V)
+        for col_let in ["M", "N", "P", "Q", "R", "U", "V"]:
+            format_cell_range(ws_val, f"{col_let}2:{col_let}200", fmt_pct)
+
+    except ImportError:
+        print("  ! gspread_formatting not installed, skipping visual styles.")
+
     print(f"\n✅ Successfully wrote {len(df_val)} rows to {tab_name}")
 
 

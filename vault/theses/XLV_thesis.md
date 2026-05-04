@@ -1,11 +1,12 @@
 ---
 ticker: XLV
-style: 
-framework_preference: 
-entry_date:
-last_reviewed:
+style: ETF
+framework_preference: null
+entry_date: null
+last_reviewed: '2026-05-03'
+cost_basis: 9196.42
+current_allocation: 1.26%
 ---
-
 # XLV — Investment Thesis
 
 ## Style
@@ -40,3 +41,30 @@ priority: low (foundational holding)
 
 ## Review Log
 - 2026-04: Initiated. Thesis intact. Monitoring Medicare drug negotiation impacts, GLP-1 adoption rates, and demographic spending trends.
+
+<!-- region:position_state -->
+**Current Allocation:** 1.26%
+**Cost Basis:** $9,196.42
+<!-- endregion:position_state -->
+
+<!-- region:sizing -->
+**Style:** ETF
+**Size Ceiling:** 8.00%
+**Drift:** -6.74%
+<!-- endregion:sizing -->
+
+<!-- region:transaction_log -->
+- 2026-04-14: Buy 10.0 @ $149.43
+- 2026-04-09: Buy 10.0 @ $149.53
+- 2026-04-01: Sell -40.0 @ $147.53
+- 2026-01-28: Buy 5.0 @ $154.34
+- 2026-01-28: Buy 5.0 @ $154.44
+<!-- endregion:transaction_log -->
+
+<!-- region:realized_gl -->
+Total Realized G/L: $166.00 over 6 closed lots. Total Proceeds: $5,902.00.
+<!-- endregion:realized_gl -->
+
+<!-- region:change_log -->
+2026-05-03 14:58: Auto-sync allocation 1.26%, drift -6.74%
+<!-- endregion:change_log -->

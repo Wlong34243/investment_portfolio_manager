@@ -80,8 +80,16 @@ def read_gsheet_robust(ws: gspread.Worksheet) -> pd.DataFrame:
     if not all_values:
         return pd.DataFrame()
     
-    headers = all_values[0]
-    data = all_values[1:]
+    # Identify header row. Some tabs have a KPI strip in row 1.
+    header_idx = 0
+    for i, row in enumerate(all_values[:10]):
+        # Look for "Ticker" or other standard headers
+        if "Ticker" in row or "Trade Date" in row or "Date" in row:
+            header_idx = i
+            break
+            
+    headers = all_values[header_idx]
+    data = all_values[header_idx + 1:]
     
     clean_headers = []
     seen = {}
@@ -98,9 +106,8 @@ def read_gsheet_robust(ws: gspread.Worksheet) -> pd.DataFrame:
 
     # Filter out redundant header rows (sometimes happens with insert_row at row 1)
     if not df.empty:
-        # Check if the first column's content is the same as its header
-        first_col = df.columns[0]
-        df = df[df[first_col] != first_col]
+        # Check if any row matches the header exactly
+        df = df[df[df.columns[0]] != clean_headers[0]]
 
     # ROOT CAUSE FIX: If the first column is unnamed, it's our Ticker column.
     if 'Unnamed_0' in df.columns:
@@ -111,28 +118,47 @@ def read_gsheet_robust(ws: gspread.Worksheet) -> pd.DataFrame:
 
     if df.empty:
         return df
-    skip_cols = [
+    
+    # Identify columns that should NOT be converted to numeric
+    # Using lowercase and substring matches for robustness
+    text_indicators = [
         'ticker', 'symbol', 'description', 'sector', 'industry', 
         'asset class', 'asset strategy', 'import date', 'closed date', 
         'opened date', 'acquisition date', 'date', 'import timestamp', 'fingerprint',
-        'is cash', 'wash sale', 'is primary acct', 'winner', 'unnamed_0'
+        'is cash', 'wash sale', 'is primary acct', 'winner', 'unnamed_',
+        'action', 'account', 'status', 'rotation', 'implicit', 'thesis', 'term',
+        'trade date', 'settlement date'
     ]
+    
     for col in df.columns:
         col_lower = col.lower()
-        # Skip known text/identifier columns AND any unnamed columns (Unnamed_0, Unnamed_1 etc.)
-        # Unnamed columns arise when a Sheet header is blank; they typically hold ticker/identifier data
-        if col_lower in skip_cols or col_lower.startswith('unnamed_'):
+        should_skip = any(ind in col_lower for ind in text_indicators)
+        
+        if should_skip:
             continue
         
         if df[col].dtype == object:
             df[col] = df[col].astype(str).str.replace('$', '', regex=False).str.replace('%', '', regex=False).str.replace(',', '', regex=False).str.strip()
             df[col] = df[col].replace('', '0')
+            # Handle parenthesized negatives: (123.45) -> -123.45
             mask = df[col].str.startswith('(') & df[col].str.endswith(')')
             df.loc[mask, col] = '-' + df.loc[mask, col].str[1:-1]
         
         df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0.0)
         
     return df
+
+@lru_cache(maxsize=32)
+def get_transactions() -> pd.DataFrame:
+    """Reads Transactions tab."""
+    try:
+        client = get_gspread_client()
+        spreadsheet = client.open_by_key(config.PORTFOLIO_SHEET_ID)
+        ws = spreadsheet.worksheet(config.TAB_TRANSACTIONS)
+        return read_gsheet_robust(ws)
+    except Exception as e:
+        print(f"Error reading Transactions: {e}")
+        return pd.DataFrame()
 
 @lru_cache(maxsize=32)
 def get_holdings_current() -> pd.DataFrame:

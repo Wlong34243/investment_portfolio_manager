@@ -1,11 +1,14 @@
 ---
 ticker: GS
-style: Cyclical Value / Capital Markets Franchise
-framework_preference:
-entry_date:
-last_reviewed: 2026-04
+style: GARP
+framework_preference: null
+entry_date: null
+last_reviewed: '2026-05-03'
+triggers:
+  price_trim_above: 480.00
+cost_basis: 1796.14
+current_allocation: 0.27%
 ---
-
 # GS — Investment Thesis
 
 ## Style
@@ -41,3 +44,28 @@ priority: medium
 
 ## Review Log
 - 2026-04: Initiated. Monitoring M&A advisory backlogs, capital market activity, and fee generation in the Asset & Wealth Management segment.
+
+<!-- region:position_state -->
+**Current Allocation:** 0.27%
+**Cost Basis:** $1,796.14
+<!-- endregion:position_state -->
+
+<!-- region:sizing -->
+**Style:** GARP
+**Size Ceiling:** 9.00%
+**Drift:** -8.73%
+<!-- endregion:sizing -->
+
+<!-- region:transaction_log -->
+- 2026-04-16: Sell -2.0 @ $904.58
+- 2026-04-14: Buy 2.0 @ $898.07
+- 2026-04-14: Buy 2.0 @ $907.43
+<!-- endregion:transaction_log -->
+
+<!-- region:realized_gl -->
+Total Realized G/L: $-6.00 over 1 closed lots. Total Proceeds: $1,809.00.
+<!-- endregion:realized_gl -->
+
+<!-- region:change_log -->
+2026-05-03 14:58: Auto-sync allocation 0.27%, drift -8.73%
+<!-- endregion:change_log -->

@@ -1,11 +1,14 @@
 ---
 ticker: CSCO
-style: 
-framework_preference: 
-entry_date:
-last_reviewed:
+style: FUND
+framework_preference: null
+entry_date: null
+last_reviewed: '2026-05-03'
+triggers:
+  price_trim_above: 65.00
+cost_basis: 2343.19
+current_allocation: 0.47%
 ---
-
 # CSCO — Investment Thesis
 
 ## Style
@@ -41,3 +44,26 @@ priority: low
 
 ## Review Log
 - 2026-04: Initiated. Thesis intact. Monitoring Splunk ARR integration, enterprise AI networking orders, and hardware inventory cycles.
+
+<!-- region:position_state -->
+**Current Allocation:** 0.47%
+**Cost Basis:** $2,343.19
+<!-- endregion:position_state -->
+
+<!-- region:sizing -->
+**Style:** FUND
+**Size Ceiling:** 5.00%
+**Drift:** -4.53%
+<!-- endregion:sizing -->
+
+<!-- region:transaction_log -->
+No recent transactions found.
+<!-- endregion:transaction_log -->
+
+<!-- region:realized_gl -->
+No realized G/L history.
+<!-- endregion:realized_gl -->
+
+<!-- region:change_log -->
+2026-05-03 14:58: Auto-sync allocation 0.47%, drift -4.53%
+<!-- endregion:change_log -->

@@ -1,11 +1,12 @@
 ---
 ticker: IFRA
-style: 
-framework_preference: 
-entry_date:
-last_reviewed:
+style: ETF
+framework_preference: null
+entry_date: null
+last_reviewed: '2026-05-03'
+cost_basis: 11574.58
+current_allocation: 1.97%
 ---
-
 # IFRA — Investment Thesis
 
 ## Style
@@ -41,3 +42,30 @@ priority: low
 
 ## Review Log
 - 2026-04: Initiated. Thesis intact. Monitoring the pace of federal fund disbursement, industrial capacity utilization, and skilled labor availability.
+
+<!-- region:position_state -->
+**Current Allocation:** 1.97%
+**Cost Basis:** $11,574.58
+<!-- endregion:position_state -->
+
+<!-- region:sizing -->
+**Style:** ETF
+**Size Ceiling:** 8.00%
+**Drift:** -6.03%
+<!-- endregion:sizing -->
+
+<!-- region:transaction_log -->
+- 2026-04-22: Sell -50.0 @ $59.40
+- 2026-03-18: Sell -50.0 @ $57.32
+- 2026-03-11: Buy 20.0 @ $57.98
+- 2026-02-11: Buy 18.0 @ $59.60
+- 2026-02-09: Buy 20.0 @ $58.52
+<!-- endregion:transaction_log -->
+
+<!-- region:realized_gl -->
+Total Realized G/L: $1,107.00 over 6 closed lots. Total Proceeds: $5,836.00.
+<!-- endregion:realized_gl -->
+
+<!-- region:change_log -->
+2026-05-03 14:58: Auto-sync allocation 1.97%, drift -6.03%
+<!-- endregion:change_log -->

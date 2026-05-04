@@ -1,25 +1,24 @@
 ---
 ticker: NVDA
-style: Hyper-Growth / AI Monopoly / "Picks & Shovels" Leader
+style: GARP
 framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: 2026-04-20
-current_allocation: 2.5%
-cost_basis: 166.96   # post-split
+last_reviewed: '2026-05-03'
+current_allocation: 2.22%
+cost_basis: 11604.79 # post-split
 time_horizon: 3 to 5 years
 triggers:
   fwd_pe_add_below: 30               # add only if multiple compresses but AI build-out intact
   fwd_pe_trim_above: 45              # trim if priced for perfection + slowing fundamentals
   fwd_pe_historical_median: null
   price_add_below: null              # behavior-driven: focus on PE + CapEx/earnings, not levels
-  price_trim_above: null
+  price_trim_above: 365.00
   discount_from_52w_high_add: null
   revenue_growth_floor_pct: 20       # still want strong growth; below this = yellow flag
   operating_margin_floor_pct: null   # focus on gross margin and DC segment margin
   style_size_ceiling_pct: 4.0        # hyper-concentrated AI cyclical; cap exposure
   current_weight_pct: 2.5
 ---
-
 # NVDA — Investment Thesis
 
 ## Core Thesis (AI Compute Railroads View)
@@ -73,3 +72,26 @@ I will exit or materially cut if the **core structural edge or demand environmen
 3. A serious geopolitical disruption (e.g., blockade/invasion of Taiwan) cripples TSMC’s capacity and there is no credible near‑term mitigation path..  
 4. CUDA/software lock‑in erodes and developers materially pivot to alternative ecosystems, undermining Nvidia’s moat.  
 5. A superior, more reasonably valued AI infrastructure play emerges with a better risk‑adjusted IRR, making it rational to rotate out even with NVDA’s story intact..  
+
+<!-- region:position_state -->
+**Current Allocation:** 2.22%
+**Cost Basis:** $11,604.79
+<!-- endregion:position_state -->
+
+<!-- region:sizing -->
+**Style:** GARP
+**Size Ceiling:** 9.00%
+**Drift:** -6.78%
+<!-- endregion:sizing -->
+
+<!-- region:transaction_log -->
+- 2026-01-23: Buy 7.0 @ $334.00
+<!-- endregion:transaction_log -->
+
+<!-- region:realized_gl -->
+No realized G/L history.
+<!-- endregion:realized_gl -->
+
+<!-- region:change_log -->
+2026-05-03 14:58: Auto-sync allocation 2.22%, drift -6.78%
+<!-- endregion:change_log -->

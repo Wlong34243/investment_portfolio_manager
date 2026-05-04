@@ -63,9 +63,12 @@ SCHEMA = {
         "Date", "Sell_Ticker", "Sell_Proceeds", "Buy_Ticker", "Buy_Amount",
         "Implicit_Bet", "Thesis_Brief", "Rotation_Type", "Trade_Log_ID", "Fingerprint"
     ],
+    "Tax_Control": [
+        "TAX CONTROL — YTD Realized Tax Posture (will be populated by manager.py tax refresh)"
+    ],
 }
 
-TABS_TO_FREEZE = ["Holdings_Current", "Holdings_History", "Daily_Snapshots", "Realized_GL", "AI_Suggested_Allocation", "Decision_Log", "Trade_Log"]
+TABS_TO_FREEZE = ["Holdings_Current", "Holdings_History", "Daily_Snapshots", "Realized_GL", "AI_Suggested_Allocation", "Decision_Log", "Trade_Log", "Tax_Control"]
 
 def create_sheets():
     print(f"Opening spreadsheet: {config.PORTFOLIO_SHEET_ID}")

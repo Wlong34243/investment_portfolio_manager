@@ -1,11 +1,14 @@
 ---
 ticker: NOW
-style: 
-framework_preference: 
-entry_date:
-last_reviewed:
+style: GARP
+framework_preference: null
+entry_date: null
+last_reviewed: '2026-05-03'
+triggers:
+  price_trim_above: 250.00
+cost_basis: 15110.87
+current_allocation: 2.11%
 ---
-
 # NOW — Investment Thesis
 
 ## Style
@@ -41,3 +44,30 @@ priority: very low
 
 ## Review Log
 - 2026-04: Initiated. Thesis intact. Massive unrealized gains. Monitoring Pro-tier AI adoption rates, cRPO (current remaining performance obligations) growth, and renewal rates.
+
+<!-- region:position_state -->
+**Current Allocation:** 2.11%
+**Cost Basis:** $15,110.87
+<!-- endregion:position_state -->
+
+<!-- region:sizing -->
+**Style:** GARP
+**Size Ceiling:** 9.00%
+**Drift:** -6.89%
+<!-- endregion:sizing -->
+
+<!-- region:transaction_log -->
+- 2026-04-30: Sell -15.0 @ $87.56
+- 2026-04-24: Buy 10.0 @ $88.10
+- 2026-04-23: Buy 15.0 @ $85.57
+- 2026-04-23: Buy 25.0 @ $87.35
+- 2026-04-22: Buy 10.0 @ $103.25
+<!-- endregion:transaction_log -->
+
+<!-- region:realized_gl -->
+Total Realized G/L: $0.00 over 3 closed lots. Total Proceeds: $1,224.00.
+<!-- endregion:realized_gl -->
+
+<!-- region:change_log -->
+2026-05-03 14:58: Auto-sync allocation 2.11%, drift -6.89%
+<!-- endregion:change_log -->

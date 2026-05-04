@@ -1,11 +1,14 @@
 ---
 ticker: COF
-style: 
-framework_preference: 
-entry_date:
-last_reviewed:
+style: GARP
+framework_preference: null
+entry_date: null
+last_reviewed: '2026-05-03'
+triggers:
+  price_trim_above: 175.00
+cost_basis: 26975.65
+current_allocation: 3.48%
 ---
-
 # COF — Investment Thesis
 
 ## Style
@@ -42,3 +45,30 @@ priority: low
 
 ## Review Log
 - 2026-04: Initiated. Thesis intact. Monitoring Discover integration timeline, consumer charge-off rates, and early progress on the Brex acquisition.
+
+<!-- region:position_state -->
+**Current Allocation:** 3.48%
+**Cost Basis:** $26,975.65
+<!-- endregion:position_state -->
+
+<!-- region:sizing -->
+**Style:** GARP
+**Size Ceiling:** 9.00%
+**Drift:** -5.52%
+<!-- endregion:sizing -->
+
+<!-- region:transaction_log -->
+- 2026-04-22: Buy 10.0 @ $200.01
+- 2026-04-17: Buy 15.0 @ $206.94
+- 2026-04-16: Buy 5.0 @ $201.37
+- 2026-04-16: Buy 10.0 @ $201.90
+- 2026-04-10: Sell -10.0 @ $192.72
+<!-- endregion:transaction_log -->
+
+<!-- region:realized_gl -->
+Total Realized G/L: $0.00 over 1 closed lots. Total Proceeds: $1,927.00.
+<!-- endregion:realized_gl -->
+
+<!-- region:change_log -->
+2026-05-03 14:58: Auto-sync allocation 3.48%, drift -5.52%
+<!-- endregion:change_log -->

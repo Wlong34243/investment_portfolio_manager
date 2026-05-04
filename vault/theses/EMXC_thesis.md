@@ -1,11 +1,12 @@
 ---
 ticker: EMXC
-style: 
-framework_preference: 
-entry_date:
-last_reviewed:
+style: ETF
+framework_preference: null
+entry_date: null
+last_reviewed: '2026-05-03'
+cost_basis: 9524.88
+current_allocation: 1.46%
 ---
-
 # EMXC — Investment Thesis
 
 ## Style
@@ -41,3 +42,29 @@ priority: medium
 
 ## Review Log
 - 2026-04: Initiated. Thesis intact. Monitoring Indian equity valuations, TSMC monthly revenue, and US Dollar Index (DXY) strength.
+
+<!-- region:position_state -->
+**Current Allocation:** 1.46%
+**Cost Basis:** $9,524.88
+<!-- endregion:position_state -->
+
+<!-- region:sizing -->
+**Style:** ETF
+**Size Ceiling:** 8.00%
+**Drift:** -6.54%
+<!-- endregion:sizing -->
+
+<!-- region:transaction_log -->
+- 2026-04-15: Buy 25.0 @ $87.85
+- 2026-04-14: Buy 15.0 @ $87.44
+- 2026-04-10: Buy 40.0 @ $84.95
+- 2026-04-10: Buy 20.0 @ $85.17
+<!-- endregion:transaction_log -->
+
+<!-- region:realized_gl -->
+No realized G/L history.
+<!-- endregion:realized_gl -->
+
+<!-- region:change_log -->
+2026-05-03 14:58: Auto-sync allocation 1.46%, drift -6.54%
+<!-- endregion:change_log -->

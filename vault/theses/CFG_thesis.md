@@ -4,6 +4,8 @@ style:
 framework_preference: 
 entry_date:
 last_reviewed:
+triggers:
+  price_trim_above: 48.00
 ---
 
 # CFG — Investment Thesis
