@@ -193,6 +193,10 @@ def sync_transactions(days: int = 90, live: bool = False, reconcile: bool = Fals
     if 'Trade Date' in combined_df.columns:
         combined_df = combined_df.sort_values(by='Trade Date', ascending=False)
 
+    # Identify which rows are actually new
+    existing_fps = set(sheet_df['Fingerprint'].astype(str).tolist()) if 'Fingerprint' in sheet_df.columns else set()
+    new_rows_df = new_tx_df[~new_tx_df['Fingerprint'].astype(str).isin(existing_fps)].copy()
+
     # 5. Dry-Run Gate
     if not live:
         print("\n--- DRY RUN COMPLETE --- Use --live to append new transactions to the Sheet.")
@@ -203,11 +207,6 @@ def sync_transactions(days: int = 90, live: bool = False, reconcile: bool = Fals
         return True
 
     # 6. Live Mode: Append Only
-    print(f"\n--- LIVE MODE --- Preparing to append new transactions to {config.TAB_TRANSACTIONS}...")
-
-    # Identify which rows are actually new
-    existing_fps = set(sheet_df['Fingerprint'].astype(str).tolist()) if 'Fingerprint' in sheet_df.columns else set()
-    new_rows_df = new_tx_df[~new_tx_df['Fingerprint'].astype(str).isin(existing_fps)].copy()
     
     if new_rows_df.empty:
         print("✅ No new unique transactions to append.")
