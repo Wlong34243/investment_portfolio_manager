@@ -28,7 +28,7 @@ This is the "where are we" document. Open this at the start of any coding sessio
 - CSV fallback retained for disaster recovery and realized G/L history
 - yFinance enrichment (prices, sector, dividend yield, beta)
 - FMP client (`fmp_client.py`) for fundamentals
-- Podcast transcript ingestion via existing pipeline → writes to `vault/transcripts/`
+- Podcast transcript ingestion via existing pipeline → writes to `data/podcast_transcripts/`
 
 ### Agent layer
 - **Idea Generator v1 (shipped May 26, 2026)**
