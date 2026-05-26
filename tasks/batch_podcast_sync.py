@@ -31,6 +31,7 @@ PODCAST_CHANNELS = {
     "Forward Guidance": "UCkrwgzhIBKccuDsi_SvZtnQ",  # verified: Forward Guidance (@ForwardGuidanceBW)
     "The Compound": "UCBRpqrzuuqE8TZcWw75JSdw",    # verified: The Compound (Josh Brown / Ritholtz)
     "Risk Reversal": "UCRAOycPjsSgcEyQcuJD_ENA",   # verified: RiskReversal Media (@RiskReversalMedia)
+    "BG2 Pod": "UC-yRDvpR99LUc5l7i7jLzew",         # verified: BG2 Pod (Bill Gurley & Brad Gerstner)
 }
 
 # Optional title filters — if set, skip videos whose titles don't contain the keyword.

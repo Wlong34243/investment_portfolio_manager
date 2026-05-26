@@ -7,6 +7,7 @@ This matrix defines which system component is authorized to write to each tab.
 
 | Tab Name | Authority | Write Pattern | Purpose |
 | :--- | :--- | :--- | :--- |
+| **0_DASHBOARD** | Pipeline | Clear-and-rebuild | Command Center — single-screen daily view |
 | **Decision_View** | Pipeline | Clear-and-rebuild | Primary morning scan dashboard |
 | **Valuation_Card** | Pipeline | Clear-and-rebuild | Fundamental/Technical valuation lookup |
 | **Tax_Control** | Pipeline | Clear-and-rebuild | YTD tax posture and offset planning |
@@ -30,6 +31,22 @@ This matrix defines which system component is authorized to write to each tab.
 ---
 
 ## Tab Definitions
+
+### 0_DASHBOARD (Command Center)
+**Purpose:** Single-screen at-a-glance view of portfolio state. No original computation — aggregates values from other tabs.
+**Authority:** Pipeline (`tasks/build_command_center.py`, called by `pm refresh dashboard` and `pm morning`)
+**Write pattern:** Clear-and-rebuild. No formulas, hard values only.
+
+Layout:
+- Rows 1-2:    Title + timestamp
+- Rows 3-4:    Headline KPIs (Total Value, Cash %, Day Change, MTD/YTD, vs. SPY)
+- Rows 6-8:    Tax Posture (mirrors Tax_Control KPI strip)
+- Rows 10-11:  Risk Snapshot (Beta, Top Position, Top Sector, Stress -10%)
+- Rows 13-19:  Top 5 Positions with Trim/Add target distances
+- Rows 21-30:  Drift Alerts (Asset Classes outside ±REBALANCE_THRESHOLD_PCT)
+- Rows 32-34:  System Health (Last Refresh, Bundle Hash, Schwab Token, FMP Cache Age)
+
+---
 
 ### Holdings_Current
 **Purpose:** Latest snapshot of every position. Overwritten on each import.

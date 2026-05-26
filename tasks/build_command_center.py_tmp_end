@@ -1,0 +1,11 @@
+    safe_execute(ws.clear)
+    safe_execute(ws.update, range_name="A1", values=grid, value_input_option="USER_ENTERED")
+    _apply_formatting(ws, drift=drift)
+
+    logger.info("Command Center refreshed. %d rows written.", len(grid))
+
+
+if __name__ == "__main__":
+    import sys
+    logging.basicConfig(level=logging.INFO)
+    main(live="--live" in sys.argv)

@@ -66,7 +66,7 @@ RESEARCH_DIR = VAULT_DIR / "research"
 # ---------------------------------------------------------------------------
 # AI Model Configuration
 # ---------------------------------------------------------------------------
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.1-pro-preview-customtools")  # Vertex AI confirmed accessible on re-property-manager-487122
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 GEMINI_MAX_TOKENS = int(os.getenv("GEMINI_MAX_TOKENS", "2000"))  # default for lightweight agents
 
 # Per-agent token budgets — overrides for agents that return large structured JSON.
@@ -519,3 +519,8 @@ EXPORT_SCENARIOS = {
     "concentration": "Hidden concentrations and drawdown behavior",
     "thesis-health": "Which theses are stale / violated / need re-reading?",
 }
+
+# --- Phase 3.2: Hygiene & Purge Defaults ---
+PURGE_DEFAULT_DAYS_PODCASTS = 30
+PURGE_DEFAULT_DAYS_BUNDLES   = 30
+PURGE_DEFAULT_DAYS_EXPORTS   = 7

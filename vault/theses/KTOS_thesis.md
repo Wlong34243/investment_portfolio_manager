@@ -1,6 +1,6 @@
 ---
 ticker: KTOS
-style: Thematic Specialist / Defense Autonomous
+style: THEME
 framework_preference: thematic_scaling_v1
 entry_date: 2026-04-24
 last_reviewed: '2026-05-03'
@@ -88,9 +88,9 @@ triggers:
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
-**Style:** None
-**Size Ceiling:** 0.00%
-**Drift:** +0.00%
+**Style:** THEME
+**Size Ceiling:** 6.00%
+**Drift:** -5.73%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->

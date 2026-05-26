@@ -192,7 +192,7 @@ def main(live: bool = typer.Option(False, "--live", help="Write to Google Sheets
         if not df_val.empty and ticker in df_val['Ticker'].values:
             row_v = df_val[df_val['Ticker'] == ticker].iloc[0]
             val_data = {
-                'Fwd P/E': row_v.get('Forward P/E (FMP)') or row_v.get('Forward P/E (yf)') or '',
+                'Fwd P/E': row_v.get('Forward P/E (yf)') or row_v.get('Forward P/E (FMP)') or '',
                 '52w Pos %': row_v.get('52w Position %', ''),
                 'Disc from High %': row_v.get('Discount from 52w High %', '')
             }

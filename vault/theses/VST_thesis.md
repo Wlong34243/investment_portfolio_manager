@@ -1,6 +1,6 @@
 ---
 ticker: VST
-style: Thematic Specialist / Power Demand Compounder / Utility Rotation
+style: THEME
 framework_preference: Thesis-first, scale-in, consensus-target trim discipline
 entry_date: 2026-05-03
 last_reviewed: '2026-05-03'
@@ -55,9 +55,9 @@ priority: medium
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
-**Style:** None
-**Size Ceiling:** 0.00%
-**Drift:** +0.00%
+**Style:** THEME
+**Size Ceiling:** 3.00%
+**Drift:** -2.44%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->

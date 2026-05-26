@@ -3,121 +3,104 @@ ticker: UNH
 style: GARP
 framework_preference: lynch_garp_v1, psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: '2026-05-03'
-current_allocation: 6.15%
-cost_basis: 36428.15
-time_horizon: 3 to 5 years
+last_reviewed: '2026-05-18'
+current_allocation: 2.22%
+cost_basis: 11397.97
+time_horizon: 1 to 3 years
 triggers:
-  fwd_pe_add_below: 14                # add when market prices in "permanently impaired"
-  fwd_pe_trim_above: 20               # trim if multiple fully normalizes ahead of fundamentals
-  fwd_pe_historical_median:
-  price_add_below: 280                # reload if panic + no structural break
-  price_trim_above: 615.00               # reconsider size as valuation closes gap to prior range
-  discount_from_52w_high_add:
-  revenue_growth_floor_pct: 5         # this is a defensive compounder, not a hyper-growth story
-  operating_margin_floor_pct:         # more about normalization trajectory than level in any one quarter
-  style_size_ceiling_pct: 7.0         # defensive, but still single-name/regulatory risk
-  current_weight_pct:
+  fwd_pe_add_below: 14
+  fwd_pe_trim_above: 18             # lowered from 20 — taking off risk earlier into strength
+  fwd_pe_historical_median: null
+  price_add_below: 290              # rebuild zone — re-engage if it pulls back into structural value
+  price_trim_above: 380             # close-out zone — exit on further strength
+  discount_from_52w_high_add: null
+  revenue_growth_floor_pct: 5
+  operating_margin_floor_pct: null
+  style_size_ceiling_pct: 5.0       # lowered from 7 — defensive but I no longer want it at 6%+ weight
+  current_weight_pct: 2.22
+drawdown_tolerance_pct: 0.25
+panic_buy_trigger_drawdown_pct: 0.20
 ---
-# UNH — Investment Thesis
+# UNH — Investment Thesis (Revised 2026-05-18)
 
-## Core Thesis (“Quality On Sale” View)
+## Style Change: From Defensive Core to Tactical Recovery Trade
 
-I am buying a dominant, defensive healthcare compounder after a **forced repricing**, not a structural collapse. The stock fell from the low-$600s to the high-$200s as regulatory and legal noise spiked, compressing the multiple to ~15x trailing earnings at entry, well below its historical range.[file:1] The bet is that UnitedHealth remains a high-quality franchise temporarily priced like a damaged one, with upside driven by earnings normalization, margin recovery, and continued cash generation rather than heroic growth assumptions.[file:1]
+When I entered UNH in April 2026, the thesis was "dominant healthcare compounder bought during forced repricing, hold as a defensive anchor." That thesis worked. UNH ran from the high-$280s back into the mid-$350s and I took meaningful profits.
 
-Over a 3–5 year horizon, I expect mid-single-digit revenue growth and steady EPS compounding as margins normalize, buybacks continue, and regulatory noise gradually clears.[file:1] This is primarily a **re-rating plus compounding** setup: I do not need explosive top-line growth to earn acceptable returns, just a path back to “boring, premium-multiple healthcare.”[file:1]
+The honest update: **I no longer view UNH as a defensive core position.** I view it as a tactical recovery trade that has largely played out. The reasons:
 
-## Valuation & GARP Targets (Peter Lynch Framework)
+1. **Most of the easy gain is captured.** The "quality bought at panic prices" setup got me a ~20% move in a short window. The remaining upside requires either continued margin normalization OR multiple re-expansion past mid-teens forward P/E, both of which are slower and less reliable than the snap-back from panic.
 
-I am underwriting UNH as a GARP-style, boring-fundamentals compounder bought during a sentiment and regulatory panic. At a ~15x trailing P/E at entry, the market is pricing in a long period of subpar profitability and persistent overhangs relative to the company’s long-term record.[file:1] My lens:
+2. **Regulatory overhang hasn't actually cleared.** It's just gone quiet. DOJ investigations and the political environment around vertically integrated healthcare insurers remain unresolved. The market is currently choosing not to focus on it. That can reverse.
 
-- Target revenue growth: low-to-mid single digits, consistent with a mature, defensive healthcare franchise.[file:1]  
-- Target EPS growth: high-single-digit to low-double-digit CAGR via margin normalization, modest growth, and capital returns.[file:1]  
-- Acceptable PEG: ~1.2–1.5x on normalized EPS growth, reflecting the quality and resilience of the business.[file:1]  
-- P/E ceiling tolerance: willing to hold into a high-teens to ~20x forward P/E if margin recovery and earnings compounding are on track; above that, I will trim if valuation outruns fundamentals.  
-- Base-case IRR: high-single-digit to low-teens annualized, driven by a mix of EPS growth, modest multiple expansion, and dividends.[file:1]  
+3. **The defensive case requires sizing it like a defensive position.** A 7% weight in a regulatory-exposed single name is not actually defensive — it's a concentrated single-name bet dressed up in defensive clothing. Real defensive exposure for me belongs in JPIE, VTI, and SGOV.
 
-## Position Sizing & Action Zones
+## Why I Trimmed to 2.22%
 
-UNH is a **defensive core** position, not a trading line; sizing is constrained by single-name regulatory risk even though the business is diversified. Entry was initiated after a >50% drawdown from the highs, with a cost basis around $296.97.[file:1] Key zones:
+The May 2026 rebalance took UNH from 7.08% to 2.22%, a roughly $29K trim. I want to be honest about the decision drivers:
 
-- Add zone (“panic quality”): Below ~$280 or at a forward P/E in the low-teens if the drawdown is clearly driven by regulatory headlines or macro, not by evidence of a structural break in profitability.[file:1]  
-- Hold zone: Forward P/E in the mid-teens with evidence of gradual margin stabilization and no escalation into existential regulatory remedies.  
-- Trim zone: A clean re-rating into a high-teens to ~20x forward P/E if that move is driven more by relief and multiple expansion than by sustainable upward revisions to earnings power.  
+1. **Concentration was over the cap** — UNH at 7%+ was the largest single-name overweight and the rebalance plan called for trimming it to roughly 4.8%.
+2. **Stock had run sharply** — the easy-money phase of the thesis was largely complete and risk-reward was less attractive.
+3. **YTD ST tax bill was already heavy** — UNH lots from April were near short-term territory, so harvesting gains before the LT clock changed the calculus. (Net ST realized YTD is now +$31K, which is too much; this contributed.)
+4. **I had higher-conviction places to put the proceeds** — VTI core build, international ETFs (EMXC, VEU, EWZ), and ballast (JPIE).
 
-## Behavioral Guardrails (Psychology / Housel Lens)
+That's the real reason set. Writing it down so the next time UNH rallies I don't second-guess myself or repeat the same trim reflexively.
 
-I will mentally underwrite a 25–30% drawdown from cost basis if it is driven by regulatory headlines, election noise, or generalized healthcare-sector de-rating rather than a clear structural impairment to UNH’s business model.[file:1] I will not panic-sell into political or DOJ headline spikes alone.
+## Updated Position State and Sizing
 
-I will hold and ignore grinding, range-bound price action as long as the thesis datapoints are moving in the right direction: margins stabilizing or improving, legal/regulatory issues trending toward resolution, and no sign of permanent earnings impairment.[file:1] I will only change my mind on the core thesis if new information points to a lasting cap on profitability or a structural change to the franchise’s economics.
+At 2.22% the position is sub-scale. Two valid paths from here:
 
-## Key Quantitative & Qualitative KPIs
+**Path A — Hold as a tactical residual.** Keep the position at 2-3% as a recovery-trade residual; close it out into further strength above $380; rebuild only on a real pullback below $290 with no structural news.
 
-The core of the thesis is **normalization**, not acceleration; my KPIs are about direction and durability, not quarterly perfection.[file:1]
+**Path B — Close it out entirely.** Sell the remaining shares as part of the next rebalance wave; deploy proceeds to VTI / international ETFs / ballast. Recognizes that 2.22% in a regulatory-exposed name doesn't earn its place in the portfolio.
 
-- Profitability: Operating margins and medical cost trends show a path back toward historical ranges over 4–8 quarters, even if choppy quarter-to-quarter.[file:1]  
-- Legal / regulatory trajectory: DOJ and political processes move toward fines, settlements, or manageable remedies rather than open-ended investigations that threaten core economics.[file:1]  
-- Cash generation & returns: Strong free cash flow conversion, continued dividend growth, and a rational buyback program that takes advantage of any extended period of depressed multiples.[file:1]  
-- Franchise health: No evidence that regulatory noise is causing structural loss of scale, network advantages, or Optum/UnitedHealthcare cross-franchise synergies.[file:1]  
+**Choosing Path A for now.** The position is too small to meaningfully hurt the portfolio, and the optionality on a further $290-$380 round-trip is worth holding. But I'm setting an explicit close-out trigger at $380 and a calendar review for 2026-Q4.
+
+## Updated Triggers
+
+- **Hard size cap lowered from 7% to 5%.** I will not let this position grow back above 5% on price appreciation. If it gets there, trim back to 4% or close.
+- **Trim/close zone raised: $380.** Above this, exit the residual.
+- **Add zone tightened: $290.** I'll only rebuild below this, and only if the pullback is sentiment-driven (regulatory headlines, macro, sector de-rating) and not a structural break.
+- **Forward P/E trim trigger lowered from 20 to 18.** Reflects my reduced patience for paying full multiples on this name.
+
+## Key KPIs (unchanged from prior thesis)
+
+- Operating margins and medical cost trends showing path back to historical ranges.
+- DOJ/regulatory trajectory toward fines and settlements rather than structural remedies.
+- Free cash flow conversion and buyback execution at depressed multiples.
+- No evidence of franchise-level erosion in scale or network advantages.
 
 ## Hard Exit Conditions
 
-I will exit or materially reduce the position if the thesis breaks in a **structural**, not cyclical, way:[file:1]
+1. Structural regulatory remedy (forced breakup, severe pricing constraint) that permanently impairs core economics.
+2. No credible margin recovery trajectory over 4-6 quarters.
+3. Clear evidence of competitive moat erosion.
+4. Price reaches $380 with no thesis-improving news — close the residual.
 
-1. DOJ action or regulation leads to binding structural remedies that permanently impair the economics of the core franchise (forced breakup, severe pricing constraints, or restrictions that dismantle key synergies).  
-2. Margins fail to show any credible recovery trajectory over 4–6+ quarters, indicating that the prior profitability profile is not coming back.[file:1]  
-3. Clear evidence emerges that UNH is losing its competitive edge (scale, network, data, integrated services) in a way that cannot be solved with time or capital.  
-4. A clearly superior risk-adjusted opportunity appears where capital can earn a higher long-term IRR, and UNH still trades at a compressed but no-longer-“dirt cheap” multiple.[file:1] 
+## Scaling State & Priority
 
-## Quantitative Triggers
-
-<!-- Machine-readable triggers. Keep the YAML block EXACT — parsers depend on it.
-     Use null for fields that don't apply to this position's style. -->
-
-```yaml
-triggers:
-        # Valuation triggers (GARP, FUND)
-  fwd_pe_add_below: 14
-  fwd_pe_trim_above: 20
-  fwd_pe_historical_median: null
-  
-        # Price/technical triggers (all styles)
-  price_add_below: 280.0
-  price_trim_above: 615.00
-  discount_from_52w_high_add: null
-  
-        # Fundamental triggers (GARP, FUND)
-  revenue_growth_floor_pct: 5
-  operating_margin_floor_pct: null
-  
-        # Position management
-  style_size_ceiling_pct: 9.0
-  current_weight_pct: 6.154931914125764
-```
+- Next step: **hold residual position; close above $380; rebuild only below $290 on clean pullback**.
+- Rotation priority: medium — eligible to close on further strength and redeploy to core ETFs.
+- Re-evaluate quarterly; full close-out by Q4 2026 if neither trim nor rebuild trigger fires.
 
 <!-- region:position_state -->
-**Current Allocation:** 6.15%
-**Cost Basis:** $36,428.15
+**Current Allocation:** 2.22%
+**Cost Basis:** $11,397.97
+**Unrealized G/L:** +$2,164.53 (+19.0%)
+**Realized G/L YTD on prior lots:** $3,103 over 24 closed lots
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
-**Style:** GARP
-**Size Ceiling:** 9.00%
-**Drift:** -2.85%
+**Style:** GARP (downgraded from "defensive core" to "tactical residual")
+**Size Ceiling:** 5.00% (lowered from 7.00%)
+**Working Soft Cap:** 3.00%
+**Drift:** -0.78% to soft cap; positioned as residual, not target
 <!-- endregion:sizing -->
 
-<!-- region:transaction_log -->
-- 2026-04-24: Sell -10.0 @ $354.18
-- 2026-04-23: Sell -5.0 @ $354.30
-- 2026-04-16: Buy 20.0 @ $317.00
-- 2026-04-16: Buy 10.0 @ $317.53
-- 2026-04-10: Sell -1.0 @ $305.20
-<!-- endregion:transaction_log -->
-
-<!-- region:realized_gl -->
-Total Realized G/L: $3,103.00 over 24 closed lots. Total Proceeds: $27,523.00.
-<!-- endregion:realized_gl -->
+<!-- region:wash_sale_watch -->
+**10 wash sale lots** with $537 disallowed loss across Jan 6, Apr 7, Apr 9, Apr 10. Position is currently in a gain; no near-term wash sale risk on further sales.
+<!-- endregion:wash_sale_watch -->
 
 <!-- region:change_log -->
-2026-05-03 14:58: Auto-sync allocation 6.15%, drift -2.85%
+2026-05-18: Major thesis revision. Reclassified from "defensive core" to "tactical residual." Position trimmed from 7.08% to 2.22%. Size ceiling lowered from 7% to 5%. Trim/close trigger set at $380, rebuild trigger tightened to $290. Honest documentation of why the trim was deeper than the original plan called for.
 <!-- endregion:change_log -->

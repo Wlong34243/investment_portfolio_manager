@@ -341,6 +341,82 @@ def inject_cash_manual(df: pd.DataFrame, cash_amount: float) -> pd.DataFrame:
     
     return pd.concat([df, pd.DataFrame([cash_row])], ignore_index=True)
 
+def parse_account_summaries(file_bytes: bytes) -> list[dict]:
+    """
+    Extract per-account total value and cash from a Schwab positions CSV.
+    Returns list of dicts: {account_label, account_number, total_value, cash_value}
+    Saved to data/account_balances.json by the bundle builder for dashboard use.
+    """
+    import re as _re
+    content = file_bytes.decode('utf-8-sig') if isinstance(file_bytes, bytes) else file_bytes
+    df_raw = pd.read_csv(io.StringIO(content), header=None, names=range(25))
+
+    try:
+        col_indices = find_column_indices(df_raw)
+    except ValueError:
+        return []
+
+    mkt_val_col = next((c for c in col_indices if 'mkt val' in c or 'market value' in c), None)
+    if not mkt_val_col:
+        return []
+    mv_idx = col_indices[mkt_val_col]
+    sym_idx = col_indices.get('symbol', 0)
+
+    # Locate the header row so we don't scan it as a position
+    symbol_row_idx = -1
+    for idx, row in df_raw.iterrows():
+        if 'symbol' in [str(x).lower().strip() for x in row.values]:
+            symbol_row_idx = idx
+            break
+
+    sections = find_account_sections(df_raw)
+    summaries = []
+
+    for section in sections:
+        raw_label = str(section.get('account_type', 'Account')).strip()
+        end = section.get('end_row', len(df_raw) - 1)
+
+        # Pull last-4 account number from the section label text
+        digits = _re.findall(r'\d{4,}', raw_label)
+        acct_num = f'...{digits[-1][-4:]}' if digits else ''
+
+        # Friendly display label (title-case, truncated)
+        display_label = raw_label.title()[:30]
+
+        # Total value: look for "Positions Total" row just after the section ends
+        total_value = 0.0
+        for offset in range(1, 4):
+            check_idx = end + offset
+            if check_idx >= len(df_raw):
+                break
+            first = str(df_raw.iloc[check_idx].iloc[0]).strip().lower()
+            if 'positions total' in first or 'account total' in first:
+                tv = clean_numeric(df_raw.iloc[check_idx].iloc[mv_idx])
+                if tv is not None:
+                    total_value = tv
+                break
+
+        # Cash value: sum cash-ticker rows within section bounds
+        cash_value = 0.0
+        scan_start = max(section['start_row'], symbol_row_idx + 1) if symbol_row_idx >= 0 else section['start_row']
+        for idx in range(scan_start, end + 1):
+            sym = str(df_raw.iloc[idx].iloc[sym_idx]).strip().upper()
+            if 'CASH' in sym or 'QACDS' in sym:
+                mv = clean_numeric(df_raw.iloc[idx].iloc[mv_idx])
+                if mv is not None:
+                    cash_value += mv
+
+        if total_value > 0 or cash_value > 0:
+            summaries.append({
+                'account_label': display_label,
+                'account_number': acct_num if acct_num else display_label[:15],
+                'total_value': total_value,
+                'cash_value': cash_value,
+            })
+
+    return summaries
+
+
 if __name__ == "__main__":
     import sys
     if len(sys.argv) > 1:

@@ -22,7 +22,7 @@ import yfinance
 import config
 
 # Import existing project parser
-from utils.csv_parser import parse_schwab_csv, clean_numeric
+from utils.csv_parser import parse_schwab_csv, clean_numeric, parse_account_summaries
 
 BUNDLE_DIR = Path("bundles")
 BUNDLE_SCHEMA_VERSION = "1.0.0"
@@ -310,7 +310,18 @@ def _build_from_csv(
     
     df = parse_schwab_csv(csv_bytes)
     csv_sha256 = hashlib.sha256(csv_bytes).hexdigest()
-    
+
+    # Save per-account summaries for the dashboard account balances section
+    try:
+        acct_summaries = parse_account_summaries(csv_bytes)
+        if acct_summaries:
+            acct_path = Path("data/account_balances.json")
+            acct_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(acct_path, "w", encoding="utf-8") as _fh:
+                json.dump(acct_summaries, _fh, indent=2)
+    except Exception as _e:
+        pass  # non-fatal; dashboard will show placeholder
+
     enrichment_errors = []
     
     # b. Enrich with yfinance

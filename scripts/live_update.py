@@ -12,15 +12,16 @@ from utils import schwab_client, schwab_token_store
 from utils.enrichment import enrich_positions, apply_smart_categorization
 import pipeline
 
-def update_portfolio(tx_days: int = 90):
+def update_portfolio(tx_days: int = 90, dry_run: bool = True):
     """
     Pull current positions and recent transactions from Schwab API → write to Sheets.
 
     Args:
         tx_days: How many calendar days of transaction history to fetch.
                  Default 90. Pass 365 for a historical backfill.
+        dry_run: Whether to perform a dry run or actual write.
     """
-    print(f"--- Portfolio Live Update (DRY_RUN={config.DRY_RUN}, tx_days={tx_days}) ---")
+    print(f"--- Portfolio Live Update (DRY_RUN={dry_run}, tx_days={tx_days}) ---")
 
     # 1. Initialize Client
     client = schwab_client.get_accounts_client()
@@ -54,7 +55,7 @@ def update_portfolio(tx_days: int = 90):
         positions_df = pipeline.normalize_positions(raw_positions, import_date=today_iso, source="schwab_api")
 
         print("Writing to Google Sheets...")
-        h_results = pipeline.write_to_sheets(positions_df, cash_amount=0.0, dry_run=config.DRY_RUN)
+        h_results = pipeline.write_to_sheets(positions_df, cash_amount=0.0, dry_run=dry_run)
 
         print(f"  - Holdings Written: {h_results['holdings_written']}")
         print(f"  - History Appended: {h_results['history_appended']}")
@@ -74,7 +75,7 @@ def update_portfolio(tx_days: int = 90):
     else:
         print(f"✅ Fetched {len(tx_df)} transactions.")
         print("Deduplicating and appending to Transactions tab...")
-        t_results = pipeline.ingest_schwab_transactions(tx_df, dry_run=config.DRY_RUN)
+        t_results = pipeline.ingest_schwab_transactions(tx_df, dry_run=dry_run)
 
         print(f"  - Total Fetched: {t_results['parsed']}")
         print(f"  - New Appended:  {t_results['new']}")
@@ -88,5 +89,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Live portfolio update from Schwab API")
     parser.add_argument("--days", type=int, default=90,
                         help="Days of transaction history to fetch (default 90, use 365 for backfill)")
+    parser.add_argument("--live", action="store_true", help="Actual write instead of dry run")
     args = parser.parse_args()
-    update_portfolio(tx_days=args.days)
+    update_portfolio(tx_days=args.days, dry_run=not args.live)

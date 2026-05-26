@@ -3,29 +3,31 @@
 ### ☀️ Daily Workflows
 | Command Context | Exact Command | What it Does |
 | :--- | :--- | :--- |
-| **Full Update** | `python manager.py snapshot --live` | Syncs Schwab, updates Holdings & Daily Snapshot |
-| **Agent Run** | `python manager.py analyze-all --live` | Runs 7 agents and writes to Agent_Outputs |
-| **UI Refresh** | `python manager.py dashboard refresh --live` | Updates Decision View and re-applies formatting |
-| **Transactions** | `python manager.py sync transactions --live` | Fetches last 90 days of trades from Schwab |
+| **Morning Routine** | `pm morning --live` | Runs the full daily loop (health -> ingest -> snapshot -> refresh) |
+| **Full Update** | `pm snapshot --live` | Syncs Schwab, updates Holdings & Daily Snapshot |
+| **UI Refresh** | `pm refresh dashboard --live` | Updates Decision View and re-applies formatting |
+| **Transactions** | `pm ingest transactions --live` | Fetches last 90 days of trades from Schwab |
 
-### 🤖 Agent Operations
+### 🧠 Data Pipeline & Export Engine
 | Command Context | Exact Command | What it Does |
 | :--- | :--- | :--- |
-| **Specific Agent** | `python manager.py agent [name] analyze --live` | Runs one agent (e.g. `valuation`, `tax`, `macro`) |
-| **Custom Tickers** | `python manager.py agent valuation analyze --ticker AAPL --live` | Analyzes specific symbols only |
-| **Behavioral** | `python manager.py agent behavioral analyze --trade-days 60` | Audits recent trades against logic |
-| **New Idea** | `python manager.py agent new-idea analyze --ticker TSLA` | Screens a potential new buy candidate |
+| **List Scenarios** | `pm export list` | Lists available context scenarios for AI analysis |
+| **Inspect Export** | `pm export inspect [PATH]` | Inspects an existing export package |
+| **Realized G/L** | `pm ingest realized-gl [CSV_PATH] --live` | Imports realized G/L lots for tax visibility |
+| **Podcast Data** | `pm ingest podcasts --live` | Fetches and processes podcast transcripts |
 
-### 🔧 Maintenance & Formatting
+### 🔧 Maintenance & Hygiene
 | Command Context | Exact Command | What it Does |
 | :--- | :--- | :--- |
-| **Promote Log** | `python manager.py journal promote --live` | Moves "Approved" staging trades to Master Log |
-| **Record Trade** | `python manager.py journal rotation --sold [T] --bought [T] --proceeds [N] --live` | Manually records a portfolio rotation |
-| **Vault Sync** | `python manager.py vault snapshot --drive --live` | Syncs research theses from Local/Drive |
-| **New Thesis** | `python manager.py vault add-thesis --ticker [T]` | Generates a blank thesis template for a ticker |
-| **Verify Integrity** | `python manager.py bundle verify [PATH]` | Checks the SHA256 hash of any context bundle |
+| **Promote Log** | `pm journal promote --live` | Moves "Approved" staging trades to Master Log |
+| **Record Trade** | `pm journal rotation --sold [T] --bought [T] --proceeds [N] ... --live` | Manually records a portfolio rotation |
+| **Vault Sync** | `pm vault sync --live` | Syncs Sheets data into local thesis files via managed regions |
+| **Vault Audit** | `pm vault sync-status` | Audits the staleness and drift of all thesis files |
+| **New Thesis** | `pm vault add-thesis [TICKER]` | Generates a blank thesis template for a ticker |
+| **Cleanup All** | `pm clean all --live` | Purges old exports, podcasts, and bundles |
+| **Verify Integrity** | `pm bundle verify [PATH]` | Checks the SHA256 hash of any context bundle |
 
 ### 💡 Pro-Tips
-* **Help:** Append `--help` to any command for full flag details: `python manager.py snapshot --help`
+* **Help:** Append `--help` to any command for full flag details: `pm snapshot --help`
 * **Safety:** Every command defaults to **Dry-Run**. If you don't see `SUCCESS` or a Sheet update, you likely forgot `--live`.
-* **Bundles:** The `bundles/` folder is your source of truth. If data feels "stale," run `snapshot` first.
+* **Bundles:** The `bundles/` folder is your source of truth. If data feels "stale," run `pm snapshot` first.

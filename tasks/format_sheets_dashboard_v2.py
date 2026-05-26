@@ -281,6 +281,10 @@ def format_decision_view(spreadsheet) -> None:
         # 52w Pos % (Column K)
         rules.append(build_gradient_rule(ws, f"K2:K{MAX_DATA_ROWS}", COLOR_GREEN_DARK, COLOR_WHITE, COLOR_RED_DARK))
 
+        # Forward P/E (Column J) — flag expensive (>30) and cheap (<21)
+        rules.append(build_boolean_rule(ws, f"J2:J{MAX_DATA_ROWS}", "NUMBER_GREATER", ["30"], bg_color=COLOR_RED_LIGHT, text_color=COLOR_RED_DARK))
+        rules.append(build_boolean_rule(ws, f"J2:J{MAX_DATA_ROWS}", "NUMBER_LESS", ["21"], bg_color=COLOR_GREEN_LIGHT, text_color=COLOR_GREEN_DARK))
+
         # Phase 2.4 — Price trigger action zones (Price=G, Trim Target=H, Add Target=I)
         # Trim zone: price has reached or exceeded Bill's trim target → bold red
         rules.append(build_boolean_rule(
