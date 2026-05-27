@@ -72,12 +72,6 @@ GEMINI_MAX_TOKENS = int(os.getenv("GEMINI_MAX_TOKENS", "2000"))  # default for l
 # Per-agent token budgets — overrides for agents that return large structured JSON.
 # Gemini 2.5 Flash output cap is 65,536 tokens; these are well within bounds.
 # Root cause of "EOF while parsing" errors: output truncated at the global 2000-token default.
-GEMINI_MAX_TOKENS_VALUATION     = 30000   # 53 positions × ~350 tokens each + narrative overhead
-GEMINI_MAX_TOKENS_CONCENTRATION = 10000   # 24 flags × hedge_suggestion + correlation table
-GEMINI_MAX_TOKENS_MACRO         = 16000   # Increased from 8000 due to truncation
-GEMINI_MAX_TOKENS_REBUY         = 10000    # Increased from 6000
-GEMINI_MAX_TOKENS_BAGGER        = 24000   # 50+ tickers × compounder gate narrative (raised from 16000)
-GEMINI_MAX_TOKENS_THESIS        = 32000   # 50+ tickers × management candor analysis (raised from 16000; unchunked)
 GEMINI_MAX_TOKENS_PODCAST       = 8000    # full-episode transcripts (10k+ words) → structured JSON with 8–12 sectors
 
 # ---------------------------------------------------------------------------
@@ -475,21 +469,6 @@ REBALANCE_THRESHOLD_PCT = 5.0            # drift % to trigger rebalance action
 
 DEFAULT_CASH_YIELD_PCT = 4.5
 
-# Phase 5-J: Add-Candidate sizing
-ADD_CANDIDATE_STYLE_PCT = {
-    "GARP":  0.030,   # 3% of dry powder as starter add
-    "FUND":  0.025,
-    "THEME": 0.015,
-    "ETF":   0.015,
-}
-ADD_CANDIDATE_MAX_STARTER_PCT = 0.05   # hard cap: never exceed 5% of dry powder
-ADD_CANDIDATE_MAX_CANDIDATES = 15      # rank more strictly if list would be longer
-ADD_CANDIDATE_STALE_THRESHOLD_DAYS = 120
-
-# Phase 5-K: New Idea Screener
-NEW_IDEA_MAX_CANDIDATES_PER_RUN = 10   # hard cap on --tickers list length
-NEW_IDEA_STARTER_SIZE_PCT = 0.015      # 1.5% of dry powder as default starter
-NEW_IDEA_MAX_STARTER_PCT = 0.025       # hard cap: 2.5% of dry powder for new ideas
 
 # ---------------------------------------------------------------------------
 # Technical Indicator Thresholds (Murphy TA — used by tasks/enrich_technicals.py)
