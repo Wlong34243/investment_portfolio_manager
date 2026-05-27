@@ -3,7 +3,6 @@
 This file tells Claude (and Claude Code, and Gemini CLI) how to work in this repo. Keep it tight.
 
 For current build state, read `STATE.md`.
-For infrastructure ground truth, read `BUNDLE_AND_AGENT_AUDIT.md`.
 
 ---
 
@@ -100,7 +99,6 @@ Agents interact strictly with the composite hash via `ask_gemini_composite()`.
 | `prompts/idea_generator.md` | Idea Generator system prompt |
 | `pipeline.py` | Legacy orchestrator (shim only; new work goes to `manager.py`) |
 | `STATE.md` | Current build state — read first |
-| `BUNDLE_AND_AGENT_AUDIT.md` | Infrastructure ground truth |
 | `PORTFOLIO_SHEET_SCHEMA.md` | Sheet tab definitions |
 
 ---
@@ -140,7 +138,7 @@ Bill carries strategic cash as intentional dry powder. He knows the thesis behin
 
 - Do not write to `Target_Allocation` from any agent
 - Do not call any Schwab order/trading endpoint
-- Do not add new vendors before extending `fmp_client.py`
+- Do not add new vendors before extending `utils/fmp_client.py`
 - Do not duplicate the `SAFETY_PREAMBLE` in agent prompts — `ask_gemini()` auto-prepends it
 - Do not refactor `core/bundle.py` while building new agents on top of it
 - Do not over-spec agents before seeing real output

@@ -1,6 +1,6 @@
 # Investment Portfolio Manager — Current State
 
-**Last updated:** 2026-05-26
+**Last updated:** 2026-05-27
 **Maintainer:** Bill (sole user)
 
 This is the "where are we" document. Open this at the start of any coding session.
@@ -20,7 +20,7 @@ This is the "where are we" document. Open this at the start of any coding sessio
 ### Gemini integration
 - `utils/gemini_client.py` — `ask_gemini()` with auto-prepended `SAFETY_PREAMBLE`
 - `ask_gemini_composite()` — enforces `bundle_hash` in agent output schemas for end-to-end audit trail
-- Dual-path auth: ADC primary, API key fallback
+- Dual-path auth: API key primary (GEMINI_API_KEY env), ADC/Vertex AI fallback
 - Retry + backoff on `429 RESOURCE_EXHAUSTED`
 
 ### Data ingestion
@@ -116,7 +116,7 @@ Not started yet. Following same fire-fire-aim pattern as Idea Generator: ship mi
 | **Authoritative frontend** | Google Sheets |
 | **Sheet ID** | `1DuY68xVvyHq-0dyb7XUQgcoK7fqcVS0fv7UoGdTnfxA` |
 | **GCP Project** | `re-property-manager-487122` |
-| **Gemini model** | `gemini-3.0-flash` via Vertex AI |
+| **Gemini model** | `gemini-2.5-pro` (API key primary; ADC/Vertex AI fallback on `re-property-manager-487122`) |
 | **Repo** | `Wlong34243/investment-portfolio-manager` |
 | **Reserve account** | Schwab `...8895` — tracked separately in RE Property Manager |
 
@@ -125,11 +125,10 @@ Not started yet. Following same fire-fire-aim pattern as Idea Generator: ship mi
 ## How to Resume Work
 
 1. Read this file first
-2. Read `BUNDLE_AND_AGENT_AUDIT.md` for infrastructure ground truth
-3. Read `CLAUDE.md` for project conventions
-4. Most recent agent output is in `agent_outputs/ideas/` — open the latest markdown file to see what the system produced
-5. To run the idea generator manually: `python manager.py agent ideas`
-6. To inspect a bundle: `python manager.py bundle inspect <path>`
+2. Read `CLAUDE.md` for project conventions
+3. Most recent agent output is in `agent_outputs/ideas/` — open the latest markdown file to see what the system produced
+4. To run the idea generator manually: `python manager.py agent ideas`
+5. To verify a bundle: `python manager.py bundle verify <path>`
 
 ---
 
