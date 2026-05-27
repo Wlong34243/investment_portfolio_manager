@@ -1,3 +1,12 @@
+<!--
+ARCHIVED 2026-05-27
+This document describes the pre-reframe nine-file agent kit plan written in April/May 2026.
+The Re-buy Analyst and three other agents it recommends building were dropped in the May 2026 reframe.
+The "Nine-File Agent Kit" framing has been replaced with: Idea Generator (shipped May 2026) + Valuation Drift Monitor (next).
+The bundle infrastructure described here is still accurate; the agent gap analysis and build recommendations are obsolete.
+See STATE.md for current state. See REPO_AUDIT_2026-05-26.md for the post-reframe audit.
+-->
+
 # Bundle & Agent Workflow Audit — May 26, 2026
 
 ## Executive Summary
