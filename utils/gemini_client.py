@@ -42,24 +42,24 @@ def _build_genai_client():
     """
     Two-path credential resolver.
 
-    Path 1 — ADC / Vertex AI (CLI, local dev):
+    Path 1 — API key / AI Studio (Streamlit Cloud, local CLI default):
+      Uses GEMINI_API_KEY from env var or Streamlit secrets. This is the 
+      primary path for Gemini Developer API models (like gemini-3.5-flash).
+
+    Path 2 — ADC / Vertex AI:
       genai.Client(vertexai=True, ...) lets the SDK discover ADC automatically.
-      No explicit credentials object needed; gcloud auth application-default
-      login is sufficient. Model strings must use Vertex AI naming convention
-      (e.g. "gemini-3.1-pro-preview-customtools", NOT "gemini-3.1-pro-preview-customtools-latest").
-
-    Path 2 — API key / AI Studio (Streamlit Cloud):
-      Falls back to GEMINI_API_KEY from env var or Streamlit secrets when ADC
-      is not present (Streamlit Cloud has no gcloud installation).
-
-    Setup once for local CLI:
-      gcloud auth application-default login
-      gcloud auth application-default set-quota-project re-property-manager-487122
+      Falls back to this if API key is not present. Model strings must use 
+      Vertex AI naming convention.
     """
     project_id = getattr(config, 'GCP_PROJECT_ID', 're-property-manager-487122')
     location = getattr(config, 'GCP_LOCATION', 'us-central1')
 
-    # Path 1: ADC — SDK discovers credentials automatically (no explicit object needed)
+    # Path 1: API key from environment (Preferred for Developer API models)
+    api_key = os.environ.get('GEMINI_API_KEY')
+    if api_key:
+        return genai.Client(api_key=api_key)
+
+    # Path 2: ADC — SDK discovers credentials automatically
     try:
         google.auth.default()  # raises DefaultCredentialsError if ADC absent
         return genai.Client(
@@ -71,12 +71,6 @@ def _build_genai_client():
         pass
     except Exception:
         pass
-
-    # Path 2: API key from environment
-    api_key = os.environ.get('GEMINI_API_KEY')
-
-    if api_key:
-        return genai.Client(api_key=api_key)
 
     logging.warning(
         "No Gemini credentials found. Run:\n"
