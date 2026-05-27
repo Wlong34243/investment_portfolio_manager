@@ -43,8 +43,8 @@ def _build_genai_client():
     Two-path credential resolver.
 
     Path 1 — API key / AI Studio (Streamlit Cloud, local CLI default):
-      Uses GEMINI_API_KEY from env var or Streamlit secrets. This is the 
-      primary path for Gemini Developer API models (like gemini-3.5-flash).
+      Uses GEMINI_API_KEY from env var or Streamlit secrets. This is the
+      primary path for Gemini Developer API models (like gemini-2.5-pro).
 
     Path 2 — ADC / Vertex AI:
       genai.Client(vertexai=True, ...) lets the SDK discover ADC automatically.
@@ -93,7 +93,7 @@ def ask_gemini(prompt: str, system_instruction: str = None, json_mode: bool = Fa
     if not client:
         return "" if not response_schema else None
         
-    model_name = getattr(config, 'GEMINI_MODEL', 'gemini-3.1-pro-preview-customtools')
+    model_name = getattr(config, 'GEMINI_MODEL', 'gemini-2.5-pro')
     
     full_system_instruction = SAFETY_PREAMBLE
     if system_instruction:

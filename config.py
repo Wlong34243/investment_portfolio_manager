@@ -66,7 +66,7 @@ RESEARCH_DIR = VAULT_DIR / "research"
 # ---------------------------------------------------------------------------
 # AI Model Configuration
 # ---------------------------------------------------------------------------
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-pro")
 GEMINI_MAX_TOKENS = int(os.getenv("GEMINI_MAX_TOKENS", "2000"))  # default for lightweight agents
 
 # Per-agent token budgets — overrides for agents that return large structured JSON.
