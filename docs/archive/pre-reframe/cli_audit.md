@@ -1,6 +1,12 @@
-# CLI Audit — Investment Portfolio Manager
+﻿<!--
+ARCHIVED 2026-05-27
+Pre-reframe CLI audit findings. Superseded by current CLI surface in manager.py.
+See STATE.md for current state.
+-->
 
-## Section A — Current Surface Map
+# CLI Audit â€” Investment Portfolio Manager
+
+## Section A â€” Current Surface Map
 
 | Command | Wraps (file::function) | Writes? | Notes |
 | :--- | :--- | :--- | :--- |
@@ -32,7 +38,7 @@
 | `podcast clean` | `manager.py::podcast_clean` | Yes (Disk) | Deletes old transcript files. |
 | `podcast bundle` | `manager.py::podcast_bundle` | Yes (Disk) | Concatenates transcripts for LLM copy-paste. |
 
-## Section B — Workflow Clusters
+## Section B â€” Workflow Clusters
 
 - **Daily Operating Loop:** `morning`, `health`, `snapshot`, `sync transactions`, `dashboard refresh`, `tax refresh`.
 - **Tax Visibility:** `tax refresh`, `export tax-rebalance`.
@@ -43,7 +49,7 @@
 - **Hygiene & Cleanup:** `export cleanup`, `podcast clean`, `bundle verify`.
 - **Diagnostics:** `health`, `vault sync-status`, `vault thesis-audit`, `export inspect`.
 
-## Section C — Friction Inventory
+## Section C â€” Friction Inventory
 
 - **Fragmented Ingestion:** To get "fully updated," one might run `sync transactions`, `sync realized-gl` (if they have a CSV), and `podcast batch`. `pm morning` covers the daily path, but there's no single "ingest everything" for the non-daily or manual-fallback paths.
 - **Scattered Cleanup:** `export cleanup` and `podcast clean` are separate. There is no CLI command to clean up the `bundles/` directory (which can grow large with immutable market/vault/composite JSONs), forcing the user to use shell commands like `find`.
@@ -51,7 +57,7 @@
 - **Redundant Status/Audit:** `health`, `vault sync-status`, and `vault thesis-audit` all provide different types of "is the system/data okay?" feedback.
 - **Vault Command Depth:** The `vault` group is robust but has many commands that could be streamlined (e.g., `sync` vs `sync-status`).
 
-## Section D — Verdict
+## Section D â€” Verdict
 
 | Workflow Cluster | Verdict | Reasoning |
 | :--- | :--- | :--- |
@@ -62,3 +68,4 @@
 | **Vault/Thesis** | **RENAME** | `vault sync` and `vault sync-status` are the core of thesis maintenance. `vault add-thesis` is a scaffolding utility. |
 | **Trade Capture**| **ALREADY GOOD** | `journal promote` and `journal rotation` are distinct manual actions. |
 | **Exports** | **ALREADY GOOD** | The scenario-based structure is the primary value of the export engine. |
+

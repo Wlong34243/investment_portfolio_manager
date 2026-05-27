@@ -1,8 +1,14 @@
-# Prompt: Portfolio Dashboard V2 — Decision-Ready UI + Valuation Data Fix
+﻿<!--
+ARCHIVED 2026-05-27
+Dashboard v2 build prompt. Work shipped May 2026 as format_sheets_dashboard_v2.py.
+See STATE.md for current state.
+-->
+
+# Prompt: Portfolio Dashboard V2 â€” Decision-Ready UI + Valuation Data Fix
 # Handoff to: Gemini CLI / Claude Code
-# Priority: HIGH — current agent outputs are not usable for investment decisions
+# Priority: HIGH â€” current agent outputs are not usable for investment decisions
 # Script output: `tasks/format_sheets_dashboard_v2.py`
-# DRY_RUN: True by default — pass `--live` to write
+# DRY_RUN: True by default â€” pass `--live` to write
 
 ---
 
@@ -12,11 +18,11 @@ Before applying any formatting, understand the three data quality problems this
 prompt addresses alongside the UI work:
 
 ### Problem 1: Valuation agent output is worthless
-All 53 valuation rows say "Insufficient data — MONITOR." Root cause: FMP returned
+All 53 valuation rows say "Insufficient data â€” MONITOR." Root cause: FMP returned
 402/429 errors for ~40 of 53 tickers, so Gemini received empty valuation tables and
 had nothing to reason over. The valuation signals are not usable. This prompt adds
 a `Valuation_Card` tab that pulls real-time valuation data via yfinance (P/E, P/B,
-forward P/E, 52-week position, market cap) for the individual equity positions —
+forward P/E, 52-week position, market cap) for the individual equity positions â€”
 bypassing FMP entirely. This is not an agent output; it's a Python-computed
 enrichment table that refreshes on every run.
 
@@ -25,7 +31,7 @@ The tax agent reported $0 cash and flagged the portfolio as underweight cash. Th
 portfolio actually holds $9,633 CASH_MANUAL + $63,827 SGOV (Treasury ETF) =
 ~$73K in cash-equivalent positions. The `Is Cash` boolean column is being misread
 from Sheets (known bug). Additionally, `Target_Allocation` has only 3 rows of
-AI-generated Dimon-letter content rather than Bill's actual allocation targets —
+AI-generated Dimon-letter content rather than Bill's actual allocation targets â€”
 making the rebalance signals against it meaningless.
 
 ### Problem 3: $24K in disallowed wash sale losses is buried
@@ -35,14 +41,14 @@ sheet and it's invisible at the top level.
 
 ---
 
-## Part 1: New Tab — `Valuation_Card`
+## Part 1: New Tab â€” `Valuation_Card`
 
 Build a new script `tasks/build_valuation_card.py` that:
 
 1. Reads `Holdings_Current` tab from the portfolio sheet, skips the KPI row (row 1),
    gets real headers from row 2, reads data from row 3+.
 
-2. Filters to individual equity positions only — exclude:
+2. Filters to individual equity positions only â€” exclude:
    - `CASH_MANUAL`, `CASH & CASH INVESTMENTS`, `QACDS` (cash tickers)
    - ETFs: any ticker in this set:
      `{SGOV, JPIE, QQQM, VEA, VTI, XBI, XOM_skip, IGV, EWZ, IFRA, VTI, XLV,
@@ -52,21 +58,21 @@ Build a new script `tasks/build_valuation_card.py` that:
      yfinance `info['quoteType'] == 'EQUITY'` (not ETF, not MUTUALFUND).
 
 3. For each qualifying ticker, fetch via yfinance `Ticker(t).info`:
-   - `trailingPE` → "Trailing P/E"
-   - `forwardPE` → "Forward P/E"  
-   - `priceToBook` → "P/B"
-   - `pegRatio` → "PEG"
-   - `marketCap` → "Market Cap"
-   - `fiftyTwoWeekHigh` → "52w High"
-   - `fiftyTwoWeekLow` → "52w Low"
+   - `trailingPE` â†’ "Trailing P/E"
+   - `forwardPE` â†’ "Forward P/E"  
+   - `priceToBook` â†’ "P/B"
+   - `pegRatio` â†’ "PEG"
+   - `marketCap` â†’ "Market Cap"
+   - `fiftyTwoWeekHigh` â†’ "52w High"
+   - `fiftyTwoWeekLow` â†’ "52w Low"
    - current price from Holdings_Current `Price` column
-   - `52w Position %` → `(price - low) / (high - low) * 100` — Python computed
-   - `Discount from 52w High %` → `(high - price) / high * 100` — Python computed
-   - `revenueGrowth` → "Rev Growth %"
-   - `returnOnEquity` → "ROE %"
-   - `debtToEquity` → "D/E"
-   - `freeCashflow` → "FCF"
-   - `dividendYield` → "Div Yield %"
+   - `52w Position %` â†’ `(price - low) / (high - low) * 100` â€” Python computed
+   - `Discount from 52w High %` â†’ `(high - price) / high * 100` â€” Python computed
+   - `revenueGrowth` â†’ "Rev Growth %"
+   - `returnOnEquity` â†’ "ROE %"
+   - `debtToEquity` â†’ "D/E"
+   - `freeCashflow` â†’ "FCF"
+   - `dividendYield` â†’ "Div Yield %"
 
 4. Write results to a `Valuation_Card` tab with these columns:
    ```
@@ -81,7 +87,7 @@ Build a new script `tasks/build_valuation_card.py` that:
 
 6. Sort output by Market Cap descending.
 
-7. Handle yfinance failures gracefully — if a ticker returns None for a field,
+7. Handle yfinance failures gracefully â€” if a ticker returns None for a field,
    write empty string, not NaN or 0. Never crash on a single ticker failure.
 
 **Formatting for Valuation_Card tab** (apply after data write):
@@ -90,23 +96,23 @@ Build a new script `tasks/build_valuation_card.py` that:
 - Column widths: Ticker=70, Name=180, Market Cap=110, Price=75, Trailing P/E=95,
   Forward P/E=95, P/B=70, PEG=70, 52w Position %=110, Discount from 52w High=130,
   Rev Growth=90, ROE=70, D/E=70, FCF=110
-- Conditional: `52w Position %` color scale — 0% = red, 50% = white, 100% = green
+- Conditional: `52w Position %` color scale â€” 0% = red, 50% = white, 100% = green
   (high position = near 52w high = expensive; low = potential entry)
-- Conditional: `Discount from 52w High %` — values > 30% = green bg `#d9ead3`
+- Conditional: `Discount from 52w High %` â€” values > 30% = green bg `#d9ead3`
   (meaningful dip from high), values < 10% = red bg `#fce8e6` (near highs)
-- Conditional: `Trailing P/E` — values > 40 = light red, < 15 = light green
-- Conditional: `PEG` — values > 2 = light red, < 1 = light green
+- Conditional: `Trailing P/E` â€” values > 40 = light red, < 15 = light green
+- Conditional: `PEG` â€” values > 2 = light red, < 1 = light green
 - Alternating row banding
 
 ---
 
-## Part 2: New Tab — `Decision_View`
+## Part 2: New Tab â€” `Decision_View`
 
 This is the primary decision-making surface. It joins data from multiple tabs into
 one scannable view, one row per position. Build `tasks/build_decision_view.py`:
 
 ### Source joins:
-- **Base:** `Holdings_Current` — Ticker, Market Value, Weight, Unrealized G/L %,
+- **Base:** `Holdings_Current` â€” Ticker, Market Value, Weight, Unrealized G/L %,
   Daily Change %
 - **Valuation_Card** (if exists): Trailing P/E, Forward P/E, 52w Position %,
   Discount from 52w High %
@@ -125,7 +131,7 @@ Top Rationale
 ```
 
 ### Decision View logic:
-- **TLH Flag**: mark "⚠️ TLH" if ticker appears in Agent_Outputs with
+- **TLH Flag**: mark "âš ï¸ TLH" if ticker appears in Agent_Outputs with
   `signal_type='tlh_candidate'` from the tax agent
 - **Top Rationale**: use valuation rationale if non-trivially different from
   "Insufficient data"; otherwise use macro action; otherwise thesis action
@@ -138,7 +144,7 @@ Top Rationale
   Daily Chg %=90, Fwd P/E=80, 52w Pos %=90, Disc from High=100,
   Valuation Signal=120, Macro Signal=200, Thesis Signal=200,
   TLH Flag=90, Top Rationale=400
-- **TLH Flag cells**: red bg `#ea4335`, white bold — these are action items
+- **TLH Flag cells**: red bg `#ea4335`, white bold â€” these are action items
 - **Valuation Signal conditional** (same color scheme as Agent_Outputs):
   accumulate=green, trim=red, hold=yellow, monitor=blue
 - **Unreal G/L %**: green font if > 0, red font if < 0
@@ -153,21 +159,21 @@ Top Rationale
 
 Revise `format_agent_outputs()` from any prior formatting script:
 
-1. **Add Agent column back as visible** — hide Run ID (col A) and Timestamp (col C)
+1. **Add Agent column back as visible** â€” hide Run ID (col A) and Timestamp (col C)
    but KEEP Agent (col B) visible, renamed display. Users need to know which agent
    fired a signal.
 
 2. **Group rows visually by agent**: Insert a light separator (thick top border +
    light grey `#f3f3f3` background) at the first row of each new agent group.
-   Agent order: tax → valuation → concentration → macro → thesis → bagger
+   Agent order: tax â†’ valuation â†’ concentration â†’ macro â†’ thesis â†’ bagger
 
-3. **Filter out noise rows**: The 53 valuation "Insufficient data — MONITOR" rows
+3. **Filter out noise rows**: The 53 valuation "Insufficient data â€” MONITOR" rows
    are not useful. Add a note in column K (Summary Narrative): flag these with
-   italic grey text "No FMP data — see Valuation_Card tab" rather than displaying
+   italic grey text "No FMP data â€” see Valuation_Card tab" rather than displaying
    the full repeated rationale. This makes the tab scannable.
 
 4. **Highlight the 3 actionable tax rebalance rows** with a stronger yellow
-   background `#fff2cc` and bold ticker text — these are the most immediately
+   background `#fff2cc` and bold ticker text â€” these are the most immediately
    actionable signals in the whole dataset.
 
 5. **Add a frozen summary row** at the top of Agent_Outputs (above the header)
@@ -189,24 +195,24 @@ Replace the Cash formula `=SUMIF(P3:P200,TRUE,G3:G200)` with:
 
 This hardcodes the known cash-equivalent tickers rather than relying on the
 broken `Is Cash` boolean column. SGOV is a 0-3 month Treasury ETF that functions
-as cash — including it gives a true dry powder number of ~$73K.
+as cash â€” including it gives a true dry powder number of ~$73K.
 
 Also add a `Dry Powder` KPI cell (unrealized cash available to deploy):
 ```
 =SUMIF(A3:A200,"CASH_MANUAL",G3:G200)+SUMIF(A3:A200,"SGOV",G3:G200)
 ```
-Label it "💰 Dry Powder" — this is the strategic cash position.
+Label it "ðŸ’° Dry Powder" â€” this is the strategic cash position.
 
 ---
 
-## Part 5: `Realized_GL` — Surface the Wash Sale Number
+## Part 5: `Realized_GL` â€” Surface the Wash Sale Number
 
 The $24,066 in disallowed wash sale losses needs to be the first thing visible
 on this tab. The existing KPI row has this but it's not prominent enough.
 
 1. Make the Disallowed KPI cell bold, red font `#ea4335`, larger (12pt).
 2. Add a second KPI row below the existing one with:
-   - "⚠️ WASH SALE RISK: Review before year-end. Disallowed losses cannot offset gains."
+   - "âš ï¸ WASH SALE RISK: Review before year-end. Disallowed losses cannot offset gains."
    - Merged across full width, orange bg `#ff9900`, white bold text
 3. Flag ALL rows where `Disallowed Loss > 0` with a full-row orange background
    `#fff2cc` AND a red border on the Disallowed Loss cell itself.
@@ -223,16 +229,16 @@ tasks/
 ```
 
 Each script:
-- `python tasks/build_valuation_card.py` — dry run (prints table)
-- `python tasks/build_valuation_card.py --live` — writes to sheet
+- `python tasks/build_valuation_card.py` â€” dry run (prints table)
+- `python tasks/build_valuation_card.py --live` â€” writes to sheet
 - Same pattern for `build_decision_view.py`
-- `format_sheets_dashboard_v2.py --live` — applies all formatting
+- `format_sheets_dashboard_v2.py --live` â€” applies all formatting
 
 All scripts use:
 - `get_gspread_client()` from `utils/sheet_readers.py`
 - `config.PORTFOLIO_SHEET_ID`
 - `DRY_RUN` default True, `--live` flag to enable writes
-- Single-batch `ws.update()` — no per-row appends
+- Single-batch `ws.update()` â€” no per-row appends
 - Fingerprint dedup on any append operations
 - Try/except per ticker for yfinance failures
 
@@ -241,9 +247,9 @@ All scripts use:
 ## Run Order
 
 ```bash
-python tasks/build_valuation_card.py --live      # First — builds valuation data
-python tasks/build_decision_view.py --live       # Second — needs valuation_card
-python tasks/format_sheets_dashboard_v2.py --live  # Third — formatting pass
+python tasks/build_valuation_card.py --live      # First â€” builds valuation data
+python tasks/build_decision_view.py --live       # Second â€” needs valuation_card
+python tasks/format_sheets_dashboard_v2.py --live  # Third â€” formatting pass
 ```
 
 Add these three to `manager.py` as:
@@ -265,7 +271,7 @@ which runs all three in sequence.
 - [ ] `Holdings_Current` KPI row shows correct dry powder (~$73K SGOV + CASH)
 - [ ] `Agent_Outputs` valuation noise rows replaced with "See Valuation_Card"
 - [ ] `Realized_GL` wash sale warning is the first thing visible on that tab
-- [ ] All scripts are idempotent — safe to re-run on next agent output cycle
+- [ ] All scripts are idempotent â€” safe to re-run on next agent output cycle
 
 ---
 
@@ -279,9 +285,9 @@ FMP returns 402 (subscription limit) for ETFs and 429 (rate limit) for the tail
 end of equities. The agent receives empty tables and produces useless signals.
 
 Fix: extend `fmp_client.py` to fall back to yfinance `info` fields when FMP
-returns 402/429. The `_YF_MAP` in `fmp_client.py` already maps yfinance fields —
+returns 402/429. The `_YF_MAP` in `fmp_client.py` already maps yfinance fields â€”
 use `trailingPE`, `forwardPE`, `priceToBook`, `pegRatio` as the fallback tier.
-ETFs should be excluded from the valuation agent entirely (they have no P/E) —
+ETFs should be excluded from the valuation agent entirely (they have no P/E) â€”
 filter them out in the pre-computation step before the FMP calls, same exclusion
 list as the Valuation_Card script above.
 
@@ -291,5 +297,6 @@ detection uses `df['Is Cash'].astype(bool)` or equivalent. Replace with:
 CASH_EQUIVALENT_TICKERS = {'CASH_MANUAL', 'QACDS', 'CASH & CASH INVESTMENTS', 'SGOV'}
 cash_value = df[df['Ticker'].isin(CASH_EQUIVALENT_TICKERS)]['Market Value'].sum()
 ```
-SGOV is a 0-3 month Treasury ETF functioning as strategic dry powder — it must
+SGOV is a 0-3 month Treasury ETF functioning as strategic dry powder â€” it must
 be counted as cash for the tax agent's position sizing and cash sufficiency checks.
+

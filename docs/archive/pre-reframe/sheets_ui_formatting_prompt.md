@@ -1,8 +1,14 @@
+﻿<!--
+ARCHIVED 2026-05-27
+Sheets UI formatting prompt. Work shipped May 2026.
+See STATE.md for current state.
+-->
+
 # Prompt: Google Sheets UI Formatting & Dashboard Improvements
 # Handoff to: Gemini CLI
 # Project: Investment Portfolio Manager
 # Script output: `tasks/format_sheets_ui.py`
-# DRY_RUN: True by default — pass `--live` to write
+# DRY_RUN: True by default â€” pass `--live` to write
 
 ---
 
@@ -15,7 +21,7 @@ The sheet is the primary UI surface. It currently has raw data but no visual for
 Your task is to write a Python script (`tasks/format_sheets_ui.py`) that uses the
 `gspread` client (already configured in `utils/sheet_readers.py`) plus the
 `gspread_formatting` library to apply a consistent, review-optimized visual layer to
-four key tabs. The script must follow all project conventions — DRY_RUN gate, single
+four key tabs. The script must follow all project conventions â€” DRY_RUN gate, single
 batch writes, no new dependencies beyond `gspread` and `gspread_formatting`.
 
 Credentials: use `get_gspread_client()` from `utils/sheet_readers.py`.
@@ -24,7 +30,7 @@ Install requirement: add `gspread-formatting` to `requirements.txt` if not alrea
 
 ---
 
-## Tab 1: `Agent_Outputs` — Priority Review View
+## Tab 1: `Agent_Outputs` â€” Priority Review View
 
 **Problem:** Columns are too narrow to read signal_type, ticker, action, rationale,
 scale_step, and severity. The first 3 columns (run_id, agent, timestamp) have no
@@ -34,9 +40,9 @@ review value and push the actionable columns off-screen.
 
 | Col | Header | Review Priority |
 |-----|--------|----------------|
-| A | Run ID | Low — hide |
-| B | Agent | Low — hide |
-| C | Timestamp | Low — hide |
+| A | Run ID | Low â€” hide |
+| B | Agent | Low â€” hide |
+| C | Timestamp | Low â€” hide |
 | D | Ticker | HIGH |
 | E | Signal Type | HIGH |
 | F | Action | HIGH |
@@ -49,7 +55,7 @@ review value and push the actionable columns off-screen.
 **Formatting tasks:**
 
 1. **Hide columns A, B, C** (Run ID, Agent, Timestamp). Use `gspread_formatting`
-   `hide_columns()`. Do NOT delete — hide only.
+   `hide_columns()`. Do NOT delete â€” hide only.
 
 2. **Set column widths (pixels):**
    - D (Ticker): 80
@@ -70,16 +76,16 @@ review value and push the actionable columns off-screen.
 
 5. **Signal Type conditional color coding (column E):**
    Apply background color to each data cell in column E based on value:
-   - `"accumulate"` → light green `#d9ead3`
-   - `"trim"` → light red `#fce8e6`
-   - `"hold"` → light yellow `#fff2cc`
-   - `"monitor"` → light blue `#cfe2f3`
-   - `"exit"` → dark red `#ea4335`, white font
+   - `"accumulate"` â†’ light green `#d9ead3`
+   - `"trim"` â†’ light red `#fce8e6`
+   - `"hold"` â†’ light yellow `#fff2cc`
+   - `"monitor"` â†’ light blue `#cfe2f3`
+   - `"exit"` â†’ dark red `#ea4335`, white font
 
 6. **Severity conditional color coding (column H):**
-   - `"high"` or `"HIGH"` → `#ea4335` background, white font
-   - `"medium"` or `"MEDIUM"` → `#ff9900` background
-   - `"low"` or `"LOW"` → `#93c47d` background
+   - `"high"` or `"HIGH"` â†’ `#ea4335` background, white font
+   - `"medium"` or `"MEDIUM"` â†’ `#ff9900` background
+   - `"low"` or `"LOW"` â†’ `#93c47d` background
 
 7. **Rationale and Summary Narrative columns (I, K):**
    - Set row height to 80px for all data rows (rows 2+)
@@ -93,7 +99,7 @@ review value and push the actionable columns off-screen.
 
 ---
 
-## Tab 2: `Holdings_Current` — Daily P&L Review View
+## Tab 2: `Holdings_Current` â€” Daily P&L Review View
 
 **Problem:** No P&L summary header, no visual distinction of accumulate vs. trim
 candidates, no highlighting of positions at meaningful gain/loss levels.
@@ -126,7 +132,7 @@ candidates, no highlighting of positions at meaningful gain/loss levels.
 
 1. **Freeze row 1** and freeze column A (Ticker).
 
-2. **Hide columns B, D, I, N, O, P, R, S** — Description, Asset Strategy, Unit Cost,
+2. **Hide columns B, D, I, N, O, P, R, S** â€” Description, Asset Strategy, Unit Cost,
    Acquisition Date, Wash Sale, Is Cash, Import Date, Fingerprint are audit columns.
    Keep them present but hidden for daily review.
 
@@ -150,32 +156,32 @@ candidates, no highlighting of positions at meaningful gain/loss levels.
    - Value < 0: font color red `#ea4335`
    - Value == 0: default
 
-6. **Unrealized G/L % conditional formatting (column K) — color scale:**
+6. **Unrealized G/L % conditional formatting (column K) â€” color scale:**
    Apply 3-point color scale:
-   - Min (≤ -15%): red `#ea4335`
+   - Min (â‰¤ -15%): red `#ea4335`
    - Mid (0%): white `#ffffff`
-   - Max (≥ +20%): green `#34a853`
+   - Max (â‰¥ +20%): green `#34a853`
 
-7. **Weight column (Q) — bar-style formatting:**
+7. **Weight column (Q) â€” bar-style formatting:**
    Apply a data bar or bold the font if weight > 5.0% to make concentration visible
    at a glance. If data bars aren't supported, apply background `#fce8e6` for weight > 8%
    (single position concentration threshold per `config.CONCENTRATION_SINGLE_THRESHOLD`).
 
-8. **Wash Sale flag (column O) — even though hidden:**
+8. **Wash Sale flag (column O) â€” even though hidden:**
    When unhidden, any TRUE value should display `#ff9900` background.
    Apply the conditional format even to the hidden column so it's ready when surfaced.
 
-9. **Summary KPI row — insert at row 1, push headers to row 2:**
+9. **Summary KPI row â€” insert at row 1, push headers to row 2:**
    > NOTE: This is the highest-impact change. Insert a new row 1 with merged cells
-   > showing portfolio-level KPIs derived from column formulas (not Python — use
+   > showing portfolio-level KPIs derived from column formulas (not Python â€” use
    > Google Sheets native ARRAYFORMULA/SUM so they auto-update):
 
-   - Cell A1 (merged A1:B1): Label "📊 PORTFOLIO SNAPSHOT" — bold, dark navy bg, white font
-   - Cell C1 (merged C1:D1): Formula `=TEXT(SUM(G3:G200),"$#,##0")` — label "Total Value"
-   - Cell E1 (merged E1:F1): Formula `=TEXT(SUM(J3:J200),"$#,##0")` — label "Unrealized G/L"
-   - Cell G1 (merged G1:H1): Formula `=TEXT(SUM(J3:J200)/SUM(H3:H200)*100,"0.0")&"%"` — label "Total Return %"
-   - Cell I1 (merged I1:J1): Formula `=TEXT(SUMIF(P3:P200,TRUE,G3:G200),"$#,##0")` — label "Cash"
-   - Cell K1 (merged K1:L1): Formula `=TEXT(COUNTA(A3:A200)-COUNTIF(P3:P200,TRUE),"0")&" positions"` — label "Positions"
+   - Cell A1 (merged A1:B1): Label "ðŸ“Š PORTFOLIO SNAPSHOT" â€” bold, dark navy bg, white font
+   - Cell C1 (merged C1:D1): Formula `=TEXT(SUM(G3:G200),"$#,##0")` â€” label "Total Value"
+   - Cell E1 (merged E1:F1): Formula `=TEXT(SUM(J3:J200),"$#,##0")` â€” label "Unrealized G/L"
+   - Cell G1 (merged G1:H1): Formula `=TEXT(SUM(J3:J200)/SUM(H3:H200)*100,"0.0")&"%"` â€” label "Total Return %"
+   - Cell I1 (merged I1:J1): Formula `=TEXT(SUMIF(P3:P200,TRUE,G3:G200),"$#,##0")` â€” label "Cash"
+   - Cell K1 (merged K1:L1): Formula `=TEXT(COUNTA(A3:A200)-COUNTIF(P3:P200,TRUE),"0")&" positions"` â€” label "Positions"
 
    Row 1 height: 40px. All KPI cells: font size 11, bold, center-aligned.
    Row 2 (original headers): dark navy `#1a2744`, white bold 10pt, height 30px.
@@ -187,7 +193,7 @@ candidates, no highlighting of positions at meaningful gain/loss levels.
 
 ---
 
-## Tab 3: `Daily_Snapshots` — Portfolio Trend View
+## Tab 3: `Daily_Snapshots` â€” Portfolio Trend View
 
 **Problem:** Raw numbers with no visual trend or gain context.
 
@@ -210,7 +216,7 @@ candidates, no highlighting of positions at meaningful gain/loss levels.
 
 4. **Header formatting:** Same dark navy, white bold.
 
-5. **Total Unrealized G/L column (D) — conditional formatting:**
+5. **Total Unrealized G/L column (D) â€” conditional formatting:**
    - Value > 0: background `#d9ead3` (light green)
    - Value < 0: background `#fce8e6` (light red)
 
@@ -222,15 +228,15 @@ candidates, no highlighting of positions at meaningful gain/loss levels.
    instant visual confirmation of today's portfolio state.
 
 8. **Insert a sparkline summary row at the top** (row 1, KPI summary):
-   - Cell A1 (merged A1:B1): "📈 DAILY SNAPSHOT" label
-   - Cell C1: `=SPARKLINE(D2:D50,{"charttype","line";"color","#34a853"})` — G/L trend sparkline
-   - Cell D1: `=TEXT(D2,"$#,##0")` — most recent unrealized G/L (row 2 after sort = newest)
-   - Cell E1: `=TEXT(B2,"$#,##0")` — most recent total value
+   - Cell A1 (merged A1:B1): "ðŸ“ˆ DAILY SNAPSHOT" label
+   - Cell C1: `=SPARKLINE(D2:D50,{"charttype","line";"color","#34a853"})` â€” G/L trend sparkline
+   - Cell D1: `=TEXT(D2,"$#,##0")` â€” most recent unrealized G/L (row 2 after sort = newest)
+   - Cell E1: `=TEXT(B2,"$#,##0")` â€” most recent total value
    Same KPI row style as Holdings_Current row 1.
 
 ---
 
-## Tab 4: `Realized_GL` — Tax Intelligence View
+## Tab 4: `Realized_GL` â€” Tax Intelligence View
 
 **Problem:** Tax-relevant columns (wash sales, disallowed losses, ST vs LT) are buried
 among lot-detail columns. No visual flag on disallowed losses.
@@ -246,7 +252,7 @@ Disallowed Loss, Account, Is Primary Acct, Import Date, Fingerprint
 
 2. **Hide columns:** Description (B), Proceeds Per Share (G), Cost Per Share (H),
    Unadjusted Cost (K), Import Date (V), Fingerprint (W).
-   These are lot-detail audit columns — not needed for daily review.
+   These are lot-detail audit columns â€” not needed for daily review.
 
 3. **Column widths:**
    - A (Ticker): 75
@@ -269,11 +275,11 @@ Disallowed Loss, Account, Is Primary Acct, Import Date, Fingerprint
    - Value > 0: font color green `#34a853`
    - Value < 0: font color red `#ea4335`
 
-5. **Disallowed Loss (column R) — HIGH PRIORITY FLAG:**
+5. **Disallowed Loss (column R) â€” HIGH PRIORITY FLAG:**
    Any cell in column R that is not empty AND not "0" AND not "$0.00":
    - Background: `#ea4335` (red)
    - Font: white, bold
-   This is the most important tax signal — disallowed wash sale losses that need
+   This is the most important tax signal â€” disallowed wash sale losses that need
    attention before year-end.
 
 6. **Wash Sale (column Q) TRUE rows:**
@@ -281,16 +287,16 @@ Disallowed Loss, Account, Is Primary Acct, Import Date, Fingerprint
    Use a conditional format on the full row range (A:S) keyed on column Q value.
 
 7. **Term (column P) conditional formatting:**
-   - "Short-term" or "ST": background `#fce8e6` (light red — higher tax impact)
-   - "Long-term" or "LT": background `#d9ead3` (light green — lower tax impact)
+   - "Short-term" or "ST": background `#fce8e6` (light red â€” higher tax impact)
+   - "Long-term" or "LT": background `#d9ead3` (light green â€” lower tax impact)
 
 8. **KPI summary row 1 (same pattern as Holdings_Current):**
-   - A1: "🧾 REALIZED G/L" label
-   - C1: `=TEXT(SUM(L3:L500),"$#,##0")` — Total Realized G/L
-   - E1: `=TEXT(SUMIF(O3:O500,">0",O3:O500),"$#,##0")` — LT Gains
-   - G1: `=TEXT(SUMIF(N3:N500,"<0",N3:N500),"$#,##0")` — LT Losses
-   - I1: `=TEXT(SUMIF(P3:P500,">0",P3:P500),"$#,##0")` — ST Gains
-   - K1: `=TEXT(SUMIF(Q3:Q500,TRUE,R3:R500),"$#,##0")` — Total Disallowed (wash sale)
+   - A1: "ðŸ§¾ REALIZED G/L" label
+   - C1: `=TEXT(SUM(L3:L500),"$#,##0")` â€” Total Realized G/L
+   - E1: `=TEXT(SUMIF(O3:O500,">0",O3:O500),"$#,##0")` â€” LT Gains
+   - G1: `=TEXT(SUMIF(N3:N500,"<0",N3:N500),"$#,##0")` â€” LT Losses
+   - I1: `=TEXT(SUMIF(P3:P500,">0",P3:P500),"$#,##0")` â€” ST Gains
+   - K1: `=TEXT(SUMIF(Q3:Q500,TRUE,R3:R500),"$#,##0")` â€” Total Disallowed (wash sale)
 
 ---
 
@@ -328,7 +334,7 @@ app = typer.Typer()
 def main(live: bool = typer.Option(False, "--live", help="Write formatting (default: dry run)")):
     dry_run = not live
     if dry_run:
-        typer.echo("DRY RUN — no changes will be written. Pass --live to apply.")
+        typer.echo("DRY RUN â€” no changes will be written. Pass --live to apply.")
         return
     
     gc = get_gspread_client()
@@ -339,7 +345,7 @@ def main(live: bool = typer.Option(False, "--live", help="Write formatting (defa
     format_daily_snapshots(spreadsheet)
     format_realized_gl(spreadsheet)
     
-    typer.echo("✅ All tabs formatted successfully.")
+    typer.echo("âœ… All tabs formatted successfully.")
 
 if __name__ == "__main__":
     app()
@@ -350,7 +356,7 @@ Implement `format_agent_outputs()`, `format_holdings_current()`,
 Each function should:
 1. Open the worksheet by tab name
 2. Apply all formatting described above
-3. Print a status line: `"  ✓ formatted {tab_name}"`
+3. Print a status line: `"  âœ“ formatted {tab_name}"`
 
 ### gspread_formatting API patterns to use
 
@@ -402,7 +408,7 @@ set_conditional_format_rules(ws, rules)
 
 ### Error handling
 
-- Wrap each `format_*()` call in try/except — a formatting failure on one tab must not
+- Wrap each `format_*()` call in try/except â€” a formatting failure on one tab must not
   abort the others.
 - If a worksheet doesn't exist (tab not yet created), log a warning and skip.
 - If `gspread_formatting` is not installed, print a clear error:
@@ -410,11 +416,11 @@ set_conditional_format_rules(ws, rules)
 
 ### Do NOT do
 
-- Do not delete any data rows or columns — only hide.
+- Do not delete any data rows or columns â€” only hide.
 - Do not insert rows unless explicitly implementing the KPI summary row.
 - Do not touch `Target_Allocation` (manual-only tab).
 - Do not write cell values (formulas only belong in the KPI summary row insert).
-- Do not call `ws.update()` or `ws.batch_update()` for data — this script touches
+- Do not call `ws.update()` or `ws.batch_update()` for data â€” this script touches
   formatting and structure only.
 - Do not add any new gspread imports to `utils/sheet_readers.py`.
 
@@ -444,14 +450,15 @@ Run `python tasks/format_sheets_ui.py --live` and verify:
 
 After running `--live`, you may want to manually:
 1. Resize the browser zoom in Sheets to ~85% to see more columns at once
-2. On `Agent_Outputs`, use View → Freeze → Up to current column (D) after
-   unhiding is confirmed — the freeze applies to the first visible column
+2. On `Agent_Outputs`, use View â†’ Freeze â†’ Up to current column (D) after
+   unhiding is confirmed â€” the freeze applies to the first visible column
 3. On `Holdings_Current`, verify the KPI row formulas reference the correct
    row offsets (row 3+ for data if KPI row was inserted successfully)
 4. The `Realized_GL` disallowed loss flag is the single most important tax
-   signal — confirm it fires on any row where the `Disallowed Loss` column
+   signal â€” confirm it fires on any row where the `Disallowed Loss` column
    is non-zero before year-end review
 
-This script is idempotent — safe to re-run after agent writes update the sheet.
+This script is idempotent â€” safe to re-run after agent writes update the sheet.
 Formatting rules accumulate; running twice does not double-apply conditionals
 (gspread_formatting replaces the full rules list on each call).
+

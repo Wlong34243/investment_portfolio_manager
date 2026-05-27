@@ -1,4 +1,10 @@
-# TASK_thesis_sync.md — Agentic Implementation Plan
+﻿<!--
+ARCHIVED 2026-05-27
+Agentic implementation plan for pm vault sync. Work shipped May 2026. Extension also fixed from .md.md to .md.
+See STATE.md for current state.
+-->
+
+# TASK_thesis_sync.md â€” Agentic Implementation Plan
 
 ## System Directive
 You are operating as the Agentic Staff Engineer defined in `GEMINI.md`. You have been tasked with building the `pm vault sync` workflow. 
@@ -36,7 +42,7 @@ Build a CLI workflow (`pm vault sync`) that reads `Transactions`, `Holdings_Curr
 ### File 1: `core/thesis_sync_data.py` (Data Gathering)
 * **Function:** `gather_thesis_sync_data(as_of_date, tickers)` -> `dict[str, TickerSyncPayload]`
 * **Logic:** Pure Python read-only assembly. Trust the pipeline that populated `Holdings_Current`.
-* **Resolution Chain:** `style` = frontmatter → `ticker_strategies.json` → None. `style_size_ceiling_pct` = `styles.json[style].size_ceiling_pct`.
+* **Resolution Chain:** `style` = frontmatter â†’ `ticker_strategies.json` â†’ None. `style_size_ceiling_pct` = `styles.json[style].size_ceiling_pct`.
 * **Rotation Linkage:** Cross-reference fingerprints against `Trade_Log` and `Trade_Log_Staging`.
 
 ### File 2: `tasks/write_thesis_updates.py` (The Writer)
@@ -44,7 +50,7 @@ Build a CLI workflow (`pm vault sync`) that reads `Transactions`, `Holdings_Curr
 * **Logic:** Diff first. If zero changes, skip completely. 
 * **Live Mode:** Write `<path>.bak.<UTC-isoformat>` BEFORE any mutation.
 * **Mutations:** Update frontmatter (`last_reviewed`, `cost_basis`, `current_allocation`). Update triggers (`current_weight_pct`, `style_size_ceiling_pct`). Replace/Append managed regions.
-* **Change Log:** Append one line per run summarizing the exact changes (e.g., `weight 9.3% → 9.5%; +1 transaction`).
+* **Change Log:** Append one line per run summarizing the exact changes (e.g., `weight 9.3% â†’ 9.5%; +1 transaction`).
 
 ### File 3: `manager.py` (CLI Wiring)
 * **Command 1:** `vault sync [--ticker] [--live] [--force] [--show-diff]`

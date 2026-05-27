@@ -1,4 +1,10 @@
-# Phase 6 Prompts — User Documentation Consolidation
+﻿<!--
+ARCHIVED 2026-05-27
+Phase 6 user documentation consolidation prompts. Superseded by portfolio_manager_user_docs.html rewrite May 2026.
+See STATE.md for current state.
+-->
+
+# Phase 6 Prompts â€” User Documentation Consolidation
 
 **Status:** QUEUED. Do not start until Phase 5 is boring.
 
@@ -6,20 +12,20 @@
 
 **Governing rules:**
 - Phase 6 does not start until Phase 5 is boring. No exceptions.
-- Phase 6 is primarily a documentation phase — little new code, lots of clarity.
+- Phase 6 is primarily a documentation phase â€” little new code, lots of clarity.
 - Single commit per prompt.
 
 ---
 
 ## Why this phase exists
 
-Over Phases 1–5, the system changes meaningfully. Each phase updates `portfolio_manager_user_docs.html` in small increments. By the time Phase 5 is done, the HTML has:
+Over Phases 1â€“5, the system changes meaningfully. Each phase updates `portfolio_manager_user_docs.html` in small increments. By the time Phase 5 is done, the HTML has:
 - Out-of-sequence feature descriptions
 - Multiple "workflow" sections that overlap
 - CLI references that grew by accretion
 - Old architectural framing ("agent-centric") that no longer applies
 
-Phase 6 consolidates everything into a single, current, authoritative user manual that replaces the incremental edits. Think of it as the "release" document — what you'd send a CPA colleague if they asked you to show them the system.
+Phase 6 consolidates everything into a single, current, authoritative user manual that replaces the incremental edits. Think of it as the "release" document â€” what you'd send a CPA colleague if they asked you to show them the system.
 
 It also takes the opportunity to update `CLAUDE.md` and `PORTFOLIO_SHEET_SCHEMA.md` so they reflect the post-Phase-5 reality.
 
@@ -52,7 +58,7 @@ Before starting Phase 6:
 
 ---
 
-## Prompt 6.1 — Rewrite `portfolio_manager_user_docs.html` to Version 3.0
+## Prompt 6.1 â€” Rewrite `portfolio_manager_user_docs.html` to Version 3.0
 
 ### Context
 
@@ -78,8 +84,8 @@ Rewrite from scratch into Version 3.0 as a single authoritative user manual.
       - Sheets as authoritative frontend
 
    3. Architecture at a Glance
-      - One diagram: Schwab API → Bundles → Sheets → (dashboard scan or export package)
-      - No more than 8 boxes and 10 arrows — if you need more, you're over-explaining
+      - One diagram: Schwab API â†’ Bundles â†’ Sheets â†’ (dashboard scan or export package)
+      - No more than 8 boxes and 10 arrows â€” if you need more, you're over-explaining
 
    4. The Weekly Cycle (5 minutes)
       - health / snapshot / sync transactions / dashboard refresh
@@ -106,7 +112,7 @@ Rewrite from scratch into Version 3.0 as a single authoritative user manual.
       - Grouped by purpose: daily, weekly, export, maintenance
       - Each with: syntax, default behavior, --live semantics, common flags
 
-   9. The Export Engine — LLM Reasoning Workflow
+   9. The Export Engine â€” LLM Reasoning Workflow
       - The scenario catalog (from Phase 4.6)
       - Which LLM for which scenario
       - How to read prompt.md and context.json
@@ -118,11 +124,11 @@ Rewrite from scratch into Version 3.0 as a single authoritative user manual.
       - Wash-sale mechanics in the system
 
    11. When Things Go Wrong
-      - Schwab token expired → what to do
-      - Sheet quota error → what to do
-      - FMP 429 → what to do
-      - Bundle hash mismatch → what to do
-      - Duplicate transactions → what to do (reconcile mode)
+      - Schwab token expired â†’ what to do
+      - Sheet quota error â†’ what to do
+      - FMP 429 â†’ what to do
+      - Bundle hash mismatch â†’ what to do
+      - Duplicate transactions â†’ what to do (reconcile mode)
 
    12. Maintenance Cadence
       - Saturday: thesis file updates, vault snapshot, bundle composite
@@ -144,7 +150,7 @@ Rewrite from scratch into Version 3.0 as a single authoritative user manual.
    - **No tables of contents longer than the sections themselves.**
    - **No emoji.** Functional document, not a pitch deck.
 
-4. Version footer: "Version 3.0 — Consolidated after Phase 5. Supersedes all prior incremental versions."
+4. Version footer: "Version 3.0 â€” Consolidated after Phase 5. Supersedes all prior incremental versions."
 
 5. Keep the same file path (`portfolio_manager_user_docs.html`). The old incremental content goes to `docs/archive/user_docs_v2_*.html` for reference.
 
@@ -159,20 +165,20 @@ Rewrite from scratch into Version 3.0 as a single authoritative user manual.
 - [ ] Version 3.0 HTML exists, replaces the prior file at the same path
 - [ ] All 13 sections present, in order, with real content (no placeholders)
 - [ ] Previous incremental versions archived to `docs/archive/`
-- [ ] Read through start to finish — no contradictions, no "to be written" notes
+- [ ] Read through start to finish â€” no contradictions, no "to be written" notes
 - [ ] Fresh observer test: someone who hasn't seen the project can follow the weekly workflow from the docs alone
 - [ ] `CHANGELOG.md` updated
-- [ ] Single commit: `Phase 6.1: User docs Version 3.0 — full consolidation`
+- [ ] Single commit: `Phase 6.1: User docs Version 3.0 â€” full consolidation`
 
 ### What NOT to do
 
 - Do not describe future phases or unimplemented features
 - Do not use the word "leverage" as a verb
-- Do not apologize for the tool's limits — just describe them
+- Do not apologize for the tool's limits â€” just describe them
 
 ---
 
-## Prompt 6.2 — Rewrite `CLAUDE.md` for post-pivot reality
+## Prompt 6.2 â€” Rewrite `CLAUDE.md` for post-pivot reality
 
 ### Context
 
@@ -187,7 +193,7 @@ The version in the project description is lengthy and has architectural decision
 2. Rewrite to these sections:
 
    ```
-   # CLAUDE.md — Investment Portfolio Manager
+   # CLAUDE.md â€” Investment Portfolio Manager
 
    ## What this project is
    A headless Python CLI portfolio operating system with Google Sheets as the
@@ -220,7 +226,7 @@ The version in the project description is lengthy and has architectural decision
    1. Schwab Developer API (primary, read-only)
    2. Schwab CSV (fallback + realized G/L history)
    3. yFinance (prices, sector, beta, dividend yield)
-   4. FMP (fundamentals — extend fmp_client.py before adding any new vendor)
+   4. FMP (fundamentals â€” extend fmp_client.py before adding any new vendor)
    5. Finnhub (news)
 
    ## Tab authority
@@ -273,7 +279,7 @@ The version in the project description is lengthy and has architectural decision
 
 ---
 
-## Prompt 6.3 — Consolidate `PORTFOLIO_SHEET_SCHEMA.md`
+## Prompt 6.3 â€” Consolidate `PORTFOLIO_SHEET_SCHEMA.md`
 
 ### Context
 
@@ -305,7 +311,7 @@ The version in the project description is lengthy and has architectural decision
 
 4. Remove "Phase N" tags where the tab is operational. Replace with a simple "Since Phase N" note at the bottom of the section for historical reference.
 
-5. Add a new top-level section: **Tab Authority Matrix** — a single table showing which tabs are pipeline-written, manual-only, sandbox, view-only. This is the at-a-glance reference for anyone modifying the system.
+5. Add a new top-level section: **Tab Authority Matrix** â€” a single table showing which tabs are pipeline-written, manual-only, sandbox, view-only. This is the at-a-glance reference for anyone modifying the system.
 
 6. The fingerprint formats section is retained and expanded to include Rotation_Review's fingerprint.
 
@@ -331,7 +337,7 @@ The version in the project description is lengthy and has architectural decision
 
 ---
 
-## Prompt 6.4 — Project README, architecture notes, and archive cleanup
+## Prompt 6.4 â€” Project README, architecture notes, and archive cleanup
 
 ### Context
 
@@ -365,25 +371,25 @@ Two final pieces close out Phase 6: a project root `README.md` for 60-second ori
 
    ## Documentation
 
-   - [User manual](portfolio_manager_user_docs.html) — full workflow
-   - [Sheet schema](PORTFOLIO_SHEET_SCHEMA.md) — cell-level truth
-   - [Conventions](CLAUDE.md) — for future devs
-   - [Changelog](CHANGELOG.md) — phase-by-phase history
-   - [Architecture notes](docs/architecture/) — the "why" behind the "what"
+   - [User manual](portfolio_manager_user_docs.html) â€” full workflow
+   - [Sheet schema](PORTFOLIO_SHEET_SCHEMA.md) â€” cell-level truth
+   - [Conventions](CLAUDE.md) â€” for future devs
+   - [Changelog](CHANGELOG.md) â€” phase-by-phase history
+   - [Architecture notes](docs/architecture/) â€” the "why" behind the "what"
 
    ## Non-goals
 
    Not a robo-advisor. Not an auto-trader. Not a backtest. Not a web app.
    ```
 
-2. **Create `docs/architecture/`** with 3–5 focused notes (one page each):
-   - `01_bundle_first_reasoning.md` — why every decision traces to a hashed bundle
-   - `02_sheets_as_authoritative_frontend.md` — why Sheets beat Streamlit for this use case
-   - `03_external_llm_reasoning.md` — why the agent squad was decommissioned in favor of export packages
-   - `04_rotation_as_unit_of_analysis.md` — the investment philosophy encoded in the data model
-   - `05_tax_visibility_as_first_class.md` — why Tax_Control deserves its own tab, not agent narrative
+2. **Create `docs/architecture/`** with 3â€“5 focused notes (one page each):
+   - `01_bundle_first_reasoning.md` â€” why every decision traces to a hashed bundle
+   - `02_sheets_as_authoritative_frontend.md` â€” why Sheets beat Streamlit for this use case
+   - `03_external_llm_reasoning.md` â€” why the agent squad was decommissioned in favor of export packages
+   - `04_rotation_as_unit_of_analysis.md` â€” the investment philosophy encoded in the data model
+   - `05_tax_visibility_as_first_class.md` â€” why Tax_Control deserves its own tab, not agent narrative
 
-   Each note: 1–2 screens of text, motivating question at top, decision/answer at bottom, "alternatives considered and why they lost" in the middle.
+   Each note: 1â€“2 screens of text, motivating question at top, decision/answer at bottom, "alternatives considered and why they lost" in the middle.
 
 3. **Archive cleanup.** Move to `docs/archive/`:
    - All previously consolidated `*_prompts.md` files (phase1 through phase5). They served their purpose; the current state is in the code and the current docs.
@@ -398,13 +404,13 @@ Two final pieces close out Phase 6: a project root `README.md` for 60-second ori
 ### Constraints
 
 - **README.md is a front door, not a manual.** 60-second orientation. Anything longer belongs in the user docs.
-- **Architecture notes are opinionated.** Each one should have a clear "here's what we chose and why" — not a survey of options.
+- **Architecture notes are opinionated.** Each one should have a clear "here's what we chose and why" â€” not a survey of options.
 - **No orphan files.** Every file in the repo should be either (a) active code, (b) active docs, (c) archived with a clear archive location, or (d) a test.
 
 ### Gate criteria
 
 - [ ] Project root has a clean `README.md` with a working quick-start
-- [ ] `docs/architecture/` has 3–5 focused notes, each readable in under 2 minutes
+- [ ] `docs/architecture/` has 3â€“5 focused notes, each readable in under 2 minutes
 - [ ] `docs/archive/` contains the superseded incremental docs and phase prompts
 - [ ] `docs/phase-prompts/` contains the current-generation phase prompt files for future reference
 - [ ] No orphan files at the project root beyond the expected ones (README, CLAUDE.md, CHANGELOG.md, requirements.txt, pyproject or setup, .gitignore, main entry points)
@@ -414,7 +420,7 @@ Two final pieces close out Phase 6: a project root `README.md` for 60-second ori
 ### What NOT to do
 
 - Do not add marketing language to the README
-- Do not write architecture notes for decisions that aren't settled — those belong in active design discussion, not archive-worthy notes
+- Do not write architecture notes for decisions that aren't settled â€” those belong in active design discussion, not archive-worthy notes
 - Do not delete old content; archive it
 
 ---
@@ -457,3 +463,4 @@ All of the following must be true:
   - Options overlay scenario in the export engine (covered calls, cash-secured puts)
   - Unified net-worth view across RE Property Manager and this project
   - Fine-tuning an open-weight model on your decision journal (research phase)
+

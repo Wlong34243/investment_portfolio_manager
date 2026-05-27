@@ -1,4 +1,10 @@
-# Phase 5 Test Suite — Investment Portfolio Manager
+﻿<!--
+ARCHIVED 2026-05-27
+Phase 5 test suite plan for Schwab API integration. Work shipped May 2026.
+See STATE.md for current state.
+-->
+
+# Phase 5 Test Suite â€” Investment Portfolio Manager
 **Target runner: Gemini CLI (`gemini --all-files -p "..."` or `gemini -p "..."` per test)**  
 **Execution model: Run one test group at a time. Never run all groups in a single call.**  
 **All tests default to DRY RUN unless explicitly noted. Never pass `--live` during testing.**
@@ -16,11 +22,11 @@ gemini --all-files -p "Read CLAUDE.md, CHANGELOG.md (last 5 entries), and agents
 
 ---
 
-## Group 1 — Infrastructure Integrity (Run First)
+## Group 1 â€” Infrastructure Integrity (Run First)
 
-These tests validate Phases 1–4 are still solid before any Phase 5 work begins. If any Group 1 test fails, fix it before running Groups 2–7.
+These tests validate Phases 1â€“4 are still solid before any Phase 5 work begins. If any Group 1 test fails, fix it before running Groups 2â€“7.
 
-### T1.1 — Bundle round-trip integrity
+### T1.1 â€” Bundle round-trip integrity
 ```
 Run: python manager.py snapshot --source auto
 
@@ -39,7 +45,7 @@ FAIL signals:
 - verify prints FAIL
 ```
 
-### T1.2 — Vault bundle coverage
+### T1.2 â€” Vault bundle coverage
 ```
 Run: python manager.py vault snapshot
 
@@ -49,10 +55,10 @@ PASS if:
 - vault_hash is a 64-char hex string
 - No Python exceptions in output
 
-Log any tickers in theses_missing — these positions will have degraded agent output.
+Log any tickers in theses_missing â€” these positions will have degraded agent output.
 ```
 
-### T1.3 — Composite bundle assembly
+### T1.3 â€” Composite bundle assembly
 ```
 Run: python manager.py bundle composite
 
@@ -69,7 +75,7 @@ FAIL signals:
 - FileNotFoundError on either sub-bundle
 ```
 
-### T1.4 — CASH_MANUAL and QACDS exclusion
+### T1.4 â€” CASH_MANUAL and QACDS exclusion
 ```
 Run: python manager.py snapshot --source auto
 
@@ -86,7 +92,7 @@ FAIL if:
 - Either contributes to portfolio beta
 ```
 
-### T1.5 — Schwab API fallback behavior
+### T1.5 â€” Schwab API fallback behavior
 ```
 Temporarily rename bundles/ to bundles_backup/ so there are no existing bundles.
 Run: python manager.py snapshot --source auto
@@ -107,11 +113,11 @@ FAIL if:
 
 ---
 
-## Group 2 — Re-buy Analyst (Phase 3 Baseline — Must Still Pass)
+## Group 2 â€” Re-buy Analyst (Phase 3 Baseline â€” Must Still Pass)
 
 The Re-buy Analyst is the reference implementation. If it regresses, something in the shared infrastructure broke.
 
-### T2.1 — Dry run produces valid output
+### T2.1 â€” Dry run produces valid output
 ```
 Run: python manager.py agent rebuy analyze
 
@@ -129,14 +135,14 @@ FAIL signals:
 - All candidates classified the same way (likely a schema parse failure)
 ```
 
-### T2.2 — Single-ticker mode
+### T2.2 â€” Single-ticker mode
 ```
 Run: python manager.py agent rebuy analyze --ticker UNH
 
 PASS if:
 - Only UNH appears in candidates output
 - UNH thesis file content is referenced (scaling_state, rotation_priority)
-- framework_validation field is populated (not null) — UNH should have FMP fundamentals
+- framework_validation field is populated (not null) â€” UNH should have FMP fundamentals
 - proposed_next_step is one of: scale_in | hold | watch | exit_watch
 - Confidence is one of: high | medium | low
 
@@ -146,7 +152,7 @@ FAIL signals:
 - proposed_next_step not in allowed enum values
 ```
 
-### T2.3 — Framework pre-computation override
+### T2.3 â€” Framework pre-computation override
 ```
 Run: python manager.py agent rebuy analyze --ticker AMZN
 
@@ -157,14 +163,14 @@ PASS if:
 - If applicable: framework_validation.rules_evaluated is a list with >= 3 items
 - framework_validation.passes_framework is a boolean, not a string
 - proposed_next_step is NOT changed from what the Python framework computed
-  (the LLM cannot override the framework_validation — it can only add rationale)
+  (the LLM cannot override the framework_validation â€” it can only add rationale)
 
 FAIL if:
 - framework_validation.passes_framework does not match the rule evaluation arithmetic
 - LLM output contradicts the Python pre-computed framework result without justification
 ```
 
-### T2.4 — Coverage warning for missing thesis
+### T2.4 â€” Coverage warning for missing thesis
 ```
 Temporarily rename vault/theses/GOOG_thesis.md to vault/theses/GOOG_thesis.md.bak
 Run: python manager.py vault snapshot
@@ -185,9 +191,9 @@ FAIL if:
 
 ---
 
-## Group 3 — Tax Agent (Phase 5-A)
+## Group 3 â€” Tax Agent (Phase 5-A)
 
-### T3.1 — TLH candidate identification
+### T3.1 â€” TLH candidate identification
 ```
 Run: python manager.py agent tax analyze
 
@@ -205,7 +211,7 @@ FAIL signals:
 - Values don't match Holdings_Current sheet (LLM computed them instead of Python)
 ```
 
-### T3.2 — Wash sale flag accuracy
+### T3.2 â€” Wash sale flag accuracy
 ```
 Precondition: At least one ticker in Transactions tab has a buy within 30 days of a sell in the same ticker.
 
@@ -217,12 +223,12 @@ PASS if:
 - Tickers with no recent transactions have wash_sale_risk = false
 
 FAIL signals:
-- wash_sale_risk = true for every ticker (false positives — logic broken)
+- wash_sale_risk = true for every ticker (false positives â€” logic broken)
 - wash_sale_risk = false for a known wash sale situation
 - warnings list is empty despite known wash sale conditions
 ```
 
-### T3.3 — Rebalancing drift calculation
+### T3.3 â€” Rebalancing drift calculation
 ```
 Precondition: Target_Allocation tab has at least 3 asset classes populated.
 
@@ -231,7 +237,7 @@ Run: python manager.py agent tax analyze
 PASS if:
 - rebalance_actions list is populated
 - Each action has direction = "trim" or "add" (not "sell" or "buy")
-- drift_pct values are Python-computed — verify one manually: (current_weight - target_weight)
+- drift_pct values are Python-computed â€” verify one manually: (current_weight - target_weight)
 - No rebalance_action exists for CASH_MANUAL or QACDS
 
 FAIL signals:
@@ -240,7 +246,7 @@ FAIL signals:
 - CASH_MANUAL or QACDS appears in rebalance_actions
 ```
 
-### T3.4 — Short vs long term classification
+### T3.4 â€” Short vs long term classification
 ```
 Run: python manager.py agent tax analyze
 
@@ -255,7 +261,7 @@ PASS if: holding_period_days shows a reasonable estimate or is marked "unknown"
 FAIL if: all positions marked short_term = true by default when data is unavailable
 ```
 
-### T3.5 — No writes to Target_Allocation
+### T3.5 â€” No writes to Target_Allocation
 ```
 Note the current row count and last fingerprint in Target_Allocation tab.
 Run: python manager.py agent tax analyze --live
@@ -267,14 +273,14 @@ PASS if:
 
 FAIL if:
 - Any write occurs to Target_Allocation
-- This is an automatic CRITICAL FAIL — stop and fix before continuing
+- This is an automatic CRITICAL FAIL â€” stop and fix before continuing
 ```
 
 ---
 
-## Group 4 — Valuation Agent (Phase 5-B)
+## Group 4 â€” Valuation Agent (Phase 5-B)
 
-### T4.1 — P/E sourced from Python, not LLM
+### T4.1 â€” P/E sourced from Python, not LLM
 ```
 Run: python manager.py agent valuation analyze --tickers UNH,GOOG,AMZN
 
@@ -292,7 +298,7 @@ FAIL signals:
 - Values appear rounded to suspiciously clean numbers (LLM hallucination pattern)
 ```
 
-### T4.2 — Accumulation plan uses small-step language
+### T4.2 â€” Accumulation plan uses small-step language
 ```
 Run: python manager.py agent valuation analyze
 
@@ -309,9 +315,9 @@ FAIL signals:
 - No percentage or step reference
 ```
 
-### T4.3 — Data gaps logged correctly
+### T4.3 â€” Data gaps logged correctly
 ```
-Identify at least 2 tickers with no FMP coverage (likely: CORZ, IREN, CRWV — recent IPOs or small caps).
+Identify at least 2 tickers with no FMP coverage (likely: CORZ, IREN, CRWV â€” recent IPOs or small caps).
 
 Run: python manager.py agent valuation analyze
 
@@ -322,11 +328,11 @@ PASS if:
 
 FAIL signals:
 - Tickers with no FMP data silently dropped from output
-- pe_fwd = 0.0 used as a fallback (misleading — should be null)
+- pe_fwd = 0.0 used as a fallback (misleading â€” should be null)
 - LLM generates a signal for a ticker with no real data
 ```
 
-### T4.4 — Style alignment sourced from vault
+### T4.4 â€” Style alignment sourced from vault
 ```
 Run: python manager.py agent valuation analyze --tickers UNH,XBI,JPIE,QQQM
 
@@ -336,7 +342,7 @@ PASS if:
 - JPIE has style_alignment = "income" or "boring_fundamentals"
 - QQQM has style_alignment = "sector_etf" or "thematic"
 
-None of these should be hallucinated — they must trace back to the thesis frontmatter style field.
+None of these should be hallucinated â€” they must trace back to the thesis frontmatter style field.
 
 FAIL signals:
 - style_alignment = "unknown" for a ticker with a thesis file
@@ -345,9 +351,9 @@ FAIL signals:
 
 ---
 
-## Group 5 — Concentration Hedger (Phase 5-C)
+## Group 5 â€” Concentration Hedger (Phase 5-C)
 
-### T5.1 — UNH concentration flag fires
+### T5.1 â€” UNH concentration flag fires
 ```
 Run: python manager.py agent concentration analyze
 
@@ -355,7 +361,7 @@ PASS if:
 - A ConcentrationFlag exists for UNH with flag_type = "single_position"
 - current_weight_pct is approximately 9.0 (matches Holdings_Current)
 - threshold_pct = 8.0 (from config.CONCENTRATION_SINGLE_THRESHOLD)
-- severity = "action" (not "watch" — 9% is over threshold)
+- severity = "action" (not "watch" â€” 9% is over threshold)
 
 FAIL signals:
 - UNH not flagged at all
@@ -363,7 +369,7 @@ FAIL signals:
 - weight doesn't match Holdings_Current
 ```
 
-### T5.2 — Tech sector concentration flag fires
+### T5.2 â€” Tech sector concentration flag fires
 ```
 Tech cluster: GOOG, AMZN, NVDA, AMD, META, MSFT, DELL, AVGO, CRWD, SNPS, NOW, PANW, IGV, QQQM
 
@@ -380,7 +386,7 @@ FAIL signals:
 - ETFs excluded from sector computation (IGV and QQQM belong in tech weight)
 ```
 
-### T5.3 — Beta and stress scenarios are Python-computed
+### T5.3 â€” Beta and stress scenarios are Python-computed
 ```
 Run: python manager.py agent concentration analyze
 
@@ -391,8 +397,8 @@ Manually verify portfolio_beta:
 
 PASS if:
 - portfolio_beta in output matches manual calculation within 0.05
-- stress_scenarios["market_down_10pct"] ≈ total_invested_value × portfolio_beta × -0.10
-- stress_scenarios["market_down_20pct"] ≈ total_invested_value × portfolio_beta × -0.20
+- stress_scenarios["market_down_10pct"] â‰ˆ total_invested_value Ã— portfolio_beta Ã— -0.10
+- stress_scenarios["market_down_20pct"] â‰ˆ total_invested_value Ã— portfolio_beta Ã— -0.20
 
 FAIL signals:
 - portfolio_beta differs from manual calculation by > 0.1
@@ -400,7 +406,7 @@ FAIL signals:
 - CASH_MANUAL included in beta calculation
 ```
 
-### T5.4 — High-correlation pairs identified
+### T5.4 â€” High-correlation pairs identified
 ```
 Run: python manager.py agent concentration analyze
 
@@ -420,7 +426,7 @@ FAIL signals:
 - Pairs identified that are obviously unrelated (JPIE / XOM is not a high-corr pair)
 ```
 
-### T5.5 — Hedge suggestions use small-step language
+### T5.5 â€” Hedge suggestions use small-step language
 ```
 Run: python manager.py agent concentration analyze
 
@@ -440,9 +446,9 @@ FAIL signals:
 
 ---
 
-## Group 6 — Macro Cycle Agent (Phase 5-D)
+## Group 6 â€” Macro Cycle Agent (Phase 5-D)
 
-### T6.1 — ATR computed in Python, not LLM
+### T6.1 â€” ATR computed in Python, not LLM
 ```
 Precondition: tasks/enrich_atr.py exists and has been run, injecting calculated_technical_stops into the bundle.
 
@@ -451,7 +457,7 @@ Run: python manager.py agent macro analyze
 PASS if:
 - calculated_technical_stops exists in the bundle JSON (check the composite JSON directly)
 - Each entry has: ticker, atr_14, stop_loss_level, current_price
-- stop_loss_level = current_price - (2.5 × atr_14) within rounding
+- stop_loss_level = current_price - (2.5 Ã— atr_14) within rounding
 - Gemini output references these pre-computed values, it does NOT re-calculate ATR
 
 Manual verify one ticker:
@@ -465,7 +471,7 @@ FAIL signals:
 - Agent calls yfinance directly (this is the invariant violation from the original code)
 ```
 
-### T6.2 — Paradigm phase is a valid enum value
+### T6.2 â€” Paradigm phase is a valid enum value
 ```
 Run: python manager.py agent macro analyze
 
@@ -479,7 +485,7 @@ FAIL signals:
 - > 80% of positions classified identically (LLM defaulting)
 ```
 
-### T6.3 — Rotation targets sourced from vault research
+### T6.3 â€” Rotation targets sourced from vault research
 ```
 Run: python manager.py agent macro analyze
 
@@ -495,9 +501,9 @@ FAIL signals:
 
 ---
 
-## Group 7 — Thesis Screener (Phase 5-E)
+## Group 7 â€” Thesis Screener (Phase 5-E)
 
-### T7.1 — Thesis content used for alignment check
+### T7.1 â€” Thesis content used for alignment check
 ```
 Run: python manager.py agent thesis analyze --ticker UNH
 
@@ -512,7 +518,7 @@ FAIL signals:
 - final_recommendation not in allowed enum values
 ```
 
-### T7.2 — Behavioral guardrails fire for potential downgrade
+### T7.2 â€” Behavioral guardrails fire for potential downgrade
 ```
 Run: python manager.py agent thesis analyze on a ticker with recent negative news but intact long-term thesis (e.g., UNH, GOOG, or AMZN after any earnings miss).
 
@@ -528,7 +534,7 @@ FAIL signals:
 - Same guardrail text for every ticker (copy-paste, not reasoned)
 ```
 
-### T7.3 — Missing transcript graceful degradation
+### T7.3 â€” Missing transcript graceful degradation
 ```
 Precondition: Choose a ticker with no earnings transcript in vault/transcripts/ (e.g., CORZ or IREN).
 
@@ -537,7 +543,7 @@ Run: python manager.py agent thesis analyze --ticker CORZ
 PASS if:
 - Agent produces output (no crash)
 - Output notes that no transcript was available
-- linguistic_candor_score reflects limited data ("insufficient data — no transcript")
+- linguistic_candor_score reflects limited data ("insufficient data â€” no transcript")
 - final_recommendation is WATCHLIST_DOWNGRADE or MAINTAIN_CONVICTION, not THESIS_VIOLATED
   (can't violate a thesis with no evidence)
 
@@ -549,9 +555,9 @@ FAIL signals:
 
 ---
 
-## Group 8 — 100-Bagger Screener (Phase 5-F)
+## Group 8 â€” 100-Bagger Screener (Phase 5-F)
 
-### T8.1 — Quantitative gate applied in Python
+### T8.1 â€” Quantitative gate applied in Python
 ```
 Run: python manager.py agent bagger analyze
 
@@ -562,7 +568,7 @@ PASS if:
 - acorn_evaluation explains market cap > $1B threshold violation
 - Python-computed market_cap value appears (not hallucinated)
 
-For any holding with market cap < $1B (if any — check CORZ, IREN):
+For any holding with market cap < $1B (if any â€” check CORZ, IREN):
 PASS if:
 - Passes the Acorn check
 - ROIC evaluation uses FMP data or is marked "insufficient data"
@@ -573,7 +579,7 @@ FAIL signals:
 - All tickers classified REJECT regardless of metrics (schema parse failure)
 ```
 
-### T8.2 — Schema file is separate from agent file
+### T8.2 â€” Schema file is separate from agent file
 ```
 Run: python -c "from agents.schemas.bagger_schema import BaggerCandidate, BaggerScreenerResponse; print('OK')"
 
@@ -590,9 +596,9 @@ FAIL signals:
 
 ---
 
-## Group 9 — Van Tharp Framework Integration (Phase 5-G)
+## Group 9 â€” Van Tharp Framework Integration (Phase 5-G)
 
-### T9.1 — Framework loads via framework_selector
+### T9.1 â€” Framework loads via framework_selector
 ```
 Run:
   python -c "
@@ -611,7 +617,7 @@ PASS if: All assertions pass and framework_id = "van_tharp_position_sizing"
 FAIL if: File not found or reviewed_by_bill = false
 ```
 
-### T9.2 — No VanTharp.py remains in agents/
+### T9.2 â€” No VanTharp.py remains in agents/
 ```
 Run: find agents/ -name "VanTharp.py" -o -name "van_tharp*.py" 2>/dev/null
 
@@ -619,14 +625,14 @@ PASS if: No files found
 FAIL if: Python agent file remains (it should be JSON in vault/frameworks/ only)
 ```
 
-### T9.3 — 1R position sizing is Python-computed
+### T9.3 â€” 1R position sizing is Python-computed
 ```
 Run: python manager.py agent rebuy analyze
 
 If Van Tharp framework selected for any position, inspect that position's bundle context.
 
 PASS if:
-- position_size_units is a number computed as: (portfolio_equity × risk_pct) / (atr × 3.0)
+- position_size_units is a number computed as: (portfolio_equity Ã— risk_pct) / (atr Ã— 3.0)
 - This computation appears in the bundle JSON before the LLM call
 - Gemini output cites the pre-computed value, not a re-derived one
 
@@ -637,9 +643,9 @@ FAIL if:
 
 ---
 
-## Group 10 — analyze-all Orchestrator (Phase 5-H)
+## Group 10 â€” analyze-all Orchestrator (Phase 5-H)
 
-### T10.1 — All agents run sequentially
+### T10.1 â€” All agents run sequentially
 ```
 Run: python manager.py analyze-all
 
@@ -655,7 +661,7 @@ FAIL signals:
 - No manifest file written
 ```
 
-### T10.2 — Single batch write in live mode
+### T10.2 â€” Single batch write in live mode
 ```
 Run: python manager.py analyze-all --live
 
@@ -672,7 +678,7 @@ FAIL signals:
 - API rate limit error (caused by cell-by-cell writes)
 ```
 
-### T10.3 — One-agent failure does not abort run
+### T10.3 â€” One-agent failure does not abort run
 ```
 Temporarily introduce a failure: rename agents/valuation_agent.py to agents/valuation_agent.py.bak
 
@@ -691,7 +697,7 @@ FAIL signals:
 - Other agents not run
 ```
 
-### T10.4 — --agents subset flag
+### T10.4 â€” --agents subset flag
 ```
 Run: python manager.py analyze-all --agents rebuy,tax
 
@@ -705,7 +711,7 @@ FAIL signals:
 - Unknown agent name causes crash
 ```
 
-### T10.5 — --fresh-bundle regenerates both bundles
+### T10.5 â€” --fresh-bundle regenerates both bundles
 ```
 Run: python manager.py analyze-all --fresh-bundle
 
@@ -722,11 +728,11 @@ FAIL signals:
 
 ---
 
-## Group 11 — Sunday Automation (Phase 5-I)
+## Group 11 â€” Sunday Automation (Phase 5-I)
 
-### T11.1 — workflow_dispatch manual trigger
+### T11.1 â€” workflow_dispatch manual trigger
 ```
-In GitHub repo → Actions → weekly_analysis.yml → Run workflow
+In GitHub repo â†’ Actions â†’ weekly_analysis.yml â†’ Run workflow
 
 PASS if:
 - Workflow completes with green checkmark
@@ -741,21 +747,21 @@ FAIL signals:
 - Target_Allocation modified
 ```
 
-### T11.2 — GCP credential resolution in Actions
+### T11.2 â€” GCP credential resolution in Actions
 ```
 Check workflow logs for the credential resolution step.
 
 PASS if:
 - Log shows "Using GCP_SERVICE_ACCOUNT_JSON env var" (not ADC, not local file)
 - Sheets write succeeds without authentication error
-- Gemini API call succeeds (ADC not required — API key path used in Actions)
+- Gemini API call succeeds (ADC not required â€” API key path used in Actions)
 
 FAIL signals:
 - AuthenticationError
 - "No credentials available" fallback to local file (local file doesn't exist in Actions)
 ```
 
-### T11.3 — Schwab token expiry fallback in Actions
+### T11.3 â€” Schwab token expiry fallback in Actions
 ```
 Simulate token expiry: set GCS token to an expired token.
 Trigger workflow_dispatch.
@@ -774,11 +780,11 @@ FAIL signals:
 
 ---
 
-## Group 12 — Cross-Cutting Invariants (Run After All Groups)
+## Group 12 â€” Cross-Cutting Invariants (Run After All Groups)
 
 These are system-wide invariants that must hold regardless of which agent ran.
 
-### T12.1 — composite_hash provenance chain
+### T12.1 â€” composite_hash provenance chain
 ```
 From any agent output JSON file, take the bundle_hash (or composite_hash) field.
 Locate the corresponding composite bundle file in bundles/.
@@ -793,7 +799,7 @@ FAIL if:
 - Agent output hash is different from the composite bundle used to generate it
 ```
 
-### T12.2 — No LLM math anywhere
+### T12.2 â€” No LLM math anywhere
 ```
 From analyze-all output, pick 3 values that should be Python-computed:
   a) A TLH candidate's unrealized_loss_usd
@@ -811,7 +817,7 @@ FAIL signals:
 - Python-computed values not present in bundle JSON (LLM computed them instead)
 ```
 
-### T12.3 — DRY_RUN gate never bypassed
+### T12.3 â€” DRY_RUN gate never bypassed
 ```
 grep -r "DRY_RUN" agents/ core/ tasks/ | grep -v "\.pyc"
 
@@ -824,7 +830,7 @@ FAIL if:
 - This is an automatic CRITICAL FAIL
 ```
 
-### T12.4 — SAFETY_PREAMBLE not duplicated
+### T12.4 â€” SAFETY_PREAMBLE not duplicated
 ```
 grep -r "SAFETY_PREAMBLE" agents/ | grep -v "ask_gemini"
 
@@ -837,7 +843,7 @@ FAIL if:
 - (Would cause it to be prepended twice)
 ```
 
-### T12.5 — Small-step invariant audit
+### T12.5 â€” Small-step invariant audit
 ```
 From analyze-all output, collect all fields containing action/sizing language:
   - scale_step (all agents)
@@ -857,7 +863,7 @@ FAIL signals:
 - scale_step = "100%" or "full" anywhere
 ```
 
-### T12.6 — Agent_Outputs schema compliance
+### T12.6 â€” Agent_Outputs schema compliance
 ```
 Run: python manager.py analyze-all --live
 
@@ -882,7 +888,7 @@ FAIL signals:
 Copy this into `tasks/todo.md` when running tests:
 
 ```
-## Phase 5 Test Run — [DATE]
+## Phase 5 Test Run â€” [DATE]
 
 Bundle hash used: _______________
 
@@ -947,17 +953,17 @@ Next action: _______________
 
 Use these composite prompts for Gemini to run entire groups at once:
 
-**Infrastructure (Groups 1–2):**
+**Infrastructure (Groups 1â€“2):**
 ```bash
 gemini --all-files -p "You are a QA engineer. Run the tests in phase5_test_suite.md Groups 1 and 2. For each test: (1) execute the command, (2) evaluate against the PASS criteria, (3) report PASS or FAIL with the specific evidence. Stop on any CRITICAL FAIL."
 ```
 
-**Agent correctness (Groups 3–8):**
+**Agent correctness (Groups 3â€“8):**
 ```bash
 gemini --all-files -p "You are a QA engineer. Run phase5_test_suite.md Groups 3 through 8. Focus specifically on verifying that all numeric values (P/E, beta, unrealized G/L, ATR stops) are Python-computed and not LLM-generated. Report any case where a numeric value in agent output cannot be traced to a Python calculation in the bundle."
 ```
 
-**Orchestration and automation (Groups 9–11):**
+**Orchestration and automation (Groups 9â€“11):**
 ```bash
 gemini --all-files -p "You are a QA engineer. Run phase5_test_suite.md Groups 9, 10, and 11. Pay special attention to T10.2 (single batch write) and T10.3 (failure isolation). These are the most likely failure points in the orchestrator."
 ```
@@ -966,3 +972,4 @@ gemini --all-files -p "You are a QA engineer. Run phase5_test_suite.md Groups 9,
 ```bash
 gemini --all-files -p "You are a QA engineer. Run phase5_test_suite.md Group 12 cross-cutting invariant tests. These are system-wide: T12.3 (DRY_RUN gate) and T12.4 (SAFETY_PREAMBLE duplication) are automatic CRITICAL FAILs if they fail. T12.2 (no LLM math) requires you to manually verify 3 numeric values against the Holdings_Current tab. Report all results."
 ```
+

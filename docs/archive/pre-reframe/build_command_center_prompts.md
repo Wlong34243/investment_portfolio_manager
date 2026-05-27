@@ -1,4 +1,10 @@
-# Prompt Set — 0_DASHBOARD Command Center
+﻿<!--
+ARCHIVED 2026-05-27
+Build prompts for 0_DASHBOARD tab. Work shipped May 2026 as pm refresh dashboard.
+See STATE.md for current state.
+-->
+
+# Prompt Set â€” 0_DASHBOARD Command Center
 
 **Goal:** Build a single-screen `0_DASHBOARD` tab that gives Bill a 30-second answer to "what is the state of the portfolio right now?" Pure gspread writes, no formulas, fully rebuilt as part of `pm refresh dashboard`.
 
@@ -13,7 +19,7 @@
 ## Tab layout (single screen, ~36 rows)
 
 ```
-Row 1     : "PORTFOLIO COMMAND CENTER  —  As of YYYY-MM-DD HH:MM"  (title, merged A1:G1)
+Row 1     : "PORTFOLIO COMMAND CENTER  â€”  As of YYYY-MM-DD HH:MM"  (title, merged A1:G1)
 Row 2     : (blank)
 
 Row 3-4   : HEADLINE KPI STRIP
@@ -48,7 +54,7 @@ Row 22    : Headers: Ticker | Current % | Target % | Drift % | Direction
 Row 23-30 : Up to 8 positions where |current_weight - target_weight| > rebalance_threshold_pct
             Sorted by absolute drift, descending
             Direction: "OVER" or "UNDER"
-            If no drift, single row: "No positions outside ±X% threshold."
+            If no drift, single row: "No positions outside Â±X% threshold."
 
 Row 32    : "SYSTEM HEALTH" section header (smaller font)
 Row 33    : A33: "Last Refresh"     B33: timestamp
@@ -76,7 +82,7 @@ Row 34    : A34: "Schwab Token"     B34: "OK" / "Expiring soon" / "Expired"
 | Top Sector | computed inline | groupby(Asset Class) sum(Weight), take max |
 | Stress -10% | Risk_Metrics | latest row, col H |
 | Top 5 Positions | Holdings_Current | top 5 by Market Value, excluding CASH_TICKERS |
-| Trim/Add Targets | Valuation_Card | cols F (Trim Target), G (Add Target) — joined on Ticker |
+| Trim/Add Targets | Valuation_Card | cols F (Trim Target), G (Add Target) â€” joined on Ticker |
 | Drift Alerts | Holdings_Current vs Target_Allocation | join on Ticker, compute drift, filter > threshold |
 | Last Refresh | datetime.now() | at write time |
 | Bundle Hash | latest bundle file | basename or hash field |
@@ -85,7 +91,7 @@ Row 34    : A34: "Schwab Token"     B34: "OK" / "Expiring soon" / "Expired"
 
 ---
 
-## Prompt 0 — Pre-flight audit
+## Prompt 0 â€” Pre-flight audit
 
 Run this first. No code generation.
 
@@ -93,43 +99,43 @@ Run this first. No code generation.
 Audit pass for the upcoming `0_DASHBOARD` Command Center build. Read these files via `view`
 and report back. Do not generate any code yet.
 
-1. `config.py` — confirm:
+1. `config.py` â€” confirm:
    - `TAB_DASHBOARD = "0_DASHBOARD"` exists (line ~107)
    - `CASH_TICKERS` list and contents
    - `REBALANCE_THRESHOLD_PCT` value
    - `TAX_CONTROL_KPI_LABELS` list (we'll read from this tab)
    - `SCHWAB_TOKEN_BUCKET` and `SCHWAB_TOKEN_BLOB_ACCOUNTS`
 
-2. `tasks/build_decision_view.py` — confirm:
+2. `tasks/build_decision_view.py` â€” confirm:
    - Function signature of `main(live: bool)`
-   - The gspread client / worksheet pattern (clear → batch update → format)
+   - The gspread client / worksheet pattern (clear â†’ batch update â†’ format)
    - How it reads Holdings_Current and Valuation_Card
 
-3. `tasks/build_tax_control.py` — confirm:
+3. `tasks/build_tax_control.py` â€” confirm:
    - Function signature of `refresh_tax_control_sheet(live: bool)`
    - How it computes the KPI strip and where the values land in the sheet (A1:H3 or similar)
    - Whether the KPI values are accessible without re-running the calculation
      (i.e., can the Command Center builder just read them from Tax_Control directly?)
 
-4. `tasks/format_sheets_dashboard_v2.py` — confirm:
+4. `tasks/format_sheets_dashboard_v2.py` â€” confirm:
    - The formatting pattern (border colors, header backgrounds, number formats)
    - This is the style we'll match for the Command Center
 
-5. `manager.py` — confirm:
+5. `manager.py` â€” confirm:
    - The `dashboard_refresh` function (lines ~755-772). This is where we'll add the
      `build_command_center` call.
 
-6. `utils/sheet_writers.py` (if it exists) — list helper functions for batch writes,
+6. `utils/sheet_writers.py` (if it exists) â€” list helper functions for batch writes,
    range formatting, and clear-and-rebuild patterns. We want to reuse, not reinvent.
 
 7. The Google Sheet itself (use gspread client from `utils/sheet_readers.py`):
-   - Confirm `0_DASHBOARD` tab exists. If not, flag it — Prompt 1 will create it.
+   - Confirm `0_DASHBOARD` tab exists. If not, flag it â€” Prompt 1 will create it.
    - List existing tabs in order to confirm `0_DASHBOARD` would be at position 0.
    - Inspect Tax_Control: confirm KPI strip layout (which rows/cols hold which labels).
    - Inspect Risk_Metrics: confirm latest row layout (column positions for beta, stress).
    - Inspect Daily_Snapshots: confirm column positions for Total Value, Cash Value.
 
-8. `core/bundle.py` — confirm the bundle hash is accessible without rebuilding the bundle
+8. `core/bundle.py` â€” confirm the bundle hash is accessible without rebuilding the bundle
    (we want to read the latest hash, not regenerate one).
 
 For each file, report:
@@ -142,13 +148,13 @@ End with a "Ready / Not Ready" verdict and list any blocking unknowns.
 
 ---
 
-## Prompt 1 — Build `tasks/build_command_center.py`
+## Prompt 1 â€” Build `tasks/build_command_center.py`
 
 ```
 Generate `tasks/build_command_center.py`.
 
 This task reads existing portfolio state from multiple Sheet tabs and writes a single
-"command center" view to the `0_DASHBOARD` tab. It performs no original computation — it
+"command center" view to the `0_DASHBOARD` tab. It performs no original computation â€” it
 aggregates and formats values that already exist elsewhere.
 
 ## Signature
@@ -175,18 +181,18 @@ def main(live: bool = False) -> None:
    Target_Allocation, Valuation_Card. Load each into a list of dicts keyed by header.
 
 2. **Compute the grid.** Build a list-of-lists `grid: list[list[str|float|int]]` matching
-   the layout in the spec. All math is straightforward aggregation — no clever logic.
+   the layout in the spec. All math is straightforward aggregation â€” no clever logic.
    Specific helpers to write:
    - `_compute_headline_kpis(daily_snapshots, holdings_current) -> dict`
-   - `_read_tax_kpis(tax_control_rows) -> dict` — read the KPI strip cells directly; do not
+   - `_read_tax_kpis(tax_control_rows) -> dict` â€” read the KPI strip cells directly; do not
      recalculate
    - `_compute_risk_snapshot(risk_metrics_rows, holdings_current) -> dict`
    - `_compute_top_5_positions(holdings_current, valuation_card) -> list[dict]`
    - `_compute_drift_alerts(holdings_current, target_allocation, threshold_pct) -> list[dict]`
-   - `_check_system_health() -> dict` — last refresh, bundle hash, Schwab token status,
+   - `_check_system_health() -> dict` â€” last refresh, bundle hash, Schwab token status,
      FMP cache age
 
-3. **vs. SPY YTD.** Use yfinance to fetch SPY's YTD return. Wrap in try/except — if
+3. **vs. SPY YTD.** Use yfinance to fetch SPY's YTD return. Wrap in try/except â€” if
    yfinance fails, write "n/a" rather than crashing the dashboard. Cache the result in
    memory; do not call yfinance more than once per `main()` invocation.
 
@@ -194,35 +200,35 @@ def main(live: bool = False) -> None:
    `drift_pct = current_weight - target_weight`. Filter where
    `abs(drift_pct) > config.REBALANCE_THRESHOLD_PCT`. Sort descending by absolute drift.
    Cap at 8 rows. If the resulting list is empty, render a single row:
-   `"No positions outside ±{threshold}% threshold."`
+   `"No positions outside Â±{threshold}% threshold."`
 
 5. **Top 5 positions.** Sort Holdings_Current by Market Value descending, exclude any
    ticker in `config.CASH_TICKERS`, take the top 5. Left-join with Valuation_Card on
    Ticker to pull Trim/Add targets. If a position has no thesis (no Trim/Add target),
-   render "—" in those columns and "n/a" in the distance columns.
+   render "â€”" in those columns and "n/a" in the distance columns.
 
 6. **Render the grid.** Build the full grid as a list of lists matching the row/col layout
-   in the spec. Use `""` (empty string) for blank cells — never None. Format numbers as
+   in the spec. Use `""` (empty string) for blank cells â€” never None. Format numbers as
    strings with their final formatting baked in (`$1,234.56`, `+2.3%`, `9.0%`). The dashboard
    tab gets formatted display values, not raw floats. (This is consistent with the
-   "no formulas, hard values" decision — but go one step further: pre-format strings so the
+   "no formulas, hard values" decision â€” but go one step further: pre-format strings so the
    formatting rules in step 8 only need to handle alignment and color, not number formats.)
 
    Note: this is opinionated and goes against the usual gspread practice of writing raw
    numbers and formatting via `format_cell_ranges`. The reasoning: the Command Center is a
    read-only summary tab. Pre-formatted strings eliminate any "did the format apply
    correctly?" debugging and make the grid identical to what stdout shows in DRY RUN mode.
-   If you disagree with this choice, flag it and propose the alternative — don't silently
+   If you disagree with this choice, flag it and propose the alternative â€” don't silently
    change it.
 
 7. **DRY RUN path.** If `live=False`, print the grid as a Rich table to stdout and exit
    without touching the sheet. Use the same row/col layout as the live write so visual
    verification is meaningful. Print a final line:
-   `[dim]DRY RUN — no Sheet writes. Re-run with --live to apply.[/]`
+   `[dim]DRY RUN â€” no Sheet writes. Re-run with --live to apply.[/]`
 
 8. **LIVE path.** Single batch operation:
-   - Open `0_DASHBOARD` worksheet (create if missing — log a warning).
-   - Clear rows 1-40 (defensive — covers any prior longer layout).
+   - Open `0_DASHBOARD` worksheet (create if missing â€” log a warning).
+   - Clear rows 1-40 (defensive â€” covers any prior longer layout).
    - `worksheet.update("A1", grid, value_input_option="USER_ENTERED")`
    - Apply formatting via one `batch_update` call: section header rows bold + bg color,
      KPI labels right-aligned, KPI values bold, drift alerts colored (OVER = red bg,
@@ -249,15 +255,15 @@ Do NOT add any new dependencies.
 - If `0_DASHBOARD` tab is missing in LIVE mode: create it at index 0, log a warning, then
   proceed with the write.
 - If any source tab is empty or missing expected columns: log a warning naming the tab
-  and the missing column, render the affected cells as "—", and continue. The dashboard
-  must always render — partial data is better than a crash.
+  and the missing column, render the affected cells as "â€”", and continue. The dashboard
+  must always render â€” partial data is better than a crash.
 - If Schwab token blob is unreachable (no GCS access in test env): render "n/a" for token
   status, do not raise.
 - If yfinance times out or returns empty: render "n/a" for vs. SPY YTD.
 
 ## Out of scope (do not build)
 
-- Conditional formatting based on price (red/green for distance to trim) — that's
+- Conditional formatting based on price (red/green for distance to trim) â€” that's
   Decision_View's job. Command Center mirrors it but doesn't duplicate the formatting.
 - Sparklines or charts. Hard values only. (Consistent with the `TAB_DASHBOARD` design
   comment in config.py.)
@@ -268,7 +274,7 @@ Do NOT add any new dependencies.
 
 ---
 
-## Prompt 2 — Wire into `pm refresh dashboard`
+## Prompt 2 â€” Wire into `pm refresh dashboard`
 
 ```
 Modify `manager.py` to call `tasks/build_command_center.py` as part of `dashboard_refresh`.
@@ -301,7 +307,7 @@ Do NOT modify any other Typer command groups.
 
 ---
 
-## Prompt 3 — Documentation updates
+## Prompt 3 â€” Documentation updates
 
 ```
 Update three documentation surfaces to reflect the Command Center.
@@ -323,7 +329,7 @@ Layout:
 - Rows 6-8:    Tax Posture (mirrors Tax_Control KPI strip)
 - Rows 10-11:  Risk Snapshot (Beta, Top Position, Top Sector, Stress)
 - Rows 13-19:  Top 5 Positions with Trim/Add target distances
-- Rows 21-30:  Drift Alerts (positions outside ±REBALANCE_THRESHOLD_PCT)
+- Rows 21-30:  Drift Alerts (positions outside Â±REBALANCE_THRESHOLD_PCT)
 - Rows 32-34:  System Health (last refresh, bundle hash, Schwab token, FMP cache age)
 ```
 
@@ -335,7 +341,7 @@ In the "Tab authority" section, add `0_DASHBOARD` to the "computed views" line:
   computed views, clear-and-rebuild
 ```
 
-In the "Command Cheatsheet" section, no change needed — `pm refresh dashboard` and
+In the "Command Cheatsheet" section, no change needed â€” `pm refresh dashboard` and
 `pm morning --live` already cover the Command Center transitively.
 
 ## File 3: `portfolio_manager_user_docs.html`
@@ -347,7 +353,7 @@ Bump version to 3.5. Add a new section after "The Weekly Cycle":
     <h2>4.5 The Command Center (0_DASHBOARD)</h2>
     <p>The first tab in the workbook is your single-screen daily view. It refreshes every
     time you run <code>pm morning</code> or <code>pm refresh dashboard</code> and contains
-    no formulas — every value is a literal write from the pipeline.</p>
+    no formulas â€” every value is a literal write from the pipeline.</p>
     <p><strong>What's on it:</strong></p>
     <ul>
         <li><strong>Headline KPIs:</strong> Total value, cash %, day change, MTD/YTD,
@@ -356,13 +362,13 @@ Bump version to 3.5. Add a new section after "The Weekly Cycle":
         <li><strong>Risk Snapshot:</strong> Beta, top position, top sector, stress -10%.</li>
         <li><strong>Top 5 Positions:</strong> Largest holdings with distance to trim/add
         targets sourced from your thesis files.</li>
-        <li><strong>Drift Alerts:</strong> Positions outside ±5% (or your configured
+        <li><strong>Drift Alerts:</strong> Positions outside Â±5% (or your configured
         threshold) of target allocation.</li>
         <li><strong>System Health:</strong> Last refresh time, bundle hash, Schwab token
         status, FMP cache age.</li>
     </ul>
     <div class="callout">
-        <strong>Read-only by design.</strong> Don't edit cells on this tab — they'll be
+        <strong>Read-only by design.</strong> Don't edit cells on this tab â€” they'll be
         overwritten on the next refresh. For everything you can act on, follow the link in
         each section to the underlying tab (Decision_View for trim/add, Tax_Control for
         harvesting, Target_Allocation for rebalancing).
@@ -387,7 +393,7 @@ Add to the top under `[Unreleased]`:
 
 ---
 
-## Prompt 4 — Verification checklist
+## Prompt 4 â€” Verification checklist
 
 ```
 Post-build verification. Run after Prompts 1-3 ship.
@@ -396,7 +402,7 @@ POST-BUILD CHECKLIST:
 
 1. `python manager.py refresh dashboard` (DRY RUN)
    - Should print the Command Center grid as a Rich table to stdout
-   - Should print "DRY RUN — no Sheet writes" at the end
+   - Should print "DRY RUN â€” no Sheet writes" at the end
    - No exceptions raised
    - All section headers present (Headline, Tax Posture, Risk Snapshot, Top 5, Drift
      Alerts, System Health)
@@ -410,7 +416,7 @@ POST-BUILD CHECKLIST:
    - System Health row shows real values (not n/a everywhere)
 
 3. `python manager.py refresh dashboard --live`
-   - Open the Sheet, click the leftmost tab — should be `0_DASHBOARD`
+   - Open the Sheet, click the leftmost tab â€” should be `0_DASHBOARD`
    - Verify the layout matches the DRY RUN output
    - Section headers are formatted (bold, bg color)
    - Drift alerts have row backgrounds (red for OVER, orange for UNDER)
@@ -423,8 +429,8 @@ POST-BUILD CHECKLIST:
 
 5. Edge cases to verify:
    - Drift alerts when no positions are outside threshold: single row with
-     "No positions outside ±5% threshold."
-   - Top 5 positions when one has no thesis (no Trim/Add target): "—" in those columns
+     "No positions outside Â±5% threshold."
+   - Top 5 positions when one has no thesis (no Trim/Add target): "â€”" in those columns
    - vs SPY YTD when yfinance is unavailable: "n/a" without crashing
    - Schwab token check when GCS is unreachable: "n/a" without crashing
 
@@ -454,3 +460,4 @@ POST-BUILD CHECKLIST:
   any manual `pm refresh dashboard` Bill triggers. No webhooks, no polling.
 - **Cross-portfolio (RE + liquid) summary.** Stays a Phase 6+ goal. Command Center is
   liquid-portfolio only.
+
