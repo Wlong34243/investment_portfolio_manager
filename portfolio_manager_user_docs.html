@@ -3,591 +3,651 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Investment Portfolio Manager | Version 3.3 Authority Manual</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <title>Investment Portfolio Manager — User Documentation</title>
     <style>
-        :root {
-            --primary: #1a2744;
-            --secondary: #2c3e50;
-            --accent: #3498db;
-            --bg: #f8f9fa;
-            --text: #333;
-            --border: #e1e4e8;
-            --code-bg: #f1f3f5;
-            --sidebar-width: 280px;
+        *, *::before, *::after { box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            font-size: 16px;
+            line-height: 1.65;
+            color: #222;
+            background: #f7f8fa;
+            margin: 0;
+            padding: 2rem 1rem;
         }
 
-        * { box-sizing: border-box; }
-        body { font-family: 'Inter', sans-serif; line-height: 1.6; color: var(--text); background-color: var(--bg); margin: 0; display: flex; }
-        nav { width: var(--sidebar-width); background: var(--primary); color: white; height: 100vh; position: sticky; top: 0; padding: 2rem 1rem; overflow-y: auto; }
-        nav h2 { font-size: 1.1rem; margin-bottom: 2rem; color: #fff; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem; }
-        nav ul { list-style: none; padding: 0; }
-        nav li { margin-bottom: 0.8rem; }
-        nav a { color: rgba(255,255,255,0.8); text-decoration: none; font-size: 0.9rem; transition: color 0.2s; }
-        nav a:hover { color: white; }
-        main { flex: 1; padding: 3rem 4rem; max-width: 1000px; background: white; min-height: 100vh; box-shadow: -5px 0 15px rgba(0,0,0,0.05); }
-        h1 { font-size: 2.2rem; color: var(--primary); margin-top: 0; }
-        h2 { font-size: 1.6rem; color: var(--secondary); margin-top: 2.5rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; }
-        h3 { font-size: 1.3rem; color: var(--primary); margin-top: 1.8rem; }
-        p { margin-bottom: 1rem; }
-        code { font-family: 'JetBrains Mono', monospace; background: var(--code-bg); padding: 0.2rem 0.4rem; border-radius: 4px; font-size: 0.9em; }
-        pre { background: #282c34; color: #abb2bf; padding: 1.2rem; border-radius: 8px; overflow-x: auto; margin-bottom: 1.2rem; }
-        pre code { background: transparent; color: inherit; padding: 0; }
-        table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; font-size: 0.9rem; }
-        th, td { text-align: left; padding: 10px 12px; border: 1px solid var(--border); }
-        th { background-color: #f1f3f5; color: var(--primary); font-weight: 600; }
-        .callout { padding: 1.2rem; border-left: 5px solid var(--accent); background: #eef2f7; margin: 1.5rem 0; border-radius: 0 8px 8px 0; }
-        .diagram { background: #fff; border: 1px solid var(--border); padding: 1.5rem; text-align: center; margin: 1.5rem 0; border-radius: 8px; }
-        footer { margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); color: #777; font-size: 0.8rem; }
+        .page-wrapper {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 3rem 3.5rem;
+            border: 1px solid #dde1e7;
+        }
+
+        h1 { font-size: 1.9rem; color: #1a1f2e; margin-top: 0; margin-bottom: 0.25rem; }
+        h2 { font-size: 1.35rem; color: #1a1f2e; margin-top: 3rem; margin-bottom: 0.75rem; padding-bottom: 0.4rem; border-bottom: 2px solid #dde1e7; }
+        h3 { font-size: 1.1rem; color: #2c3a5c; margin-top: 2rem; margin-bottom: 0.5rem; }
+        p { margin: 0.75rem 0; }
+
+        a { color: #2563eb; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+
+        code, kbd {
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+            font-size: 0.88em;
+            background: #f1f3f7;
+            padding: 0.15em 0.4em;
+            border-radius: 3px;
+            border: 1px solid #dde1e7;
+        }
+
+        pre {
+            background: #1e2330;
+            color: #c9d1d9;
+            padding: 1.2rem 1.4rem;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin: 1.2rem 0;
+            font-size: 0.87rem;
+            line-height: 1.5;
+        }
+        pre code {
+            background: transparent;
+            border: none;
+            padding: 0;
+            font-size: inherit;
+            color: inherit;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.2rem 0;
+            font-size: 0.9rem;
+        }
+        th, td {
+            text-align: left;
+            padding: 8px 12px;
+            border: 1px solid #dde1e7;
+            vertical-align: top;
+        }
+        th { background: #f1f3f7; font-weight: 600; color: #1a1f2e; }
+        tr:nth-child(even) td { background: #fafbfc; }
+
+        ul, ol { padding-left: 1.5rem; margin: 0.75rem 0; }
+        li { margin-bottom: 0.4rem; }
+
+        .toc { background: #f7f8fa; border: 1px solid #dde1e7; padding: 1.25rem 1.75rem; margin: 1.5rem 0 2.5rem; border-radius: 4px; }
+        .toc h2 { margin-top: 0; font-size: 1rem; border: none; padding: 0; margin-bottom: 0.75rem; }
+        .toc ol { margin: 0; }
+        .toc li { margin-bottom: 0.3rem; font-size: 0.93rem; }
+
+        .note { background: #eff6ff; border-left: 4px solid #2563eb; padding: 0.9rem 1.1rem; margin: 1.2rem 0; border-radius: 0 4px 4px 0; font-size: 0.93rem; }
+        .warning { background: #fff7ed; border-left: 4px solid #d97706; padding: 0.9rem 1.1rem; margin: 1.2rem 0; border-radius: 0 4px 4px 0; font-size: 0.93rem; }
+
+        hr { border: none; border-top: 1px solid #dde1e7; margin: 2.5rem 0; }
+
+        .meta { font-size: 0.88rem; color: #6b7280; margin-bottom: 2rem; }
+
+        .badge { display: inline-block; font-size: 0.75rem; font-weight: 600; padding: 0.15em 0.55em; border-radius: 3px; vertical-align: middle; margin-left: 0.3em; }
+        .badge-green { background: #dcfce7; color: #166534; }
+        .badge-yellow { background: #fef9c3; color: #854d0e; }
+        .badge-gray { background: #f1f3f7; color: #4b5563; border: 1px solid #dde1e7; }
     </style>
 </head>
 <body>
-    <nav>
-        <h2>3.0 Authority Manual</h2>
-        <ul>
-            <li><a href="#definition">1. What This System Is</a></li>
-            <li><a href="#philosophy">2. Operating Philosophy</a></li>
-            <li><a href="#architecture">3. Architecture at a Glance</a></li>
-            <li><a href="#weekly-cycle">4. The Weekly Cycle</a></li>
-            <li><a href="#thesis-sync">5. Thesis Sync &amp; Audit</a></li>
-            <li><a href="#deep-dive">6. The Weekly Deep Dive</a></li>
-            <li><a href="#retrospective">7. The Monthly Retrospective</a></li>
-            <li><a href="#sheet-tabs">8. The Sheet: Tab by Tab</a></li>
-            <li><a href="#morning-command">Daily routine: <code>pm morning</code></a></li>
-            <li><a href="#cli-reference">8. CLI Command Reference</a></li>
-            <li><a href="#export-engine">9. The Export Engine</a></li>
-            <li><a href="#tax-visibility">10. Tax Visibility</a></li>
-            <li><a href="#troubleshooting">11. When Things Go Wrong</a></li>
-            <li><a href="#maintenance">12. Maintenance Cadence</a></li>
-            <li><a href="#non-goals">13. What's Deliberately Not Here</a></li>
-        </ul>
-        <h2 style="margin-top: 2rem;">Files &amp; Data</h2>
-        <ul>
-            <li><a href="#files-overview">Overview &amp; legend</a></li>
-            <li><a href="#files-quick-lookup">Quick lookup</a></li>
-            <li><a href="#files-bundles">Bundles</a></li>
-            <li><a href="#files-vault">Vault</a></li>
-            <li><a href="#files-podcasts">Podcast pipeline</a></li>
-            <li><a href="#files-sheet">Google Sheet tabs</a></li>
-            <li><a href="#files-tokens">Tokens &amp; credentials</a></li>
-            <li><a href="#files-exports">Exports</a></li>
-            <li><a href="#files-logs">Logs &amp; audit</a></li>
-            <li><a href="#files-hygiene">Cleanup &amp; backup</a></li>
-            <li><a href="#files-llm-handoff">Handing artifacts to an external LLM</a></li>
-        </ul>
+<div class="page-wrapper">
 
-        <h2 style="margin-top: 2rem;">Podcast Workflow</h2>
-        <ul>
-            <li><a href="#podcast-overview">Overview</a></li>
-            <li><a href="#podcast-collect">Collecting transcripts</a></li>
-            <li><a href="#podcast-bundle">Preparing for AI analysis</a></li>
-            <li><a href="#podcast-analyze-optional">Optional: built-in Gemini analysis</a></li>
-            <li><a href="#podcast-outputs">Outputs: file by file</a></li>
-        </ul>
+    <h1>Investment Portfolio Manager</h1>
+    <p class="meta">Last updated: 2026-05-26 &mdash; Reflects post-reframe state: Idea Generator v1 shipped, Valuation Drift Monitor next. Source of truth: actual code (Pass 1 verified), STATE.md, CLAUDE.md, REPO_AUDIT_2026-05-26.md.</p>
+
+    <nav class="toc">
+        <h2>Contents</h2>
+        <ol>
+            <li><a href="#overview">System Overview</a></li>
+            <li><a href="#architecture">Architecture Spine</a></li>
+            <li><a href="#sheets">Authoritative Surface: Google Sheets</a></li>
+            <li><a href="#bundles">Bundle Architecture</a></li>
+            <li><a href="#data-sources">Data Sources</a></li>
+            <li><a href="#cli">CLI Reference</a></li>
+            <li><a href="#principles">Operating Principles</a></li>
+            <li><a href="#agents">Agent Layer</a></li>
+            <li><a href="#tax">Tax Architecture</a></li>
+            <li><a href="#automation">Automation</a></li>
+            <li><a href="#out-of-scope">What Is Explicitly Out of Scope</a></li>
+            <li><a href="#file-reference">File Reference</a></li>
+            <li><a href="#decisions">Recent Decisions Log</a></li>
+        </ol>
     </nav>
 
-    <main>
-        <header>
-            <h1>Investment Portfolio Manager</h1>
-            <p><strong>System Authority Manual</strong> | Version 3.3</p>
-        </header>
+    <hr>
 
-        <section id="definition">
-            <h2>1. What This System Is (and What It Isn't)</h2>
-            <p>The Investment Portfolio Manager is a headless data orchestration pipeline designed to bridge brokerage data (Schwab) with professional-grade analysis (Frontier LLMs). It provides a deterministic "spine" of truth—prices, technicals, tax lots, and written theses—while delegating complex reasoning to external models.</p>
-            <p><strong>Explicit Non-Goals:</strong> This is not a robo-advisor (it makes no trades), not an auto-trader (it has no order execution capability), and not a backtesting engine (it analyzes real decisions made on real dates).</p>
-        </section>
+    <section id="overview">
+        <h2>1. System Overview</h2>
 
-        <section id="philosophy">
-            <h2>2. The Operating Philosophy</h2>
-            <ul>
-                <li><strong>APIs calculate locally, LLMs reason externally:</strong> Python owns the math and data integrity; Claude/Gemini own the qualitative research and strategy.</li>
-                <li><strong>Rotation is the unit of analysis:</strong> Most trades are treated as a pair (selling X to buy Y) rather than isolated events.</li>
-                <li><strong>Small-step scaling:</strong> The system encourages incremental entries and exits (trims/adds) rather than binary all-in/all-out bets.</li>
-                <li><strong>Sheets as authoritative frontend:</strong> Google Sheets is the UI. The CLI is the engine. Local JSON bundles are the immutable record.</li>
-            </ul>
-        </section>
+        <h3>What this is</h3>
+        <p>A headless Python CLI portfolio operating system. It pulls live position data from the Schwab API, freezes that data into immutable SHA-256-hashed JSON bundles, enriches it with yFinance and FMP fundamentals, writes computed views to Google Sheets, and exposes AI agents that reason over those frozen bundles. Every run is deterministic and auditable. No state leaks between runs.</p>
 
-        <section id="architecture">
-            <h2>3. Architecture at a Glance</h2>
-            <div class="diagram">
-                <pre><code>
- [ Schwab API ] --(Sync)--> [ JSON Bundles ] --(Enrich)--> [ yf / FMP APIs ]
-                                  |
-                                  v
- [ Google Sheets ] <--(Update)-- [ CLI Engine ] --(Package)--> [ Export Dir ]
-       |                                                         |
-       v                                                         v
- [ Dashboard Scan ]                                      [ External LLM ]
-                </code></pre>
-            </div>
-        </section>
+        <h3>What it does</h3>
+        <p>On any given morning: runs a health check against Schwab tokens and APIs, syncs transaction history, freezes current holdings and prices to a bundle, rebuilds all computed Sheet views (Dashboard, Valuation Card, Decision View, Tax Control), and optionally runs agents that surface investment candidates or flag valuation drift. All writes to Sheets require an explicit <code>--live</code> flag. Everything else is a dry run by default.</p>
 
-        <section id="weekly-cycle">
-            <h2>4. The Weekly Cycle (5 minutes)</h2>
-            <p>Performed every Monday morning to synchronize state:</p>
-            <ol>
-                <li><code>pm health</code>: Verify tokens and API connectivity.</li>
-                <li><code>pm snapshot --live</code>: Freeze current holdings and enrich with technicals.</li>
-                <li><code>pm sync transactions --live</code>: Ingest broker trade history.</li>
-                <li><code>pm vault sync-status</code>: Audit thesis staleness and style drift.</li>
-                <li><code>pm dashboard refresh --live</code>: Update Action Zones and Valuation signals.</li>
-            </ol>
-            <p><strong>What to scan:</strong> Check <code>Decision_View</code> for red/green price highlights (Thesis triggers hit) and <code>Tax_Control</code> for remaining offset capacity.</p>
-        </section>
+        <h3>What it is not</h3>
+        <p>Not an auto-trader. Not a robo-advisor. Not a backtest framework. Not a web app. The system never places orders, never calls Schwab order endpoints, and never makes autonomous decisions. LLMs synthesize; the investor decides.</p>
+    </section>
 
-        <section id="thesis-sync">
-            <h2>5. Thesis Sync &amp; Audit</h2>
-            <p>The Thesis Sync workflow (<code>pm vault sync</code>) bridges the gap between structured portfolio data and your unstructured markdown theses. It allows you to keep your hand-written prose while automatically injecting the latest facts from Google Sheets.</p>
-            
-            <h3>The Managed Regions Strategy</h3>
-            <p>Your <code>vault/theses/*.md</code> files are protected. The sync tool only mutates specific "Managed Regions" identified by HTML comment fences. Everything else—your narrative, your exit conditions, your behavioral guardrails—is never touched.</p>
-            
-            <pre><code>&lt;!-- region:position_state --&gt;
-| Metric | Value |
-| :--- | :--- |
-| **Quantity** | 100.00 |
-| **Cost Basis** | $296.97 |
-...
-&lt;!-- endregion:position_state --&gt;</code></pre>
+    <hr>
 
-            <h3>Key Operations</h3>
-            <ul>
-                <li><strong>Audit staleness:</strong> <code>pm vault sync-status</code> prints a table showing when each thesis was last reviewed and if the current weight has drifted past the style ceiling.</li>
-                <li><strong>Safe synchronization:</strong> <code>pm vault sync --ticker UNH --show-diff</code> performs a dry-run update. It updates frontmatter (cost basis, last reviewed) and injects the latest trade log and realized P&L into the managed regions.</li>
-                <li><strong>Live commit:</strong> Use <code>--live</code> to write changes. The tool creates a timestamped <code>.bak</code> file before every write for absolute safety.</li>
-                <li><strong>Bootstrap regions:</strong> Use <code>--force</code> on a new or existing thesis to inject the managed region fences if they are missing.</li>
-            </ul>
+    <section id="architecture">
+        <h2>2. Architecture Spine</h2>
 
-            <div class="callout">
-                <strong>Safety Guardrail:</strong> Thesis sync uses <code>ruamel.yaml</code> in round-trip mode. This ensures that even when the tool updates your <code>triggers:</code> block, your manual comments and formatting are preserved perfectly.
-            </div>
-        </section>
+        <p>Three layers, each with a defined role:</p>
 
-        <section id="deep-dive">
-            <h2>6. The Weekly Deep Dive</h2>
-            <p>Triggered midweek when a position enters an action zone or a rotation is considered:</p>
-            <pre><code>pm export rotation --sell TICKER --buy TICKER</code></pre>
-            <ol>
-                <li>Navigate to <code>exports/</code>.</li>
-                <li>Copy <code>prompt.md</code> to Claude 3.5 or Gemini 2.0.</li>
-                <li>Attach <code>context.json</code> and relevant <code>theses/</code> files.</li>
-                <li>Record the decision outcome manually in the <code>Decision_Log</code> or staging enrichment.</li>
-            </ol>
-        </section>
+        <ul>
+            <li><strong>CLI owns execution.</strong> <code>manager.py</code> (Typer app) is the single entry point. All operations are explicit, logged, and deterministic.</li>
+            <li><strong>Sheets owns persistence.</strong> Google Sheets is the authoritative frontend. The CLI computes; Sheets stores. No other UI is authoritative.</li>
+            <li><strong>Bundles own context.</strong> Every agent run starts from a frozen, hash-verified JSON bundle. Agents never browse, never fetch live data, and never write to production tabs directly.</li>
+        </ul>
 
-        <section id="retrospective">
-            <h2>6. The Monthly Retrospective</h2>
-            <p>Conducted the first Saturday of every month to tune market timing:</p>
-            <pre><code>pm export rotation-retrospective --last-n 20</code></pre>
-            <p><strong>What to look for:</strong> Patterns where specific styles (e.g. GARP) or technical setups (e.g. RSI > 70) lead to consistent underperformance or outperformance relative to the "sold" position.</p>
-        </section>
+        <h3>Data flow</h3>
+        <pre>
+Schwab API (read-only)
+  |
+  +-- fetch_positions() / fetch_quotes() / fetch_tax_lots()
+  |
+  v
+build_bundle()  -- SHA-256 hash -- bundles/context_bundle_*.json
+  |
+  +-- enrich_fmp.py (fundamentals)
+  +-- enrich_technicals.py (RSI, MACD, ATR)
+  +-- enrich_styles.py (4-style classification)
+  |
+  v
+build_vault_bundle()  -- per-document SHA-256 -- bundles/vault_bundle_*.json
+  |
+  v
+build_composite_bundle()  -- composite hash -- bundles/composite_bundle_*.json
+  |                           includes recent_rotations from Trade_Log
+  |
+  +-- pipeline writes --> Google Sheets (holdings, snapshots, dashboard views)
+  |
+  +-- agents (idea_generator, drift_monitor) --> agent_outputs/*.md (local only)
+  |
+  +-- export packages --> exports/ --> paste into external LLM (Claude, Gemini)
+</pre>
 
-        <section id="sheet-tabs">
-            <h2>7. The Sheet: Tab by Tab</h2>
-            <table>
-                <thead>
-                    <tr><th>Tab Name</th><th>Purpose</th><th>Populated By</th></tr>
-                </thead>
-                <tbody>
-                    <tr><td><code>Decision_View</code></td><td>Top-level dashboard; highlights thesis action zones.</td><td>Auto (Dashboard Refresh)</td></tr>
-                    <tr><td><code>Valuation_Card</code></td><td>Fundamental metrics (P/E, PEG, ROIC) vs targets.</td><td>Auto (Dashboard Refresh)</td></tr>
-                    <tr><td><code>Tax_Control</code></td><td>YTD realized posture, wash-sale drag, and offset capacity.</td><td>Auto (Tax Refresh)</td></tr>
-                    <tr><td><code>Holdings_Current</code></td><td>Current positions, weights, and unrealized G/L.</td><td>Auto (Snapshot)</td></tr>
-                    <tr><td><code>Trade_Log_Staging</code></td><td>Queue for newly derived rotation candidates.</td><td>Auto (Derive Rotations)</td></tr>
-                    <tr><td><code>Trade_Log</code></td><td>Permanent record of enriched/approved rotations.</td><td>Manual (Journal Promote)</td></tr>
-                    <tr><td><code>Rotation_Review</code></td><td>Post-hoc P&L attribution (30/90/180 day returns).</td><td>Auto (Trade Review)</td></tr>
-                    <tr><td><code>Transactions</code></td><td>Broker trade history (Buys, Sells, Dividends).</td><td>Auto (Sync Transactions)</td></tr>
-                    <tr><td><code>Target_Allocation</code></td><td>Strategic model weights by asset class/strategy.</td><td>Manual Only</td></tr>
-                    <tr><td><code>AI_Suggested_Allocation</code></td><td>Macro suggestions from podcast analysis.</td><td>Auto (Podcast Task)</td></tr>
-                    <tr><td><code>Holdings_History</code></td><td>Archive of all historical snapshots.</td><td>Auto (Snapshot)</td></tr>
-                    <tr><td><code>Daily_Snapshots</code></td><td>Portfolio total value and yield over time.</td><td>Auto (Snapshot)</td></tr>
-                    <tr><td><code>Risk_Metrics</code></td><td>Portfolio Beta, Concentration, and VaR.</td><td>Auto (Snapshot)</td></tr>
-                    <tr><td><code>Income_Tracking</code></td><td>Dividend projection and yield analysis.</td><td>Auto (Snapshot)</td></tr>
-                    <tr><td><code>RealizedGL</code></td><td>Detailed tax lot closure history.</td><td>Auto (Manual Import)</td></tr>
-                    <tr><td><code>Config</code></td><td>System rates (Tax, Cash Yield) and thresholds.</td><td>Manual Only</td></tr>
-                    <tr><td><code>Logs</code></td><td>Audit trail of system operations.</td><td>Read-Only</td></tr>
-                    <tr><td><code>Disagreements</code></td><td>Record of times LLM reasoning differed from action.</td><td>Manual Only</td></tr>
-                </tbody>
-            </table>
-        </section>
+        <div class="note">
+            <strong>Visual layer is replaceable.</strong> The CLI + Sheets spine is the system. Streamlit, Looker Studio, and any other visualization layer are optional read-only consumers. The April 2026 pivot removed Streamlit as the primary UI.
+        </div>
+    </section>
 
-        <section id="morning-command">
-            <h2>Daily routine: <code>pm morning</code></h2>
-            <p>One command at market open:</p>
-            <pre><code>pm morning --live</code></pre>
-            <p>Runs health → Schwab transaction sync → snapshot → dashboard refresh, in that order. Halts immediately if Schwab tokens or Sheet access are broken (you'd want to know that before proceeding anyway). Continues past warnings unless you pass <code>--strict</code>. Drop <code>--live</code> to dry-run the whole sequence and see what it would do.</p>
-            <h3>Flags</h3>
-            <ul>
-                <li><code>--live</code>: Write to Google Sheets. Omit for a read-only dry-run preview.</li>
-                <li><code>--tx-days N</code>: Days of transaction history to sync (default 7).</li>
-                <li><code>--strict</code>: Halt on any health warning, not just critical failures.</li>
-                <li><code>--skip-transactions</code>: Skip transaction sync. Use when Schwab's transaction endpoint is flaky.</li>
-                <li><code>--skip-tax</code>: Skip the Tax_Control refresh step.</li>
-                <li><code>--skip-health</code>: Skip the upfront health check (not recommended).</li>
-            </ul>
-            <div class="callout">
-                If transactions sync fails (Schwab's transaction endpoint is the flakiest part of the API), the snapshot and dashboard refresh still run. You'll see a ⚠ next to "Transactions" in the summary and you can rerun <code>pm sync transactions --live</code> when it's working.
-            </div>
-        </section>
+    <hr>
 
-        <section id="cli-reference">
-            <h2>8. CLI Command Reference</h2>
-            <div class="callout">
-                <strong>Install the <code>pm</code> shortcut once.</strong> Run <code>pip install -e .</code> from the repo root. After that, every command below works as <code>pm &lt;command&gt;</code>. The long form <code>python manager.py &lt;command&gt;</code> always works as a fallback if you haven't done this step.
-            </div>
-            <h3>Standard Workflow</h3>
-            <ul>
-                <li><code>health</code>: Runs 10+ connectivity and integrity checks. No flags.</li>
-                <li><code>snapshot [--live]</code>: Captures market state. Use <code>--live</code> to update dashboard.</li>
-                <li><code>sync transactions [--live] [--days N]</code>: Pulls broker history. Default 90 days.</li>
-                <li><code>dashboard refresh [--live] [--update]</code>: Rebuilds view tabs. <code>--update</code> forces a position sync.</li>
-            </ul>
-            <h3>Trade &amp; Thesis Management</h3>
-            <ul>
-                <li><code>journal promote [--live]</code>: Moves approved rows from Staging to permanent Trade_Log.</li>
-                <li><code>trade review [--live]</code>: Computes historical P&L attribution for all Trade_Log entries.</li>
-                <li><code>vault sync [--live] [--ticker T] [--show-diff] [--force]</code>: Synchronizes Sheets data into thesis markdown files.</li>
-                <li><code>vault sync-status</code>: Audits thesis staleness and style ceiling drift.</li>
-            </ul>
-            <h3>Export Engine</h3>
-            <ul>
-                <li><code>export list</code>: Shows all available LLM scenarios.</li>
-                <li><code>export <scenario> [flags]</code>: Generates analysis package in <code>exports/</code>.</li>
-                <li><code>export inspect <path></code>: Previews package contents and prompt.</li>
-            </ul>
-        </section>
+    <section id="sheets">
+        <h2>3. Authoritative Surface: Google Sheets</h2>
 
-        <section id="export-engine">
-            <h2>9. The Export Engine — LLM Reasoning Workflow</h2>
-            <p>The system provides specific scenarios to ensure the LLM has exactly the context needed without drowning in noise:</p>
-            <ul>
-                <li><code>rotation</code>: Claude 3.5 (Best for tax/thesis nuance).</li>
-                <li><code>macro-review</code>: Gemini 2.0 (Best for wide context integration).</li>
-                <li><code>technical-scan</code>: Gemini 2.0 (Best for pattern recognition across 50+ rows).</li>
-                <li><code>deep-dive</code>: Claude 3.5 / Perplexity (Best for single-stock validation).</li>
-            </ul>
-            <p>Each package contains a <code>prompt.md</code> which defines Bill's investment styles and a <code>context.json</code> containing the deterministic "spine" data. Results should be reviewed and key takeaways recorded in the <code>Decision_Log</code>.</p>
-        </section>
+        <p><strong>Sheet ID:</strong> <code>1DuY68xVvyHq-0dyb7XUQgcoK7fqcVS0fv7UoGdTnfxA</code><br>
+        <strong>GCP Project:</strong> <code>re-property-manager-487122</code></p>
 
-        <section id="podcast-overview">
-            <h2>Podcast Workflow</h2>
-            <p>The intended workflow is straightforward: collect raw transcripts from a small set of macro/markets podcasts, then paste a bundled file into an external LLM (Claude or ChatGPT) and ask for a synthesis. The built-in Gemini path remains available but is no longer the default — it's an opt-in flag for users who want structured allocation rows written directly to the <code>AI_Suggested_Allocation</code> tab.</p>
+        <h3>Layer A: Manual-only (app reads, never writes)</h3>
+        <table>
+            <thead><tr><th>Tab</th><th>Purpose</th></tr></thead>
+            <tbody>
+                <tr><td><code>Target_Allocation</code></td><td>Strategic model weights by asset class. Bill sets these manually.</td></tr>
+                <tr><td><code>Config</code></td><td>System rates and thresholds (tax rates, yield assumptions, etc.).</td></tr>
+                <tr><td><code>Disagreements</code></td><td>Log of LLM-vs-human judgment divergence. Append-only, manual.</td></tr>
+            </tbody>
+        </table>
 
-            <div class="callout">
-                <strong>Why transcripts first.</strong> Pasting raw transcripts into a frontier model with your own framing prompt usually produces a more useful synthesis than running them through a fixed schema. The schema path is preserved for users who want it, but the day-to-day workflow assumes you'll do the analysis yourself.
-            </div>
-        </section>
+        <h3>Layer B: Pipeline writes (computed from data)</h3>
+        <table>
+            <thead><tr><th>Tab</th><th>Write pattern</th><th>Source</th></tr></thead>
+            <tbody>
+                <tr><td><code>Holdings_Current</code></td><td>Clear-and-rebuild</td><td><code>pm snapshot --live</code></td></tr>
+                <tr><td><code>Holdings_History</code></td><td>Append with dedup</td><td><code>pm snapshot --live</code></td></tr>
+                <tr><td><code>Daily_Snapshots</code></td><td>Append with dedup</td><td><code>pm snapshot --live</code></td></tr>
+                <tr><td><code>Transactions</code></td><td>Append with dedup</td><td><code>pm ingest transactions --live</code></td></tr>
+                <tr><td><code>Realized_GL</code></td><td>Append with dedup</td><td><code>pm ingest realized-gl [CSV] --live</code></td></tr>
+                <tr><td><code>Risk_Metrics</code></td><td>Append with dedup</td><td><code>pm snapshot --live</code></td></tr>
+                <tr><td><code>Income_Tracking</code></td><td>Append with dedup</td><td><code>pm snapshot --live</code></td></tr>
+                <tr><td><code>Trade_Log_Staging</code></td><td>Append with dedup</td><td><code>tasks/derive_rotations.py</code></td></tr>
+                <tr><td><code>Trade_Log</code></td><td>Append with dedup</td><td><code>pm journal promote --live</code></td></tr>
+            </tbody>
+        </table>
 
-        <section id="podcast-collect">
-            <h3>Collecting transcripts</h3>
-            <p>Pull the latest episode from each configured channel:</p>
-            <pre><code>pm podcast batch</code></pre>
-            <p>That's a dry-run scan: it detects new episodes via YouTube RSS, downloads transcripts to <code>data/podcast_transcripts/</code>, and stops. No Sheet writes, no AI calls. Run it as many times as you want — the dedup log only updates when you pass <code>--live</code>.</p>
+        <h3>Layer C: Computed views (clear-and-rebuild)</h3>
+        <table>
+            <thead><tr><th>Tab</th><th>Rebuilt by</th></tr></thead>
+            <tbody>
+                <tr><td><code>0_DASHBOARD</code></td><td><code>pm refresh dashboard --live</code> / <code>pm morning --live</code></td></tr>
+                <tr><td><code>Decision_View</code></td><td><code>pm refresh dashboard --live</code></td></tr>
+                <tr><td><code>Valuation_Card</code></td><td><code>pm refresh dashboard --live</code></td></tr>
+                <tr><td><code>Tax_Control</code></td><td><code>pm refresh tax --live</code></td></tr>
+                <tr><td><code>Rotation_Review</code></td><td><code>pm refresh rotations --live</code></td></tr>
+            </tbody>
+        </table>
 
-            <p>To commit the dedup log so you don't reprocess the same episodes next time:</p>
-            <pre><code>pm podcast batch --live</code></pre>
+        <h3>Layer D: Sandbox / agent outputs</h3>
+        <table>
+            <thead><tr><th>Tab</th><th>Purpose</th></tr></thead>
+            <tbody>
+                <tr><td><code>AI_Suggested_Allocation</code></td><td>AI-generated allocation suggestions. Bill reviews and may promote to Target_Allocation manually.</td></tr>
+                <tr><td><code>Agent_Outputs</code></td><td>Landing zone for structured agent results (not yet wired for v1 agents).</td></tr>
+                <tr><td><code>Agent_Outputs_Archive</code></td><td>Older agent output rows.</td></tr>
+                <tr><td><code>Decision_Log</code></td><td>Manual qualitative decision journal. Append-only.</td></tr>
+                <tr><td><code>Logs</code></td><td>System audit trail. Append-only.</td></tr>
+            </tbody>
+        </table>
+    </section>
 
-            <p>Other useful forms:</p>
-            <pre><code>pm podcast list                              # show channels and recent transcripts
-pm podcast batch --channel "The Compound"    # one channel only
-pm podcast fetch dQw4w9WgXcQ -s "Manual"     # one specific video by ID
-pm podcast clean --days 30                   # purge old transcripts</code></pre>
-        </section>
+    <hr>
 
-        <section id="podcast-bundle">
-            <h3>Preparing for AI analysis</h3>
-            <p>Once you have a few transcripts on disk, bundle them into a single markdown file ready to paste into Claude or ChatGPT:</p>
-            <pre><code>pm podcast bundle              # last 5 episodes
-pm podcast bundle -n 10        # last 10 episodes
-pm podcast bundle --since-days 14   # everything from the past two weeks</code></pre>
-            <p>The bundle includes a pre-written analysis prompt that explains your investing style (the four codified styles, ~$550K portfolio, small-step scaling preference) and asks the receiving LLM to extract macro thesis, sector views, ticker mentions, and points of agreement/disagreement across episodes.</p>
+    <section id="bundles">
+        <h2>4. Bundle Architecture</h2>
 
-            <p>Strip the prompt prefix if you want to write your own:</p>
-            <pre><code>pm podcast bundle --no-prompt</code></pre>
+        <p>Bundles are the system's memory. Every agent run starts from a verified frozen bundle. No agent calls live APIs. No agent writes to production tabs.</p>
 
-            <p>Output lands in <code>data/podcast_bundles/</code>. The CLI prints the absolute path and word count when it finishes — drag the file into Claude or open it in any editor and copy-paste.</p>
-        </section>
+        <h3>Market bundle (<code>context_bundle_*.json</code>)</h3>
+        <p>Built by <code>core/bundle.py</code>. Snapshot of holdings, prices, tax lots, enrichment metadata. Hash function: <code>_sha256_canonical()</code> applies SHA-256 to a canonical JSON serialization of the payload (sorted keys, no whitespace, ASCII-safe). The hash excludes the <code>bundle_hash</code> field itself via <code>_hashable_payload()</code>. Data sources: Schwab API primary, CSV fallback. Enriched with yFinance, FMP, technicals, and style classification.</p>
 
-        <section id="podcast-analyze-optional">
-            <h3>Optional: built-in Gemini analysis</h3>
-            <p>If you'd rather have structured allocation rows written directly to the <code>AI_Suggested_Allocation</code> tab in the Portfolio Sheet, use the <code>--analyze</code> flag:</p>
-            <pre><code>pm podcast batch --analyze              # dry-run: print JSON, no Sheet writes
-pm podcast batch --analyze --live       # full pipeline: analyze + write to Sheet</code></pre>
-            <p>This calls Gemini with a fixed schema and writes one row per sector to <code>AI_Suggested_Allocation</code>, archiving the prior batch to <code>Logs</code> first. <code>Target_Allocation</code> is never touched — that tab is manual-only by design.</p>
+        <h3>Vault bundle (<code>vault_bundle_*.json</code>)</h3>
+        <p>Built by <code>core/vault_bundle.py</code>. Snapshot of all thesis files, podcast transcripts, and research notes from the local <code>vault/</code> directory. Each document is individually hashed with <code>_sha256_text()</code> over its UTF-8 bytes. The bundle hash wraps all document hashes. Drive fallback is not yet implemented. Currently covers 62 thesis files.</p>
 
-            <div class="callout">
-                <strong>The GitHub Actions cron uses this path.</strong> Every Friday at 22:00 UTC, the scheduled workflow runs the equivalent of <code>--analyze --live</code> across all configured channels. If you're happy letting the automation handle it, you don't need to run anything manually.
-            </div>
-        </section>
+        <h3>Composite bundle (<code>composite_bundle_*.json</code>)</h3>
+        <p>Built by <code>core/composite_bundle.py</code>. A thin metadata object linking market and vault bundles. Adds Tier 2 data: top-10 recent rotations from the <code>Trade_Log</code> Sheet tab. Composite hash is <code>SHA256(market_hash + vault_hash + recent_rotations_json)</code>. Agents interact exclusively with the composite hash for end-to-end traceability.</p>
 
-        <section id="podcast-outputs">
-            <h3>Outputs: file by file</h3>
-            <p>Every object the podcast pipeline can produce, where it lives, and what command creates it.</p>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Output</th>
-                        <th>Purpose</th>
-                        <th>Populated By</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td><code>data/podcast_transcripts/<br>YYYY-MM-DD_SOURCE_VIDEOID.txt</code></td>
-                        <td>Raw plain-text transcript for one episode. One file per episode. Plain UTF-8 with no markup — ready to paste directly into any LLM context window.</td>
-                        <td><code>pm podcast fetch</code><br><code>pm podcast batch</code></td>
-                    </tr>
-                    <tr>
-                        <td><code>data/podcast_bundles/<br>bundle_YYYY-MM-DD_HHMM.md</code></td>
-                        <td>Concatenated transcripts from multiple episodes, prefixed with a pre-written investor-style analysis prompt. Drag the file into Claude or ChatGPT and paste. Gitignored — treat as a transient working artifact.</td>
-                        <td><code>pm podcast bundle</code></td>
-                    </tr>
-                    <tr>
-                        <td><code>data/podcast_summaries/<br>YYYY-MM-DD_SOURCE.md</code></td>
-                        <td>Per-source markdown digest generated from <code>AI_Suggested_Allocation</code> rows after a Gemini run. Used by downstream Gemini agents via <code>load_digest()</code>. Auto-purged after 7 days.</td>
-                        <td><code>pm podcast batch --analyze --live</code><br>GitHub Actions cron</td>
-                    </tr>
-                    <tr>
-                        <td><code>data/processed_videos.json</code></td>
-                        <td>Dedup log. Tracks which YouTube video IDs have been ingested so reruns skip already-processed episodes. Only written on <code>--live</code> runs — dry runs are non-destructive so a subsequent live run still picks up every episode.</td>
-                        <td><code>pm podcast batch --live</code><br>GitHub Actions cron</td>
-                    </tr>
-                    <tr>
-                        <td>Sheet: <code>AI_Suggested_Allocation</code></td>
-                        <td>Structured sector allocation rows derived from Gemini transcript analysis. Columns: Source, Episode Date, Asset Class, Current %, Target %, Confidence, Rationale, Timestamp. One row per sector per source. Clear-and-rebuild on each run — prior rows are archived to <code>Logs</code> first.</td>
-                        <td><code>pm podcast batch --analyze --live</code><br>GitHub Actions cron</td>
-                    </tr>
-                    <tr>
-                        <td>Sheet: <code>Logs</code></td>
-                        <td>Append-only audit trail. Receives a copy of every <code>AI_Suggested_Allocation</code> batch before it is overwritten. Lets you review historical Gemini outputs and spot drift in its sector recommendations over time.</td>
-                        <td>Auto — archive-before-overwrite on every Gemini write</td>
-                    </tr>
-                </tbody>
-            </table>
+        <h3>Hash verification</h3>
+        <p>All three bundle types verify their hash on load. Any tampered field causes an exception before the agent sees data. Verify manually with <code>pm bundle verify &lt;path&gt;</code>.</p>
+    </section>
 
-            <h4 style="margin-top: 1.5rem;">Directory layout at a glance</h4>
-            <pre><code>data/
-  podcast_transcripts/      # committed — raw episode text, one file per episode
-  podcast_summaries/        # committed — markdown digests, auto-purged after 7 days
-  podcast_bundles/          # gitignored — transient paste artifacts
-  processed_videos.json     # committed — dedup log for batch runs</code></pre>
+    <hr>
 
-            <div class="callout">
-                <strong>What gets committed vs. ignored.</strong> Transcripts and the dedup log are committed so the pipeline state survives across machines and CI runs. Bundle files are gitignored because they are transient — just a convenience step before you paste into an LLM. Summaries are committed but short-lived (7-day TTL).
-            </div>
-        </section>
+    <section id="data-sources">
+        <h2>5. Data Sources</h2>
 
-        <section id="files-overview">
-            <h2>Files &amp; Data</h2>
-            <p>The Portfolio Manager produces artifacts across four places: local <code>bundles/</code> and <code>data/</code> directories, the <code>vault/</code> directory of investment docs, the Google Sheet, and GCS blobs that hold Schwab tokens. This section is the catalog — what each artifact is, what created it, what's inside, and how to handle it.</p>
-            
-            <p>Two axes matter for every artifact:</p>
-            <ul>
-                <li><strong>Sharing risk:</strong> Use the legend below before pasting anything into an external service.</li>
-                <li><strong>Persistence:</strong> Some artifacts regenerate from a fresh snapshot; others are the only copy of something Bill wrote.</li>
-            </ul>
-            
-            <p><strong>Legend:</strong></p>
-            <ul>
-                <li>🟢 <strong>Safe to share</strong> — deterministic data, no secrets, no audit role</li>
-                <li>🟡 <strong>Share with care</strong> — contains identifiable position detail; fine for personal LLM use, not public posts</li>
-                <li>🔴 <strong>Never share</strong> — credentials, tokens, anything in GCS blobs</li>
-                <li>♻ <strong>Regenerable</strong> — can be rebuilt from upstream sources</li>
-                <li>📌 <strong>Permanent</strong> — append-only audit object, manually authored, or otherwise irreplaceable</li>
-            </ul>
-        </section>
+        <table>
+            <thead><tr><th>Source</th><th>Priority</th><th>What it provides</th><th>Access</th></tr></thead>
+            <tbody>
+                <tr><td><strong>Schwab Developer API</strong></td><td>1 (primary)</td><td>Live positions, prices, quotes, tax lots, transactions</td><td>Read-only. Tokens stored in GCS bucket <code>portfolio-manager-tokens</code>. Refreshed by Cloud Function every 25 min during market hours.</td></tr>
+                <tr><td><strong>Schwab CSV export</strong></td><td>2 (fallback)</td><td>Positions snapshot, realized G/L lots</td><td>Manual export. Used when API token is expired or unavailable.</td></tr>
+                <tr><td><strong>yFinance</strong></td><td>3</td><td>Live prices (zero-price fallback), sector, beta, dividend yield</td><td>No API key required. Used in enrichment pass after bundle build.</td></tr>
+                <tr><td><strong>FMP (Financial Modeling Prep)</strong></td><td>4</td><td>Forward P/E, PEG, ROIC, margins, analyst estimates</td><td><code>utils/fmp_client.py</code>. API key in <code>.env</code> as <code>FMP_API_KEY</code>.</td></tr>
+                <tr><td><strong>Finnhub</strong></td><td>5</td><td>News (future use)</td><td>API key in <code>.env</code> as <code>FINNHUB_API_KEY</code>.</td></tr>
+                <tr><td><strong>Podcast transcripts</strong></td><td>Research</td><td>YouTube transcripts from tracked channels</td><td><code>data/podcast_transcripts/</code>. Fetched by <code>pm ingest podcasts</code> or automated via GitHub Actions (Friday 5pm EST).</td></tr>
+            </tbody>
+        </table>
 
-        <section id="files-quick-lookup">
-            <h3>Quick lookup</h3>
-            <p>If you found a file and don't recognize it, find its row here and jump to the detail section.</p>
-            <table>
-                <thead>
-                    <tr><th>Artifact</th><th>Example path</th><th>Created by</th><th>Sharing</th><th>Persistence</th><th>Detail</th></tr>
-                </thead>
-                <tbody>
-                    <tr><td>Market bundle</td><td><code>bundles/context_bundle_2026-04-30T...json</code></td><td><code>pm snapshot</code></td><td>🟡</td><td>♻</td><td><a href="#files-bundles-market">below</a></td></tr>
-                    <tr><td>Vault bundle</td><td><code>bundles/vault_bundle_*.json</code></td><td><code>pm vault snapshot</code></td><td>🟡</td><td>♻</td><td><a href="#files-bundles-vault">below</a></td></tr>
-                    <tr><td>Composite bundle</td><td><code>bundles/composite_bundle_*.json</code></td><td><code>pm bundle composite</code></td><td>🟡</td><td>♻</td><td><a href="#files-bundles-composite">below</a></td></tr>
-                    <tr><td>Thesis files</td><td><code>vault/theses/UNH_thesis.md</code></td><td><code>pm vault add-thesis</code></td><td>🟡</td><td>📌</td><td><a href="#files-vault-theses">below</a></td></tr>
-                    <tr><td>Raw transcripts</td><td><code>data/podcast_transcripts/*.txt</code></td><td><code>pm podcast fetch</code></td><td>🟢</td><td>♻</td><td><a href="#files-podcasts-transcripts">below</a></td></tr>
-                    <tr><td>Podcast bundles</td><td><code>data/podcast_bundles/bundle_*.md</code></td><td><code>pm podcast bundle</code></td><td>🟡</td><td>♻</td><td><a href="#files-podcasts-bundles">below</a></td></tr>
-                    <tr><td>Dedup log</td><td><code>data/processed_videos.json</code></td><td><code>pm podcast batch --live</code></td><td>🟢</td><td>📌</td><td><a href="#files-podcasts-dedup">below</a></td></tr>
-                    <tr><td>Schwab tokens</td><td>GCS blobs</td><td><code>schwab_initial_auth.py</code></td><td>🔴</td><td>📌</td><td><a href="#files-tokens">below</a></td></tr>
-                </tbody>
-            </table>
-        </section>
+        <div class="note">
+            <strong>Two transcript directories exist with different roles.</strong> <code>data/podcast_transcripts/</code> is where the podcast pipeline writes. <code>vault/transcripts/</code> is where hand-curated or promoted transcripts live and are included in the vault bundle. Do not conflate them.
+        </div>
+    </section>
 
-        <section id="files-bundles">
-            <h3>Bundles (<code>bundles/</code>)</h3>
-            
-            <h4 id="files-bundles-market">Market bundle — <code>context_bundle_*.json</code></h4>
-            <p><strong>Created by:</strong> <code>pm snapshot</code>. Bundles always write to disk; <code>--live</code> only affects downstream Sheet pushes.</p>
-            <p><strong>Hash:</strong> SHA256 of canonical-JSON contents, stored in <code>bundle_hash</code>.</p>
-            <p><strong>Top-level keys:</strong> <code>timestamp_utc</code>, <code>bundle_hash</code>, <code>source</code>, <code>positions</code>, <code>calculated_technicals</code>, <code>calculated_fundamentals</code>, <code>fmp_fundamentals</code>, <code>cash_manual</code>, <code>enrichment_errors</code>. Read <code>core/bundle.py</code> for the authoritative schema.</p>
-            <p><strong>Position dict keys:</strong> <code>ticker</code>, <code>description</code>, <code>asset_class</code>, <code>quantity</code>, <code>price</code>, <code>market_value</code>, <code>cost_basis</code>, <code>unrealized_gl</code>, <code>unrealized_gl_pct</code>, <code>weight_pct</code>, <code>daily_change_pct</code>, <code>is_cash</code>, etc.</p>
-            <p><strong>Sharing:</strong> 🟡 — your full position list, market values, cost basis. Fine for personal LLM analysis. Not for public posts.</p>
-            <p><strong>Persistence:</strong> ♻ — regenerable. <code>bundles/</code> is gitignored; old bundles can be deleted any time.</p>
-            <p><strong>Read by:</strong> <code>pm bundle composite</code>, <code>pm bundle push</code>, <code>pm dashboard refresh</code>, agent commands, all <code>tasks/build_*</code> writers.</p>
-            <p><strong>Verify:</strong> <code>pm bundle verify &lt;path&gt;</code></p>
-            
-            <h4 id="files-bundles-vault">Vault bundle — <code>vault_bundle_*.json</code></h4>
-            <p><strong>Created by:</strong> <code>pm vault snapshot</code>. Aggregates all thesis files and research docs into a single JSON object for LLM consumption.</p>
-            <p><strong>Contents:</strong> <code>documents[]</code> (prose + metadata), <code>theses_present</code>, <code>theses_missing</code>, <code>vault_skip_log</code>.</p>
-            <p><strong>Sharing:</strong> 🟡 — contains your full investment reasoning database.</p>
-            <p><strong>Persistence:</strong> ♻ — regenerable from the <code>vault/</code> directory.</p>
-            
-            <h4 id="files-bundles-composite">Composite bundle — <code>composite_bundle_*.json</code></h4>
-            <p><strong>Created by:</strong> <code>pm bundle composite</code>. Links a specific market bundle with a specific vault bundle.</p>
-            <p><strong>Structure:</strong> Instead of merging, it stores pointers to the component bundles and a <code>composite_hash</code> derived from both. It provides the <code>get_ticker_triggers()</code> method used by agents.</p>
-            <p><strong>Sharing:</strong> 🟡 — the "everything" file for portfolio analysis.</p>
-            
-            <h4 id="files-bundles-perticker">Per-ticker market bundle — <code>&lt;TICKER&gt;_bndl.json</code></h4>
-            <p><strong>Created by:</strong> <code>tasks/enrich_atr.py</code> and <code>tasks/enrich_technicals.py</code>. Caches ticker-specific enrichment data (ATR stops, RSI, Trend) to avoid redundant API calls.</p>
-            
-            <h4 id="files-bundles-agent">Agent output — <code>*_output_*.json</code></h4>
-            <p><strong>Created by:</strong> Domain agents (e.g., <code>pm agent rebuy</code> → <code>rebuy_output_*.json</code>).</p>
-            <p><strong>Audit:</strong> Includes <code>bundle_hash</code> linkage to the exact market state used for the calculation, plus specific Pydantic-validated fields (e.g., <code>van_tharp_sizing_map</code>).</p>
-        </section>
+    <hr>
 
-        <section id="files-vault">
-            <h3>Vault (<code>vault/</code>)</h3>
-            
-            <h4 id="files-vault-theses">Thesis files — <code>vault/theses/&lt;TICKER&gt;_thesis.md</code></h4>
-            <p><strong>Created by:</strong> <code>pm vault add-thesis --ticker X</code> scaffolds it; you fill it in by hand. The system reads but never writes the prose.</p>
-            <p><strong>Structure:</strong> YAML frontmatter (<code>ticker</code>, <code>style</code>, <code>framework_preference</code>, <code>entry_date</code>, <code>last_reviewed</code>) → prose sections (Core Thesis, Valuation &amp; Targets, etc.) → machine-readable <code>triggers:</code> YAML block.</p>
-            <p><strong>Trigger fields:</strong> <code>fwd_pe_add_below</code>, <code>fwd_pe_trim_above</code>, <code>price_add_below</code>, <code>price_trim_above</code>, <code>discount_from_52w_high_add</code>, <code>revenue_growth_floor_pct</code>, <code>operating_margin_floor_pct</code>, <code>current_weight_pct</code>.</p>
-            <p><strong>Sharing:</strong> 🟡 — your investment reasoning. Fine for personal LLM analysis ("review my thesis on UNH").</p>
-            <p><strong>Persistence:</strong> 📌 — <em>your written record. Back these up. Loss = real loss.</em></p>
-            
-            <h4 id="files-vault-transcripts">Vault transcripts — <code>vault/transcripts/</code></h4>
-            <p><strong>Purpose:</strong> Curated, permanent reference material (e.g., earnings call transcripts). Different from the transient <code>data/podcast_transcripts/</code> pipeline.</p>
-            
-            <h4 id="files-vault-research">Vault research — <code>vault/research/</code></h4>
-            <p><strong>Purpose:</strong> Deep-dive research notes and PDF snapshots of analyst reports.</p>
-        </section>
+    <section id="cli">
+        <h2>6. CLI Reference</h2>
 
-        <section id="files-podcasts">
-            <h3>Podcast pipeline (<code>data/</code>)</h3>
-            
-            <h4 id="files-podcasts-transcripts">Raw transcripts — <code>data/podcast_transcripts/*.txt</code></h4>
-            <p><strong>Created by:</strong> <code>pm podcast batch</code>. Plain UTF-8 text ready for LLM pasting.</p>
-            <p><strong>Sharing:</strong> 🟢 — public information.</p>
-            <p><strong>Persistence:</strong> ♻ — purge with <code>pm podcast clean</code>.</p>
-            
-            <h4 id="files-podcasts-summaries">Markdown digests — <code>data/podcast_summaries/*.md</code></h4>
-            <p><strong>Created by:</strong> <code>pm podcast batch --analyze</code>. 7-day rolling window.</p>
-            <p><strong>Sharing:</strong> 🟡 — contains AI suggestions tied to your portfolio context.</p>
-            
-            <h4 id="files-podcasts-bundles">Podcast bundles — <code>data/podcast_bundles/bundle_*.md</code></h4>
-            <p><strong>Created by:</strong> <code>pm podcast bundle</code>. Concatenated transcripts + analysis prompt.</p>
-            
-            <h4 id="files-podcasts-dedup">Dedup log — <code>data/processed_videos.json</code></h4>
-            <p><strong>Updated by:</strong> <code>pm podcast batch --live</code>. Tracks already-ingested episode IDs.</p>
-        </section>
+        <p>Preferred invocation: <code>pm &lt;command&gt;</code> (after <code>pip install -e .</code>).<br>
+        Always works: <code>python manager.py &lt;command&gt;</code>.<br>
+        Every command defaults to dry-run. Use <code>--live</code> to write.</p>
 
-        <section id="files-sheet">
-            <h3>Google Sheet tabs</h3>
-            <p>The Sheet is the system's authoritative frontend. For column-level detail see <code>PORTFOLIO_SHEET_SCHEMA.md</code>.</p>
-            
-            <table>
-                <thead>
-                    <tr><th>Layer</th><th>Tabs</th><th>Authority</th><th>Persistence</th></tr>
-                </thead>
-                <tbody>
-                    <tr><td><strong>State</strong></td><td>Holdings_Current, Holdings_History, Daily_Snapshots, Transactions</td><td>Pipeline</td><td>📌 Audit-trail</td></tr>
-                    <tr><td><strong>Views</strong></td><td>Decision_View, Valuation_Card, Tax_Control, Risk_Metrics, Rotation_Review</td><td>Pipeline</td><td>♻ Transient</td></tr>
-                    <tr><td><strong>Sandbox</strong></td><td>AI_Suggested_Allocation, Trade_Log_Staging</td><td>AI Agents</td><td>♻ Transient</td></tr>
-                    <tr><td><strong>Manual</strong></td><td>Target_Allocation, Config, Decision_Log, Trade_Log, Disagreements</td><td>User</td><td>📌 Permanent</td></tr>
-                </tbody>
-            </table>
-        </section>
+        <h3>Top-level commands</h3>
 
-        <section id="files-tokens">
-            <h3>Tokens &amp; credentials</h3>
-            
-            <h4>Schwab tokens (GCS)</h4>
-            <p><strong>Locations:</strong> <code>gs://&lt;BUCKET&gt;/token_accounts.json</code> and <code>token_market.json</code>.</p>
-            <p><strong>Sharing:</strong> 🔴 — <strong>NEVER SHARE.</strong> These grant API access to your brokerage.</p>
-            
-            <h4>Application Credentials</h4>
-            <p><strong>Path:</strong> <code>~/.config/gcloud/application_default_credentials.json</code>. Used for Gemini and Google Sheets access.</p>
-            <p><strong>Sharing:</strong> 🔴.</p>
-        </section>
+        <table>
+            <thead><tr><th>Command</th><th>Description</th><th>Notable flags</th></tr></thead>
+            <tbody>
+                <tr>
+                    <td><code>pm morning</code></td>
+                    <td>Full market-open pipeline: health check, Schwab sync, snapshot, dashboard refresh. Runs all steps in sequence with per-step pass/fail summary.</td>
+                    <td><code>--live</code>, <code>--skip-health</code>, <code>--skip-transactions</code>, <code>--skip-tax</code>, <code>--tx-days N</code></td>
+                </tr>
+                <tr>
+                    <td><code>pm health</code></td>
+                    <td>Run pipeline health checks: Schwab tokens, API connectivity, Sheet access, bundle age, FMP cache, yfinance, transactions freshness, thesis coverage.</td>
+                    <td><code>--verbose</code></td>
+                </tr>
+                <tr>
+                    <td><code>pm snapshot</code></td>
+                    <td>Freeze current market state to an immutable context bundle. Enriches with FMP, technicals, styles. With <code>--live</code>, pushes to Holdings_Current and Daily_Snapshots.</td>
+                    <td><code>--source [auto|schwab|csv]</code>, <code>--csv PATH</code>, <code>--cash FLOAT</code>, <code>--live</code></td>
+                </tr>
+            </tbody>
+        </table>
 
-        <section id="files-exports">
-            <h3>Exports (<code>exports/</code>)</h3>
-            <p><strong>Created by:</strong> <code>pm export &lt;scenario&gt;</code>. Each export is a self-contained directory with a <code>manifest.json</code>, <code>context.json</code>, and <code>prompt.md</code>. Designed for one-click pasting into a frontier LLM.</p>
-        </section>
+        <pre><code># Full morning pipeline
+pm morning --live
 
-        <section id="files-logs">
-            <h3>Logs &amp; audit</h3>
-            <p>The <code>Logs</code> Sheet tab provides a low-level audit trail. Higher-level audit is provided by the <strong>Bundle Hash Chain</strong> (Market Hash → Vault Hash → Composite Hash → Agent Hash), ensuring every AI decision can be traced back to the exact market state that triggered it.</p>
-        </section>
+# Dry-run snapshot (no Sheet writes)
+pm snapshot
 
-        <section id="files-hygiene">
-            <h3>Cleanup &amp; backup</h3>
-            <p><strong>Gitignored:</strong> <code>bundles/</code>, <code>data/podcast_*</code>, <code>exports/</code>, <code>.env</code>.</p>
-            <p><strong>Backup priorities:</strong> <code>vault/theses/</code> and the manual Sheet tabs (Trade_Log, Decision_Log). Everything else is regenerable.</p>
-            <pre><code># Cleanup old bundles
-find bundles/ -name "*.json" -mtime +30 -delete</code></pre>
-        </section>
+# Snapshot from CSV with manual cash
+pm snapshot --source csv --csv ./positions.csv --cash 5000 --live</code></pre>
 
-        <section id="files-llm-handoff">
-            <h3>Handing artifacts to an external LLM</h3>
-            <p>Best artifacts to use, in priority order:</p>
-            <ol>
-                <li><strong>Composite bundle</strong> (<code>bundles/composite_bundle_*.json</code>) — The default for "review my portfolio" prompts.</li>
-                <li><strong>Podcast bundle</strong> (<code>data/podcast_bundles/bundle_*.md</code>) — For "what's the macro consensus" prompts.</li>
-                <li><strong>Specific thesis</strong> (<code>vault/theses/&lt;TICKER&gt;_thesis.md</code>) — For deep-dives on one ticker.</li>
-            </ol>
-            <div class="callout">
-                <strong>Safety:</strong> Never paste tokens or secrets. Identifiable position detail is fine for personal use with Claude/ChatGPT, but not for public forums.
-            </div>
-        </section>
+        <h3>pm ingest</h3>
+        <table>
+            <thead><tr><th>Subcommand</th><th>Description</th><th>Notable flags</th></tr></thead>
+            <tbody>
+                <tr><td><code>pm ingest transactions</code></td><td>Sync Schwab transaction history. Default: 90 days.</td><td><code>--days N</code>, <code>--live</code>, <code>--purge</code></td></tr>
+                <tr><td><code>pm ingest realized-gl &lt;CSV&gt;</code></td><td>Import realized G/L lots from Schwab CSV export.</td><td><code>--live</code>, <code>--purge</code></td></tr>
+                <tr><td><code>pm ingest podcasts</code></td><td>Fetch latest transcripts for all tracked channels. Use <code>--analyze</code> to run legacy Gemini macro extraction after fetch (non-default).</td><td><code>--live</code>, <code>--purge</code>, <code>--analyze</code></td></tr>
+                <tr><td><code>pm ingest all</code></td><td>Run transactions + podcasts ingestion in sequence.</td><td><code>--live</code>, <code>--days N</code>, <code>--purge</code></td></tr>
+            </tbody>
+        </table>
 
-        <section id="tax-visibility">
-            <h2>10. Tax Visibility (CPA's corner)</h2>
-            <p>The <code>Tax_Control</code> tab is the authoritative view for planning. The **Estimated Federal Tax** is a conservative projection using rates defined in the <code>Config</code> tab. It does <em>not</em> include state taxes or NIIT.</p>
-            <p><strong>Wash-Sale Mechanics:</strong> The system automatically flags disallowed losses from Schwab and pins them to the top of the <code>Tax_Control</code> table. **Tax Offset Capacity** represents the dollar amount of gains currently harvestable by realizing losses.</p>
-        </section>
+        <h3>pm refresh</h3>
+        <table>
+            <thead><tr><th>Subcommand</th><th>Description</th></tr></thead>
+            <tbody>
+                <tr><td><code>pm refresh dashboard</code></td><td>Rebuild Valuation_Card, Decision_View, 0_DASHBOARD, and apply formatting. Use <code>--update</code> to fetch live prices first.</td></tr>
+                <tr><td><code>pm refresh tax</code></td><td>Rebuild Tax_Control tab from Realized_GL and Config rates.</td></tr>
+                <tr><td><code>pm refresh rotations</code></td><td>Refresh Rotation_Review with 30/90/180-day P&amp;L attribution for all Trade_Log rows.</td></tr>
+            </tbody>
+        </table>
 
-        <section id="troubleshooting">
-            <h2>11. When Things Go Wrong</h2>
-            <ul>
-                <li><strong>Schwab Token Expired:</strong> Run <code>python scripts/schwab_manual_reauth.py</code>.</li>
-                <li><strong>Sheet Quota Error:</strong> The system will auto-retry. If it fails, wait 60 seconds and re-run with <code>--live</code>.</li>
-                <li><strong>FMP 429:</strong> This is a rate limit. The system uses a 14-day local cache; wait for the quota reset or check your API key in <code>.env</code>.</li>
-                <li><strong>Duplicate Transactions:</strong> Use <code>sync transactions --reconcile</code> to identify drift between Schwab and the Sheet.</li>
-                <li><strong>Bundle Hash Mismatch:</strong> Occurs if files were modified after a snapshot. Run <code>snapshot</code> again to create a fresh immutable state.</li>
-            </ul>
-        </section>
+        <h3>pm vault</h3>
+        <table>
+            <thead><tr><th>Subcommand</th><th>Description</th></tr></thead>
+            <tbody>
+                <tr><td><code>pm vault snapshot</code></td><td>Freeze vault documents (theses, transcripts, research) to a vault bundle.</td></tr>
+                <tr><td><code>pm vault sync</code></td><td>Sync Sheets data (position state, triggers) into thesis markdown files via managed regions. Safe: only mutates fenced regions.</td></tr>
+                <tr><td><code>pm vault sync-status</code></td><td>Audit staleness and drift for all thesis files. Shows last_reviewed, weight vs ceiling, drift status.</td></tr>
+                <tr><td><code>pm vault add-thesis &lt;TICKER&gt;</code></td><td>Scaffold a new blank thesis file from template.</td></tr>
+                <tr><td><code>pm vault thesis-audit</code></td><td>Report quantitative trigger completeness across all thesis files.</td></tr>
+            </tbody>
+        </table>
 
-        <section id="maintenance">
-            <h2>12. Maintenance Cadence</h2>
-            <ul>
-                <li><strong>Saturday:</strong> Review <code>Thesis_Health</code>, update thesis triggers, and run <code>vault snapshot --live</code>.</li>
-                <li><strong>Monthly:</strong> Run <code>trade review --live</code> followed by <code>export rotation-retrospective</code>.</li>
-                <li><strong>Quarterly:</strong> Review <code>styles.json</code> for style drift and audit <code>Target_Allocation</code>.</li>
-                <li><strong>Annually:</strong> Move previous year's <code>Holdings_History</code> to an archive tab; reset <code>Tax_Control</code> for the new calendar year.</li>
-            </ul>
-        </section>
+        <h3>pm bundle</h3>
+        <table>
+            <thead><tr><th>Subcommand</th><th>Description</th></tr></thead>
+            <tbody>
+                <tr><td><code>pm bundle composite</code></td><td>Combine latest market + vault bundles into a composite bundle. Use <code>--market PATH</code> and <code>--vault PATH</code> to pin specific sub-bundles.</td></tr>
+                <tr><td><code>pm bundle push</code></td><td>Push bundle data to Holdings_Current and Daily_Snapshots in Sheets.</td></tr>
+                <tr><td><code>pm bundle verify &lt;PATH&gt;</code></td><td>Verify SHA-256 hash integrity of any bundle file (market, vault, or composite).</td></tr>
+            </tbody>
+        </table>
 
-        <section id="non-goals">
-            <h2>13. What's Deliberately Not Here</h2>
-            <p>To preserve the system's "Deterministic Spine" integrity, several features are explicitly excluded:</p>
-            <ul>
-                <li><strong>Auto-trading:</strong> Human-in-the-loop is mandatory for all trade execution.</li>
-                <li><strong>Auto-suggestion of rotations:</strong> The system surfaces signals (Price vs Target); Bill identifies the rotation.</li>
-                <li><strong>Web UI:</strong> Rejected to keep the data footprint small and the frontend (Sheets) familiar and reliable.</li>
-            </ul>
-        </section>
+        <h3>pm agent</h3>
+        <table>
+            <thead><tr><th>Subcommand</th><th>Description</th><th>Status</th></tr></thead>
+            <tbody>
+                <tr>
+                    <td><code>pm agent ideas</code></td>
+                    <td>Generate investment candidates from recent podcast transcripts. Reads transcripts from <code>data/podcast_transcripts/</code>, loads the latest composite bundle, calls Gemini with the system prompt in <code>prompts/idea_generator.md</code>, and writes a markdown report to <code>agent_outputs/ideas/</code>.</td>
+                    <td><span class="badge badge-green">Shipped</span></td>
+                </tr>
+            </tbody>
+        </table>
 
-        <footer>
-            Version 3.3 — Added Thesis Sync &amp; Audit workflow documentation. | May 3, 2026
-        </footer>
-    </main>
+        <pre><code># Run idea generator (auto-detects latest composite bundle)
+pm agent ideas
+
+# Look back 14 days for transcripts
+pm agent ideas --since-days 14
+
+# Preview report without writing to disk
+pm agent ideas --dry-run
+
+# Pin a specific composite bundle
+pm agent ideas --bundle-path bundles/composite_bundle_2026-05-26T....json</code></pre>
+
+        <h3>pm journal</h3>
+        <table>
+            <thead><tr><th>Subcommand</th><th>Description</th></tr></thead>
+            <tbody>
+                <tr><td><code>pm journal rotation</code></td><td>Record a manual portfolio rotation in Trade_Log. Requires <code>--sold</code>, <code>--bought</code>, <code>--proceeds</code>, <code>--type</code>, <code>--bet</code>.</td></tr>
+                <tr><td><code>pm journal promote</code></td><td>Promote rows with Status=approved from Trade_Log_Staging to Trade_Log.</td></tr>
+            </tbody>
+        </table>
+
+        <h3>pm clean</h3>
+        <table>
+            <thead><tr><th>Subcommand</th><th>Default retention</th></tr></thead>
+            <tbody>
+                <tr><td><code>pm clean exports</code></td><td>Purge export packages older than 7 days.</td></tr>
+                <tr><td><code>pm clean podcasts</code></td><td>Purge transcripts older than 30 days.</td></tr>
+                <tr><td><code>pm clean bundles</code></td><td>Purge bundle files older than 30 days.</td></tr>
+                <tr><td><code>pm clean all</code></td><td>Run all three cleanup passes. Always use <code>--live</code> to actually delete.</td></tr>
+            </tbody>
+        </table>
+
+        <h3>pm export</h3>
+        <table>
+            <thead><tr><th>Subcommand</th><th>Description</th></tr></thead>
+            <tbody>
+                <tr><td><code>pm export list</code></td><td>List available export scenarios.</td></tr>
+                <tr><td><code>pm export run &lt;scenario&gt;</code></td><td>Build a context package (prompt.md + context.json) in <code>exports/</code> for paste into an external LLM. Currently implemented: <code>tax-rebalance</code>.</td></tr>
+            </tbody>
+        </table>
+
+        <h3>pm podcast</h3>
+        <table>
+            <thead><tr><th>Subcommand</th><th>Description</th></tr></thead>
+            <tbody>
+                <tr><td><code>pm podcast fetch &lt;VIDEO_ID&gt;</code></td><td>Fetch a single YouTube transcript by video ID.</td></tr>
+                <tr><td><code>pm podcast batch</code></td><td>Fetch latest episode for all tracked channels. Deduplicates via <code>data/processed_videos.json</code>.</td></tr>
+                <tr><td><code>pm podcast bundle</code></td><td>Concatenate the N most recent transcripts into a single markdown file for manual LLM pasting.</td></tr>
+            </tbody>
+        </table>
+    </section>
+
+    <hr>
+
+    <section id="principles">
+        <h2>7. Operating Principles</h2>
+
+        <p>These are the confirmed hard rules &mdash; each has enforcement in code, not just documentation.</p>
+
+        <table>
+            <thead><tr><th>Rule</th><th>Enforcement</th></tr></thead>
+            <tbody>
+                <tr>
+                    <td><strong>Read-only w.r.t. Schwab.</strong> No order endpoints ever.</td>
+                    <td><code>utils/schwab_client.py</code> and <code>cloud_functions/token_refresh/main.py</code> both carry explicit prohibited-method lists in their docstrings. Auditable via grep.</td>
+                </tr>
+                <tr>
+                    <td><strong>DRY_RUN default true.</strong> Every write path requires <code>--live</code>.</td>
+                    <td>Every write command in <code>manager.py</code> checks <code>if not live: print DRY RUN; return</code> before any Sheet call.</td>
+                </tr>
+                <tr>
+                    <td><strong>Bundle-first.</strong> Agents reason over immutable, hashed snapshots.</td>
+                    <td><code>_sha256_canonical()</code> computed last in build; verified first on load. Hash mismatch raises ValueError before agent sees data.</td>
+                </tr>
+                <tr>
+                    <td><strong>bundle_hash in every agent output schema.</strong> End-to-end audit trail.</td>
+                    <td><code>ask_gemini_composite()</code> raises ValueError if <code>bundle_hash</code> is absent from the Pydantic response schema.</td>
+                </tr>
+                <tr>
+                    <td><strong>No automated LLM calls against production tabs.</strong></td>
+                    <td>All agent output lands in <code>agent_outputs/*.md</code> (local) or <code>Agent_Outputs</code> sandbox tab. <code>Target_Allocation</code> and <code>Config</code> are never written by agents.</td>
+                </tr>
+                <tr>
+                    <td><strong>Single-batch gspread writes with fingerprint dedup.</strong></td>
+                    <td>Append tabs use <code>append_rows()</code> with a Fingerprint column. Never cell-by-cell.</td>
+                </tr>
+                <tr>
+                    <td><strong>Fire-fire-aim development.</strong></td>
+                    <td>Ship minimum viable agents, run on real data, iterate based on real output. The bundle layer keeps the discipline. See Idea Generator v1 as the template.</td>
+                </tr>
+                <tr>
+                    <td><strong>No price targets, no market predictions, no buy/sell recommendations in agent output.</strong></td>
+                    <td><code>SAFETY_PREAMBLE</code> constant in <code>utils/gemini_client.py</code> line 38 is prepended to every LLM system instruction.</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <hr>
+
+    <section id="agents">
+        <h2>8. Agent Layer</h2>
+
+        <h3>Idea Generator v1 <span class="badge badge-green">Shipped 2026-05-26</span></h3>
+
+        <p>Consumes the composite bundle plus recent podcast transcripts. Extracts actionable investment candidates and classifies each by style fit (GARP, Thematic, BoringFundamentals, SectorETF, Unclear). Flags overlap with current holdings and notes concerns raised by the speaker.</p>
+
+        <p><strong>How to run:</strong></p>
+        <pre><code>pm agent ideas                          # auto-detects latest bundle + 7 days of transcripts
+pm agent ideas --since-days 14          # look back further
+pm agent ideas --dry-run                # print to stdout, do not write file</code></pre>
+
+        <p><strong>Prerequisites:</strong> A composite bundle must exist in <code>bundles/</code>. Run <code>pm snapshot</code> then <code>pm vault snapshot</code> then <code>pm bundle composite</code> if no composite bundle exists. Transcripts must be present in <code>data/podcast_transcripts/</code>; run <code>pm ingest podcasts --live</code> to fetch them.</p>
+
+        <p><strong>Output:</strong> Markdown report written to <code>agent_outputs/ideas/ideas_{YYYY-MM-DD}_{hash_prefix}.md</code>. Filename includes the composite bundle hash prefix for traceability. Output is local only &mdash; not pushed to Sheets in v1.</p>
+
+        <p><strong>Key files:</strong></p>
+        <ul>
+            <li><code>utils/agents/idea_generator.py</code> &mdash; Pydantic schemas (<code>Candidate</code>, <code>IdeaGeneratorOutput</code>), <code>run_idea_generator()</code>, <code>write_idea_report()</code></li>
+            <li><code>prompts/idea_generator.md</code> &mdash; system prompt describing the investor's four styles and extraction rules</li>
+        </ul>
+
+        <p><strong>Hard rule compliance:</strong> No price targets, no buy/sell recommendations. <code>SAFETY_PREAMBLE</code> is prepended automatically. <code>bundle_hash</code> is required in <code>IdeaGeneratorOutput</code> and verified after the LLM call.</p>
+
+        <h3>Valuation Drift Monitor <span class="badge badge-yellow">Next, not yet built</span></h3>
+
+        <p>Sell-side signal generation. Will track changes in forward P/E, PEG, and three-statement quality across current holdings vs original thesis baseline. Flags positions where valuation has materially drifted. Output: markdown report in <code>agent_outputs/drift/</code>. No automatic sell signals &mdash; surfaces "worth re-examining" only.</p>
+
+        <p>Following the same fire-fire-aim pattern as Idea Generator: ship minimum viable version, learn from real output, iterate.</p>
+    </section>
+
+    <hr>
+
+    <section id="tax">
+        <h2>9. Tax Architecture</h2>
+
+        <p>Tax state is split across three locations:</p>
+
+        <ul>
+            <li><strong>Realized_GL tab</strong> &mdash; Append-only log of closed lots from Schwab CSV import. Contains: ticker, closed date, opened date, proceeds, cost basis, gain/loss, term (ST/LT), wash sale flag, disallowed loss.</li>
+            <li><strong>Tax_Control tab</strong> &mdash; Computed view rebuilt by <code>pm refresh tax --live</code>. KPI strip (Net ST, Net LT, wash sale drag, estimated Fed cap gains tax, offset capacity) plus a lots table sorted with wash sale lots pinned to top.</li>
+            <li><strong>Config tab</strong> &mdash; Manual: ST/LT tax rates, rebalance threshold, TLH threshold. Read by the pipeline; never written.</li>
+        </ul>
+
+        <p>To run tax-rebalance analysis with an external LLM:</p>
+        <pre><code>pm export run tax-rebalance</code></pre>
+        <p>This builds a package in <code>exports/</code> containing <code>prompt.md</code> and <code>context.json</code> with TLH candidates, unrealized gains, and wash sale lots. Paste <code>prompt.md</code> into Claude or Gemini and attach <code>context.json</code>.</p>
+    </section>
+
+    <hr>
+
+    <section id="automation">
+        <h2>10. Automation</h2>
+
+        <h3>GitHub Actions &mdash; Podcast pipeline</h3>
+        <p>File: <code>.github/workflows/podcast_sync.yml</code></p>
+        <ul>
+            <li>Schedule: Friday 10:00 PM UTC (5:00 PM EST)</li>
+            <li>Trigger: also <code>workflow_dispatch</code> (manual from GitHub UI)</li>
+            <li>What it does: runs <code>python tasks/batch_podcast_sync.py --live</code>, commits updated <code>data/processed_videos.json</code> dedup log back to repo</li>
+            <li>Secrets required: <code>GEMINI_API_KEY</code>, <code>GCP_SERVICE_ACCOUNT_JSON</code></li>
+        </ul>
+
+        <h3>GCP Cloud Function &mdash; Schwab token refresh</h3>
+        <p>File: <code>cloud_functions/token_refresh/main.py</code></p>
+        <ul>
+            <li>Triggered by: GCP Cloud Scheduler, every 25 minutes during market hours</li>
+            <li>What it does: calls Schwab's <code>get_account_numbers()</code> (read-only) to trigger schwab-py's automatic token refresh; stores fresh token in GCS bucket <code>portfolio-manager-tokens</code></li>
+            <li>Safety: explicitly prohibited from placing orders (docstring enforced by grep)</li>
+            <li>Project: <code>re-property-manager-487122</code> (shared with RE Property Manager)</li>
+        </ul>
+    </section>
+
+    <hr>
+
+    <section id="out-of-scope">
+        <h2>11. What Is Explicitly Out of Scope</h2>
+
+        <table>
+            <thead><tr><th>Item</th><th>Why it was dropped or never built</th></tr></thead>
+            <tbody>
+                <tr><td>Auto-trading of any kind</td><td>Hard rule, permanent. Read-only is an invariant.</td></tr>
+                <tr><td>Streamlit Cloud deployment</td><td>Local CLI execution is the default. April 2026 pivot removed Streamlit-first architecture. <code>app.py</code> no longer exists.</td></tr>
+                <tr><td>MCP integrations (Gemma, Financial Datasets MCP)</td><td>Wrong fit for server-side, low-volume work. Duplicates FMP coverage.</td></tr>
+                <tr><td>Re-buy Analyst</td><td>Dropped May 2026. User had already re-bought broad ETFs; the problem it solved no longer existed.</td></tr>
+                <tr><td>Add-Candidate Analyst</td><td>Dropped May 2026. Idea Generator covers candidate sourcing more broadly.</td></tr>
+                <tr><td>New Idea Screener</td><td>Dropped May 2026. Idea Generator absorbs this function.</td></tr>
+                <tr><td>List Coherence Checker</td><td>Dropped May 2026. User judgment plus Sheets visibility is sufficient.</td></tr>
+                <tr><td>Nine-file agent kit nomenclature</td><td>Replaced with research-and-monitoring framing (Idea Generator, Drift Monitor).</td></tr>
+                <tr><td>Looker Studio dashboard</td><td>Deferred. Only if a specific visibility gap emerges.</td></tr>
+                <tr><td>Options chain scanner</td><td>Deferred to Phase 6+.</td></tr>
+            </tbody>
+        </table>
+    </section>
+
+    <hr>
+
+    <section id="file-reference">
+        <h2>12. File Reference</h2>
+
+        <table>
+            <thead><tr><th>File / Directory</th><th>Role</th></tr></thead>
+            <tbody>
+                <tr><td><code>manager.py</code></td><td>CLI entry point. Typer app. All commands wired here.</td></tr>
+                <tr><td><code>config.py</code></td><td>Central settings: Sheet ID, GCP project, tab names, thresholds, column definitions.</td></tr>
+                <tr><td><code>pipeline.py</code></td><td>Migration compatibility shim. Re-exposes write functions for three callers. Pending decomposition into <code>utils/sheet_writers.py</code>.</td></tr>
+                <tr><td><code>core/bundle.py</code></td><td>Market bundle: <code>build_bundle()</code>, <code>_sha256_canonical()</code>, CSV and Schwab paths.</td></tr>
+                <tr><td><code>core/vault_bundle.py</code></td><td>Vault bundle: per-document SHA-256 hashing, thesis field parsing, transcript loading.</td></tr>
+                <tr><td><code>core/composite_bundle.py</code></td><td>Composite bundle: links market + vault, bakes in recent_rotations from Trade_Log.</td></tr>
+                <tr><td><code>core/thesis_sync_data.py</code></td><td>Gathers data from Sheets for thesis file synchronization.</td></tr>
+                <tr><td><code>utils/gemini_client.py</code></td><td>Centralized LLM interface. <code>ask_gemini()</code>, <code>ask_gemini_composite()</code>. Dual-path auth (API key primary, ADC fallback). SAFETY_PREAMBLE. 429 retry with backoff.</td></tr>
+                <tr><td><code>utils/agents/idea_generator.py</code></td><td>Idea Generator v1. <code>Candidate</code>, <code>IdeaGeneratorOutput</code> schemas. <code>run_idea_generator()</code>, <code>write_idea_report()</code>.</td></tr>
+                <tr><td><code>utils/fmp_client.py</code></td><td>FMP API client for fundamentals. Extend here before adding any new vendor.</td></tr>
+                <tr><td><code>utils/schwab_client.py</code></td><td>Schwab read-only client. Provides positions, quotes, tax lots. No order endpoints.</td></tr>
+                <tr><td><code>utils/thesis_utils.py</code></td><td>ThesisManager for surgical markdown/YAML/region updates. Use for any <code>vault/theses/*.md</code> edits.</td></tr>
+                <tr><td><code>prompts/idea_generator.md</code></td><td>System prompt for Idea Generator agent.</td></tr>
+                <tr><td><code>tasks/</code></td><td>Modular pipeline tasks: build_valuation_card, build_decision_view, build_command_center, enrich_fmp, enrich_technicals, sync_transactions, health, etc.</td></tr>
+                <tr><td><code>vault/theses/</code></td><td>62 thesis files (<code>TICKER_thesis.md</code>). Managed by ThesisManager. Not generated by agents.</td></tr>
+                <tr><td><code>vault/transcripts/</code></td><td>Hand-curated transcripts included in vault bundle. Separate from <code>data/podcast_transcripts/</code>.</td></tr>
+                <tr><td><code>data/podcast_transcripts/</code></td><td>Podcast transcript files written by the ingestion pipeline. Read by Idea Generator.</td></tr>
+                <tr><td><code>bundles/</code></td><td>Serialized JSON bundles. Hash-verified on load. Pruned by <code>pm clean bundles</code>.</td></tr>
+                <tr><td><code>agent_outputs/ideas/</code></td><td>Idea Generator reports. Filename: <code>ideas_{YYYY-MM-DD}_{hash_prefix}.md</code>.</td></tr>
+                <tr><td><code>exports/</code></td><td>Context packages for external LLM use. Built by <code>pm export run</code>.</td></tr>
+                <tr><td><code>cloud_functions/token_refresh/</code></td><td>GCP Cloud Function for Schwab OAuth token refresh.</td></tr>
+                <tr><td><code>.github/workflows/podcast_sync.yml</code></td><td>GitHub Actions for weekly automated podcast ingestion.</td></tr>
+                <tr><td><code>tests/</code></td><td>Smoke tests: bundle hash round-trip, tamper detection, CSV fallback, vault bundle.</td></tr>
+                <tr><td><code>docs/archive/deprecated/agents/</code></td><td>Archived deprecated agent kit. Keep for reference; do not re-import.</td></tr>
+                <tr><td><code>PORTFOLIO_SHEET_SCHEMA.md</code></td><td>Authoritative Sheet structure: tab authority matrix, column definitions, fingerprint formats.</td></tr>
+                <tr><td><code>STATE.md</code></td><td>Current project state. Read at the start of every coding session.</td></tr>
+            </tbody>
+        </table>
+    </section>
+
+    <hr>
+
+    <section id="decisions">
+        <h2>13. Recent Decisions Log</h2>
+
+        <table>
+            <thead><tr><th>Date</th><th>Decision</th></tr></thead>
+            <tbody>
+                <tr>
+                    <td>2026-05-26</td>
+                    <td><strong>Reframed agent kit.</strong> Dropped Re-buy Analyst, Add-Candidate Analyst, New Idea Screener, List Coherence Checker. New direction: Idea Generator (shipped) + Valuation Drift Monitor (next).</td>
+                </tr>
+                <tr>
+                    <td>2026-05-26</td>
+                    <td><strong>Shipped Idea Generator v1.</strong> First real run: 7 candidates from 3 podcast transcripts. Reliable style classification and overlap detection. Hard rule compliance verified.</td>
+                </tr>
+                <tr>
+                    <td>2026-05-26</td>
+                    <td><strong>Bundle infrastructure audited and confirmed.</strong> No hardening pass needed before next agent build.</td>
+                </tr>
+                <tr>
+                    <td>April 2026</td>
+                    <td><strong>Architectural pivot away from Streamlit-first.</strong> CLI + Sheets is the spine. Streamlit removed as primary UI. Local CLI execution is the default going forward.</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <footer style="margin-top:3rem; padding-top:1.5rem; border-top:1px solid #dde1e7; font-size:0.82rem; color:#9ca3af;">
+        Investment Portfolio Manager &mdash; sole user: Bill Long &mdash; private, single-account system
+    </footer>
+
+</div>
 </body>
 </html>
+<!--
+  Last rewritten: 2026-05-26
+  Reflects post-reframe state: idea generator shipped, drift monitor next.
+  Source of truth: actual code (Pass 1 verified), STATE.md, CLAUDE.md, BUNDLE_AND_AGENT_AUDIT.md, REPO_AUDIT_2026-05-26.md.
+-->
