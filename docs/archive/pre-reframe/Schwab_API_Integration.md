@@ -1,19 +1,26 @@
-# Phase 5-S: Schwab API Integration — Build Prompts
+﻿<!--
+ARCHIVED 2026-05-27
+Build prompts for Phase 5-S Schwab API integration. Work shipped May 2026.
+References deprecated Streamlit secrets.toml path. No longer actionable.
+See STATE.md and utils/schwab_client.py for current Schwab integration state.
+-->
+
+# Phase 5-S: Schwab API Integration â€” Build Prompts
 
 > **Purpose:** Replace manual CSV uploads with automated Schwab API pulls (positions, balances, transactions, quotes). CSV upload remains as a fallback path.
 >
-> **Architecture:** Two Schwab apps (Accounts and Trading + Market Data), each with its own OAuth token stored in GCS. A Cloud Function runs every 25 minutes 24/7 to keep both refresh tokens alive. The Streamlit app reads tokens from GCS and uses two scoped clients — Market Data client physically cannot reach account endpoints.
+> **Architecture:** Two Schwab apps (Accounts and Trading + Market Data), each with its own OAuth token stored in GCS. A Cloud Function runs every 25 minutes 24/7 to keep both refresh tokens alive. The Streamlit app reads tokens from GCS and uses two scoped clients â€” Market Data client physically cannot reach account endpoints.
 >
 > **Safety rails (non-negotiable, enforced in every prompt):**
-> 1. NO order/trading endpoints imported anywhere — grep-able at code review
+> 1. NO order/trading endpoints imported anywhere â€” grep-able at code review
 > 2. `DRY_RUN` still gates all Sheet writes
 > 3. API output flows through the same `normalize_positions()` as CSV input
 > 4. Token files never logged, never printed, never committed
 >
 > **Pre-flight (already done):**
-> - ✅ Both Schwab apps approved, keys in `secrets.toml`
-> - ✅ GCS bucket `gs://portfolio-manager-tokens` created in `re-property-manager-487122` / `us-central1`
-> - ✅ Service account `propertymanager@re-property-manager-487122.iam.gserviceaccount.com` granted `objectAdmin` on the bucket
+> - âœ… Both Schwab apps approved, keys in `secrets.toml`
+> - âœ… GCS bucket `gs://portfolio-manager-tokens` created in `re-property-manager-487122` / `us-central1`
+> - âœ… Service account `propertymanager@re-property-manager-487122.iam.gserviceaccount.com` granted `objectAdmin` on the bucket
 
 ---
 
@@ -22,11 +29,11 @@
 ### `.streamlit/secrets.toml` additions
 
 ```toml
-# Schwab — Accounts and Trading app (positions, balances, transactions)
+# Schwab â€” Accounts and Trading app (positions, balances, transactions)
 schwab_accounts_app_key    = "..."
 schwab_accounts_app_secret = "..."
 
-# Schwab — Market Data app (quotes, price history, fundamentals)
+# Schwab â€” Market Data app (quotes, price history, fundamentals)
 schwab_market_app_key    = "..."
 schwab_market_app_secret = "..."
 
@@ -51,16 +58,16 @@ SCHWAB_TOKEN_BUCKET   = _secret("schwab_token_bucket", "portfolio-manager-tokens
 SCHWAB_ACCOUNT_HASH   = _secret("schwab_account_hash", "")
 SCHWAB_CALLBACK_URL   = _secret("schwab_callback_url", "https://127.0.0.1")
 
-# Token blob names in GCS (one per app — Market Data client cannot read accounts blob)
+# Token blob names in GCS (one per app â€” Market Data client cannot read accounts blob)
 SCHWAB_TOKEN_BLOB_ACCOUNTS = "token_accounts.json"
 SCHWAB_TOKEN_BLOB_MARKET   = "token_market.json"
 SCHWAB_ALERT_BLOB          = "schwab_alert.json"
 
-# GCP context (already used elsewhere — duplicated here for the Cloud Function)
+# GCP context (already used elsewhere â€” duplicated here for the Cloud Function)
 GCP_PROJECT_ID = "re-property-manager-487122"
 GCP_REGION     = "us-central1"
 
-# Client cache TTL (Cloud Function does the actual refresh — this just caches the client object in Streamlit)
+# Client cache TTL (Cloud Function does the actual refresh â€” this just caches the client object in Streamlit)
 SCHWAB_CLIENT_CACHE_TTL = 1500   # 25 min
 ```
 
@@ -85,7 +92,7 @@ token_market.json
 
 ## P5-S-A: Token Store + Initial Auth Script
 
-**🤖 Claude Code Prompt:**
+**ðŸ¤– Claude Code Prompt:**
 
 ```
 Read CLAUDE.md and config.py first to understand the project conventions.
@@ -107,10 +114,10 @@ Functions:
     - Returns parsed JSON dict, or None if blob does not exist
     - Uses google-cloud-storage with credentials from
       st.secrets["gcp_service_account"] (same pattern as the existing
-      Google Sheets client — see how gspread is initialized in pipeline.py
+      Google Sheets client â€” see how gspread is initialized in pipeline.py
       and copy that auth pattern)
     - On any GCS error: log warning, return None (never raise)
-    - NEVER log the token contents — only log the blob name and success/fail
+    - NEVER log the token contents â€” only log the blob name and success/fail
 
   save_token(token_data: dict, blob_name: str) -> bool
     - Uploads token_data as JSON to gs://{SCHWAB_TOKEN_BUCKET}/{blob_name}
@@ -146,7 +153,7 @@ Functions:
     - Deletes {SCHWAB_ALERT_BLOB} from GCS
     - Called when a successful token refresh happens after a failure
 
-Module-level constants come from config.py — do not hardcode bucket names.
+Module-level constants come from config.py â€” do not hardcode bucket names.
 
 ============================================================
 2. utils/schwab_client.py
@@ -156,7 +163,7 @@ READ-ONLY Schwab API client. Two scoped factory functions, one for the
 Accounts app and one for the Market Data app. Each loads its own token
 from GCS via schwab_token_store.
 
-SAFETY PREAMBLE — paste at the top of the module as a docstring AND as
+SAFETY PREAMBLE â€” paste at the top of the module as a docstring AND as
 a comment block above the imports:
 
   '''
@@ -170,7 +177,7 @@ a comment block above the imports:
     - get_orders_for_account
     - get_orders_for_all_linked_accounts
 
-  Code review checkpoint: grep this file for "order" — only matches
+  Code review checkpoint: grep this file for "order" â€” only matches
   allowed are this docstring and comments. Any other match is a bug.
   '''
 
@@ -178,7 +185,7 @@ Functions:
 
   get_accounts_client() -> schwab.client.Client | None
     - Loads token from SCHWAB_TOKEN_BLOB_ACCOUNTS via load_token()
-    - If token missing → write_alert("Accounts token missing — run initial auth", "critical")
+    - If token missing â†’ write_alert("Accounts token missing â€” run initial auth", "critical")
       and return None
     - Builds a schwab-py client using SCHWAB_ACCOUNTS_APP_KEY,
       SCHWAB_ACCOUNTS_APP_SECRET, SCHWAB_CALLBACK_URL
@@ -201,7 +208,7 @@ Functions:
     - Parses the JSON response into a DataFrame matching POSITION_COLUMNS
       from config.py exactly (use POSITION_COL_MAP for the rename)
     - Skips cash sweep tickers in CASH_TICKERS (these come from manual entry)
-    - NUCLEAR TYPE ENFORCEMENT — required, not optional:
+    - NUCLEAR TYPE ENFORCEMENT â€” required, not optional:
       Immediately after parsing the JSON response and BEFORE passing to
       normalize_positions, coerce every numeric column with:
         df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0.0)
@@ -209,7 +216,7 @@ Functions:
       Unrealized G/L, Unrealized G/L %, Est Annual Income, Dividend Yield,
       Daily Change %, Weight.
       Rationale: schwab-py occasionally returns numeric fields as strings
-      depending on the endpoint, and Google Sheets is downstream — typing
+      depending on the endpoint, and Google Sheets is downstream â€” typing
       must be enforced at the source, not the sink. This matches the
       project's existing pattern for CSV ingestion in pipeline.py.
     - Adds 'Import Date' = today's date (UTC)
@@ -253,12 +260,12 @@ Usage:
   python scripts/schwab_initial_auth.py
 
 Flow:
-  1. Print clear banner: "Schwab Initial Auth — One-Time Setup"
+  1. Print clear banner: "Schwab Initial Auth â€” One-Time Setup"
   2. Verify required secrets are present (both app keys, both secrets,
      bucket name, callback URL). If any missing, print which one and exit.
   3. Run schwab-py browser auth for the ACCOUNTS app:
      - Use schwab.auth.client_from_login_flow() pointed at a temp file
-     - Browser opens to Schwab login → Bill logs in + 2FA → authorizes
+     - Browser opens to Schwab login â†’ Bill logs in + 2FA â†’ authorizes
      - Read the temp token file, upload to GCS as SCHWAB_TOKEN_BLOB_ACCOUNTS
      - Delete the temp file
   4. Call client.get_account_numbers() to retrieve account hashes
@@ -270,15 +277,15 @@ Flow:
      separate temp file, separate GCS blob)
   7. Verify both tokens are readable from GCS
   8. Print success summary:
-     "✅ Both tokens stored in GCS.
+     "âœ… Both tokens stored in GCS.
       Next: deploy the Cloud Function keep-alive (see P5-S-B).
       You should not need to run this script again unless a token dies."
 
 Error handling:
-  - Missing secrets → print which one and exit cleanly
-  - Browser auth timeout → print recovery instructions
-  - GCS upload failure → print the GCS error and exit
-  - get_account_numbers failure → print error but don't fail (the token
+  - Missing secrets â†’ print which one and exit cleanly
+  - Browser auth timeout â†’ print recovery instructions
+  - GCS upload failure â†’ print the GCS error and exit
+  - get_account_numbers failure â†’ print error but don't fail (the token
     is already saved; user can re-fetch the hash later)
 
 NEVER log token contents. Only log "uploaded {blob_name} to GCS".
@@ -299,7 +306,7 @@ password changed, etc.). Same flow as initial_auth.py but:
 
 ## P5-S-B: Cloud Function Token Keep-Alive
 
-**🤖 Claude Code Prompt:**
+**ðŸ¤– Claude Code Prompt:**
 
 ```
 Build the Cloud Function that keeps both Schwab refresh tokens alive.
@@ -317,17 +324,17 @@ Files to create:
 1. cloud_functions/token_refresh/main.py
 ============================================================
 
-SAFETY PREAMBLE — paste at the top of main.py:
+SAFETY PREAMBLE â€” paste at the top of main.py:
 
   '''
   SAFETY: This Cloud Function ONLY refreshes OAuth tokens.
   It does NOT and MUST NOT place orders or modify account state.
 
-  The only Schwab API call made is get_account_numbers() — a read-only
+  The only Schwab API call made is get_account_numbers() â€” a read-only
   call used to trigger schwab-py's automatic token refresh mechanism.
 
   PROHIBITED imports: any module containing "order", "trade", "place"
-  Code review checkpoint: grep main.py for those terms — only this
+  Code review checkpoint: grep main.py for those terms â€” only this
   docstring should match.
   '''
 
@@ -377,17 +384,17 @@ Entry point:
 
       Error handling:
         - Token blob not found in GCS:
-          → _write_alert(f"{app_label} token missing — run initial auth", "critical")
-          → return {"status": "error", "app": app_label, "reason": "missing"}
+          â†’ _write_alert(f"{app_label} token missing â€” run initial auth", "critical")
+          â†’ return {"status": "error", "app": app_label, "reason": "missing"}
         - Schwab returns invalid_client (refresh token expired):
-          → _write_alert(f"{app_label} refresh token expired — run manual reauth", "critical")
-          → return {"status": "error", "app": app_label, "reason": "expired"}
+          â†’ _write_alert(f"{app_label} refresh token expired â€” run manual reauth", "critical")
+          â†’ return {"status": "error", "app": app_label, "reason": "expired"}
         - Network timeout / 5xx from Schwab:
-          → log warning, return {"status": "error", "app": app_label, "reason": "transient"}
-          → (Scheduler will retry on next 25-min cycle)
+          â†’ log warning, return {"status": "error", "app": app_label, "reason": "transient"}
+          â†’ (Scheduler will retry on next 25-min cycle)
         - Any other exception:
-          → _write_alert(f"{app_label} refresh failed: {e}", "warning")
-          → return {"status": "error", "app": app_label, "reason": str(e)}
+          â†’ _write_alert(f"{app_label} refresh failed: {e}", "warning")
+          â†’ return {"status": "error", "app": app_label, "reason": str(e)}
 
 ============================================================
 Helper functions in main.py
@@ -466,7 +473,7 @@ Helper functions in main.py
     --set-env-vars "TOKEN_BUCKET=portfolio-manager-tokens"
 
   echo ""
-  echo "⚠️  Set the Schwab credentials and alert email as env vars (not committed):"
+  echo "âš ï¸  Set the Schwab credentials and alert email as env vars (not committed):"
   echo ""
   echo "  gcloud functions deploy $FUNCTION_NAME \\"
   echo "    --gen2 --region $REGION --project $PROJECT \\"
@@ -485,7 +492,7 @@ Helper functions in main.py
   echo "    --project $PROJECT \\"
   echo "    --location $REGION"
 
-DO NOT bake the Schwab keys into deploy.sh — they go in via the
+DO NOT bake the Schwab keys into deploy.sh â€” they go in via the
 --update-env-vars step printed at the end so they never hit git.
 
 ============================================================
@@ -498,7 +505,7 @@ Credentials (ADC) because deploy.sh attaches the service account with
 
 This means:
   - google-cloud-storage automatically authenticates as that service
-    account when the function runs in GCP — no key file needed
+    account when the function runs in GCP â€” no key file needed
   - google-api-python-client (for Gmail) does the same
   - DO NOT load a JSON service account key file from disk
   - DO NOT pass credentials= to any client constructor unless ADC fails
@@ -506,7 +513,7 @@ This means:
     Cloud Function source
 
 If you find yourself writing `service_account.Credentials.from_service_account_file(...)`
-or `from_service_account_info(...)` inside the Cloud Function, stop —
+or `from_service_account_info(...)` inside the Cloud Function, stop â€”
 that's the wrong pattern for in-GCP execution. Use the no-argument
 client constructor: `storage.Client()` and let ADC handle it.
 ```
@@ -515,24 +522,24 @@ client constructor: `storage.Client()` and let ADC handle it.
 
 ## P5-S-C: Wire Schwab API into `app.py` as Primary Source
 
-**🤖 Claude Code Prompt:**
+**ðŸ¤– Claude Code Prompt:**
 
 ```
 Read app.py to understand how the CSV upload sidebar currently works.
 Read utils/schwab_client.py (built in P5-S-A).
 
 ============================================================
-CRITICAL ARCHITECTURE CONSTRAINT — read this before writing any code
+CRITICAL ARCHITECTURE CONSTRAINT â€” read this before writing any code
 ============================================================
 
 The dashboard UI is encapsulated inside a `main_dashboard()` function
-(or a dedicated sidebar rendering function — find it before you start).
+(or a dedicated sidebar rendering function â€” find it before you start).
 This is intentional: it prevents global scope leakage where UI elements
 bleed across sub-pages registered via st.navigation.
 
-ALL new code from this prompt — sidebar widgets, the data source radio,
+ALL new code from this prompt â€” sidebar widgets, the data source radio,
 the Schwab fetch logic, the manual refresh button, the quote enrichment
-block — MUST live INSIDE main_dashboard() (or whichever function owns
+block â€” MUST live INSIDE main_dashboard() (or whichever function owns
 the dashboard page).
 
 DO NOT add any st.sidebar.*, st.spinner, st.error, st.button, st.radio,
@@ -546,11 +553,11 @@ The only module-level additions allowed are imports
 ============================================================
 
 Modify app.py to add Schwab API as the primary data source, with CSV
-upload as a fallback. Do NOT remove or break the CSV path — it stays
+upload as a fallback. Do NOT remove or break the CSV path â€” it stays
 as the explicit fallback for the case where the API is unavailable.
 
 ============================================================
-Sidebar — new Data Source section (place ABOVE the existing CSV uploader)
+Sidebar â€” new Data Source section (place ABOVE the existing CSV uploader)
 ============================================================
 
 Add a new sidebar section: "Data Source"
@@ -559,18 +566,18 @@ Add a new sidebar section: "Data Source"
   alert = schwab_token_store.read_alert()
 
   if alert:
-      st.sidebar.error(f"⚠️ Schwab API: {alert['message']}")
+      st.sidebar.error(f"âš ï¸ Schwab API: {alert['message']}")
       st.sidebar.caption("Falling back to CSV upload below.")
 
   if api_status["accounts"]:
-      st.sidebar.success("✅ Schwab API connected (Accounts)")
+      st.sidebar.success("âœ… Schwab API connected (Accounts)")
   else:
-      st.sidebar.warning("⚪ Schwab API offline (Accounts)")
+      st.sidebar.warning("âšª Schwab API offline (Accounts)")
 
   if api_status["market"]:
-      st.sidebar.success("✅ Schwab API connected (Market Data)")
+      st.sidebar.success("âœ… Schwab API connected (Market Data)")
   else:
-      st.sidebar.warning("⚪ Schwab API offline (Market Data)")
+      st.sidebar.warning("âšª Schwab API offline (Market Data)")
 
   source_options = []
   if api_status["accounts"]:
@@ -585,7 +592,7 @@ Add a new sidebar section: "Data Source"
   )
 
 ============================================================
-Main flow — branching on data source
+Main flow â€” branching on data source
 ============================================================
 
   if data_source == "Schwab API (live)":
@@ -601,9 +608,9 @@ Main flow — branching on data source
               st.stop()
 
           positions_df = pipeline.normalize_positions(raw_positions, source="schwab_api")
-          st.success(f"✅ Fetched {len(positions_df)} positions from Schwab API")
+          st.success(f"âœ… Fetched {len(positions_df)} positions from Schwab API")
 
-  else:  # CSV Upload (existing path — leave unchanged)
+  else:  # CSV Upload (existing path â€” leave unchanged)
       uploaded_file = st.sidebar.file_uploader("Upload Schwab Positions CSV", type=["csv"])
       if uploaded_file is None:
           st.info("Upload a Schwab positions CSV to begin.")
@@ -612,12 +619,12 @@ Main flow — branching on data source
       positions_df = pipeline.normalize_positions(raw_positions, source="csv")
 
 ============================================================
-pipeline.normalize_positions — add the source parameter
+pipeline.normalize_positions â€” add the source parameter
 ============================================================
 
 Modify pipeline.normalize_positions() to accept a `source` keyword
 ("schwab_api" or "csv") and pass it through to any logging or audit
-trail. The actual normalization logic should be source-agnostic — both
+trail. The actual normalization logic should be source-agnostic â€” both
 inputs must produce the same output schema (POSITION_COLUMNS from
 config.py).
 
@@ -627,7 +634,7 @@ source. The downstream code (Sheet writer, dashboards, risk metrics)
 must not need to know which source the data came from.
 
 ============================================================
-REFACTOR DISCIPLINE — read before touching pipeline.py
+REFACTOR DISCIPLINE â€” read before touching pipeline.py
 ============================================================
 
 pipeline.py contains tightly coupled functions including (but not
@@ -645,7 +652,7 @@ Hard requirements:
 
   2. When you modify normalize_positions, you MUST return the FULL,
      COMPLETE replacement for that function. Do not use partial diffs.
-     Do not omit any existing logic — including but not limited to:
+     Do not omit any existing logic â€” including but not limited to:
        - weight calculations (Weight column = market_value / total)
        - Unrealized G/L math (both $ and %)
        - Unit Cost derivation
@@ -673,7 +680,7 @@ Manual refresh button
 
 Add a button below the data source radio:
 
-  if st.sidebar.button("🔄 Refresh from Schwab API"):
+  if st.sidebar.button("ðŸ”„ Refresh from Schwab API"):
       st.cache_resource.clear()  # bust the schwab client cache
       st.cache_data.clear()      # bust any data caches
       st.rerun()
@@ -694,7 +701,7 @@ enrich live prices using fetch_quotes() instead of yfinance:
           # Leave yfinance enrichment in place as a fallback for any
           # tickers that fail to return a quote
 
-DRY_RUN must still gate all Sheet writes — do not bypass it on the
+DRY_RUN must still gate all Sheet writes â€” do not bypass it on the
 API path. The flag's existing behavior is unchanged.
 ```
 
@@ -702,13 +709,13 @@ API path. The flag's existing behavior is unchanged.
 
 ## P5-S-D: Update Docs, Config, and Changelog
 
-**🤖 Claude Code Prompt:**
+**ðŸ¤– Claude Code Prompt:**
 
 ```
 Update the following files to document the Schwab API integration.
 
 ============================================================
-1. CLAUDE.md — add a new section under "Critical Infrastructure"
+1. CLAUDE.md â€” add a new section under "Critical Infrastructure"
 ============================================================
 
   ### Schwab API Integration (Phase 5-S)
@@ -719,8 +726,8 @@ Update the following files to document the Schwab API integration.
   - Token refresh handled by Cloud Function `schwab-token-refresh`
     on a 24/7 every-25-minute Cloud Scheduler trigger
   - Streamlit app uses two scoped clients:
-      - utils/schwab_client.get_accounts_client()  → positions, balances, transactions
-      - utils/schwab_client.get_market_client()    → quotes, price history
+      - utils/schwab_client.get_accounts_client()  â†’ positions, balances, transactions
+      - utils/schwab_client.get_market_client()    â†’ quotes, price history
   - CSV upload remains as the explicit fallback path
   - PROHIBITED endpoints (never imported anywhere):
       place_order, replace_order, cancel_order,
@@ -729,7 +736,7 @@ Update the following files to document the Schwab API integration.
       - Token expired (offline > 7 days): python scripts/schwab_manual_reauth.py
       - Token missing (first setup or wiped): python scripts/schwab_initial_auth.py
   - Alert channels:
-      - alert.json in GCS → banner in Streamlit app sidebar
+      - alert.json in GCS â†’ banner in Streamlit app sidebar
       - Gmail (after 2+ consecutive Cloud Function failures, ~50 min)
 
   Repo additions:
@@ -742,39 +749,39 @@ Update the following files to document the Schwab API integration.
     cloud_functions/token_refresh/deploy.sh
 
 ============================================================
-2. CHANGELOG.md — add a new entry at the top
+2. CHANGELOG.md â€” add a new entry at the top
 ============================================================
 
-  ## [TODAY'S DATE] — Phase 5-S: Schwab API Integration
+  ## [TODAY'S DATE] â€” Phase 5-S: Schwab API Integration
 
   ### feat: Automated position, transaction, and quote pulls via Schwab API
 
   **What changed:**
-  - utils/schwab_client.py — read-only Schwab API client (positions,
+  - utils/schwab_client.py â€” read-only Schwab API client (positions,
     balances, transactions, quotes); two scoped factory functions for
     the Accounts and Market Data apps
-  - utils/schwab_token_store.py — GCS-backed OAuth token persistence
+  - utils/schwab_token_store.py â€” GCS-backed OAuth token persistence
     plus alert read/write/clear helpers
-  - cloud_functions/token_refresh/ — Cloud Function keep-alive that
+  - cloud_functions/token_refresh/ â€” Cloud Function keep-alive that
     refreshes both tokens every 25 min, 24/7; Gmail escalation after
     2+ consecutive failures
-  - scripts/schwab_initial_auth.py — one-time browser OAuth setup for
+  - scripts/schwab_initial_auth.py â€” one-time browser OAuth setup for
     both apps; uploads tokens to GCS and prints account hashes
-  - scripts/schwab_manual_reauth.py — emergency token recovery
-  - app.py sidebar — Schwab API as the primary data source with CSV
+  - scripts/schwab_manual_reauth.py â€” emergency token recovery
+  - app.py sidebar â€” Schwab API as the primary data source with CSV
     upload as the explicit fallback; manual refresh button included
 
   **Architecture:**
   - Two Schwab apps, two GCS-stored tokens, one keep-alive Cloud Function
   - Market Data client physically cannot reach account endpoints (separate
     app key, separate token, separate client object)
-  - DRY_RUN safety gate unchanged — still gates all Sheet writes
+  - DRY_RUN safety gate unchanged â€” still gates all Sheet writes
   - Graceful degradation to CSV on any Schwab API failure
 
   **Status:** [FILL IN AFTER TESTING]
 
 ============================================================
-3. PORTFOLIO_SHEET_SCHEMA.md — add a "Source" annotation
+3. PORTFOLIO_SHEET_SCHEMA.md â€” add a "Source" annotation
 ============================================================
 
 Add a one-liner to the Holdings_Current section noting that the
@@ -782,33 +789,33 @@ Add a one-liner to the Holdings_Current section noting that the
 is identical regardless of source.
 
 ============================================================
-4. lessonsLearned.md — append
+4. lessonsLearned.md â€” append
 ============================================================
 
   ## Phase 5-S Lessons
 
-  - **Two Schwab apps, two tokens, one auth flow per app** — each Schwab
+  - **Two Schwab apps, two tokens, one auth flow per app** â€” each Schwab
     app gets its own App Key/Secret and its own OAuth token. They share
     the same browser login but generate independent refresh tokens.
     Storing them in separate GCS blobs gives the Market Data client a
     physical inability to reach account endpoints.
 
-  - **Refresh token 7-day expiry is the real constraint** — the access
+  - **Refresh token 7-day expiry is the real constraint** â€” the access
     token lasts 30 minutes (auto-refreshed by schwab-py), but the
     refresh token dies in 7 days unless something keeps it warm. The
     Cloud Function exists solely to make sure that "something" is
     automated and reliable.
 
-  - **Cloud Function on 24/7 schedule, not market hours** — saves nothing
+  - **Cloud Function on 24/7 schedule, not market hours** â€” saves nothing
     in dollars (free tier) and removes a class of weekend edge cases
     against the 7-day window.
 
-  - **Two-failure threshold for Gmail alerts** — single transient
+  - **Two-failure threshold for Gmail alerts** â€” single transient
     failures get caught by the next 25-minute cycle without notification.
     Two consecutive failures (~50 min of trouble) means it's a real
     problem worth pinging about.
 
-  - **Never log token contents** — only log blob names and success/fail.
+  - **Never log token contents** â€” only log blob names and success/fail.
     Token files are gitignored AND never written to stdout/stderr.
 ```
 
@@ -876,7 +883,7 @@ adherence to the project's architecture rules:
 
 Check for:
 
-  CRITICAL — fail the review if any of these are violated:
+  CRITICAL â€” fail the review if any of these are violated:
   - Any import or call to order/trading endpoints
     (place_order, replace_order, cancel_order, get_orders_*)
   - Any token contents printed, logged, or written to a non-token file
@@ -932,7 +939,7 @@ Total elapsed: ~70 minutes if nothing goes sideways.
 |---|---|---|
 | Banner: "accounts token missing" | First-time setup, or token wiped | `python scripts/schwab_initial_auth.py` |
 | Banner: "refresh token expired" | Cloud Function offline > 7 days | `python scripts/schwab_manual_reauth.py` |
-| Banner: "refresh failed: ..." (transient) | Schwab API hiccup | Wait 25 min — next scheduler run will retry |
+| Banner: "refresh failed: ..." (transient) | Schwab API hiccup | Wait 25 min â€” next scheduler run will retry |
 | Gmail alert: "failing 2x" | Two consecutive failures | Check Cloud Function logs in GCP console |
 | Account hash returns empty positions | Wrong hash in secrets (e.g., reserve account ...8895) | Re-run initial_auth, pick the primary investment account hash |
 | `is_api_available()` always False | Service account missing GCS read on bucket | `gsutil iam ch serviceAccount:propertymanager@re-property-manager-487122.iam.gserviceaccount.com:objectAdmin gs://portfolio-manager-tokens` |
@@ -948,7 +955,7 @@ A: Nothing breaks. The client factories re-read the token from GCS on first call
 A: No. It only calls `get_account_numbers()` to trigger schwab-py's auto-refresh. No trading modules are imported. The safety preamble at the top of `main.py` is enforced by the smoke test grep check.
 
 **Q: Why two apps instead of one?**
-A: Schwab issues separate App Keys for Accounts/Trading and Market Data. Storing them as separate clients with separate tokens means the Market Data client physically cannot reach account endpoints — a defense-in-depth layer on top of the "no order imports" rule.
+A: Schwab issues separate App Keys for Accounts/Trading and Market Data. Storing them as separate clients with separate tokens means the Market Data client physically cannot reach account endpoints â€” a defense-in-depth layer on top of the "no order imports" rule.
 
 **Q: How much does this cost?**
 A: $0/month. Cloud Function free tier covers ~2 million invocations; you'll use ~57,000/month. Cloud Storage cost on a < 1 KB token file is rounding error. Cloud Scheduler gives 3 free jobs.
@@ -957,4 +964,5 @@ A: $0/month. Cloud Function free tier covers ~2 million invocations; you'll use 
 A: It's a separate Schwab account hash under the same login, so the same Accounts token works. Add a second `SCHWAB_RESERVE_ACCOUNT_HASH` to config and a parallel `fetch_positions(client, account_hash=...)` call. But the RE Property Manager already tracks that account, so probably not worth it.
 
 **Q: Can I run the initial auth script from Cloud Shell instead of locally?**
-A: No — it opens a browser for the OAuth callback. Has to run on a machine where you can complete the Schwab login + 2FA in a browser that can hit `https://127.0.0.1`.
+A: No â€” it opens a browser for the OAuth callback. Has to run on a machine where you can complete the Schwab login + 2FA in a browser that can hit `https://127.0.0.1`.
+

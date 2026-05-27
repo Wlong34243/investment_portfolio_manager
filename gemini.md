@@ -27,9 +27,11 @@ Python (Typer CLI), Google Sheets (gspread), Gemini 2.5 Pro/Flash (google-genai)
 📂 Key Files
 - `manager.py`: The Typer CLI spine and main entry point.
 - `core/composite_bundle.py`: Combines market and vault bundles into a single agent-ready artifact.
-- `pipeline.py`: Legacy orchestrator (shim only).
+- `pipeline.py`: Legacy orchestrator (shim only — 7 active imports, do not delete without migration).
 - `config.py`: Single source of truth for column maps and constants.
 - `utils/column_guard.py`: Prevents KeyError crashes via self-healing Title Case.
+- `utils/agents/idea_generator.py`: Idea Generator agent — scans podcast transcripts against composite bundle, outputs investment candidates via `pm agent ideas`.
+- `prompts/idea_generator.md`: System prompt for the Idea Generator. SAFETY_PREAMBLE is auto-prepended by `ask_gemini()` — do NOT duplicate safety language here.
 - `STATE.md` and `CLAUDE.md`: Read these files first to understand current build states and conventions.
 
 🗝️ Authoritative Fingerprints

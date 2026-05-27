@@ -1,8 +1,15 @@
+﻿<!--
+ARCHIVED 2026-05-27
+Codebase inventory snapshot from pre-reframe period. Agents section lists 7 agents that were planned but never built.
+Would actively mislead: use grep/glob on live codebase instead.
+See STATE.md for current file map.
+-->
+
 # Investment Portfolio Manager: Codebase Inventory
 
 This document provides a technical map of the Python scripts within the repository, detailing their purpose, data sources, and impact on Google Sheets.
 
-## 核心 Orcherstration & Pipeline
+## æ ¸å¿ƒ Orcherstration & Pipeline
 | Script | Purpose | Data Source | Writes To | Key Command |
 | :--- | :--- | :--- | :--- | :--- |
 | `manager.py` | Primary CLI Entry Point. Orchestrates snapshots, agent runs, and maintenance. | Varies by command | Agent_Outputs, Bundles | `python manager.py` |
@@ -11,7 +18,7 @@ This document provides a technical map of the Python scripts within the reposito
 
 ---
 
-## 🚀 Execution Tasks (`tasks/`)
+## ðŸš€ Execution Tasks (`tasks/`)
 Scripts that perform specific, scheduled, or triggered operations.
 
 | Script | Purpose | Data Source | Writes To | Key Command |
@@ -25,7 +32,7 @@ Scripts that perform specific, scheduled, or triggered operations.
 
 ---
 
-## 🤖 Intelligence Agents (`agents/`)
+## ðŸ¤– Intelligence Agents (`agents/`)
 Gemini-powered analysis scripts. All agents write to the `Agent_Outputs` tab.
 
 | Script | Purpose | Pre-Computation (Python) | LLM Rationale |
@@ -40,8 +47,8 @@ Gemini-powered analysis scripts. All agents write to the `Agent_Outputs` tab.
 
 ---
 
-## 🛠️ Utilities (`utils/`)
-The engine room — shared logic used across the codebase.
+## ðŸ› ï¸ Utilities (`utils/`)
+The engine room â€” shared logic used across the codebase.
 
 | Script | Purpose |
 | :--- | :--- |
@@ -54,7 +61,7 @@ The engine room — shared logic used across the codebase.
 
 ---
 
-## 🔧 Maintenance Scripts (`scripts/`)
+## ðŸ”§ Maintenance Scripts (`scripts/`)
 Utility scripts for one-off fixes or debugging.
 
 | Script | Purpose |
@@ -63,3 +70,4 @@ Utility scripts for one-off fixes or debugging.
 | `schwab_initial_auth.py` | Run once to establish the OAuth token link via browser. |
 | `repair_sheet_data.py` | Fixes corrupted sheet data (e.g., converting "Unnamed_0" back to "Ticker"). |
 | `audit_cost_basis.py` | Compares Schwab cost basis vs manual staging to find discrepancies. |
+
