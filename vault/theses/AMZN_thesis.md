@@ -1,5 +1,5 @@
 ---
-ticker: COF
+ticker: AMZN
 style: GARP
 framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
 entry_date: 2026-04-20
