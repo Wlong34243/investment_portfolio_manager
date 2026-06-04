@@ -14,7 +14,7 @@ import pipeline
 
 def update_portfolio(tx_days: int = 90, dry_run: bool = True):
     """
-    Pull current positions and recent transactions from Schwab API → write to Sheets.
+    Pull current positions and recent transactions from Schwab API -> write to Sheets.
 
     Args:
         tx_days: How many calendar days of transaction history to fetch.
@@ -26,8 +26,8 @@ def update_portfolio(tx_days: int = 90, dry_run: bool = True):
     # 1. Initialize Client
     client = schwab_client.get_accounts_client()
     if not client:
-        print("❌ Could not initialize Schwab Accounts client. Check your tokens in GCS.")
-        print("   → Run: python scripts/schwab_manual_reauth.py")
+        print("[ERROR] Could not initialize Schwab Accounts client. Check your tokens in GCS.")
+        print("   -> Run: python scripts/schwab_manual_reauth.py")
         return False
 
     # 2. Fetch & Update Positions
@@ -35,9 +35,9 @@ def update_portfolio(tx_days: int = 90, dry_run: bool = True):
     print("Fetching positions from Schwab API...")
     raw_positions = schwab_client.fetch_positions(client)
     if raw_positions.empty:
-        print("❌ Schwab API returned no positions.")
+        print("[ERROR] Schwab API returned no positions.")
     else:
-        print(f"✅ Fetched {len(raw_positions)} positions.")
+        print(f"[OK] Fetched {len(raw_positions)} positions.")
 
         print("Enriching positions (metadata & smart mapping)...")
         raw_positions = enrich_positions(raw_positions)
@@ -69,11 +69,11 @@ def update_portfolio(tx_days: int = 90, dry_run: bool = True):
     tx_df = schwab_client.fetch_transactions(client, start_date=start_date)
 
     if tx_df.empty:
-        print(f"ℹ️ No transactions returned from API for the last {tx_days} days.")
-        print("   → Check token status: python scripts/schwab_test_fetch_write.py")
-        print("   → If token expired: python scripts/schwab_manual_reauth.py")
+        print(f"[INFO] No transactions returned from API for the last {tx_days} days.")
+        print("   -> Check token status: python scripts/schwab_test_fetch_write.py")
+        print("   -> If token expired: python scripts/schwab_manual_reauth.py")
     else:
-        print(f"✅ Fetched {len(tx_df)} transactions.")
+        print(f"[OK] Fetched {len(tx_df)} transactions.")
         print("Deduplicating and appending to Transactions tab...")
         t_results = pipeline.ingest_schwab_transactions(tx_df, dry_run=dry_run)
 
