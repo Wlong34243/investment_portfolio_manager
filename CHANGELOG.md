@@ -2,6 +2,29 @@
 
 ## [Unreleased]
 
+## [2026-06-04] — Morning cascade extension + reliability fixes
+
+### Added
+- **`pm morning` cascade steps 7–9**: after dashboard refresh, the pipeline now runs Vault Sync (Sheets → thesis files), Vault Snapshot (freeze local vault bundle), and Composite Bundle (link market + vault). All three are non-fatal and wrapped in try/except like the podcast step. Full step ordering: health → transactions → live update → snapshot → podcast sync → dashboard → **vault sync → vault snapshot → composite bundle**.
+- **`pm morning --skip-vault-sync`**: bypass vault sync + vault snapshot + composite bundle in a single flag.
+- **`pm morning --skip-composite`**: bypass vault snapshot and composite bundle only.
+- **`pm login`**: new CLI command that runs the Schwab OAuth manual reauth script directly (`scripts/schwab_manual_reauth.py`).
+- **`pm backup`**: new CLI command that archives the project and uploads to Google Drive (`scripts/backup_to_drive.py`). Accepts `--name` and `--folder-id`.
+- **Schwab reauth prompt on critical health failure**: when `pm morning` hits a CRITICAL health failure, it now offers an interactive prompt to run the reauth script immediately rather than requiring a separate terminal.
+- **`.bat` shortcuts**: `run_morning_sync.bat`, `run_idea_generator.bat`, `schwab_emergency_reauth.bat` — activate `.venv` and launch the relevant command without a pre-activated shell.
+
+### Changed
+- **Health table rendering**: `✓` / `⚠` / `✗` replaced with `PASS` / `WARN` / `FAIL`. Windows cp1252 terminals cannot render those Unicode symbols and the table was silently garbled.
+- **Gemini credential resolution order** (`utils/gemini_client.py`): ADC (Vertex AI / `gcloud auth application-default login`) is now tried first; `GEMINI_API_KEY` env var is the fallback. Previous order caused the stale API key to win over valid ADC credentials, producing 400s on every local CLI run.
+
+### Fixed
+- **`pm morning` always exiting code 1 on Windows** (`scripts/live_update.py`): STEP 2 (Live Update) raised `UnicodeEncodeError: 'charmap' codec can't encode character '✅'` on every run because `print("✅ ...")`, `print("❌ ...")`, `print("ℹ️ ...")`, and `print("... →")` all contain characters cp1252 cannot encode. Replaced all five with ASCII equivalents (`[OK]`, `[ERROR]`, `[INFO]`, `->`). The cascade exit code now correctly reflects actual step outcomes.
+- **Podcast step hang** (`manager.py`): `subprocess.run(cmd, capture_output=True)` had no timeout. `YouTubeTranscriptApi().fetch()` also has no timeout, so one captionless or slow-responding video blocked the entire morning pipeline indefinitely. Added `timeout=180`; `subprocess.TimeoutExpired` is caught by the existing `except Exception` block and recorded as WARN.
+- **Podcast step silent failure masking** (`manager.py`): `batch_podcast_sync.py` uses `logging`, which writes to stderr. The count-parsing regex was searching `pod_result.stdout` (always empty); `n_processed` and `n_failed` were always 0, so every podcast run reported PASS even when channels failed. Switched to `pod_result.stderr`. The summary label now correctly shows `Podcasts (N new)` and surfaces WARN when channels fail.
+- **Thesis frontmatter ticker mismatches** (`vault/theses/`): `AMZN_thesis.md` had `ticker: COF`, `ETN_thesis.md` had `ticker: NVDA`, `VEU_thesis.md` had `ticker: IFRA`. `gather_thesis_sync_data()` reads `fm['style']` from the frontmatter to determine position sizing rules — the wrong ticker meant style lookups were pulling from the wrong position's data. Corrected all three to match their filenames.
+
+---
+
 ### Added
 - **`pm morning --skip-podcasts`**: new flag to bypass the podcast batch sync step in the morning pipeline.
 - **Podcast step in `pm morning`**: after snapshot, before dashboard — runs `batch_podcast_sync.py` via subprocess (non-fatal; a failed RSS fetch logs ⚠ and the dashboard still runs). Step ordering: health → transactions → live update → snapshot → **podcast sync** → dashboard. Summary table shows `Podcasts (N new)` with ✓/⚠/SKIP treatment.
