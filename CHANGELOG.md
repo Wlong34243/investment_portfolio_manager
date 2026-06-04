@@ -3,6 +3,16 @@
 ## [Unreleased]
 
 ### Added
+- **`pm morning --skip-podcasts`**: new flag to bypass the podcast batch sync step in the morning pipeline.
+- **Podcast step in `pm morning`**: after snapshot, before dashboard — runs `batch_podcast_sync.py` via subprocess (non-fatal; a failed RSS fetch logs ⚠ and the dashboard still runs). Step ordering: health → transactions → live update → snapshot → **podcast sync** → dashboard. Summary table shows `Podcasts (N new)` with ✓/⚠/SKIP treatment.
+- **Podcast ingestion universe expanded**: `PODCAST_CHANNELS` in `tasks/batch_podcast_sync.py` rebuilt to 10 verified channels — Forward Guidance, The Compound, BG2 Pod, Capital Allocators, Chat With Traders, On The Tape, CNBC Television, Top Traders Unplugged, Invest Like The Best, On Investing. All channel IDs confirmed live via YouTube RSS. Placeholder names and dead IDs removed.
+- **Per-channel title filtering**: `PODCAST_CHANNELS` upgraded from flat `{name: channel_id}` to `{name: {channel_id, title_filter?}}` config dicts; the separate `TITLE_FILTERS` dict is removed.
+- **`get_latest_video` title filter**: scans all feed entries (newest-first) and returns the first whose title contains `title_filter` (case-insensitive). A filtered channel with no matching episode logs an info-level skip and routes to `results["filter_skipped"]` — not `results["failed"]`.
+
+### Changed
+- **`batch_podcast_sync.py` main loop**: unpacks `cfg` dict per channel; logs `[filter: '...']` when a filter is active; summary now reports `Skipped (no filter match)` separately from dedup skips and failures.
+- **`manager.py podcast_batch`**: fixed stale import of removed `TITLE_FILTERS` dict; loop updated to unpack per-channel config dicts matching the new `PODCAST_CHANNELS` format.
+
 - **Idea Generator Agent (v1)**: New `pm agent ideas` command that consumes the composite bundle and recent podcast transcripts and writes a markdown report of investment candidates to `agent_outputs/ideas/`.
   - Pydantic schema: `Candidate` (ticker, company, style fit, portfolio relationship, concerns) + `IdeaGeneratorOutput` wrapper with `bundle_hash` traceability.
   - System prompt in `prompts/idea_generator.md` — style-aware, no price targets, no buy/sell recommendations.
@@ -19,6 +29,8 @@
 
 ### Fixed
 - **`pm ingest podcasts` silent exit**: Command printed "Checking channels..." and immediately returned because `podcast_batch()` had no implementation. Now runs the full RSS → dedup → download loop.
+- **Gemini credential resolution order inverted** (`utils/gemini_client.py`): ADC (Vertex AI / `gcloud auth application-default login`) is now tried first; API key is the fallback. Previous order caused the stale `GEMINI_API_KEY` env var to win over valid ADC credentials, producing 400s on every local CLI run.
+- **Gemini Pydantic fallback strips markdown fences** (`utils/gemini_client.py`): When `response.parsed` is `None` (Vertex AI backend does not populate it), the fallback path now strips ` ```json ... ``` ` fences with a regex before calling `model_validate_json()`. Previously, a markdown-wrapped JSON response from Vertex caused the parse to fail silently and return `None`.
 
 ---
 

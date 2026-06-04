@@ -94,13 +94,101 @@
         .badge-green { background: #dcfce7; color: #166534; }
         .badge-yellow { background: #fef9c3; color: #854d0e; }
         .badge-gray { background: #f1f3f7; color: #4b5563; border: 1px solid #dde1e7; }
+    
+        /* Side Navigation Styles */
+        body {
+            display: flex;
+            padding: 0;
+            background: #fff;
+        }
+
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            overflow-y: auto;
+            background: #f7f8fa;
+            border-right: 1px solid #dde1e7;
+            padding: 2rem 1.5rem;
+        }
+
+        .sidebar h2 {
+            margin-top: 0;
+            font-size: 1.1rem;
+            border: none;
+            padding-bottom: 0;
+            margin-bottom: 1rem;
+        }
+
+        .sidebar ol {
+            list-style: none;
+            padding-left: 0;
+            margin: 0;
+        }
+
+        .sidebar li {
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+        
+        .sidebar a {
+            color: #4b5563;
+            display: block;
+            padding: 0.2rem 0;
+        }
+        
+        .sidebar a:hover {
+            color: #2563eb;
+            text-decoration: none;
+        }
+
+        .page-wrapper {
+            margin-left: 260px;
+            width: calc(100% - 260px);
+            max-width: 850px;
+            padding: 3rem 4rem;
+            border: none;
+            background: #fff;
+            margin-right: auto;
+        }
+
+        /* Hide the inline TOC since we have a sidebar */
+        nav.toc {
+            display: none;
+        }
+
     </style>
 </head>
 <body>
+
+<div class="sidebar">
+    <h2>Investment Portfolio Manager</h2>
+    <nav >
+        <h2>Contents</h2>
+        <ol>
+            <li><a href="#overview">System Overview</a></li>
+            <li><a href="#architecture">Architecture Spine</a></li>
+            <li><a href="#sheets">Authoritative Surface: Google Sheets</a></li>
+            <li><a href="#bundles">Bundle Architecture</a></li>
+            <li><a href="#data-sources">Data Sources</a></li>
+            <li><a href="#cli">CLI Reference</a></li>
+            <li><a href="#principles">Operating Principles</a></li>
+            <li><a href="#agents">Agent Layer</a></li>
+            <li><a href="#tax">Tax Architecture</a></li>
+            <li><a href="#automation">Automation</a></li>
+            <li><a href="#out-of-scope">What Is Explicitly Out of Scope</a></li>
+            <li><a href="#file-reference">File Reference</a></li>
+            <li><a href="#decisions">Recent Decisions Log</a></li>
+        </ol>
+    </nav>
+</div>
+
 <div class="page-wrapper">
 
     <h1>Investment Portfolio Manager</h1>
-    <p class="meta">Last updated: 2026-06-04 &mdash; Reflects simplified administration (Windows batch scripts, pm login, pm backup, integrated morning sync). Source of truth: actual code, STATE.md, CLAUDE.md.</p>
+    <p class="meta">Last updated: 2026-05-26 &mdash; Reflects post-reframe state: Idea Generator v1 shipped, Valuation Drift Monitor next. Source of truth: actual code (Pass 1 verified), STATE.md, CLAUDE.md, REPO_AUDIT_2026-05-26.md.</p>
 
     <nav class="toc">
         <h2>Contents</h2>
@@ -293,32 +381,13 @@ build_composite_bundle()  -- composite hash -- bundles/composite_bundle_*.json
 
         <h3>Top-level commands</h3>
 
-        <div class="note">
-            <strong>Windows Automation Batch Files:</strong> In the project root, you can double-click:
-            <ul>
-                <li><code>run_morning_sync.bat</code> to execute the full morning pipeline (including local vault sync and composite bundle creation).</li>
-                <li><code>run_idea_generator.bat</code> to run the Idea Generator and automatically open the report.</li>
-                <li><code>schwab_emergency_reauth.bat</code> to quickly re-authenticate with Schwab.</li>
-            </ul>
-        </div>
-
         <table>
             <thead><tr><th>Command</th><th>Description</th><th>Notable flags</th></tr></thead>
             <tbody>
                 <tr>
                     <td><code>pm morning</code></td>
-                    <td>Full market-open pipeline: health check → Schwab sync → snapshot → podcast batch sync → dashboard refresh → local vault sync → vault snapshot → composite bundle. In <code>--live</code> mode, automatically syncs Sheet data back to local theses and rebuilds composite bundles.</td>
-                    <td><code>--live</code>, <code>--skip-health</code>, <code>--skip-transactions</code>, <code>--skip-podcasts</code>, <code>--skip-tax</code>, <code>--skip-vault-sync</code>, <code>--skip-composite</code>, <code>--tx-days N</code>, <code>--strict</code></td>
-                </tr>
-                <tr>
-                    <td><code>pm login</code></td>
-                    <td>Schwab OAuth manual reauthentication script. Run this if your credentials expire.</td>
-                    <td>None</td>
-                </tr>
-                <tr>
-                    <td><code>pm backup</code></td>
-                    <td>Archive the project (excluding credentials, caches, and venv) and upload it as a zip file to Google Drive.</td>
-                    <td><code>--name &lt;NAME&gt;</code>, <code>--folder_id &lt;ID&gt;</code></td>
+                    <td>Full market-open pipeline: health check, Schwab sync, snapshot, dashboard refresh. Runs all steps in sequence with per-step pass/fail summary.</td>
+                    <td><code>--live</code>, <code>--skip-health</code>, <code>--skip-transactions</code>, <code>--skip-tax</code>, <code>--tx-days N</code></td>
                 </tr>
                 <tr>
                     <td><code>pm health</code></td>
@@ -333,17 +402,14 @@ build_composite_bundle()  -- composite hash -- bundles/composite_bundle_*.json
             </tbody>
         </table>
 
-        <pre><code># Full morning pipeline (updates sheets, local theses, and builds composite bundle)
+        <pre><code># Full morning pipeline
 pm morning --live
 
-# Emergency Schwab OAuth Reauthentication
-pm login
-
-# Archive project to Google Drive
-pm backup
-
 # Dry-run snapshot (no Sheet writes)
-pm snapshot</code></pre>
+pm snapshot
+
+# Snapshot from CSV with manual cash
+pm snapshot --source csv --csv ./positions.csv --cash 5000 --live</code></pre>
 
         <h3>pm ingest</h3>
         <table>

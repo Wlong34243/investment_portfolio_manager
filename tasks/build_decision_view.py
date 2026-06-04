@@ -112,7 +112,7 @@ def get_latest_agent_outputs(ws_agent):
         # Get one of the run_ids from the latest timestamp
         latest_run_id = df[df["run_ts_dt"] == latest_ts]["run_id"].iloc[0]
         df = df[df["run_id"] == latest_run_id]
-        print(f"  ✓ Filtering Decision View to latest run: {latest_run_id} ({latest_ts})")
+        print(f"  [OK] Filtering Decision View to latest run: {latest_run_id} ({latest_ts})")
 
     return df
 

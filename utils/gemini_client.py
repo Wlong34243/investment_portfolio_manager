@@ -54,12 +54,7 @@ def _build_genai_client():
     project_id = getattr(config, 'GCP_PROJECT_ID', 're-property-manager-487122')
     location = getattr(config, 'GCP_LOCATION', 'us-central1')
 
-    # Path 1: API key from environment (Preferred for Developer API models)
-    api_key = os.environ.get('GEMINI_API_KEY')
-    if api_key:
-        return genai.Client(api_key=api_key)
-
-    # Path 2: ADC — SDK discovers credentials automatically
+    # Path 1: ADC — SDK discovers credentials automatically (Preferred for local CLI)
     try:
         google.auth.default()  # raises DefaultCredentialsError if ADC absent
         return genai.Client(
@@ -71,6 +66,11 @@ def _build_genai_client():
         pass
     except Exception:
         pass
+
+    # Path 2: API key from environment (Fallback for Streamlit Cloud)
+    api_key = os.environ.get('GEMINI_API_KEY')
+    if api_key:
+        return genai.Client(api_key=api_key)
 
     logging.warning(
         "No Gemini credentials found. Run:\n"
@@ -131,9 +131,14 @@ def ask_gemini(prompt: str, system_instruction: str = None, json_mode: bool = Fa
             if response.parsed is not None:
                 return response.parsed
             try:
-                return response_schema.model_validate_json(response.text)
+                cleaned_text = response.text.strip()
+                if cleaned_text.startswith("```"):
+                    match = re.search(r"```(?:json)?\s*(.*?)\s*```", cleaned_text, re.DOTALL)
+                    if match:
+                        cleaned_text = match.group(1).strip()
+                return response_schema.model_validate_json(cleaned_text)
             except Exception as pe:
-                print(f"DEBUG: Pydantic Parsing Failed: {pe}")
+                print(f"DEBUG: Pydantic Parsing Failed: {pe}\nRaw text: {response.text[:200]}")
                 return None
         return response.text
     except Exception as e:

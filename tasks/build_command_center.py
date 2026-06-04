@@ -190,7 +190,10 @@ def _compute_headline_kpis(daily_rows: list[dict], holdings_rows: list[dict]) ->
         return out
 
     df = pd.DataFrame(daily_rows)
-    df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
+    import warnings
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", UserWarning)
+        df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
     df = df.dropna(subset=["Date"]).sort_values("Date")
     if df.empty:
         return out

@@ -27,18 +27,21 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 logger = logging.getLogger(__name__)
 
 # Constants
+# Per-channel config dict. Keys flow into the Source field in Sheets — use clean show names
+# once resolved from the first live run. Placeholder names (Channel UC...) should be updated
+# after observing the episode titles logged on first run.
 PODCAST_CHANNELS = {
-    "Forward Guidance": "UCkrwgzhIBKccuDsi_SvZtnQ",  # verified: Forward Guidance (@ForwardGuidanceBW)
-    "The Compound": "UCBRpqrzuuqE8TZcWw75JSdw",    # verified: The Compound (Josh Brown / Ritholtz)
-    "Risk Reversal": "UCRAOycPjsSgcEyQcuJD_ENA",   # verified: RiskReversal Media (@RiskReversalMedia)
-    "BG2 Pod": "UC-yRDvpR99LUc5l7i7jLzew",         # verified: BG2 Pod (Bill Gurley & Brad Gerstner)
-}
-
-# Optional title filters — if set, skip videos whose titles don't contain the keyword.
-# Prevents short clips / highlights from being processed instead of full episodes.
-TITLE_FILTERS = {
-    "The Compound": "TCAF",         # Only process full "The Compound and Friends" episodes
-    # Risk Reversal: no filter — ingest all uploads (channel mixes full episodes and shorts)
+    "Forward Guidance":      {"channel_id": "UCkrwgzhIBKccuDsi_SvZtnQ"},
+    "The Compound":          {"channel_id": "UCBRpqrzuuqE8TZcWw75JSdw"},
+    "BG2 Pod":               {"channel_id": "UC-yRDvpR99LUc5l7i7jLzew"},
+    "Capital Allocators":    {"channel_id": "UCbzQ_YWf9RsBP9ATbmv5kxQ"},
+    "Chat With Traders":     {"channel_id": "UCdnzT5Tl6pAkATOiDsPhqcg"},
+    "On The Tape":           {"channel_id": "UCe8y7CzcjhMPTzem-Zn6sqA"},
+    "CNBC Television":       {"channel_id": "UCrp_UI8XtuYfpiqluWLD7Lw"},
+    "Top Traders Unplugged": {"channel_id": "UCt-_RaV_mFlyXDmhYnIm0Ug"},
+    "Invest Like The Best":  {"channel_id": "UCpQBb0fToph3jrDulwz1iUQ"},
+    "On Investing":          {"channel_id": "UCToe3dspZyw2L_JY-JmP3Mw",
+                              "title_filter": "On Investing"},
 }
 
 DEDUP_FILE = os.path.join(os.path.dirname(__file__), "..", "data", "processed_videos.json")
@@ -69,11 +72,12 @@ def save_processed_videos(data: dict) -> None:
         logger.error(f"Failed to save dedup file: {e}")
 
 # RSS fetch function
-def get_latest_video(channel_id: str, title_filter: str = None) -> tuple[str, str] | tuple[None, None]:
+def get_latest_video(channel_id: str, title_filter: str | None = None) -> tuple[str, str] | tuple[None, None]:
     """
-    Fetch the YouTube RSS feed for a channel and return (video_id, title)
-    for the most recent upload matching the optional title_filter keyword.
-    Scans up to 15 recent videos. Returns (None, None) on failure.
+    Fetch the YouTube RSS feed and return (video_id, title) for the most recent
+    upload. If title_filter is provided, return the most recent upload whose title
+    contains title_filter (case-insensitive). Returns (None, None) if no feed or
+    no matching entry in the (up to 15) entries the feed provides.
     """
     feed_url = f"https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}"
     try:
@@ -82,20 +86,20 @@ def get_latest_video(channel_id: str, title_filter: str = None) -> tuple[str, st
         root = ET.fromstring(xml_data)
 
         entries = root.findall(f"{{{ATOM_NS}}}entry")
-        for entry in entries[:50]:
+        if not entries:
+            return None, None
+
+        for entry in entries:  # feed is newest-first
             video_id_elem = entry.find(f"{{{YT_NS}}}videoId")
-            title_elem    = entry.find(f"{{{ATOM_NS}}}title")
+            title_elem = entry.find(f"{{{ATOM_NS}}}title")
             video_id = video_id_elem.text if video_id_elem is not None else None
-            title    = title_elem.text    if title_elem    is not None else "Unknown Title"
-
-            if title_filter and title_filter.lower() not in title.lower():
-                logger.info(f"  Skipping '{title}' (doesn't match filter '{title_filter}')")
+            title = title_elem.text if title_elem is not None else "Unknown Title"
+            if video_id is None:
                 continue
+            if title_filter is None or title_filter.lower() in title.lower():
+                return video_id, title
 
-            return video_id, title
-
-        logger.warning(f"No video matching filter '{title_filter}' found in last 25 uploads")
-        return None, None
+        return None, None  # no entry matched the filter
     except Exception as e:
         logger.error(f"Failed to fetch RSS for channel {channel_id}: {e}")
         return None, None
@@ -112,16 +116,21 @@ def main():
     logger.info(f"=== Batch Podcast Sync — {mode} ===")
 
     processed = load_processed_videos()
-    results = {"processed": [], "skipped": [], "failed": []}
+    results = {"processed": [], "skipped": [], "filter_skipped": [], "failed": []}
 
-    for channel_name, channel_id in PODCAST_CHANNELS.items():
-        logger.info(f"Checking: {channel_name} ({channel_id})")
-
-        title_filter = TITLE_FILTERS.get(channel_name)
-        video_id, title = get_latest_video(channel_id, title_filter=title_filter)
+    for channel_name, cfg in PODCAST_CHANNELS.items():
+        channel_id = cfg["channel_id"]
+        title_filter = cfg.get("title_filter")
+        logger.info(f"Checking: {channel_name} ({channel_id})"
+                    + (f" [filter: '{title_filter}']" if title_filter else ""))
+        video_id, title = get_latest_video(channel_id, title_filter)
         if video_id is None:
-            logger.warning(f"  Could not fetch latest video for {channel_name}")
-            results["failed"].append(channel_name)
+            if title_filter:
+                logger.info(f"  No recent episode matching '{title_filter}' — skipping")
+                results["filter_skipped"].append(channel_name)
+            else:
+                logger.warning(f"  Could not fetch latest video for {channel_name}")
+                results["failed"].append(channel_name)
             continue
 
         logger.info(f"  Latest: '{title}' (ID: {video_id})")
@@ -179,6 +188,7 @@ def main():
     logger.info("=== Summary ===")
     logger.info(f"  Processed: {results['processed'] or 'None'}")
     logger.info(f"  Skipped (already done): {results['skipped'] or 'None'}")
+    logger.info(f"  Skipped (no filter match): {results['filter_skipped'] or 'None'}")
     logger.info(f"  Failed: {results['failed'] or 'None'}")
 
 if __name__ == "__main__":

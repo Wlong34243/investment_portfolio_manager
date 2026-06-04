@@ -47,7 +47,18 @@ Manage the local disk footprint by purging obsolete artifacts based on shared re
 
 ### Morning Routine (`pm morning`)
 Run the full market-open pipeline.
-* `pm morning --live`: Executes Health Check -> Schwab Sync -> Snapshot -> Dashboard Refresh sequentially. Includes options to `--skip-health`, `--skip-transactions`, or `--skip-tax`.
+* `pm morning --live`: Executes Health Check -> Schwab Sync -> Snapshot -> Podcast Sync -> Dashboard Refresh -> Local Thesis Sync -> Vault Snapshot -> Composite Bundle Creation sequentially.
+* **Integrated Steps**: In `--live` mode, this command automatically runs `pm vault sync --live`, `pm vault snapshot`, and `pm bundle composite` after the dashboard refresh to bring both Sheets and your local files/bundles to a 100% updated state.
+* **Optional Flags**: Supports `--skip-health`, `--skip-transactions`, `--skip-podcasts`, `--skip-tax`, `--skip-vault-sync`, and `--skip-composite`.
+
+### Authentication (`pm login`)
+Run the Schwab OAuth manual reauthentication script.
+* `pm login`: Initiates the interactive browser-based OAuth login flow for Schwab's Accounts and Market Data applications. Use this command if your credentials expire.
+
+### Backup (`pm backup`)
+Archive the project and upload it to Google Drive.
+* `pm backup`: Zips the project (excluding `.venv`, caches, and credentials) and uploads it as a timestamped zip file to your Google Drive under the shared GCP service account.
+* **Optional Flags**: Supports `--name "custom_name.zip"` and `--folder_id "DRIVE_FOLDER_ID"`.
 
 ---
 

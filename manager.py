@@ -13,6 +13,7 @@ Usage:
 """
 
 import json
+import subprocess
 import time
 import sys
 import os
@@ -354,11 +355,11 @@ def run_health_report(verbose: bool = False):
 
     for r in results:
         if r.status == PASS:
-            status_cell = Text("✓", style="bold green")
+            status_cell = Text("PASS", style="bold green")
         elif r.status == WARN:
-            status_cell = Text("⚠", style="bold yellow")
+            status_cell = Text("WARN", style="bold yellow")
         else:
-            status_cell = Text("✗", style="bold red")
+            status_cell = Text("FAIL", style="bold red")
 
         level_marker = "" if r.level == CRITICAL else "[dim](W)[/dim] "
         name_cell = f"{level_marker}[cyan]{r.name}[/cyan]"
@@ -965,7 +966,7 @@ def podcast_batch(
     """Fetch latest episode transcripts for all tracked podcast channels."""
     from tasks.batch_podcast_sync import (
         get_latest_video, load_processed_videos, save_processed_videos,
-        PODCAST_CHANNELS, TITLE_FILTERS,
+        PODCAST_CHANNELS,
     )
     from tasks.podcast_fetcher import fetch_transcript_to_file
 
@@ -975,9 +976,10 @@ def podcast_batch(
     processed = load_processed_videos()
     counts = {"fetched": 0, "skipped": 0, "failed": 0}
 
-    for channel_name, channel_id in PODCAST_CHANNELS.items():
+    for channel_name, cfg in PODCAST_CHANNELS.items():
+        channel_id = cfg["channel_id"]
+        title_filter = cfg.get("title_filter")
         console.print(f"\nChecking [cyan]{channel_name}[/]...")
-        title_filter = TITLE_FILTERS.get(channel_name)
         video_id, title = get_latest_video(channel_id, title_filter=title_filter)
 
         if video_id is None:
@@ -1097,12 +1099,15 @@ def morning(
     live: bool = typer.Option(False, "--live", help="Write to Google Sheets. Without this, runs as a dry-run preview."),
     skip_health: bool = typer.Option(False, "--skip-health", help="Skip the upfront health check (not recommended)."),
     skip_transactions: bool = typer.Option(False, "--skip-transactions", help="Skip transaction sync."),
+    skip_podcasts: bool = typer.Option(False, "--skip-podcasts", help="Skip the podcast batch sync step."),
     skip_tax: bool = typer.Option(False, "--skip-tax", help="Skip the Tax_Control refresh."),
     tx_days: int = typer.Option(7, "--tx-days", help="Days of transactions to sync. Default 7."),
     continue_on_warning: bool = typer.Option(True, "--continue-on-warning/--strict", help="Continue past health warnings."),
+    skip_vault_sync: bool = typer.Option(False, "--skip-vault-sync", help="Skip vault sync to markdown theses."),
+    skip_composite: bool = typer.Option(False, "--skip-composite", help="Skip building composite bundle."),
 ):
     """
-    Run the full market-open pipeline: health check -> Schwab sync -> snapshot -> dashboard refresh.
+    Run the full market-open pipeline: health -> Schwab sync -> snapshot -> podcast sync -> dashboard refresh -> vault sync -> composite bundle.
     """
     from tasks.health import run_all_checks, exit_code as health_exit_code, CRITICAL, FAIL, WARN, PASS
     from tasks.build_valuation_card import main as build_val
@@ -1128,6 +1133,10 @@ def morning(
         if code == 1:
             step_results.append(("Health", "fail"))
             console.print(Panel("[bold red]Cannot proceed — Critical health failures detected.[/]", style="red"))
+            from rich.prompt import Confirm
+            if Confirm.ask("Would you like to run the Schwab reauthentication script now?"):
+                subprocess.run([sys.executable, "scripts/schwab_manual_reauth.py"])
+                console.print("[yellow]Reauthentication complete. Please run `pm morning` again.[/]")
             _morning_summary(console, mode_label, step_results, tx_ok, snapshot_ok, tax_refreshed, skip_tax, start_time)
             raise typer.Exit(code=1)
         elif code == 2:
@@ -1179,8 +1188,47 @@ def morning(
         console.print(f"[red]Snapshot failed: {e}[/]")
         step_results.append(("Snapshot", "fail"))
 
-    # 5. Refresh Dashboard (Rebuild Views from Bundle)
-    console.print("\n[bold cyan]STEP 4 - Refreshing Dashboard...[/]")
+    # 5. Batch Podcast Sync (non-fatal; always continues regardless of result or --strict)
+    #    batch_podcast_sync.main() uses argparse so we can't call it in-process cleanly;
+    #    we shell out via subprocess — the same decoupled pattern the batch script uses
+    #    when it shells out to weekly_podcast_sync.py.
+    if not skip_podcasts:
+        console.print("\n[bold cyan]STEP 4 - Batch Podcast Sync...[/]")
+        try:
+            script_path = Path(__file__).parent / "tasks" / "batch_podcast_sync.py"
+            cmd = [sys.executable, str(script_path)]
+            if live:
+                cmd.append("--live")
+            pod_result = subprocess.run(cmd, capture_output=True, text=True)
+
+            # Parse episode counts from summary lines
+            n_processed = 0
+            n_failed = 0
+            pm = re.search(r"Processed: \[(.+?)\]", pod_result.stdout)
+            if pm:
+                n_processed = len([x for x in pm.group(1).split(",") if x.strip()])
+            fm = re.search(r"Failed: \[(.+?)\]", pod_result.stdout)
+            if fm:
+                n_failed = len([x for x in fm.group(1).split(",") if x.strip()])
+
+            for line in pod_result.stdout.strip().splitlines()[-6:]:
+                if line.strip():
+                    console.print(f"  [dim]{line}[/dim]")
+
+            label = f"Podcasts ({n_processed} new)" if n_processed else "Podcasts"
+            if n_failed > 0:
+                console.print(f"  [yellow]! {n_failed} channel(s) failed to fetch[/]")
+                step_results.append((label, "warn"))
+            else:
+                step_results.append((label, "pass"))
+        except Exception as e:
+            console.print(f"[yellow]Podcast sync error: {e}[/]")
+            step_results.append(("Podcasts", "warn"))
+    else:
+        step_results.append(("Podcasts", "skip"))
+
+    # 6. Refresh Dashboard (Rebuild Views from Bundle)
+    console.print("\n[bold cyan]STEP 5 - Refreshing Dashboard...[/]")
     try:
         build_val(live=live, include_all=True)
         build_dec(live=live)
@@ -1194,6 +1242,86 @@ def morning(
         console.print(f"[red]Dashboard refresh failed: {e}[/]")
         step_results.append(("Dashboard", "fail"))
 
+    # 7. Vault Sync (sync Sheets data back to local thesis files)
+    if not skip_vault_sync:
+        console.print("\n[bold cyan]STEP 6 - Syncing Sheets to Local Thesis Files...[/]")
+        try:
+            from core.thesis_sync_data import gather_thesis_sync_data
+            from tasks.write_thesis_updates import write_thesis_updates
+            
+            payloads = gather_thesis_sync_data()
+            if payloads:
+                report = write_thesis_updates(payloads=payloads, dry_run=not live, force_recreate_regions=False, show_diff=False)
+                if report.get('errors', 0) > 0:
+                    console.print(f"[yellow]Vault sync completed with {report['errors']} errors.[/]")
+                    step_results.append(("Vault Sync", "warn"))
+                else:
+                    console.print(f"[green]Vault sync completed successfully. Updated {report['updated']} file(s).[/]")
+                    step_results.append(("Vault Sync", "pass"))
+            else:
+                console.print("[yellow]No vault sync data found.[/]")
+                step_results.append(("Vault Sync", "pass"))
+        except Exception as e:
+            console.print(f"[red]Vault sync failed: {e}[/]")
+            step_results.append(("Vault Sync", "fail"))
+    else:
+        step_results.append(("Vault Sync", "skip"))
+
+    # 8. Vault Snapshot (rebuild local vault bundle)
+    if not skip_composite:
+        console.print("\n[bold cyan]STEP 7 - Freezing Vault Snapshot...[/]")
+        try:
+            tickers = None
+            try:
+                if 'bundle' in locals() and bundle:
+                    tickers = [p["ticker"] for p in bundle.positions if not p.get("is_cash")]
+                else:
+                    market_bundles = sorted(list(Path("bundles").glob("context_bundle_*.json")), key=lambda p: p.stat().st_mtime)
+                    if market_bundles:
+                        market_data = load_bundle(market_bundles[-1])
+                        tickers = [p["ticker"] for p in market_data["positions"] if not p.get("is_cash")]
+            except Exception as e:
+                console.print(f"[dim]Failed to resolve tickers for vault snapshot: {e}[/dim]")
+
+            vault_bundle = build_vault_bundle(ticker_list=tickers, include_drive=False)
+            vault_path = write_vault_bundle(vault_bundle)
+            console.print(f"[green]Vault snapshot frozen:[/] {vault_path.name} ({vault_bundle.vault_hash[:8]})")
+            step_results.append(("Vault Snapshot", "pass"))
+        except Exception as e:
+            console.print(f"[red]Vault snapshot failed: {e}[/]")
+            step_results.append(("Vault Snapshot", "fail"))
+    else:
+        step_results.append(("Vault Snapshot", "skip"))
+
+    # 9. Build Composite Bundle
+    if not skip_composite:
+        console.print("\n[bold cyan]STEP 8 - Building Composite Bundle...[/]")
+        try:
+            market_path = None
+            if 'path' in locals() and path:
+                market_path = path
+            
+            vault_path_resolved = None
+            if 'vault_path' in locals() and vault_path:
+                vault_path_resolved = vault_path
+            else:
+                vault_bundles = sorted(list(Path("bundles").glob("vault_bundle_*.json")), key=lambda p: p.stat().st_mtime)
+                if vault_bundles:
+                    vault_path_resolved = vault_bundles[-1]
+
+            if not market_path or not vault_path_resolved:
+                market_path, vault_path_resolved = resolve_latest_bundles()
+
+            composite = build_composite_bundle(market_path, vault_path_resolved)
+            comp_path = write_composite_bundle(composite)
+            console.print(f"[green]Composite bundle built:[/] {comp_path.name} ({composite.composite_hash[:8]})")
+            step_results.append(("Composite Bundle", "pass"))
+        except Exception as e:
+            console.print(f"[red]Composite bundle failed: {e}[/]")
+            step_results.append(("Composite Bundle", "fail"))
+    else:
+        step_results.append(("Composite Bundle", "skip"))
+
     _morning_summary(console, mode_label, step_results, tx_ok, snapshot_ok, tax_refreshed, skip_tax, start_time)
 
     # Exit with code based on worst step
@@ -1205,6 +1333,27 @@ def morning(
     if worst == "fail": raise typer.Exit(code=1)
     if worst == "warn": raise typer.Exit(code=2)
     raise typer.Exit(code=0)
+
+
+@app.command("login")
+def login():
+    """
+    Run the Schwab OAuth manual reauthentication script to update credentials.
+    """
+    from scripts.schwab_manual_reauth import run_reauth
+    run_reauth()
+
+
+@app.command("backup")
+def backup(
+    name: Optional[str] = typer.Option(None, help="Name of the zip file in Drive."),
+    folder_id: Optional[str] = typer.Option(None, help="ID of the Drive folder to upload to.")
+):
+    """
+    Archive the project (excluding credentials/venv/caches) and upload to Google Drive.
+    """
+    from scripts.backup_to_drive import backup as run_backup
+    run_backup(name=name, folder_id=folder_id)
 
 
 # --- AGENT GROUP ---
