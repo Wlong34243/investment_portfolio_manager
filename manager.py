@@ -1199,19 +1199,20 @@ def morning(
             cmd = [sys.executable, str(script_path)]
             if live:
                 cmd.append("--live")
-            pod_result = subprocess.run(cmd, capture_output=True, text=True)
+            pod_result = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
 
-            # Parse episode counts from summary lines
+            # Logger writes to stderr; parse summary lines from there
+            output = pod_result.stderr
             n_processed = 0
             n_failed = 0
-            pm = re.search(r"Processed: \[(.+?)\]", pod_result.stdout)
+            pm = re.search(r"Processed: \[(.+?)\]", output)
             if pm:
                 n_processed = len([x for x in pm.group(1).split(",") if x.strip()])
-            fm = re.search(r"Failed: \[(.+?)\]", pod_result.stdout)
+            fm = re.search(r"Failed: \[(.+?)\]", output)
             if fm:
                 n_failed = len([x for x in fm.group(1).split(",") if x.strip()])
 
-            for line in pod_result.stdout.strip().splitlines()[-6:]:
+            for line in output.strip().splitlines()[-6:]:
                 if line.strip():
                     console.print(f"  [dim]{line}[/dim]")
 
