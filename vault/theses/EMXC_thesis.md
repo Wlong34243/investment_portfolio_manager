@@ -1,11 +1,11 @@
 ---
 ticker: EMXC
 style: ETF
-framework_preference: null
-entry_date: null
-last_reviewed: '2026-05-03'
-cost_basis: 9524.88
-current_allocation: 1.46%
+framework_preference:
+entry_date:
+last_reviewed: '2026-07-14'
+cost_basis: 22283.92
+current_allocation: 0.04%
 ---
 # EMXC — Investment Thesis
 
@@ -44,21 +44,22 @@ priority: medium
 - 2026-04: Initiated. Thesis intact. Monitoring Indian equity valuations, TSMC monthly revenue, and US Dollar Index (DXY) strength.
 
 <!-- region:position_state -->
-**Current Allocation:** 1.46%
-**Cost Basis:** $9,524.88
+**Current Allocation:** 0.04%
+**Cost Basis:** $22,283.92
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** ETF
 **Size Ceiling:** 8.00%
-**Drift:** -6.54%
+**Drift:** -7.96%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
-- 2026-04-15: Buy 25.0 @ $87.85
-- 2026-04-14: Buy 15.0 @ $87.44
-- 2026-04-10: Buy 40.0 @ $84.95
-- 2026-04-10: Buy 20.0 @ $85.17
+- 2026-06-08: Buy 15.0 @ $96.20
+- 2026-06-05: Buy 5.0 @ $97.04
+- 2026-06-01: Buy 15.0 @ $103.19
+- 2026-05-29: Buy 3.0 @ $101.52
+- 2026-05-29: Buy 12.0 @ $101.52
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
@@ -66,5 +67,5 @@ No realized G/L history.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-05-03 14:58: Auto-sync allocation 1.46%, drift -6.54%
+2026-07-14 10:51: Auto-sync allocation 0.04%, drift -7.96%
 <!-- endregion:change_log -->

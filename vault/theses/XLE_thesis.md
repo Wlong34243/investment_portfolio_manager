@@ -1,11 +1,11 @@
 ---
 ticker: XLE
 style: ETF
-framework_preference: null
-entry_date: null
-last_reviewed: '2026-05-03'
-cost_basis: 7518.3
-current_allocation: 1.15%
+framework_preference:
+entry_date:
+last_reviewed: '2026-06-25'
+cost_basis: 3596.7
+current_allocation: 0.57%
 ---
 # XLE — Investment Thesis
 
@@ -44,28 +44,28 @@ priority: low (serves as a core inflation hedge)
 - 2026-04: Initiated. Thesis intact. Massive unrealized gains. Monitoring global oil inventory levels, sector-wide capital expenditure (CapEx) trends, and inflation data.
 
 <!-- region:position_state -->
-**Current Allocation:** 1.15%
-**Cost Basis:** $7,518.30
+**Current Allocation:** 0.57%
+**Cost Basis:** $3,596.70
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** ETF
 **Size Ceiling:** 8.00%
-**Drift:** -6.85%
+**Drift:** -7.43%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
-- 2026-04-17: Buy 15.0 @ $54.43
-- 2026-04-17: Buy 20.0 @ $54.09
-- 2026-04-14: Buy 10.0 @ $56.24
-- 2026-04-14: Buy 50.0 @ $55.60
-- 2026-04-10: Buy 20.0 @ $56.95
+- 2026-06-24: Sell -25.0 @ $53.25
+- 2026-06-24: Sell -120.0 @ $53.17
+- 2026-06-17: Buy 15.0 @ $54.93
+- 2026-05-15: Buy 20.0 @ $58.88
+- 2026-05-04: Sell -10.0 @ $58.92
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
-No realized G/L history.
+Total Realized G/L: $20.09 over 1 closed lots. Total Proceeds: $589.24.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-05-03 14:58: Auto-sync allocation 1.15%, drift -6.85%
+2026-06-25 08:03: Auto-sync allocation 0.57%, drift -7.43%
 <!-- endregion:change_log -->

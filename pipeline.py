@@ -59,7 +59,7 @@ def sanitize_dataframe_for_sheets(df: pd.DataFrame, columns: list[str], col_map:
     3. Reorder to match 'columns' list exactly.
     4. Fill NA with empty string or "N/A" for specific fields.
     5. Cast every value to native Python types (no numpy, no NaT).
-    6. If is_holdings=True, inject relative G/L formulas using {ROW} placeholder.
+    6. If is_holdings=True, label ETF/cash rows with no valuation data.
     """
     df = df.copy()
 
@@ -77,14 +77,22 @@ def sanitize_dataframe_for_sheets(df: pd.DataFrame, columns: list[str], col_map:
             df[col] = ""
 
     df_ordered = df[columns].copy()
-    
-    # Task 4: Handle ETF / Fixed Income display for valuation fields
+
     if is_holdings:
-        # If it's an ETF or Cash, and certain fields are empty, mark as No Valuation
-        etf_mask = df_ordered['Asset Class'].astype(str).str.upper().isin(['ETF', 'FUND', 'CASH', 'FIXED_INCOME'])
-        # Note: we don't overwrite valid numbers, just provide context for blanks
-        # This is a bit complex in a flat list loop, handled in the row loop below.
-        pass
+        # Always recompute G/L from Market Value - Cost Basis rather than trust
+        # whatever arrived in the incoming 'Unrealized G/L' column. The bundle_push
+        # path (manager.py) builds its dataframe straight from bundle JSON without
+        # going through normalize_positions(), and the bundle's own unrealized_gl
+        # field has been observed to be a flat 0.0 even when cost_basis and
+        # market_value are both correct -- so trusting it silently writes $0 G/L
+        # for every position. Market Value and Cost Basis are always present and
+        # authoritative, so recomputing here is correct for every upstream caller.
+        mv = pd.to_numeric(df_ordered['Market Value'], errors='coerce').fillna(0.0)
+        cb = pd.to_numeric(df_ordered['Cost Basis'], errors='coerce').fillna(0.0)
+        gl = mv - cb
+        cb_safe = cb.replace(0, pd.NA)
+        df_ordered['Unrealized G/L'] = gl
+        df_ordered['Unrealized G/L %'] = (gl / cb_safe).fillna(0.0)
 
     data = []
     for _, row in df_ordered.iterrows():
@@ -95,13 +103,15 @@ def sanitize_dataframe_for_sheets(df: pd.DataFrame, columns: list[str], col_map:
             val = row[col_name]
 
             if is_holdings:
-                if col_name == 'Unrealized G/L':
-                    clean_row.append('=G{ROW}-H{ROW}')
-                    continue
-                elif col_name == 'Unrealized G/L %':
-                    clean_row.append('=IF(H{ROW}<>0, J{ROW}/H{ROW}, 0)')
-                    continue
-                
+                # Unrealized G/L and Unrealized G/L % were already recomputed
+                # from Market Value - Cost Basis above, as real floats; they
+                # fall through to the generic value-copy branch below like any
+                # other numeric column. (Previously this injected
+                # '=G{ROW}-H{ROW}' formula strings, which only worked under
+                # USER_ENTERED. Writing RAW now to prevent the #NAME? bug
+                # elsewhere means Sheets would store those strings as literal
+                # text instead of evaluating them.)
+
                 # Task 4: Label ETF fields that have no valuation metrics
                 if is_etf_or_cash and col_name in ['Valuation Signal', 'Macro Signal'] and (val == "" or val == "N/A"):
                     clean_row.append("ETF - No Valuation")
@@ -197,33 +207,82 @@ def normalize_positions(df: pd.DataFrame, import_date: str, source: str = "csv")
 # Sheet write helpers
 # ---------------------------------------------------------------------------
 
+def _col_letter(idx: int) -> str:
+    """0-indexed column number -> spreadsheet column letter (0->A, 25->Z, 26->AA, ...)."""
+    letters = ""
+    idx += 1
+    while idx > 0:
+        idx, rem = divmod(idx - 1, 26)
+        letters = chr(65 + rem) + letters
+    return letters
+
+
+def _apply_holdings_number_formats(ws, num_data_rows: int) -> None:
+    """
+    Stamp one canonical number format onto every dollar/percent/quantity column,
+    on every write. ws.batch_clear() only clears cell values, not formatting, so
+    without this, stale percent/dollar formats from older writes or manual edits
+    leak into new rows and produce columns that mix scales (e.g. "6.77%" next to
+    a raw 0.0789 in the same Weight column).
+    """
+    try:
+        from gspread_formatting import CellFormat, NumberFormat, format_cell_ranges
+    except ImportError:
+        print("gspread_formatting not installed; skipping Holdings_Current number formats.")
+        return
+
+    first_row = 3
+    last_row = 2 + max(num_data_rows, 1)
+
+    dollar_cols = ['Price', 'Market Value', 'Cost Basis', 'Unit Cost', 'Unrealized G/L', 'Est Annual Income']
+    pct_cols = ['Unrealized G/L %', 'Dividend Yield', 'Daily Change %', 'Weight']
+    qty_cols = ['Quantity']
+
+    dollar_fmt = CellFormat(numberFormat=NumberFormat(type='CURRENCY', pattern='$#,##0.00'))
+    pct_fmt = CellFormat(numberFormat=NumberFormat(type='PERCENT', pattern='0.0%'))
+    qty_fmt = CellFormat(numberFormat=NumberFormat(type='NUMBER', pattern='#,##0.####'))
+
+    ranges = []
+    for col_name, fmt in (
+        *[(c, dollar_fmt) for c in dollar_cols],
+        *[(c, pct_fmt) for c in pct_cols],
+        *[(c, qty_fmt) for c in qty_cols],
+    ):
+        idx = config.POSITION_COLUMNS.index(col_name)
+        letter = _col_letter(idx)
+        ranges.append((f"{letter}{first_row}:{letter}{last_row}", fmt))
+
+    try:
+        format_cell_ranges(ws, ranges)
+    except Exception as e:
+        print(f"Holdings_Current number formatting failed: {e}")
+
+
 def write_holdings_current(ws, data: list[list]) -> None:
     """Atomically update Holdings_Current starting at row 2 (row 1=KPI dashboard)."""
     if not data:
         print("Holdings_Current: No data to write.")
         return
 
-    # Replace {ROW} placeholder with actual row index (starting at 3 because row 1 is KPI, row 2 is header)
-    processed_data = []
-    for i, row in enumerate(data):
-        row_idx = i + 3
-        new_row = [str(cell).replace("{ROW}", str(row_idx)) if "{ROW}" in str(cell) else cell for cell in row]
-        processed_data.append(new_row)
-
     # Prepare headers and data for a single update starting at A2 (Task 1)
-    full_data = [config.POSITION_COLUMNS] + processed_data
-    
+    full_data = [config.POSITION_COLUMNS] + data
+
     num_cols = len(config.POSITION_COLUMNS)
     col_letter = chr(ord('A') + num_cols - 1)
-    
+
     # Clear the data range starting from A2 (headers + positions) to ensure no stale data remains
     # Row 1 is preserved for the KPI dashboard.
     ws.batch_clear([f"A2:{col_letter}2000"])
-    
-    # Write everything in one go starting at A2
-    # Headers go to Row 2, Data starts at Row 3.
-    ws.update(range_name="A2", values=full_data, value_input_option='USER_ENTERED')
-        
+
+    # RAW, not USER_ENTERED: every value here is a Python-computed number or
+    # plain text, never a formula string (sanitize_dataframe_for_sheets no
+    # longer injects '=G{ROW}-H{ROW}' formulas -- Unrealized G/L and
+    # Unrealized G/L % are passed through as the real floats normalize_positions()
+    # already computed). RAW prevents Sheets from mis-parsing any value that
+    # happens to start with '+' or '=' as a formula.
+    ws.update(range_name="A2", values=full_data, value_input_option='RAW')
+    _apply_holdings_number_formats(ws, len(data))
+
     time.sleep(1.0)
     print(f"Holdings_Current: Updated {len(data)} rows (starting at Row 2).")
 

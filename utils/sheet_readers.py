@@ -133,19 +133,27 @@ def read_gsheet_robust(ws: gspread.Worksheet) -> pd.DataFrame:
     for col in df.columns:
         col_lower = col.lower()
         should_skip = any(ind in col_lower for ind in text_indicators)
-        
+
         if should_skip:
             continue
-        
+
+        had_pct = pd.Series(False, index=df.index)
         if df[col].dtype == object:
-            df[col] = df[col].astype(str).str.replace('$', '', regex=False).str.replace('%', '', regex=False).str.replace(',', '', regex=False).str.strip()
-            df[col] = df[col].replace('', '0')
+            s = df[col].astype(str)
+            # A literal '%' in the cell means Sheets is displaying a fraction as a
+            # percentage (e.g. "6.77%" == 0.0677) — remember that before stripping
+            # the sign, so the parsed number can be divided back down to a fraction.
+            had_pct = s.str.contains('%', regex=False)
+            s = s.str.replace('$', '', regex=False).str.replace('%', '', regex=False).str.replace(',', '', regex=False).str.strip()
+            s = s.replace('', '0')
             # Handle parenthesized negatives: (123.45) -> -123.45
-            mask = df[col].str.startswith('(') & df[col].str.endswith(')')
-            df.loc[mask, col] = '-' + df.loc[mask, col].str[1:-1]
-        
+            mask = s.str.startswith('(') & s.str.endswith(')')
+            s.loc[mask] = '-' + s.loc[mask].str[1:-1]
+            df[col] = s
+
         df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0.0)
-        
+        df.loc[had_pct, col] = df.loc[had_pct, col] / 100.0
+
     return df
 
 @lru_cache(maxsize=32)

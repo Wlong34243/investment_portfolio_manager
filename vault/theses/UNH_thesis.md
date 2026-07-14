@@ -3,19 +3,19 @@ ticker: UNH
 style: GARP
 framework_preference: lynch_garp_v1, psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: '2026-05-18'
-current_allocation: 2.22%
+last_reviewed: '2026-07-14'
+current_allocation: 0.02%
 cost_basis: 11397.97
 time_horizon: 1 to 3 years
 triggers:
   fwd_pe_add_below: 14
   fwd_pe_trim_above: 18             # lowered from 20 — taking off risk earlier into strength
-  fwd_pe_historical_median: null
+  fwd_pe_historical_median:
   price_add_below: 290              # rebuild zone — re-engage if it pulls back into structural value
   price_trim_above: 380             # close-out zone — exit on further strength
-  discount_from_52w_high_add: null
+  discount_from_52w_high_add:
   revenue_growth_floor_pct: 5
-  operating_margin_floor_pct: null
+  operating_margin_floor_pct:
   style_size_ceiling_pct: 5.0       # lowered from 7 — defensive but I no longer want it at 6%+ weight
   current_weight_pct: 2.22
 drawdown_tolerance_pct: 0.25
@@ -84,17 +84,14 @@ At 2.22% the position is sub-scale. Two valid paths from here:
 - Re-evaluate quarterly; full close-out by Q4 2026 if neither trim nor rebuild trigger fires.
 
 <!-- region:position_state -->
-**Current Allocation:** 2.22%
+**Current Allocation:** 0.02%
 **Cost Basis:** $11,397.97
-**Unrealized G/L:** +$2,164.53 (+19.0%)
-**Realized G/L YTD on prior lots:** $3,103 over 24 closed lots
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
-**Style:** GARP (downgraded from "defensive core" to "tactical residual")
-**Size Ceiling:** 5.00% (lowered from 7.00%)
-**Working Soft Cap:** 3.00%
-**Drift:** -0.78% to soft cap; positioned as residual, not target
+**Style:** GARP
+**Size Ceiling:** 9.00%
+**Drift:** -8.98%
 <!-- endregion:sizing -->
 
 <!-- region:wash_sale_watch -->
@@ -102,5 +99,17 @@ At 2.22% the position is sub-scale. Two valid paths from here:
 <!-- endregion:wash_sale_watch -->
 
 <!-- region:change_log -->
-2026-05-18: Major thesis revision. Reclassified from "defensive core" to "tactical residual." Position trimmed from 7.08% to 2.22%. Size ceiling lowered from 7% to 5%. Trim/close trigger set at $380, rebuild trigger tightened to $290. Honest documentation of why the trim was deeper than the original plan called for.
+2026-07-14 10:51: Auto-sync allocation 0.02%, drift -8.98%
 <!-- endregion:change_log -->
+
+<!-- region:transaction_log -->
+- 2026-05-11: Sell -15.0 @ $380.99
+- 2026-05-11: Sell -20.0 @ $380.99
+- 2026-04-24: Sell -10.0 @ $354.18
+- 2026-04-23: Sell -5.0 @ $354.30
+- 2026-04-16: Buy 10.0 @ $317.53
+<!-- endregion:transaction_log -->
+
+<!-- region:realized_gl -->
+Total Realized G/L: $11,836.62 over 64 closed lots. Total Proceeds: $85,706.22.
+<!-- endregion:realized_gl -->

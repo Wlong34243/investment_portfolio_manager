@@ -1,13 +1,14 @@
 ---
 ticker: CFG
-style: 
-framework_preference: 
+style: FUND
+framework_preference:
 entry_date:
-last_reviewed:
+last_reviewed: '2026-06-29'
 triggers:
   price_trim_above: 48.00
+cost_basis: 2422.43
+current_allocation: 0.41%
 ---
-
 # CFG — Investment Thesis
 
 ## Style
@@ -43,3 +44,30 @@ priority: low
 
 ## Review Log
 - 2026-04: Initiated. Thesis intact. Monitoring Net Interest Margin (NIM) trajectory, CRE loan provisions, and private banking fee revenue.
+
+<!-- region:position_state -->
+**Current Allocation:** 0.41%
+**Cost Basis:** $2,422.43
+<!-- endregion:position_state -->
+
+<!-- region:sizing -->
+**Style:** FUND
+**Size Ceiling:** 5.00%
+**Drift:** -4.59%
+<!-- endregion:sizing -->
+
+<!-- region:transaction_log -->
+- 2026-06-24: Buy 15.0 @ $69.08
+- 2026-06-24: Buy 20.0 @ $69.31
+- 2026-05-01: Sell -55.0 @ $65.03
+- 2026-04-20: Buy 15.0 @ $64.70
+- 2026-04-10: Buy 5.0 @ $64.66
+<!-- endregion:transaction_log -->
+
+<!-- region:realized_gl -->
+Total Realized G/L: $426.91 over 8 closed lots. Total Proceeds: $6,706.60.
+<!-- endregion:realized_gl -->
+
+<!-- region:change_log -->
+2026-06-29 10:51: Auto-sync allocation 0.41%, drift -4.59%
+<!-- endregion:change_log -->

@@ -3,19 +3,19 @@ ticker: AMD
 style: GARP
 framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: '2026-05-03'
-current_allocation: 1.94%
-cost_basis: 6606.04
+last_reviewed: '2026-07-14'
+current_allocation: 0.01%
+cost_basis: 1816.35
 time_horizon: 3 to 5 years
 triggers:
   fwd_pe_add_below: 25               # add if de-rated but AI/DC thesis intact
   fwd_pe_trim_above: 38              # trim if priced as flawless NVDA-lite
-  fwd_pe_historical_median: null
-  price_add_below: null              # focus on PE + data center signals
+  fwd_pe_historical_median:
+  price_add_below:                   # focus on PE + data center signals
   price_trim_above: 240.00
-  discount_from_52w_high_add: null
+  discount_from_52w_high_add:
   revenue_growth_floor_pct: 15       # still want mid-teens+ given AI ramp
-  operating_margin_floor_pct: null   # watch DC segment margins and mix
+  operating_margin_floor_pct:        # watch DC segment margins and mix
   style_size_ceiling_pct: 4.0        # high beta / dual-front-competition risk
   current_weight_pct: 2.2
 ---
@@ -67,25 +67,28 @@ I will exit or materially cut if the **“smart second‑source” and share‑g
 4. A superior, more attractively priced AI accelerator or semiconductor compounder emerges, offering a better risk‑adjusted IRR.  
 
 <!-- region:position_state -->
-**Current Allocation:** 1.94%
-**Cost Basis:** $6,606.04
+**Current Allocation:** 0.01%
+**Cost Basis:** $1,816.35
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** GARP
 **Size Ceiling:** 9.00%
-**Drift:** -7.06%
+**Drift:** -8.99%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
+- 2026-06-29: Sell -10.0 @ $522.00
+- 2026-05-13: Sell -9.0 @ $442.33
+- 2026-05-13: Sell -1.0 @ $442.33
+- 2026-05-08: Sell -7.0 @ $426.95
 - 2026-04-24: Sell -8.0 @ $344.10
-- 2026-02-04: Buy 8.0 @ $205.40
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
-Total Realized G/L: $1,110.00 over 1 closed lots. Total Proceeds: $2,753.00.
+Total Realized G/L: $6,478.04 over 4 closed lots. Total Proceeds: $12,917.59.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-05-03 14:58: Auto-sync allocation 1.94%, drift -7.06%
+2026-07-14 10:51: Auto-sync allocation 0.01%, drift -8.99%
 <!-- endregion:change_log -->

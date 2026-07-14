@@ -30,9 +30,14 @@ Python (Typer CLI), Google Sheets (gspread), Gemini 2.5 Pro/Flash (google-genai)
 - `pipeline.py`: Legacy orchestrator (shim only — 7 active imports, do not delete without migration).
 - `config.py`: Single source of truth for column maps and constants.
 - `utils/column_guard.py`: Prevents KeyError crashes via self-healing Title Case.
-- `utils/agents/idea_generator.py`: Idea Generator agent — scans podcast transcripts against composite bundle, outputs investment candidates via `pm agent ideas`.
+- `utils/agents/idea_generator.py`: Idea Generator agent — auto-ingests podcast transcripts as Step 1, scans them against composite bundle, and outputs investment candidates via `pm agent ideas`.
 - `prompts/idea_generator.md`: System prompt for the Idea Generator. SAFETY_PREAMBLE is auto-prepended by `ask_gemini()` — do NOT duplicate safety language here.
 - `STATE.md` and `CLAUDE.md`: Read these files first to understand current build states and conventions.
+
+⚠️ Current State & Known Issues (June 2026)
+- Morning Cascade: Expanded to 9 steps (health → transactions → live update → snapshot → podcast sync → dashboard → vault sync → vault snapshot → composite bundle).
+- Podcast Ingestion: GitHub Actions cron is failing silently because YouTube blocks Azure IPs. Workaround: Must be run locally using `pm ingest podcasts --live` or `pm agent ideas`.
+- Next Agent Priority: Valuation Drift Monitor (tracking fundamental changes against thesis baselines).
 
 🗝️ Authoritative Fingerprints
 - `Holdings_History`: `import_date|ticker|quantity`

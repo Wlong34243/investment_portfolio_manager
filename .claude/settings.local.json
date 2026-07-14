@@ -26,7 +26,27 @@
       "Bash(claude doctor *)",
       "Bash(pm podcast *)",
       "Bash(echo \"exit: $?\")",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(powershell.exe *)",
+      "PowerShell(Test-Path \"C:\\\\Users\\\\WLong\\\\Investment_Portfolio\\\\REPO_AUDIT_2026-05-26.md\"; \\(Get-Item \"C:\\\\Users\\\\WLong\\\\Investment_Portfolio\\\\REPO_AUDIT_2026-05-26.md\"\\).Length; Test-Path \"C:\\\\Users\\\\WLong\\\\Investment_Portfolio\\\\portfolio_manager_user_docs.html\"; \\(Get-Item \"C:\\\\Users\\\\WLong\\\\Investment_Portfolio\\\\portfolio_manager_user_docs.html\"\\).Length)",
+      "PowerShell(Test-Path *)",
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\WLong\\\\Investment_Portfolio\\\\utils\\\\agents\\\\\" | Where-Object { !$_.PSIsContainer } | Select-Object Name)",
+      "Bash(git rm *)",
+      "Bash(curl -sI \"https://www.youtube.com/feeds/videos.xml?channel_id=UCe8y7CzcjhMPTzem-Zn6sqA\")",
+      "Bash(PYTHONIOENCODING=utf-8 python manager.py morning --skip-podcasts)",
+      "Bash(PYTHONIOENCODING=utf-8 python manager.py morning)",
+      "Bash(PYTHONIOENCODING=utf-8 python manager.py morning --strict --skip-health)",
+      "Bash(sort -t_ -k5)",
+      "Bash(PYTHONIOENCODING=utf-8 python manager.py agent ideas --dry-run)",
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(pm login *)",
+      "Bash(pm backup *)",
+      "Bash(pm morning *)",
+      "Bash(grep -n \"u2705\\\\|✅\\\\|\\\\\\\\\\\\\\\\u2705\\\\|\\\\\\\\✅\\\\|skip_transactions\" \"C:\\\\Users\\\\WLong\\\\Investment_Portfolio\\\\manager.py\")",
+      "Bash(grep -n \"u2705\\\\|✅\\\\|\\\\\\\\\\\\\\\\u2705\" \"C:\\\\Users\\\\WLong\\\\Investment_Portfolio\\\\utils\\\\schwab_client.py\")",
+      "Bash(grep *)",
+      "Bash(pm vault *)",
+      "Bash(echo \"grep exit: $?\")"
     ]
   }
 }

@@ -3,9 +3,9 @@ ticker: LRCX
 style: GARP
 framework_preference: lynch_garp_v1
 entry_date: 2026-05-03
-last_reviewed: '2026-05-03'
-current_allocation: 0.93%
-cost_basis: 6419.35
+last_reviewed: '2026-07-14'
+current_allocation: 0.02%
+cost_basis: 8462.62
 time_horizon: 3 to 5 years
 triggers:
   fwd_pe_add_below: 18              # add on semi cycle fear; LRCX historically re-rates fast off trough
@@ -17,7 +17,7 @@ triggers:
   revenue_growth_floor_pct: 5       # floor for WFE growth environment; miss signals cycle deterioration
   operating_margin_floor_pct: 42    # world-class margins; contraction below here is a thesis check
   style_size_ceiling_pct: 9.0
-  current_weight_pct: null
+  current_weight_pct:
 drawdown_tolerance_pct: 0.35        # semi equipment is cyclical; 35% from cost is within thesis
 panic_buy_trigger_drawdown_pct: 0.25
 ---
@@ -63,18 +63,22 @@ Cost basis: ~$255.51 per share. At entry LRCX traded at a compressed forward mul
 - Rotation priority: medium; semi-equipment is cyclical but the unit intensity thesis is high conviction.
 
 <!-- region:position_state -->
-**Current Allocation:** 0.93%
-**Cost Basis:** $6,419.35
+**Current Allocation:** 0.02%
+**Cost Basis:** $8,462.62
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** GARP
 **Size Ceiling:** 9.00%
-**Drift:** -8.07%
+**Drift:** -8.98%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
-- 2026-04-30: Buy 8.0 @ $255.51
+- 2026-06-18: Sell -15.0 @ $395.90
+- 2026-05-07: Buy 5.0 @ $285.95
+- 2026-05-05: Buy 5.0 @ $272.38
+- 2026-05-04: Buy 7.0 @ $256.32
+- 2026-05-04: Buy 5.0 @ $259.14
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
@@ -82,5 +86,5 @@ No realized G/L history.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-05-03 14:58: Auto-sync allocation 0.93%, drift -8.07%
+2026-07-14 10:51: Auto-sync allocation 0.02%, drift -8.98%
 <!-- endregion:change_log -->

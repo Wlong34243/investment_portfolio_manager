@@ -636,7 +636,12 @@ def bundle_push(
 
     data = load_bundle(path)
     df = pd.DataFrame(data.get("positions", []))
-    if 'weight_pct' in df.columns and 'weight' not in df.columns:
+    if 'weight_pct' in df.columns:
+        # core/bundle.py only ever populates weight_pct (from market_value /
+        # total_value); some enrichment steps add a 'weight' key that defaults
+        # to 0.0 and is never actually filled in. Always prefer weight_pct
+        # here -- checking "weight not in df.columns" let a bogus all-zero
+        # 'weight' column silently win whenever both keys were present.
         df['weight'] = df['weight_pct'] / 100.0
     if 'import_date' not in df.columns:
         df['import_date'] = data.get('timestamp_utc', '')[:10]
@@ -1199,7 +1204,11 @@ def morning(
             cmd = [sys.executable, str(script_path)]
             if live:
                 cmd.append("--live")
-            pod_result = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
+            # 600s, not 180s: each new episode found costs a transcript
+            # download + a Gemini call over the full transcript, sequentially,
+            # on top of up to 10 RSS checks -- a morning with several new
+            # episodes queued across channels routinely exceeded 180s.
+            pod_result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
 
             # Logger writes to stderr; parse summary lines from there
             output = pod_result.stderr
@@ -1364,15 +1373,27 @@ def agent_ideas(
     since_days: int = typer.Option(7, "--since-days", help="Look back N days for transcripts."),
     bundle_path: Optional[Path] = typer.Option(None, "--bundle-path", help="Path to composite bundle. Auto-detects latest if omitted."),
     dry_run: bool = typer.Option(False, "--dry-run", help="Print report to stdout instead of writing to disk."),
+    skip_ingest: bool = typer.Option(False, "--skip-ingest", help="Skip podcast ingestion and use transcripts already on disk."),
 ):
     """
     Generate investment candidates from recent podcast transcripts.
 
+    Fetches new podcast transcripts first, then runs the idea generator.
     Consumes the composite bundle + data/podcast_transcripts/ and writes a markdown
     report to agent_outputs/ideas/. Use --dry-run to print to stdout.
     """
     import time as _time
     from utils.agents.idea_generator import run_idea_generator, write_idea_report
+
+    if not skip_ingest:
+        console.print("[bold cyan]Step 1/2 — Ingesting new podcast transcripts...[/]")
+        try:
+            podcast_batch(analyze=False, live=True)
+        except Exception as e:
+            console.print(f"[yellow]Podcast ingestion failed: {e} — continuing with existing transcripts.[/]")
+        console.print()
+
+    console.print("[bold cyan]Step 2/2 — Running idea generator...[/]" if not skip_ingest else "[bold cyan]Running idea generator...[/]")
 
     bundle_path_str = str(bundle_path) if bundle_path else None
 

@@ -1,10 +1,12 @@
 """
 tasks/build_command_center.py — Build the 0_DASHBOARD Command Center tab.
 
-Reads from: Holdings_Current, Daily_Snapshots, Tax_Control, Risk_Metrics,
-            Target_Allocation, Valuation_Card.
+Reads from: Holdings_Current, Daily_Snapshots, Risk_Metrics, Valuation_Card, Agent_Outputs.
 Writes to:  0_DASHBOARD (clear-and-rebuild, single batch_update call).
-No original computation — aggregates values already present on other tabs.
+One position row per holding (sorted by Market Value descending), joined against
+Valuation_Card and the latest Agent_Outputs run, plus one bulk yfinance call for
+52-week range (not baked into any tab yet). No price targets or recommendations
+originate here — Trim/Add/Signal are all read from existing sandboxed surfaces.
 """
 
 import json
@@ -12,7 +14,7 @@ import logging
 import time
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
 
@@ -30,10 +32,17 @@ import pandas as pd
 import config
 from utils.sheet_readers import get_gspread_client, read_gsheet_robust
 from utils.sheet_writers import safe_execute
+from utils.agent_signals import get_latest_agent_outputs, ACTION_SEVERITIES
 
 logger = logging.getLogger(__name__)
 
-_NCOLS = 9  # grid width (Ticker|Weight|MV|UGL%|Price|Trim|Add|DistTrim|DistAdd)
+# Position table columns, left to right (A..O)
+_POS_COLS = [
+    "Ticker", "MV", "Wt%", "Price", "Day%", "UGL $", "UGL %",
+    "Fwd P/E", "PEG", "52w %", "Trim", "Add", "->Trim %", "->Add %", "Signal",
+]
+_NCOLS = 18  # widest row is the KPI strip (9 label/value pairs = 18 cells)
+_DATA_START_ROW = 5
 
 
 def _pad(row: list, n: int = _NCOLS) -> list:
@@ -41,52 +50,7 @@ def _pad(row: list, n: int = _NCOLS) -> list:
 
 
 # ---------------------------------------------------------------------------
-# Formatters — pre-bake strings so DRY RUN and LIVE output are identical
-# ---------------------------------------------------------------------------
-
-def _dollar(v) -> str:
-    try:
-        f = float(v)
-        return f"${f:,.2f}" if f >= 0 else f"-${abs(f):,.2f}"
-    except (TypeError, ValueError):
-        return "—"
-
-
-def _dollar_signed(v) -> str:
-    try:
-        f = float(v)
-        return f"+${f:,.2f}" if f >= 0 else f"-${abs(f):,.2f}"
-    except (TypeError, ValueError):
-        return "—"
-
-
-def _pct(v, signed: bool = False, decimals: int = 1) -> str:
-    try:
-        f = float(v)
-        if signed:
-            return f"{f:+.{decimals}f}%"
-        return f"{f:.{decimals}f}%"
-    except (TypeError, ValueError):
-        return "—"
-
-
-def _float2(v) -> str:
-    try:
-        return f"{float(v):.2f}"
-    except (TypeError, ValueError):
-        return "—"
-
-
-def _normalize_pct(series: pd.Series) -> pd.Series:
-    """Convert 0-1 fractions to 0-100 percentages if the max is <= 1.5."""
-    numeric = pd.to_numeric(series, errors="coerce").fillna(0)
-    if numeric.abs().max() <= 1.5:
-        return numeric * 100
-    return numeric
-
-
-# ---------------------------------------------------------------------------
-# Tab readers — never raise; return [] / [[]] on failure
+# Tab readers — never raise; return [] on failure
 # ---------------------------------------------------------------------------
 
 def _read_records(ss, tab: str) -> list[dict]:
@@ -96,14 +60,6 @@ def _read_records(ss, tab: str) -> list[dict]:
         return df.to_dict("records")
     except Exception as e:
         logger.warning("Could not read tab %s: %s", tab, e)
-        return []
-
-
-def _read_raw(ss, tab: str) -> list[list]:
-    try:
-        return ss.worksheet(tab).get_all_values()
-    except Exception as e:
-        logger.warning("Could not read tab %s (raw): %s", tab, e)
         return []
 
 
@@ -161,7 +117,7 @@ def _fmp_cache_age() -> str:
 
 
 def _spy_ytd_pct() -> Optional[float]:
-    """Return SPY YTD return as a float percentage, or None on failure."""
+    """Return SPY YTD return as a float percentage (e.g. 8.5 for 8.5%), or None on failure."""
     try:
         import yfinance as yf
         hist = yf.Ticker("SPY").history(period="ytd")
@@ -172,19 +128,28 @@ def _spy_ytd_pct() -> Optional[float]:
         return None
 
 
+def _check_system_health() -> dict:
+    return {
+        "last_refresh": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "bundle_hash": _latest_bundle_hash(),
+        "schwab_token": _schwab_token_status(),
+        "fmp_cache_age": _fmp_cache_age(),
+    }
+
+
 # ---------------------------------------------------------------------------
-# KPI computers
+# Headline KPIs — returns raw numbers (or None), never pre-formatted strings.
+# Writing raw numbers with a real Sheets number format (instead of a baked
+# string like "+$530.00") is what makes the old #NAME? bug impossible: Sheets
+# never has to parse a leading '+' as a formula, because nothing here is a
+# string.
 # ---------------------------------------------------------------------------
 
 def _compute_headline_kpis(daily_rows: list[dict], holdings_rows: list[dict]) -> dict:
     out = {
-        "total_value": "—",
-        "cash_pct": "—",
-        "strategic_cash": "—",
-        "day_change": "—",
-        "mtd_pct": "—",
-        "ytd_pct": "—",
-        "ytd_raw": None,
+        "total_value": None, "cash_pct": None, "strategic_cash": None,
+        "day_change_dollar": None, "day_change_pct": None,
+        "mtd_pct": None, "ytd_pct": None, "snapshot_date": None,
     }
     if not daily_rows:
         return out
@@ -205,25 +170,25 @@ def _compute_headline_kpis(daily_rows: list[dict], holdings_rows: list[dict]) ->
     latest = df.iloc[-1]
     total_value = latest.get("Total Value")
     cash_value = latest.get("Cash Value") or 0.0
+    out["snapshot_date"] = latest["Date"]
 
     if total_value and total_value > 0:
-        out["total_value"] = _dollar(total_value)
-        out["cash_pct"] = _pct(cash_value / total_value * 100)
+        out["total_value"] = float(total_value)
+        out["cash_pct"] = float(cash_value) / float(total_value)
 
     # Strategic cash: Market Value sum for CASH_TICKERS
     if holdings_rows:
         df_h = pd.DataFrame(holdings_rows)
         df_h["Market Value"] = pd.to_numeric(df_h.get("Market Value", pd.Series(dtype=float)), errors="coerce").fillna(0)
         strat_cash = df_h.loc[df_h["Ticker"].astype(str).isin(config.CASH_TICKERS), "Market Value"].sum()
-        out["strategic_cash"] = _dollar(strat_cash)
+        out["strategic_cash"] = float(strat_cash)
 
     # Day change
     if len(df) >= 2 and total_value:
         prev_val = pd.to_numeric(df.iloc[-2].get("Total Value"), errors="coerce")
         if prev_val:
-            delta = total_value - prev_val
-            delta_pct = delta / prev_val * 100
-            out["day_change"] = f"{_dollar_signed(delta)} ({_pct(delta_pct, signed=True)})"
+            out["day_change_dollar"] = float(total_value - prev_val)
+            out["day_change_pct"] = float((total_value - prev_val) / prev_val)
 
     now = latest["Date"]
 
@@ -232,187 +197,176 @@ def _compute_headline_kpis(daily_rows: list[dict], holdings_rows: list[dict]) ->
     if not month_rows.empty and total_value:
         start_val = pd.to_numeric(month_rows.iloc[0].get("Total Value"), errors="coerce")
         if start_val:
-            out["mtd_pct"] = _pct(total_value / start_val * 100 - 100, signed=True)
+            out["mtd_pct"] = float(total_value / start_val - 1)
 
     # YTD
     year_rows = df[df["Date"].dt.year == now.year]
     if not year_rows.empty and total_value:
         start_val = pd.to_numeric(year_rows.iloc[0].get("Total Value"), errors="coerce")
         if start_val:
-            ytd = total_value / start_val * 100 - 100
-            out["ytd_pct"] = _pct(ytd, signed=True)
-            out["ytd_raw"] = ytd
+            out["ytd_pct"] = float(total_value / start_val - 1)
 
     return out
 
 
-def _read_tax_kpis(tax_raw: list[list]) -> dict:
-    """Read KPI strip from Tax_Control raw values (row 1=labels, row 2=values)."""
-    result = {label: "—" for label in config.TAX_CONTROL_KPI_LABELS}
-    if len(tax_raw) < 3:
-        return result
-    labels = tax_raw[1]
-    values = tax_raw[2]
-    for i, label in enumerate(labels):
-        if label in result and i < len(values):
-            result[label] = values[i]
-    return result
-
-
-def _compute_risk_snapshot(risk_rows: list[dict]) -> dict:
-    out = {
-        "beta": "—",
-        "top_pos": "—",
-        "top_sector": "—",
-        "stress_10": "—",
-    }
+def _compute_beta(risk_rows: list[dict]) -> Optional[float]:
     if not risk_rows:
-        return out
+        return None
     latest = risk_rows[-1]
-
-    out["beta"] = _float2(latest.get("Portfolio Beta"))
-
-    ticker = str(latest.get("Top Position Ticker", "—"))
-    conc = latest.get("Top Position Conc %")
-    if conc not in (None, ""):
-        conc_f = float(conc) if float(conc) > 1 else float(conc) * 100
-        out["top_pos"] = f"{ticker} ({_pct(conc_f)})"
-    else:
-        out["top_pos"] = ticker
-
-    sector = str(latest.get("Top Sector", "—"))
-    sec_conc = latest.get("Top Sector Conc %")
-    if sec_conc not in (None, ""):
-        sec_f = float(sec_conc) if float(sec_conc) > 1 else float(sec_conc) * 100
-        out["top_sector"] = f"{sector} ({_pct(sec_f)})"
-    else:
-        out["top_sector"] = sector
-
-    out["stress_10"] = _dollar(latest.get("Stress -10% Impact"))
-    return out
+    try:
+        return float(latest.get("Portfolio Beta"))
+    except (TypeError, ValueError):
+        return None
 
 
-def _compute_top_n(holdings_rows: list[dict], valuation_rows: list[dict], n: int = 10) -> list[dict]:
+# ---------------------------------------------------------------------------
+# 52-week range — not baked into any tab yet, so one bulk yfinance call here.
+# ---------------------------------------------------------------------------
+
+def _fetch_52w_ranges(tickers: list[str]) -> dict[str, tuple[float, float]]:
+    if not tickers:
+        return {}
+    try:
+        import yfinance as yf
+        data = yf.download(tickers, period="1y", progress=False, group_by="ticker", threads=True)
+    except Exception as e:
+        logger.warning("52-week range bulk fetch failed: %s", e)
+        return {}
+
+    ranges: dict[str, tuple[float, float]] = {}
+    for t in tickers:
+        try:
+            closes = data[t]["Close"].dropna() if len(tickers) > 1 else data["Close"].dropna()
+            if not closes.empty:
+                ranges[t] = (float(closes.min()), float(closes.max()))
+        except Exception:
+            continue
+    return ranges
+
+
+# ---------------------------------------------------------------------------
+# Agent signal — reuses get_latest_agent_outputs(); picks the highest-priority
+# active signal for a ticker the same way build_decision_view.py does, so the
+# two views agree on what "ADD"/"TRIM" means for a given ticker. No price
+# targets or new recommendations are generated here, only surfaced.
+# ---------------------------------------------------------------------------
+
+_SIGNAL_PRIORITY = ("valuation", "macro", "thesis")
+
+
+def _ticker_signal(df_agent: pd.DataFrame, ticker: str) -> tuple[str, str]:
+    """Return (signal_chip, rationale) for a ticker, or ("", "") if no active signal."""
+    if df_agent.empty:
+        return "", ""
+    ticker_agents = df_agent[df_agent["ticker"] == ticker]
+    if ticker_agents.empty:
+        return "", ""
+    for agent_name in _SIGNAL_PRIORITY:
+        agent_rows = ticker_agents[ticker_agents["agent"] == agent_name]
+        if agent_rows.empty:
+            continue
+        row = agent_rows.iloc[0]
+        sev = str(row.get("severity", "")).lower()
+        if sev not in ACTION_SEVERITIES:
+            continue
+        signal = str(row.get("signal_type", "") or row.get("action", ""))
+        if signal:
+            rationale = str(row.get("rationale", "") or row.get("action", ""))
+            return signal.upper(), rationale
+    return "", ""
+
+
+# ---------------------------------------------------------------------------
+# Position table assembly — Holdings_Current x Valuation_Card x Agent signals
+# ---------------------------------------------------------------------------
+
+def _safe_float(val):
+    try:
+        return float(val) if val not in (None, "", "—") else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _safe_float_nonzero(val):
+    """
+    Like _safe_float, but also treats 0.0 as missing. read_gsheet_robust()
+    fillna(0.0)s every numeric Valuation_Card column, so a blank Trim Target /
+    Add Target / PEG / Forward P/E cell (normal for a pure ETF) comes back as
+    a real 0.0, not None -- and a genuine 0.0 in any of these fields is never
+    meaningful data, so treating it as missing is always correct here.
+    """
+    f = _safe_float(val)
+    return f if f else None
+
+
+def _build_position_table(
+    holdings_rows: list[dict],
+    valuation_rows: list[dict],
+    df_agent: pd.DataFrame,
+) -> list[dict]:
     if not holdings_rows:
         return []
 
     df_h = pd.DataFrame(holdings_rows)
-    df_h["Market Value"] = pd.to_numeric(df_h.get("Market Value", pd.Series(dtype=float)), errors="coerce").fillna(0)
-    df_h["Weight"] = _normalize_pct(df_h.get("Weight", pd.Series(dtype=float)))
-    df_h["Unrealized G/L %"] = _normalize_pct(df_h.get("Unrealized G/L %", pd.Series(dtype=float)))
-    df_h["Price"] = pd.to_numeric(df_h.get("Price", pd.Series(dtype=float)), errors="coerce").fillna(0)
-
+    for col in ["Market Value", "Weight", "Price", "Daily Change %", "Unrealized G/L", "Unrealized G/L %"]:
+        if col in df_h.columns:
+            df_h[col] = pd.to_numeric(df_h[col], errors="coerce").fillna(0)
     df_h = df_h[~df_h["Ticker"].astype(str).isin(config.CASH_TICKERS)]
-    df_h = df_h.nlargest(n, "Market Value")
+    df_h = df_h.sort_values("Market Value", ascending=False)
 
     val_map: dict[str, dict] = {}
     for row in (valuation_rows or []):
         ticker = str(row.get("Ticker", "")).strip()
         if ticker:
-            val_map[ticker] = {
-                "trim": row.get("Trim Target"),
-                "add": row.get("Add Target"),
-            }
+            val_map[ticker] = row
+
+    tickers = df_h["Ticker"].astype(str).tolist()
+    ranges_52w = _fetch_52w_ranges(tickers)
 
     results = []
     for _, row in df_h.iterrows():
         ticker = str(row["Ticker"])
         price = float(row["Price"]) if row["Price"] else 0.0
-
-        def _safe_float(val):
-            try:
-                return float(val) if val not in (None, "", "—") else None
-            except (TypeError, ValueError):
-                return None
-
         vdata = val_map.get(ticker, {})
-        trim = _safe_float(vdata.get("trim"))
-        add = _safe_float(vdata.get("add"))
 
-        dist_trim = _pct((trim - price) / price * 100, signed=True) if trim and price else "n/a"
-        dist_add = _pct((price - add) / add * 100, signed=True) if add and price else "n/a"
+        fwd_pe = _safe_float_nonzero(vdata.get("Forward P/E (yf)"))
+        peg = _safe_float_nonzero(vdata.get("PEG"))
+        trim = _safe_float_nonzero(vdata.get("Trim Target"))
+        add = _safe_float_nonzero(vdata.get("Add Target"))
+
+        dist_trim = (trim - price) / price if trim and price else None
+        dist_add = (price - add) / add if add and price else None
+
+        lo_hi = ranges_52w.get(ticker)
+        pos_52w = None
+        if lo_hi and price:
+            lo, hi = lo_hi
+            if hi > lo:
+                pos_52w = (price - lo) / (hi - lo)
+
+        signal, rationale = _ticker_signal(df_agent, ticker)
+        no_valuation = fwd_pe is None and peg is None and trim is None and add is None
 
         results.append({
             "Ticker": ticker,
-            "Weight": _pct(row["Weight"]),
-            "Market Value": _dollar(row["Market Value"]),
-            "UGL %": _pct(row["Unrealized G/L %"], signed=True),
-            "Price": _dollar(price),
-            "Trim Tgt": _dollar(trim) if trim else "—",
-            "Add Tgt": _dollar(add) if add else "—",
-            "Dist to Trim": dist_trim,
-            "Dist to Add": dist_add,
+            "MV": float(row["Market Value"]),
+            "Wt%": float(row["Weight"]),
+            "Price": price,
+            "Day%": float(row["Daily Change %"]),
+            "UGL $": float(row["Unrealized G/L"]),
+            "UGL %": float(row["Unrealized G/L %"]),
+            "Fwd P/E": fwd_pe,
+            "PEG": peg,
+            "52w %": pos_52w,
+            "Trim": trim,
+            "Add": add,
+            "->Trim %": dist_trim,
+            "->Add %": dist_add,
+            "Signal": signal,
+            "Rationale": rationale,
+            "no_valuation": no_valuation,
         })
     return results
-
-
-def _compute_drift_alerts(holdings_rows: list[dict], target_rows: list[dict]) -> list[dict]:
-    """
-    Aggregate Holdings_Current weights by Asset Class and compare with Target_Allocation.
-    Target_Allocation is an asset-class table, not a ticker table — joining on Asset Class.
-    """
-    if not holdings_rows or not target_rows:
-        return []
-
-    df_h = pd.DataFrame(holdings_rows)
-    df_t = pd.DataFrame(target_rows)
-
-    df_h["Weight"] = _normalize_pct(df_h.get("Weight", pd.Series(dtype=float)))
-    if "Asset Class" not in df_h.columns:
-        return []
-
-    df_current = df_h.groupby("Asset Class")["Weight"].sum().reset_index()
-    df_current.columns = ["Asset Class", "Current %"]
-
-    target_col = next(
-        (c for c in df_t.columns if "target" in c.lower() and "%" in c.lower()),
-        next((c for c in df_t.columns if "target" in c.lower()), None),
-    )
-    asset_col = next((c for c in df_t.columns if "asset" in c.lower()), None)
-    if not target_col or not asset_col:
-        return []
-
-    df_t = df_t[[asset_col, target_col]].copy()
-    df_t.columns = ["Asset Class", "Target %"]
-    df_t["Target %"] = _normalize_pct(df_t["Target %"])
-
-    merged = pd.merge(df_current, df_t, on="Asset Class", how="inner")
-    merged["Drift %"] = merged["Current %"] - merged["Target %"]
-    merged = merged[merged["Drift %"].abs() > config.REBALANCE_THRESHOLD_PCT]
-    merged = merged.iloc[merged["Drift %"].abs().argsort()[::-1]]
-
-    results = []
-    for _, row in merged.head(8).iterrows():
-        drift = row["Drift %"]
-        results.append({
-            "Asset Class": row["Asset Class"],
-            "Current %": _pct(row["Current %"]),
-            "Target %": _pct(row["Target %"]),
-            "Drift %": _pct(drift, signed=True),
-            "Direction": "OVER" if drift > 0 else "UNDER",
-        })
-    return results
-
-
-def _read_account_balances() -> list[dict]:
-    """Read per-account balance data saved by the bundle builder. Returns [] on any failure."""
-    try:
-        path = Path("data/account_balances.json")
-        if not path.exists():
-            return []
-        with open(path, "r", encoding="utf-8") as fh:
-            return json.load(fh)
-    except Exception:
-        return []
-
-
-def _check_system_health() -> dict:
-    return {
-        "last_refresh": datetime.now().strftime("%Y-%m-%d %H:%M"),
-        "bundle_hash": _latest_bundle_hash(),
-        "schwab_token": _schwab_token_status(),
-        "fmp_cache_age": _fmp_cache_age(),
-    }
 
 
 # ---------------------------------------------------------------------------
@@ -421,130 +375,142 @@ def _check_system_health() -> dict:
 
 def _build_grid(
     headline: dict,
-    tax: dict,
-    risk: dict,
-    top10: list[dict],
-    drift: list[dict],
+    beta: Optional[float],
+    positions: list[dict],
     health: dict,
     spy_ytd_raw: Optional[float],
-    accounts: list[dict] | None = None,
 ) -> list[list]:
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
 
-    if spy_ytd_raw is not None and headline["ytd_raw"] is not None:
-        try:
-            delta = float(headline["ytd_raw"]) - float(spy_ytd_raw)
-            vs_spy = _pct(delta, signed=True)
-        except (TypeError, ValueError):
-            vs_spy = "n/a"
-    else:
-        vs_spy = "n/a"
+    vs_spy = None
+    if spy_ytd_raw is not None and headline.get("ytd_pct") is not None:
+        vs_spy = headline["ytd_pct"] - (spy_ytd_raw / 100.0)
 
     grid: list[list] = []
 
     # R1: Title
     grid.append(_pad([f"PORTFOLIO COMMAND CENTER  —  As of {now_str}"]))
-    # R2: blank
-    grid.append(_pad([]))
-    # R3: Headline line 1
-    grid.append(_pad(["Total Value", headline["total_value"], "Cash %", headline["cash_pct"], "Strategic Cash", headline["strategic_cash"]]))
-    # R4: Headline line 2
-    grid.append(_pad(["Day Change", headline["day_change"], "MTD", headline["mtd_pct"], "YTD", headline["ytd_pct"], "vs. SPY YTD", vs_spy]))
-    # R5: blank
-    grid.append(_pad([]))
-    # R6: Tax header
-    grid.append(_pad(["TAX POSTURE"]))
-    # R7: Tax KPIs line 1
-    grid.append(_pad([
-        "Net ST (YTD)", tax.get("Net ST (YTD)", "—"),
-        "Net LT (YTD)", tax.get("Net LT (YTD)", "—"),
-        "Disallowed Wash", tax.get("Disallowed Wash Loss (YTD)", "—"),
-        "Wash Sales", tax.get("Wash Sale Count", "—"),
-    ]))
-    # R8: Tax KPIs line 2
-    grid.append(_pad(["Est. Fed Tax", tax.get("Est. Fed Cap Gains Tax", "—"), "Offset Capacity", tax.get("Tax Offset Capacity", "—")]))
-    # R9: blank
-    grid.append(_pad([]))
-    # R10: Risk header
-    grid.append(_pad(["RISK SNAPSHOT"]))
-    # R11: Risk data
-    grid.append(_pad(["Portfolio Beta", risk["beta"], "Top Position", risk["top_pos"], "Top Sector", risk["top_sector"], "Stress -10%", risk["stress_10"]]))
-    # R12: blank
-    grid.append(_pad([]))
-    # R13: Top 10 header
-    grid.append(_pad(["TOP 10 POSITIONS"]))
-    # R14: Top 10 column headers
-    grid.append(_pad(["Ticker", "Weight", "Market Value", "UGL %", "Price", "Trim Tgt", "Add Tgt", "Dist to Trim", "Dist to Add"]))
-    # R15-24: Top 10 data (pad to 10 rows)
-    for pos in top10:
-        grid.append(_pad([pos["Ticker"], pos["Weight"], pos["Market Value"], pos["UGL %"], pos["Price"], pos["Trim Tgt"], pos["Add Tgt"], pos["Dist to Trim"], pos["Dist to Add"]]))
-    for _ in range(10 - len(top10)):
-        grid.append(_pad([]))
-    # R25: blank
-    grid.append(_pad([]))
-    # R26: Drift header
-    grid.append(_pad(["DRIFT ALERTS"]))
-    # R27: Drift column headers
-    grid.append(_pad(["Asset Class", "Current %", "Target %", "Drift %", "Direction"]))
-    # R28-35: Drift data (8 rows)
-    if drift:
-        for alert in drift:
-            grid.append(_pad([alert["Asset Class"], alert["Current %"], alert["Target %"], alert["Drift %"], alert["Direction"]]))
-        for _ in range(8 - len(drift)):
-            grid.append(_pad([]))
-    else:
-        grid.append(_pad([f"No positions outside ±{config.REBALANCE_THRESHOLD_PCT:.0f}% threshold."]))
-        for _ in range(7):
-            grid.append(_pad([]))
-    # R36: blank
-    grid.append(_pad([]))
-    # R37: System Health header
-    grid.append(_pad(["SYSTEM HEALTH"]))
-    # R38: Health line 1
-    grid.append(_pad(["Last Refresh", health["last_refresh"], "Bundle Hash", health["bundle_hash"]]))
-    # R39: Health line 2
-    grid.append(_pad(["Schwab Token", health["schwab_token"], "FMP Cache Age", health["fmp_cache_age"]]))
-    # R40: blank
-    grid.append(_pad([]))
-    # R41: Account Balances header
-    grid.append(_pad(["ACCOUNT BALANCES"]))
-    # R42: Account Balances column headers
-    grid.append(_pad(["Account", "Total Value", "Cash"]))
-    # R43-47: Account data (up to 5 accounts, padded)
-    _N_ACCT_ROWS = 5
-    acct_list = accounts or []
-    for acct in acct_list[:_N_ACCT_ROWS]:
-        grid.append(_pad([
-            acct.get("account_number", "—"),
-            _dollar(acct.get("total_value", 0)),
-            _dollar(acct.get("cash_value", 0)),
-        ]))
-    if not acct_list:
-        grid.append(_pad(["No data — run snapshot with CSV to populate"]))
-        for _ in range(_N_ACCT_ROWS - 1):
-            grid.append(_pad([]))
-    else:
-        for _ in range(_N_ACCT_ROWS - len(acct_list[:_N_ACCT_ROWS])):
-            grid.append(_pad([]))
 
-    return grid
+    # R2: KPI strip (9 label/value pairs)
+    grid.append(_pad([
+        "Total Value", headline.get("total_value"),
+        "Day Change $", headline.get("day_change_dollar"),
+        "Day %", headline.get("day_change_pct"),
+        "MTD %", headline.get("mtd_pct"),
+        "YTD %", headline.get("ytd_pct"),
+        "vs SPY YTD", vs_spy,
+        "Cash %", headline.get("cash_pct"),
+        "Strategic Cash $", headline.get("strategic_cash"),
+        "Beta", beta,
+    ]))
+
+    # R3: blank
+    grid.append(_pad([]))
+
+    # R4: position table header
+    grid.append(_pad(_POS_COLS))
+
+    # R5+: position rows, sorted by Market Value descending, cash excluded
+    for pos in positions:
+        grid.append(_pad([
+            pos["Ticker"], pos["MV"], pos["Wt%"], pos["Price"], pos["Day%"],
+            pos["UGL $"], pos["UGL %"], pos["Fwd P/E"], pos["PEG"], pos["52w %"],
+            pos["Trim"], pos["Add"], pos["->Trim %"], pos["->Add %"], pos["Signal"],
+        ]))
+
+    # blank
+    grid.append(_pad([]))
+
+    # Last row: system health
+    grid.append(_pad([
+        "Last Refresh", health["last_refresh"],
+        "Bundle Hash", health["bundle_hash"],
+        "Schwab Token", health["schwab_token"],
+        "FMP Cache Age", health["fmp_cache_age"],
+    ]))
+
+    # None -> "" so gspread never has to serialize a bare null into a cell
+    return [["" if c is None else c for c in row] for row in grid]
 
 
 # ---------------------------------------------------------------------------
 # DRY RUN output
 # ---------------------------------------------------------------------------
 
-def _print_dry_run(grid: list[list]) -> None:
+def _fmt_preview(val, kind: str) -> str:
+    if val is None or val == "":
+        return "—"
+    try:
+        f = float(val)
+    except (TypeError, ValueError):
+        return str(val)
+    if kind == "$":
+        return f"${f:,.2f}"
+    if kind == "$0":
+        return f"${f:,.0f}"
+    if kind == "%":
+        return f"{f * 100:+.1f}%"
+    if kind == "%u":
+        return f"{f * 100:.1f}%"
+    if kind == "f2":
+        return f"{f:.2f}"
+    if kind == "f1":
+        return f"{f:.1f}"
+    return str(val)
+
+
+def _print_dry_run(
+    headline: dict, beta: Optional[float], positions: list[dict],
+    health: dict, spy_ytd_raw: Optional[float], n_rules: int, n_notes: int,
+) -> None:
     from rich.console import Console
     from rich.table import Table
 
     console = Console()
-    table = Table(show_header=False, box=None, padding=(0, 1))
-    for _ in range(_NCOLS):
-        table.add_column()
-    for row in grid:
-        table.add_row(*[str(c) for c in row])
+
+    vs_spy = None
+    if spy_ytd_raw is not None and headline.get("ytd_pct") is not None:
+        vs_spy = headline["ytd_pct"] - (spy_ytd_raw / 100.0)
+
+    console.print(
+        f"Total Value {_fmt_preview(headline.get('total_value'), '$0')}  |  "
+        f"Day {_fmt_preview(headline.get('day_change_dollar'), '$')} "
+        f"({_fmt_preview(headline.get('day_change_pct'), '%')})  |  "
+        f"MTD {_fmt_preview(headline.get('mtd_pct'), '%')}  |  "
+        f"YTD {_fmt_preview(headline.get('ytd_pct'), '%')}  |  "
+        f"vs SPY {_fmt_preview(vs_spy, '%')}  |  "
+        f"Cash {_fmt_preview(headline.get('cash_pct'), '%u')}  |  "
+        f"Strategic Cash {_fmt_preview(headline.get('strategic_cash'), '$0')}  |  "
+        f"Beta {_fmt_preview(beta, 'f2')}"
+    )
+
+    table = Table(show_header=True, header_style="bold")
+    for col in _POS_COLS:
+        table.add_column(col)
+    for pos in positions:
+        table.add_row(
+            pos["Ticker"],
+            _fmt_preview(pos["MV"], "$0"),
+            _fmt_preview(pos["Wt%"], "%u"),
+            _fmt_preview(pos["Price"], "$"),
+            _fmt_preview(pos["Day%"], "%"),
+            _fmt_preview(pos["UGL $"], "$0"),
+            _fmt_preview(pos["UGL %"], "%"),
+            _fmt_preview(pos["Fwd P/E"], "f1"),
+            _fmt_preview(pos["PEG"], "f2"),
+            _fmt_preview(pos["52w %"], "%u"),
+            _fmt_preview(pos["Trim"], "$"),
+            _fmt_preview(pos["Add"], "$"),
+            _fmt_preview(pos["->Trim %"], "%"),
+            _fmt_preview(pos["->Add %"], "%"),
+            pos["Signal"] or "",
+        )
     console.print(table)
+    console.print(
+        f"Last Refresh {health['last_refresh']}  |  Bundle {health['bundle_hash']}  |  "
+        f"Schwab {health['schwab_token']}  |  FMP Cache {health['fmp_cache_age']}"
+    )
+    console.print(f"[dim]Would write {n_rules} conditional-format rules and {n_notes} cell notes.[/]")
     console.print("[dim]DRY RUN — no Sheet writes. Re-run with --live to apply.[/]")
 
 
@@ -552,77 +518,166 @@ def _print_dry_run(grid: list[list]) -> None:
 # Formatting (LIVE only)
 # ---------------------------------------------------------------------------
 
-def _apply_formatting(ws, drift: list[dict]) -> None:
+_N_CONDITIONAL_RULES = 8  # Day% (2) + UGL% (2) + Trim gradient (1) + Add gradient (1) + banding (1) + ETF grey-text (1)
+
+
+def _apply_formatting(ws, headline: dict, positions: list[dict]) -> None:
     try:
         from gspread_formatting import (
-            CellFormat, Color, TextFormat,
-            format_cell_range, set_frozen, set_column_widths,
+            CellFormat, Color, TextFormat, NumberFormat,
+            ConditionalFormatRule, BooleanRule, BooleanCondition,
+            GradientRule, InterpolationPoint, GridRange,
+            get_conditional_format_rules, format_cell_ranges,
+            set_frozen, set_column_widths,
         )
     except ImportError:
         logger.warning("gspread_formatting not installed; skipping Command Center formatting.")
         return
 
     NAVY = Color(0.10, 0.15, 0.27)
+    STALE_RED = Color(0.72, 0.11, 0.11)
     WHITE = Color(1, 1, 1)
-    GREY = Color(0.95, 0.95, 0.95)
-    RED_LIGHT = Color(0.99, 0.91, 0.90)
-    ORANGE_LIGHT = Color(1.0, 0.93, 0.80)
+    GREY_BG = Color(0.95, 0.95, 0.95)
+    GREY_TEXT = Color(0.6, 0.6, 0.6)
+    GREEN = Color(0.20, 0.66, 0.33)
+    RED_TEXT = Color(0.80, 0.20, 0.20)
 
-    def _fmt(bg=None, bold=False, size=None, fg=None, halign=None):
-        return CellFormat(
-            backgroundColor=bg,
-            textFormat=TextFormat(bold=bold, fontSize=size, foregroundColor=fg),
-            horizontalAlignment=halign,
-        )
+    data_end = _DATA_START_ROW - 1 + max(len(positions), 1)
 
-    def _apply(rng, **kw):
+    is_stale = False
+    snap_date = headline.get("snapshot_date")
+    if snap_date is not None:
         try:
-            format_cell_range(ws, rng, _fmt(**kw))
+            is_stale = (datetime.now() - snap_date.to_pydatetime()) > timedelta(hours=24)
+        except Exception:
+            is_stale = False
+
+    dollar_fmt = NumberFormat(type='CURRENCY', pattern='$#,##0')
+    dollar2_fmt = NumberFormat(type='CURRENCY', pattern='$#,##0.00')
+    dollar_signed_fmt = NumberFormat(type='CURRENCY', pattern='+$#,##0;-$#,##0')
+    pct_fmt = NumberFormat(type='PERCENT', pattern='0.0%')
+    pct_unsigned_fmt = NumberFormat(type='PERCENT', pattern='0%')
+    pct_signed_fmt = NumberFormat(type='PERCENT', pattern='+0.0%;-0.0%')
+    float2_fmt = NumberFormat(type='NUMBER', pattern='0.00')
+    float1_fmt = NumberFormat(type='NUMBER', pattern='0.0')
+
+    title_bg = STALE_RED if is_stale else NAVY
+
+    ranges = [
+        ("A1:R1", CellFormat(backgroundColor=title_bg, textFormat=TextFormat(bold=True, fontSize=12, foregroundColor=WHITE), horizontalAlignment="LEFT")),
+    ]
+    # R2 labels bold + right-aligned
+    for col in ("A", "C", "E", "G", "I", "K", "M", "O", "Q"):
+        ranges.append((f"{col}2:{col}2", CellFormat(textFormat=TextFormat(bold=True), horizontalAlignment="RIGHT")))
+    # R2 values bold + number formats
+    ranges.append(("B2:B2", CellFormat(textFormat=TextFormat(bold=True), numberFormat=dollar_fmt)))
+    ranges.append(("D2:D2", CellFormat(textFormat=TextFormat(bold=True), numberFormat=dollar_signed_fmt)))
+    ranges.append(("F2:F2", CellFormat(textFormat=TextFormat(bold=True), numberFormat=pct_signed_fmt)))
+    ranges.append(("H2:H2", CellFormat(textFormat=TextFormat(bold=True), numberFormat=pct_signed_fmt)))
+    ranges.append(("J2:J2", CellFormat(textFormat=TextFormat(bold=True), numberFormat=pct_signed_fmt)))
+    ranges.append(("L2:L2", CellFormat(textFormat=TextFormat(bold=True), numberFormat=pct_signed_fmt)))
+    ranges.append(("N2:N2", CellFormat(textFormat=TextFormat(bold=True), numberFormat=pct_fmt)))
+    ranges.append(("P2:P2", CellFormat(textFormat=TextFormat(bold=True), numberFormat=dollar_fmt)))
+    ranges.append(("R2:R2", CellFormat(textFormat=TextFormat(bold=True), numberFormat=float2_fmt)))
+
+    # R4 header row
+    ranges.append(("A4:O4", CellFormat(backgroundColor=GREY_BG, textFormat=TextFormat(bold=True))))
+
+    # Position table columns
+    d0, d1 = _DATA_START_ROW, data_end
+    ranges.append((f"A{d0}:A{d1}", CellFormat(textFormat=TextFormat(bold=True))))
+    ranges.append((f"B{d0}:B{d1}", CellFormat(textFormat=TextFormat(bold=True), numberFormat=dollar_fmt)))
+    ranges.append((f"C{d0}:C{d1}", CellFormat(numberFormat=pct_fmt)))
+    ranges.append((f"D{d0}:D{d1}", CellFormat(numberFormat=dollar2_fmt)))
+    ranges.append((f"E{d0}:E{d1}", CellFormat(numberFormat=pct_signed_fmt)))
+    ranges.append((f"F{d0}:F{d1}", CellFormat(numberFormat=dollar_fmt)))
+    ranges.append((f"G{d0}:G{d1}", CellFormat(numberFormat=pct_signed_fmt)))
+    ranges.append((f"H{d0}:H{d1}", CellFormat(numberFormat=float1_fmt)))
+    ranges.append((f"I{d0}:I{d1}", CellFormat(numberFormat=float2_fmt)))
+    ranges.append((f"J{d0}:J{d1}", CellFormat(numberFormat=pct_unsigned_fmt)))
+    ranges.append((f"K{d0}:K{d1}", CellFormat(numberFormat=dollar2_fmt)))
+    ranges.append((f"L{d0}:L{d1}", CellFormat(numberFormat=dollar2_fmt)))
+    ranges.append((f"M{d0}:M{d1}", CellFormat(numberFormat=pct_signed_fmt)))
+    ranges.append((f"N{d0}:N{d1}", CellFormat(numberFormat=pct_signed_fmt)))
+
+    try:
+        format_cell_ranges(ws, ranges)
+    except Exception as e:
+        logger.warning("0_DASHBOARD static/number formatting failed: %s", e)
+
+    # --- Conditional formatting, one rules.save() batch ---
+    try:
+        rules = get_conditional_format_rules(ws)
+        rules.clear()
+
+        for col in ("E", "G"):  # Day%, UGL%
+            rng = f"{col}{d0}:{col}{d1}"
+            grid_rng = GridRange.from_a1_range(rng, ws)
+            rules.append(ConditionalFormatRule(
+                ranges=[grid_rng],
+                booleanRule=BooleanRule(condition=BooleanCondition("NUMBER_LESS", ["0"]), format=CellFormat(textFormat=TextFormat(foregroundColor=RED_TEXT))),
+            ))
+            rules.append(ConditionalFormatRule(
+                ranges=[grid_rng],
+                booleanRule=BooleanRule(condition=BooleanCondition("NUMBER_GREATER", ["0"]), format=CellFormat(textFormat=TextFormat(foregroundColor=GREEN))),
+            ))
+
+        for col in ("M", "N"):  # ->Trim %, ->Add %
+            rng = f"{col}{d0}:{col}{d1}"
+            rules.append(ConditionalFormatRule(
+                ranges=[GridRange.from_a1_range(rng, ws)],
+                gradientRule=GradientRule(
+                    minpoint=InterpolationPoint(color=GREEN, type="NUMBER", value="0"),
+                    midpoint=InterpolationPoint(color=WHITE, type="NUMBER", value="0.15"),
+                    maxpoint=InterpolationPoint(color=GREY_TEXT, type="NUMBER", value="0.30"),
+                ),
+            ))
+
+        # Row banding on the position table
+        rules.append(ConditionalFormatRule(
+            ranges=[GridRange.from_a1_range(f"A{d0}:O{d1}", ws)],
+            booleanRule=BooleanRule(condition=BooleanCondition("CUSTOM_FORMULA", ["=ISEVEN(ROW())"]), format=CellFormat(backgroundColor=GREY_BG)),
+        ))
+
+        # Grey text on the valuation columns for ETF-style rows with no
+        # Fwd P/E, PEG, Trim, or Add (Sheets applies the anchor row's formula
+        # relatively to every row in the range, same as ISEVEN(ROW()) above).
+        rules.append(ConditionalFormatRule(
+            ranges=[GridRange.from_a1_range(f"H{d0}:N{d1}", ws)],
+            booleanRule=BooleanRule(
+                condition=BooleanCondition("CUSTOM_FORMULA", [f'=AND($H{d0}="",$I{d0}="",$K{d0}="",$L{d0}="")']),
+                format=CellFormat(textFormat=TextFormat(foregroundColor=GREY_TEXT)),
+            ),
+        ))
+
+        rules.save()
+    except Exception as e:
+        logger.warning("0_DASHBOARD conditional formatting failed: %s", e)
+
+    # --- Cell notes: full agent rationale on the Signal cell ---
+    notes = {}
+    for i, pos in enumerate(positions):
+        if pos.get("Rationale"):
+            notes[f"O{_DATA_START_ROW + i}"] = pos["Rationale"]
+    if notes:
+        try:
+            ws.update_notes(notes)
         except Exception as e:
-            logger.warning("Formatting failed for %s: %s", rng, e)
+            logger.warning("0_DASHBOARD notes write failed: %s", e)
 
-    # Title — left-aligned
-    _apply("A1:I1", bg=NAVY, bold=True, size=12, fg=WHITE, halign="LEFT")
-
-    # Section headers (rows shifted by 5 for top-10 expansion; account section added at 41)
-    for r in [6, 10, 13, 26, 37, 41]:
-        _apply(f"A{r}:I{r}", bg=GREY, bold=True)
-
-    # KPI label/value pairs
-    for r in [3, 4, 7, 8, 11]:
-        for col in ["A", "C", "E", "G"]:
-            _apply(f"{col}{r}:{col}{r}", bold=True, halign="RIGHT")
-        for col in ["B", "D", "F", "H"]:
-            _apply(f"{col}{r}:{col}{r}", bold=True)
-
-    # Table column headers
-    _apply("A14:I14", bold=True, bg=GREY)
-    _apply("A27:I27", bold=True, bg=GREY)
-    _apply("A42:I42", bold=True, bg=GREY)
-
-    # Drift alert row colors (drift data now starts at row 28)
-    for i, alert in enumerate(drift[:8]):
-        row_num = 28 + i
-        bg = RED_LIGHT if alert["Direction"] == "OVER" else ORANGE_LIGHT
-        _apply(f"A{row_num}:I{row_num}", bg=bg)
-
-    # System Health labels (shifted to rows 38-39)
-    for r in [38, 39]:
-        _apply(f"A{r}:A{r}", bold=True, halign="RIGHT")
-        _apply(f"C{r}:C{r}", bold=True, halign="RIGHT")
+    try:
+        set_frozen(ws, rows=4, cols=1)
+    except Exception as e:
+        logger.warning("Freeze failed: %s", e)
 
     try:
         set_column_widths(ws, [
-            ("A", 140), ("B", 110), ("C", 120), ("D", 90),
-            ("E", 130), ("F", 110), ("G", 110), ("H", 110), ("I", 110),
+            ("A", 70), ("B", 110), ("C", 70), ("D", 90), ("E", 80),
+            ("F", 100), ("G", 80), ("H", 80), ("I", 70), ("J", 70),
+            ("K", 90), ("L", 90), ("M", 90), ("N", 90), ("O", 90),
         ])
     except Exception as e:
         logger.warning("Column widths failed: %s", e)
-
-    try:
-        set_frozen(ws, rows=1)
-    except Exception as e:
-        logger.warning("Freeze row failed: %s", e)
 
 
 # ---------------------------------------------------------------------------
@@ -631,50 +686,56 @@ def _apply_formatting(ws, drift: list[dict]) -> None:
 
 def main(live: bool = False) -> None:
     """
-    Rebuild the 0_DASHBOARD Command Center tab.
-
-    Reads from: Holdings_Current, Daily_Snapshots, Tax_Control, Risk_Metrics,
-                Target_Allocation, Valuation_Card.
-    Writes to:  0_DASHBOARD (clear-and-rebuild, single batch_update call).
+    Rebuild the 0_DASHBOARD Command Center tab: a KPI strip plus one row per
+    position (sorted by Market Value descending), joined against Valuation_Card
+    and the latest Agent_Outputs run.
 
     Args:
-        live: If False (default), prints the rendered grid to stdout without writing.
+        live: If False (default), prints the rendered table to stdout without writing.
     """
     client = get_gspread_client()
     ss = client.open_by_key(config.PORTFOLIO_SHEET_ID)
 
     holdings_rows = _read_records(ss, config.TAB_HOLDINGS_CURRENT)
     daily_rows = _read_records(ss, config.TAB_DAILY_SNAPSHOTS)
-    tax_raw = _read_raw(ss, config.TAB_TAX_CONTROL)
     risk_rows = _read_records(ss, config.TAB_RISK_METRICS)
-    target_rows = _read_records(ss, config.TAB_TARGET_ALLOCATION)
     valuation_rows = _read_records(ss, "Valuation_Card")
 
+    try:
+        ws_agent = ss.worksheet(config.TAB_AGENT_OUTPUTS)
+        df_agent = get_latest_agent_outputs(ws_agent)
+    except Exception as e:
+        logger.warning("Could not read %s: %s", config.TAB_AGENT_OUTPUTS, e)
+        df_agent = pd.DataFrame()
+
     headline = _compute_headline_kpis(daily_rows, holdings_rows)
-    tax = _read_tax_kpis(tax_raw)
-    risk = _compute_risk_snapshot(risk_rows)
-    top10 = _compute_top_n(holdings_rows, valuation_rows, n=10)
-    drift = _compute_drift_alerts(holdings_rows, target_rows)
+    beta = _compute_beta(risk_rows)
+    positions = _build_position_table(holdings_rows, valuation_rows, df_agent)
     health = _check_system_health()
     spy_ytd_raw = _spy_ytd_pct()
-    accounts = _read_account_balances()
 
-    grid = _build_grid(headline, tax, risk, top10, drift, health, spy_ytd_raw, accounts=accounts)
+    n_notes = sum(1 for p in positions if p.get("Rationale"))
 
     if not live:
-        _print_dry_run(grid)
+        _print_dry_run(headline, beta, positions, health, spy_ytd_raw, _N_CONDITIONAL_RULES, n_notes)
         return
+
+    grid = _build_grid(headline, beta, positions, health, spy_ytd_raw)
 
     existing_tabs = {ws.title for ws in ss.worksheets()}
     if config.TAB_DASHBOARD not in existing_tabs:
         logger.warning("Tab %s not found; creating at index 0.", config.TAB_DASHBOARD)
-        ws = safe_execute(ss.add_worksheet, title=config.TAB_DASHBOARD, rows=50, cols=_NCOLS, index=0)
+        ws = safe_execute(ss.add_worksheet, title=config.TAB_DASHBOARD, rows=max(50, len(grid) + 5), cols=_NCOLS, index=0)
     else:
         ws = ss.worksheet(config.TAB_DASHBOARD)
 
     safe_execute(ws.clear)
-    safe_execute(ws.update, range_name="A1", values=grid, value_input_option="USER_ENTERED")
-    _apply_formatting(ws, drift=drift)
+    # RAW: every value here is a Python-computed number or plain text, so
+    # nothing can be mis-parsed as a formula (the old "+$530.00" #NAME? bug
+    # required a leading-'+' STRING under USER_ENTERED; there are no baked
+    # strings here at all).
+    safe_execute(ws.update, range_name="A1", values=grid, value_input_option="RAW")
+    _apply_formatting(ws, headline, positions)
 
     logger.info("Command Center refreshed. %d rows written.", len(grid))
 

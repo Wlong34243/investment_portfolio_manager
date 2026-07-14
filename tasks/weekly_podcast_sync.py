@@ -65,6 +65,21 @@ def main():
             print("WARNING: Transcript exceeds 12,000 words. Gemini can handle it but results may "
                   "lose focus on earlier segments.")
 
+        # --- Save raw transcript so idea_generator can find it ---
+        try:
+            from pathlib import Path
+            import re
+            TRANSCRIPTS_DIR = Path(__file__).parent.parent / "data" / "podcast_transcripts"
+            TRANSCRIPTS_DIR.mkdir(parents=True, exist_ok=True)
+            date_str = datetime.now().strftime("%Y-%m-%d")
+            slug = re.sub(r"[^\w\s-]", "", source_name).strip()
+            slug = re.sub(r"[\s]+", "_", slug)[:80]
+            transcript_path = TRANSCRIPTS_DIR / f"{date_str}_{slug}_{args.video_id}.txt"
+            transcript_path.write_text(full_text, encoding="utf-8")
+            print(f"Transcript saved: {transcript_path.name}")
+        except Exception as e:
+            print(f"WARNING: Could not save transcript to disk: {e}")
+
         # --- AI analysis ---
         from utils.agents.podcast_analyst import analyze_podcast
 

@@ -3,9 +3,9 @@ ticker: MSFT
 style: GARP
 framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: '2026-05-03'
-current_allocation: 2.40%
-cost_basis: 17437.06
+last_reviewed: '2026-07-14'
+current_allocation: 0.01%
+cost_basis: 9169.8
 time_horizon: 5+ years
 triggers:
   price_trim_above: 587.00
@@ -49,28 +49,28 @@ I will trim or exit if:[file:28]
 3. Regulators force a breakup of key assets (e.g., Instagram or WhatsApp), permanently impairing the ad flywheel.  
 
 <!-- region:position_state -->
-**Current Allocation:** 2.40%
-**Cost Basis:** $17,437.06
+**Current Allocation:** 0.01%
+**Cost Basis:** $9,169.80
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** GARP
 **Size Ceiling:** 9.00%
-**Drift:** -6.60%
+**Drift:** -8.99%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
-- 2026-04-30: Buy 2.0 @ $404.65
-- 2026-04-30: Buy 3.0 @ $404.65
-- 2026-04-27: Buy 5.0 @ $420.00
-- 2026-04-23: Buy 5.0 @ $419.93
-- 2026-04-20: Buy 5.0 @ $418.16
+- 2026-06-29: Sell -10.0 @ $373.14
+- 2026-06-25: Sell -5.0 @ $363.01
+- 2026-05-12: Sell -15.0 @ $408.28
+- 2026-05-08: Buy 5.0 @ $416.74
+- 2026-05-05: Buy 2.0 @ $410.24
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
-Total Realized G/L: $1.00 over 3 closed lots. Total Proceeds: $3,708.00.
+Total Realized G/L: $1.56 over 12 closed lots. Total Proceeds: $13,540.79.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-05-03 14:58: Auto-sync allocation 2.40%, drift -6.60%
+2026-07-14 10:51: Auto-sync allocation 0.01%, drift -8.99%
 <!-- endregion:change_log -->

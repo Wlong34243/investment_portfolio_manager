@@ -3,19 +3,19 @@ ticker: VEU
 style: ETF
 framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: '2026-05-03'
-current_allocation: 0.65%
-cost_basis: 4261.98
+last_reviewed: '2026-07-14'
+current_allocation: 0.02%
+cost_basis: 11688.99
 time_horizon: 3 to 7 years
 triggers:
-  fwd_pe_add_below: null              # ETF; focus on macro and project pipeline, not PE
-  fwd_pe_trim_above: null
-  fwd_pe_historical_median: null
+  fwd_pe_add_below:                   # ETF; focus on macro and project pipeline, not PE
+  fwd_pe_trim_above:
+  fwd_pe_historical_median:
   price_add_below: 52                 # add if sentiment weak but funding/AI build-out intact
   price_trim_above: 70                # trim if infra/AI hype rich vs earnings & backlogs
-  discount_from_52w_high_add: null
-  revenue_growth_floor_pct: null
-  operating_margin_floor_pct: null
+  discount_from_52w_high_add:
+  revenue_growth_floor_pct:
+  operating_margin_floor_pct:
   style_size_ceiling_pct: 5.0         # core-ish thematic; below broad SPY/VOO sleeve
   current_weight_pct: 3.0
 ---
@@ -65,28 +65,28 @@ I will trim or reconsider IFRA (vs just owning more SPY/VOO) if:.
 5. A clearly superior infra/AI‑linked vehicle (e.g., more focused grid/AI infra ETF at similar or lower cost) appears with better risk/reward.  
 
 <!-- region:position_state -->
-**Current Allocation:** 0.65%
-**Cost Basis:** $4,261.98
+**Current Allocation:** 0.02%
+**Cost Basis:** $11,688.99
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** ETF
 **Size Ceiling:** 8.00%
-**Drift:** -7.35%
+**Drift:** -7.98%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
+- 2026-05-11: Buy 50.0 @ $83.38
 - 2026-04-09: Buy 20.0 @ $78.45
 - 2026-04-01: Sell -20.0 @ $76.02
 - 2026-03-10: Buy 5.0 @ $77.35
 - 2026-03-06: Sell -175.0 @ $76.17
-- 2026-01-28: Buy 10.0 @ $78.58
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
-Total Realized G/L: $665.00 over 11 closed lots. Total Proceeds: $14,849.00.
+Total Realized G/L: $1,329.20 over 22 closed lots. Total Proceeds: $29,697.85.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-05-03 14:58: Auto-sync allocation 0.65%, drift -7.35%
+2026-07-14 10:51: Auto-sync allocation 0.02%, drift -7.98%
 <!-- endregion:change_log -->

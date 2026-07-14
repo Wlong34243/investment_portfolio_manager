@@ -1,6 +1,6 @@
 # Investment Portfolio Manager — Current State
 
-**Last updated:** 2026-05-27
+**Last updated:** 2026-06-15
 **Maintainer:** Bill (sole user)
 
 This is the "where are we" document. Open this at the start of any coding session.
@@ -31,12 +31,12 @@ This is the "where are we" document. Open this at the start of any coding sessio
 - Podcast transcript ingestion via existing pipeline → writes to `data/podcast_transcripts/`
 
 ### Agent layer
-- **Idea Generator v1 (shipped May 26, 2026)**
+- **Idea Generator v1 (shipped May 26, 2026; updated June 15, 2026)**
   - `utils/agents/idea_generator.py` — Pydantic schemas + `run_idea_generator()` + `write_idea_report()`
   - `prompts/idea_generator.md` — system prompt for Gemini
-  - CLI: `python manager.py agent ideas [--since-days 7] [--bundle-path PATH] [--dry-run]`
+  - CLI: `python manager.py agent ideas [--since-days 7] [--bundle-path PATH] [--dry-run] [--skip-ingest]`
+  - **Auto-ingests podcasts before analyzing** — `pm agent ideas` now runs `pm ingest podcasts --live` as Step 1, then generates the report. No need to run ingestion separately. Use `--skip-ingest` to go straight to the generator.
   - Output: markdown reports in `agent_outputs/ideas/`, named `ideas_{YYYY-MM-DD}_{hash_prefix}.md`
-  - First real run (2026-05-26): 3 transcripts → 7 candidates with style classification, portfolio overlap detection, and substantive concerns. Hard rule compliance verified (no price targets, no buy/sell language).
 
 ### Google Sheets persistence
 - Sheet ID: `1DuY68xVvyHq-0dyb7XUQgcoK7fqcVS0fv7UoGdTnfxA`
@@ -46,7 +46,8 @@ This is the "where are we" document. Open this at the start of any coding sessio
 - Provenance: `Logs`
 
 ### Automation
-- GitHub Actions: podcast pipeline Friday 5pm EST cron + `workflow_dispatch`
+- GitHub Actions: podcast pipeline Friday 5pm EST cron + `workflow_dispatch` — **currently non-functional**: YouTube blocks transcript requests from Azure cloud runner IPs. The workflow reports green but processes 0 episodes. Last successful automated run: June 2, 2026.
+- **Podcast ingestion workaround**: run `pm agent ideas` (or `pm ingest podcasts --live`) locally. Local machine IPs are not blocked by YouTube.
 - GCP Cloud Scheduler + Cloud Function: Schwab token refresh every 25 min during market hours
 - GCP project: `re-property-manager-487122` (shared with RE Property Manager)
 

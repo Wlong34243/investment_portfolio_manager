@@ -3,19 +3,19 @@ ticker: VRT
 style: THEME
 framework_preference: thematic_specialist_v1, lynch_garp_v1
 entry_date: 2026-05
-last_reviewed: '2026-05-18'
-current_allocation: 0.56%
-cost_basis: null
+last_reviewed: '2026-07-14'
+current_allocation: 0.01%
+cost_basis: 9693.23
 time_horizon: 2 to 4 years
 triggers:
   fwd_pe_add_below: 28              # add on cyclical / multiple-compression pullbacks
   fwd_pe_trim_above: 50             # trim if multiple gets into peak-AI-infrastructure-mania territory
-  fwd_pe_historical_median: null
-  price_add_below: null             # build to target weight on volatility, not on a specific level yet
-  price_trim_above: null            # set once position is sized; thematic, not level-driven yet
+  fwd_pe_historical_median:
+  price_add_below:                  # build to target weight on volatility, not on a specific level yet
+  price_trim_above:                 # set once position is sized; thematic, not level-driven yet
   discount_from_52w_high_add: 0.20  # add on 20%+ drawdowns from highs absent structural news
   revenue_growth_floor_pct: 15
-  operating_margin_floor_pct: null
+  operating_margin_floor_pct:
   style_size_ceiling_pct: 3.0       # thematic single names cap lower than GARP core
   current_weight_pct: 0.56
 drawdown_tolerance_pct: 0.35
@@ -88,18 +88,26 @@ Current allocation 0.56%. This is starter-position size. The plan:
 - Rotation priority: medium — building, not trimming, in current setup.
 
 <!-- region:position_state -->
-**Current Allocation:** 0.56%
-**Cost Basis:** TBD (cost basis flow not yet visible in bundle)
-**Unrealized G/L:** TBD
+**Current Allocation:** 0.01%
+**Cost Basis:** $9,693.23
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
-**Style:** THEME (AI Infrastructure Picks-and-Shovels)
+**Style:** THEME
 **Size Ceiling:** 3.00%
-**Working Target:** 2.0-2.5%
-**Drift:** -1.94% to target (under-allocated)
+**Drift:** -2.98%
 <!-- endregion:sizing -->
 
 <!-- region:change_log -->
-2026-05-18: Position initiated. New thesis file created. Sourced from Stephanie Link recommendation; aligned with broader AI buildout thesis. Sized as starter position with plan to build to 2-2.5% on pullbacks.
+2026-07-14 10:51: Auto-sync allocation 0.01%, drift -2.98%
 <!-- endregion:change_log -->
+
+<!-- region:transaction_log -->
+- 2026-06-11: Buy 5.0 @ $290.38
+- 2026-06-01: Buy 5.0 @ $319.50
+- 2026-05-27: Buy 10.0 @ $317.00
+<!-- endregion:transaction_log -->
+
+<!-- region:realized_gl -->
+No realized G/L history.
+<!-- endregion:realized_gl -->

@@ -67,24 +67,36 @@ def ensure_display_columns(df: pd.DataFrame) -> pd.DataFrame:
             df = df.rename(columns={df.columns[0]: 'Ticker'})
 
     # 4. Guarantee all columns exist
+    _NUMERIC_COLS = [
+        'Market Value', 'Cost Basis', 'Unit Cost', 'Quantity', 'Price',
+        'Weight', 'Dividend Yield', 'Est Annual Income', 'Daily Change %',
+        'Unrealized G/L', 'Unrealized G/L %',
+    ]
     for col in config.POSITION_COLUMNS:
         if col not in df.columns:
-            if col in ['Market Value', 'Cost Basis', 'Quantity', 'Price', 'Weight', 'Dividend Yield', 'Est Annual Income', 'Daily Change %']:
+            if col in _NUMERIC_COLS:
                 df[col] = 0.0
             elif col in ['Is Cash', 'Wash Sale']:
                 df[col] = False
             else:
                 df[col] = "N/A"
-        
+
         # Type Casting
-        if col in ['Market Value', 'Cost Basis', 'Quantity', 'Price', 'Weight', 'Dividend Yield', 'Est Annual Income', 'Daily Change %']:
+        if col in _NUMERIC_COLS:
+            had_pct = pd.Series(False, index=df.index)
             if df[col].dtype == object:
-                # Strip $, %, and , before numeric conversion
-                df[col] = df[col].astype(str).str.replace('$', '', regex=False)\
-                                           .str.replace('%', '', regex=False)\
-                                           .str.replace(',', '', regex=False)\
-                                           .str.strip()
+                s = df[col].astype(str)
+                # A literal '%' means Sheets is displaying a fraction as a
+                # percentage (e.g. "6.77%" == 0.0677) — remember that before
+                # stripping the sign so the parsed number can be divided back
+                # down to a fraction, instead of silently becoming 100x too big.
+                had_pct = s.str.contains('%', regex=False)
+                df[col] = s.str.replace('$', '', regex=False)\
+                            .str.replace('%', '', regex=False)\
+                            .str.replace(',', '', regex=False)\
+                            .str.strip()
             df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0.0)
+            df.loc[had_pct, col] = df.loc[had_pct, col] / 100.0
         elif col in ['Is Cash', 'Wash Sale']:
             if df[col].dtype == object:
                 df[col] = df[col].astype(str).str.upper().isin(['TRUE', 'YES', '1', 'T'])

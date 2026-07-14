@@ -3,19 +3,19 @@ ticker: ETN
 style: GARP
 framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: '2026-05-03'
-current_allocation: 2.22%
-cost_basis: 11604.79 # post-split
+last_reviewed: '2026-07-14'
+current_allocation: 0.01%
+cost_basis: 7589.55  # post-split
 time_horizon: 3 to 5 years
 triggers:
   fwd_pe_add_below: 30               # add only if multiple compresses but AI build-out intact
   fwd_pe_trim_above: 45              # trim if priced for perfection + slowing fundamentals
-  fwd_pe_historical_median: null
-  price_add_below: null              # behavior-driven: focus on PE + CapEx/earnings, not levels
+  fwd_pe_historical_median:
+  price_add_below:                   # behavior-driven: focus on PE + CapEx/earnings, not levels
   price_trim_above: 365.00
-  discount_from_52w_high_add: null
+  discount_from_52w_high_add:
   revenue_growth_floor_pct: 20       # still want strong growth; below this = yellow flag
-  operating_margin_floor_pct: null   # focus on gross margin and DC segment margin
+  operating_margin_floor_pct:        # focus on gross margin and DC segment margin
   style_size_ceiling_pct: 4.0        # hyper-concentrated AI cyclical; cap exposure
   current_weight_pct: 2.5
 ---
@@ -74,24 +74,27 @@ I will exit or materially cut if the **core structural edge or demand environmen
 5. A superior, more reasonably valued AI infrastructure play emerges with a better risk‑adjusted IRR, making it rational to rotate out even with NVDA’s story intact..  
 
 <!-- region:position_state -->
-**Current Allocation:** 2.22%
-**Cost Basis:** $11,604.79
+**Current Allocation:** 0.01%
+**Cost Basis:** $7,589.55
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** GARP
 **Size Ceiling:** 9.00%
-**Drift:** -6.78%
+**Drift:** -8.98%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
+- 2026-05-08: Sell -10.0 @ $403.68
+- 2026-05-07: Buy 3.0 @ $400.92
+- 2026-05-04: Sell -7.0 @ $427.90
 - 2026-01-23: Buy 7.0 @ $334.00
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
-No realized G/L history.
+Total Realized G/L: $1,813.72 over 2 closed lots. Total Proceeds: $7,031.72.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-05-03 14:58: Auto-sync allocation 2.22%, drift -6.78%
+2026-07-14 10:51: Auto-sync allocation 0.01%, drift -8.98%
 <!-- endregion:change_log -->

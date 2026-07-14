@@ -3,19 +3,19 @@ ticker: IGV
 style: ETF
 framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: '2026-05-03'
-current_allocation: 2.36%
-cost_basis: 15855.4
+last_reviewed: '2026-07-14'
+current_allocation: 0.01%
+cost_basis: 5938.82
 time_horizon: 3 to 5 years
 triggers:
-  fwd_pe_add_below: null          # ETF; use macro/sector signals instead of PE
-  fwd_pe_trim_above: null
-  fwd_pe_historical_median: null
+  fwd_pe_add_below:               # ETF; use macro/sector signals instead of PE
+  fwd_pe_trim_above:
+  fwd_pe_historical_median:
   price_add_below: 80             # add if sector de-rates again but fundamentals intact
   price_trim_above: 120           # trim if sector sentiment/euphoria runs far ahead of growth
-  discount_from_52w_high_add: null
-  revenue_growth_floor_pct: null  # focus on holdings' growth & margins, not ETF revenue
-  operating_margin_floor_pct: null
+  discount_from_52w_high_add:
+  revenue_growth_floor_pct:       # focus on holdings' growth & margins, not ETF revenue
+  operating_margin_floor_pct:
   style_size_ceiling_pct: 5.0     # cap SaaS basket size; rest handled via core names (MSFT, etc.)
   current_weight_pct: 3.0
 ---
@@ -65,28 +65,28 @@ I’ll consider exiting or cutting IGV if:[file:26]
 4. I can build a higher‑conviction basket of specific software/AI applications (e.g., MSFT, NOW, CRWD) at attractive valuations, making IGV redundant as a broad proxy.  
 
 <!-- region:position_state -->
-**Current Allocation:** 2.36%
-**Cost Basis:** $15,855.40
+**Current Allocation:** 0.01%
+**Cost Basis:** $5,938.82
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** ETF
 **Size Ceiling:** 8.00%
-**Drift:** -5.64%
+**Drift:** -7.99%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
-- 2026-04-30: Sell -10.0 @ $83.47
-- 2026-04-30: Sell -10.0 @ $83.73
-- 2026-04-20: Sell -25.0 @ $85.33
-- 2026-04-16: Buy 15.0 @ $84.11
-- 2026-04-15: Buy 50.0 @ $82.48
+- 2026-06-29: Sell -25.0 @ $90.76
+- 2026-06-25: Sell -50.0 @ $86.07
+- 2026-06-25: Sell -20.0 @ $84.53
+- 2026-05-26: Sell -25.0 @ $94.22
+- 2026-05-21: Sell -10.0 @ $92.18
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
-Total Realized G/L: $-563.00 over 14 closed lots. Total Proceeds: $16,609.00.
+Total Realized G/L: $-1,128.95 over 30 closed lots. Total Proceeds: $34,890.52.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-05-03 14:58: Auto-sync allocation 2.36%, drift -5.64%
+2026-07-14 10:51: Auto-sync allocation 0.01%, drift -7.99%
 <!-- endregion:change_log -->

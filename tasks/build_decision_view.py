@@ -1,353 +1,184 @@
 """
-tasks/build_decision_view.py — Joins Holdings, Valuation, and Agent Outputs into Decision_View tab.
+tasks/build_decision_view.py — Builds the Decision_View tab: agent-signal rows only.
+
+Decision_View no longer duplicates 0_DASHBOARD's full position table. It shows
+only tickers with an active signal (ADD/TRIM/etc.) from the latest Agent_Outputs
+run, with full untruncated rationale -- reusing the exact same Holdings_Current x
+Valuation_Card x Agent signal join build_command_center.py uses for 0_DASHBOARD,
+so the two views can never disagree on the underlying numbers.
 """
 
 import os
 import sys
-import pandas as pd
-import typer
-from typing import Optional
-import time
 
-# Add project root to path
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _ROOT = os.path.dirname(_HERE)
 if _ROOT not in sys.path:
     sys.path.insert(0, _ROOT)
 
+import typer
+
 import config
 from utils.sheet_readers import get_gspread_client
-
-try:
-    from gspread_formatting import (
-        format_cell_range, CellFormat, NumberFormat,
-        set_frozen, TextFormat, Color
-    )
-    HAS_FORMATTING = True
-except ImportError:
-    HAS_FORMATTING = False
-
-# --- Colors ---
-COLOR_NAVY = Color(0.10, 0.15, 0.27)
-COLOR_WHITE = Color(1, 1, 1)
-
-# ---------------------------------------------------------------------------
-# Bundle helpers
-# ---------------------------------------------------------------------------
-
-def _load_latest_composite_bundle():
-    """Return latest CompositeBundle object, or None if not found."""
-    from core.composite_bundle import resolve_latest_bundles, load_composite_bundle, CompositeBundle
-    from core.composite_bundle import build_composite_bundle
-    try:
-        market_path, vault_path = resolve_latest_bundles()
-        return build_composite_bundle(market_path, vault_path)
-    except Exception as e:
-        print(f"Warning: Could not load composite bundle for Decision_View: {e}")
-        return None
-
-def _load_latest_market_bundle() -> dict | None:
-    """Return latest market bundle dict, or None if not found."""
-    from pathlib import Path
-    import json
-    candidates = sorted(
-        Path("bundles").glob("context_bundle_*.json"),
-        key=lambda p: p.stat().st_mtime,
-    )
-    if not candidates:
-        return None
-    try:
-        with open(candidates[-1], "r", encoding="utf-8") as fh:
-            return json.load(fh)
-    except Exception as e:
-        print(f"Warning: Could not load market bundle: {e}")
-        return None
+from utils.sheet_writers import safe_execute
+from utils.agent_signals import get_latest_agent_outputs
+from tasks.build_command_center import _read_records, _build_position_table
 
 app = typer.Typer()
 
-_ACTION_SEVERITIES = {"action", "alert", "data_quality"}
+_DEC_COLS = [
+    "Ticker", "Signal", "Market Value", "Wt%", "Price", "Trim", "Add",
+    "->Trim %", "->Add %", "Fwd P/E", "52w %", "Rationale",
+]
+_DATA_START_ROW = 3
 
 
-def get_latest_agent_outputs(ws_agent):
-    """
-    Reads Agent_Outputs and returns signals from the LATEST run only.
+def _pad(row: list, n: int = len(_DEC_COLS)) -> list:
+    return (row + [""] * n)[:n]
 
-    Handles both legacy 11-col format (run_id, run_ts, ...) and
-    compact 10-col format (run_date, run_id_short, ...) written by analyze-all.
-    """
-    all_values = ws_agent.get_all_values()
-    if len(all_values) < 2:
-        return pd.DataFrame()
 
-    # Detect header row
-    header_row_idx = -1
-    for i, row in enumerate(all_values[:5]):
-        if 'agent' in [str(h).strip().lower() for h in row]:
-            header_row_idx = i
-            break
+def _run_header(df_agent) -> str:
+    if df_agent.empty:
+        return "AGENT SIGNALS — no agent run found"
+    run_id = df_agent["run_id"].iloc[0] if "run_id" in df_agent.columns else "n/a"
+    run_ts = df_agent["run_ts"].iloc[0] if "run_ts" in df_agent.columns else "n/a"
+    return f"AGENT SIGNALS — run {run_id}  {run_ts}"
 
-    if header_row_idx == -1:
-        return pd.DataFrame()
 
-    headers = [str(h).strip().lower() for h in all_values[header_row_idx]]
-    data = all_values[header_row_idx + 1:]
+def _print_dry_run(header: str, signal_rows: list[dict]) -> None:
+    from rich.console import Console
+    from rich.table import Table
 
-    df = pd.DataFrame(data, columns=headers)
-    if df.empty:
-        return pd.DataFrame()
+    console = Console()
+    console.print(header)
 
-    # Normalize column aliases
-    rename_map = {
-        "run_date":      "run_ts",
-        "run_id_short":  "run_id",
-        "signal":        "signal_type",
-        "narrative":     "rationale",
-    }
-    df = df.rename(columns={k: v for k, v in rename_map.items() if k in df.columns})
+    table = Table(show_header=True, header_style="bold")
+    for col in _DEC_COLS:
+        table.add_column(col, overflow="fold")
+    for p in signal_rows:
+        table.add_row(
+            p["Ticker"], p["Signal"],
+            f'${p["MV"]:,.0f}' if p["MV"] is not None else "—",
+            f'{p["Wt%"]*100:.1f}%' if p["Wt%"] is not None else "—",
+            f'${p["Price"]:,.2f}' if p["Price"] is not None else "—",
+            f'${p["Trim"]:,.2f}' if p["Trim"] else "—",
+            f'${p["Add"]:,.2f}' if p["Add"] else "—",
+            f'{p["->Trim %"]*100:+.1f}%' if p["->Trim %"] is not None else "—",
+            f'{p["->Add %"]*100:+.1f}%' if p["->Add %"] is not None else "—",
+            f'{p["Fwd P/E"]:.1f}' if p["Fwd P/E"] else "—",
+            f'{p["52w %"]*100:.0f}%' if p["52w %"] is not None else "—",
+            p["Rationale"],
+        )
+    console.print(table)
+    console.print(f"[dim]{len(signal_rows)} signal rows.[/]")
+    console.print("[dim]DRY RUN — no Sheet writes. Re-run with --live to apply.[/]")
 
-    # Filter to LATEST run only (Task 3 fix)
-    df["run_ts_dt"] = pd.to_datetime(df["run_ts"], errors="coerce")
-    if not df["run_ts_dt"].dropna().empty:
-        latest_ts = df["run_ts_dt"].max()
-        # Get one of the run_ids from the latest timestamp
-        latest_run_id = df[df["run_ts_dt"] == latest_ts]["run_id"].iloc[0]
-        df = df[df["run_id"] == latest_run_id]
-        print(f"  [OK] Filtering Decision View to latest run: {latest_run_id} ({latest_ts})")
 
-    return df
+def _apply_formatting(ws, header: str, n_rows: int) -> None:
+    try:
+        from gspread_formatting import (
+            CellFormat, Color, TextFormat, NumberFormat,
+            format_cell_ranges, set_frozen, set_column_widths,
+        )
+    except ImportError:
+        print("  ! gspread_formatting not installed, skipping visual styles.")
+        return
+
+    NAVY = Color(0.10, 0.15, 0.27)
+    WHITE = Color(1, 1, 1)
+    GREY_BG = Color(0.95, 0.95, 0.95)
+
+    last_col = "L"
+    data_end = _DATA_START_ROW - 1 + max(n_rows, 1)
+
+    dollar_fmt = NumberFormat(type='CURRENCY', pattern='$#,##0.00')
+    dollar0_fmt = NumberFormat(type='CURRENCY', pattern='$#,##0')
+    pct_fmt = NumberFormat(type='PERCENT', pattern='0.0%')
+    pct_signed_fmt = NumberFormat(type='PERCENT', pattern='+0.0%;-0.0%')
+    float1_fmt = NumberFormat(type='NUMBER', pattern='0.0')
+
+    ranges = [
+        (f"A1:{last_col}1", CellFormat(backgroundColor=NAVY, textFormat=TextFormat(bold=True, fontSize=11, foregroundColor=WHITE))),
+        (f"A2:{last_col}2", CellFormat(backgroundColor=GREY_BG, textFormat=TextFormat(bold=True))),
+        (f"A{_DATA_START_ROW}:A{data_end}", CellFormat(textFormat=TextFormat(bold=True))),
+        (f"C{_DATA_START_ROW}:C{data_end}", CellFormat(numberFormat=dollar0_fmt)),
+        (f"D{_DATA_START_ROW}:D{data_end}", CellFormat(numberFormat=pct_fmt)),
+        (f"E{_DATA_START_ROW}:E{data_end}", CellFormat(numberFormat=dollar_fmt)),
+        (f"F{_DATA_START_ROW}:F{data_end}", CellFormat(numberFormat=dollar_fmt)),
+        (f"G{_DATA_START_ROW}:G{data_end}", CellFormat(numberFormat=dollar_fmt)),
+        (f"H{_DATA_START_ROW}:H{data_end}", CellFormat(numberFormat=pct_signed_fmt)),
+        (f"I{_DATA_START_ROW}:I{data_end}", CellFormat(numberFormat=pct_signed_fmt)),
+        (f"J{_DATA_START_ROW}:J{data_end}", CellFormat(numberFormat=float1_fmt)),
+        (f"K{_DATA_START_ROW}:K{data_end}", CellFormat(numberFormat=pct_fmt)),
+        (f"L{_DATA_START_ROW}:L{data_end}", CellFormat(wrapStrategy="WRAP", verticalAlignment="TOP")),
+    ]
+    try:
+        format_cell_ranges(ws, ranges)
+    except Exception as e:
+        print(f"  ! Decision_View formatting failed: {e}")
+
+    try:
+        set_frozen(ws, rows=2, cols=1)
+    except Exception as e:
+        print(f"  ! Freeze failed: {e}")
+
+    try:
+        set_column_widths(ws, [
+            ("A", 70), ("B", 70), ("C", 100), ("D", 70), ("E", 90),
+            ("F", 90), ("G", 90), ("H", 90), ("I", 90), ("J", 70),
+            ("K", 70), ("L", 500),
+        ])
+    except Exception as e:
+        print(f"  ! Column widths failed: {e}")
+
 
 @app.command()
 def main(live: bool = typer.Option(False, "--live", help="Write to Google Sheets")):
     print(f"Building Decision View (Live={live})...")
-    
-    # --- Load bundles ---
-    composite_bundle = _load_latest_composite_bundle()
-    
-    # Technical Indicators map
-    tech_map = {}
-    if composite_bundle:
-        # CompositeBundle object stores full market data in _market_data
-        tech_list = composite_bundle._market_data.get('calculated_technicals', [])
-        tech_map = {t['ticker']: t for t in tech_list}
-    else:
-        # Fallback to market bundle dict
-        m_bundle = _load_latest_market_bundle()
-        if m_bundle:
-            tech_list = m_bundle.get('calculated_technicals', [])
-            tech_map = {t['ticker']: t for t in tech_list}
-    
-    gc = get_gspread_client()
-    spreadsheet = gc.open_by_key(config.PORTFOLIO_SHEET_ID)
-    
-    # 1. Read Holdings_Current
-    ws_holdings = spreadsheet.worksheet(config.TAB_HOLDINGS_CURRENT)
-    all_holdings = ws_holdings.get_all_values()
-    
-    # Detect where headers are (search first 5 rows)
-    header_row_idx = -1
-    for i, row in enumerate(all_holdings[:5]):
-        if 'Ticker' in row or 'ticker' in [str(h).strip().lower() for h in row]:
-            header_row_idx = i
-            break
-            
-    if header_row_idx == -1:
-        print("Error: Could not find 'Ticker' column in first 5 rows of Holdings_Current.")
-        return
-        
-    headers = all_holdings[header_row_idx]
-    data = all_holdings[header_row_idx + 1:]
 
-    df_holdings = pd.DataFrame(data, columns=headers)
-    
-    # Use column_guard for normalization
-    from utils.column_guard import ensure_display_columns
-    df_holdings = ensure_display_columns(df_holdings)
-    
-    # Filter out cash
-    df_holdings = df_holdings[~df_holdings['Ticker'].isin(['CASH_MANUAL', 'QACDS', 'CASH & CASH INVESTMENTS'])]
-    
-    # 2. Read Valuation_Card
+    client = get_gspread_client()
+    ss = client.open_by_key(config.PORTFOLIO_SHEET_ID)
+
+    holdings_rows = _read_records(ss, config.TAB_HOLDINGS_CURRENT)
+    valuation_rows = _read_records(ss, "Valuation_Card")
+
     try:
-        ws_val = spreadsheet.worksheet("Valuation_Card")
-        df_val = pd.DataFrame(ws_val.get_all_records())
+        ws_agent = ss.worksheet(config.TAB_AGENT_OUTPUTS)
+        df_agent = get_latest_agent_outputs(ws_agent)
     except Exception as e:
-        print(f"Warning: Could not read Valuation_Card: {e}")
-        df_val = pd.DataFrame(columns=['Ticker', 'Forward P/E', '52w Position %', 'Discount from 52w High %'])
+        print(f"Warning: Could not read {config.TAB_AGENT_OUTPUTS}: {e}")
+        import pandas as pd
+        df_agent = pd.DataFrame()
 
-    # 3. Read Agent_Outputs
-    ws_agent = spreadsheet.worksheet(config.TAB_AGENT_OUTPUTS)
-    df_agent = get_latest_agent_outputs(ws_agent)
-    
-    # Join Logic
-    # We want one row per ticker from Holdings_Current
-    results = []
-    
-    tickers = df_holdings['Ticker'].unique()
-    
-    for ticker in tickers:
-        row_h = df_holdings[df_holdings['Ticker'] == ticker].iloc[0]
-        
-        # Valuation Data
-        val_data = {}
-        if not df_val.empty and ticker in df_val['Ticker'].values:
-            row_v = df_val[df_val['Ticker'] == ticker].iloc[0]
-            val_data = {
-                'Fwd P/E': row_v.get('Forward P/E (yf)') or row_v.get('Forward P/E (FMP)') or '',
-                '52w Pos %': row_v.get('52w Position %', ''),
-                'Disc from High %': row_v.get('Discount from 52w High %', '')
-            }
-        else:
-            val_data = {'Fwd P/E': '', '52w Pos %': '', 'Disc from High %': ''}
-            
-        # Agent Signals — only surface severity in (action, alert, data_quality)
-        # Empty cell = "no active signal" (not "Not Evaluated"); hold/info/watch rows are noise
-        ticker_agents = df_agent[df_agent['ticker'] == ticker] if not df_agent.empty else pd.DataFrame()
+    header = _run_header(df_agent)
+    positions = _build_position_table(holdings_rows, valuation_rows, df_agent)
+    signal_rows = [p for p in positions if p.get("Signal")]
 
-        def get_active_signal(agent_name: str) -> str:
-            """Return signal_type if latest row has action-level severity, else ''."""
-            if ticker_agents.empty:
-                return ''
-            agent_rows = ticker_agents[ticker_agents['agent'] == agent_name]
-            if agent_rows.empty:
-                return ''
-            row = agent_rows.iloc[0]  # already sorted by run_ts descending
-            sev = str(row.get('severity', '')).lower()
-            if sev not in _ACTION_SEVERITIES:
-                return ''
-            return str(row.get('signal_type', '') or row.get('action', ''))
-
-        def get_concentration_flag(tkr: str) -> str:
-            """Return concentration flag text if this ticker is flagged at action severity."""
-            if df_agent.empty:
-                return ''
-            conc_rows = df_agent[
-                (df_agent['agent'] == 'concentration')
-                & (df_agent['ticker'] == tkr)
-                & (df_agent['severity'].str.lower().isin(_ACTION_SEVERITIES))
-            ]
-            if conc_rows.empty:
-                return ''
-            return str(conc_rows.iloc[0].get('signal_type', 'flagged'))
-
-        val_signal = get_active_signal('valuation')
-        macro_signal = get_active_signal('macro')
-        thesis_signal = get_active_signal('thesis')
-        conc_flag = get_concentration_flag(ticker)
-
-        # TLH Flag — tax agent uses ticker-level rows
-        tlh_flag = ""
-        if not ticker_agents.empty:
-            tax_rows = ticker_agents[ticker_agents['agent'] == 'tax']
-            if not tax_rows.empty:
-                sig = str(tax_rows.iloc[0].get('signal_type', '')).lower()
-                if 'tlh' in sig:
-                    tlh_flag = "TLH"
-
-        # Top Rationale — highest-severity, non-generic narrative for this ticker
-        top_rationale = ""
-        for agent_name in ('valuation', 'macro', 'thesis'):
-            if ticker_agents.empty:
-                break
-            agent_rows = ticker_agents[ticker_agents['agent'] == agent_name]
-            if agent_rows.empty:
-                continue
-            row = agent_rows.iloc[0]
-            sev = str(row.get('severity', '')).lower()
-            if sev not in _ACTION_SEVERITIES:
-                continue
-            rat = str(row.get('rationale', '') or row.get('action', ''))
-            if rat and "Insufficient data" not in rat:
-                top_rationale = rat[:120]
-                break
-
-        # Goal 1: Map results and ensure raw decimals for percentages
-        def to_pct_float(val):
-            if val is None or val == "": return 0.0
-            try:
-                s = str(val).replace("%", "").strip()
-                return float(s) / 100.0 if float(s) > 1.0 or "%" in str(val) else float(s)
-            except: return 0.0
-
-        # Technical Data (RSI, MA200, better Daily Change)
-        tech_data = tech_map.get(ticker, {})
-        rsi_val = tech_data.get('rsi_14')
-        
-        # Use technicals daily_change if holdings is 0.0
-        h_daily = to_pct_float(row_h.get('Daily Change %'))
-        t_daily = tech_data.get('daily_change_pct', 0.0)
-        daily_chg = t_daily if (h_daily == 0.0 and t_daily != 0.0) else h_daily
-
-        results.append({
-            'Ticker': ticker,
-            'Weight %': to_pct_float(row_h.get('Weight')),
-            'Market Value': pd.to_numeric(row_h.get('Market Value'), errors='coerce') or 0.0,
-            'Unreal G/L %': to_pct_float(row_h.get('Unrealized G/L %')),
-            'Daily Chg %': daily_chg,
-            'RSI': rsi_val,
-            'Price': pd.to_numeric(row_h.get('Price'), errors='coerce') or 0.0,
-            'Trim Target': composite_bundle.get_ticker_triggers(ticker).get('price_trim_above') if composite_bundle else None,
-            'Add Target': composite_bundle.get_ticker_triggers(ticker).get('price_add_below') if composite_bundle else None,
-            'Fwd P/E': val_data['Fwd P/E'],
-            '52w Pos %': to_pct_float(val_data['52w Pos %']),
-            'Disc from High %': to_pct_float(val_data['Disc from High %']),
-            'Valuation Signal': val_signal,
-            'Top Rationale': top_rationale,
-        })
-            
-    df_decision = pd.DataFrame(results)
-    
-    # Sorting: Weight % descending
-    df_decision = df_decision.sort_values(by=['Weight %'], ascending=[False])
-    
     if not live:
-        print("\nDRY RUN: Decision View Preview")
-        print(df_decision.to_string(index=False))
+        _print_dry_run(header, signal_rows)
         return
-        
-    # Live Write
+
+    grid = [_pad([header]), _pad(_DEC_COLS)]
+    for p in signal_rows:
+        grid.append(_pad([
+            p["Ticker"], p["Signal"], p["MV"], p["Wt%"], p["Price"],
+            p["Trim"], p["Add"], p["->Trim %"], p["->Add %"],
+            p["Fwd P/E"], p["52w %"], p["Rationale"],
+        ]))
+    grid = [["" if c is None else c for c in row] for row in grid]
+
     tab_name = "Decision_View"
     try:
-        ws_dec = spreadsheet.worksheet(tab_name)
-        ws_dec.clear()
-    except:
-        ws_dec = spreadsheet.add_worksheet(title=tab_name, rows=100, cols=20)
-        
-    # Data to write (handle nulls as empty strings for GSheets)
-    # Ensure numeric columns remain numeric
-    df_write = df_decision.copy()
-    
-    data_to_write = [df_write.columns.tolist()] + df_write.values.tolist()
-    # Replace None/NaN with ""
-    data_to_write = [[(v if pd.notnull(v) else "") for v in row] for row in data_to_write]
-    
-    ws_dec.update(range_name='A1', values=data_to_write)
-    
-    # Apply Formatting if available
-    if HAS_FORMATTING:
-        print(f"  Applying formatting to {tab_name}...")
-        
-        # Header Format
-        header_fmt = CellFormat(
-            backgroundColor=COLOR_NAVY,
-            textFormat=TextFormat(bold=True, foregroundColor=COLOR_WHITE),
-            horizontalAlignment="CENTER"
-        )
-        format_cell_range(ws_dec, "A1:M1", header_fmt)
-        set_frozen(ws_dec, rows=1)
-        
-        # Numeric Formats
-        fmt_pct = CellFormat(numberFormat=NumberFormat(type='PERCENT', pattern='0.00%'))
-        fmt_curr = CellFormat(numberFormat=NumberFormat(type='CURRENCY', pattern='$#,##0.00'))
-        
-        # Weight % (B), Unreal G/L % (D), Daily Chg % (E), 52w Pos % (J), Disc from High % (K)
-        for col_let in ["B", "D", "E", "J", "K"]:
-            format_cell_range(ws_dec, f"{col_let}2:{col_let}200", fmt_pct)
-            
-        # Market Value (C), Price (F), Trim Target (G), Add Target (H)
-        for col_let in ["C", "F", "G", "H"]:
-            format_cell_range(ws_dec, f"{col_let}2:{col_let}200", fmt_curr)
+        ws_dec = ss.worksheet(tab_name)
+    except Exception:
+        ws_dec = ss.add_worksheet(title=tab_name, rows=max(50, len(grid) + 5), cols=len(_DEC_COLS))
 
-    print(f"\n✅ Successfully wrote {len(df_decision)} rows to {tab_name}")
+    safe_execute(ws_dec.clear)
+    safe_execute(ws_dec.update, range_name="A1", values=grid, value_input_option="RAW")
+    _apply_formatting(ws_dec, header, len(signal_rows))
+
+    print(f"\nWrote {len(signal_rows)} signal rows to {tab_name}")
+
 
 if __name__ == "__main__":
     app()

@@ -331,9 +331,44 @@ def refresh_tax_control_sheet(live: bool = False) -> Dict[str, Any]:
     # Batch update
     safe_execute(ws.clear)
     safe_execute(ws.update, range_name="A1", values=all_values, value_input_option="USER_ENTERED")
-    
+    _apply_kpi_number_formats(ws)
+
     logger.info(f"LIVE — refreshed {config.TAB_TAX_CONTROL} with {len(table_data)} lots.")
     return data
+
+
+def _apply_kpi_number_formats(ws) -> None:
+    """
+    Stamp the correct number format on row 3 (the KPI values row), every write.
+    ws.clear() only clears values, not formatting -- without this, a stale
+    dollar format left on the Wash Sale Count cell from an earlier manual edit
+    or older script version persists indefinitely and renders a genuine count
+    (e.g. 3) as "$3.00" (observed on 0_DASHBOARD as "Wash Sales $111.00").
+    """
+    try:
+        from gspread_formatting import CellFormat, NumberFormat, format_cell_ranges
+    except ImportError:
+        logger.warning("gspread_formatting not installed; skipping Tax_Control number formats.")
+        return
+
+    dollar_fmt = CellFormat(numberFormat=NumberFormat(type='CURRENCY', pattern='$#,##0.00'))
+    int_fmt = CellFormat(numberFormat=NumberFormat(type='NUMBER', pattern='0'))
+
+    dollar_cols = ["Net ST (YTD)", "Net LT (YTD)", "Disallowed Wash Loss (YTD)",
+                   "Est. Fed Cap Gains Tax", "Tax Offset Capacity"]
+    int_cols = ["Wash Sale Count"]
+
+    ranges = []
+    for col_name in dollar_cols + int_cols:
+        idx = config.TAX_CONTROL_KPI_LABELS.index(col_name)
+        letter = chr(ord('A') + idx)
+        fmt = dollar_fmt if col_name in dollar_cols else int_fmt
+        ranges.append((f"{letter}3:{letter}3", fmt))
+
+    try:
+        format_cell_ranges(ws, ranges)
+    except Exception as e:
+        logger.warning(f"Tax_Control number formatting failed: {e}")
 
 if __name__ == "__main__":
     # Test run

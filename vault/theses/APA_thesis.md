@@ -3,9 +3,9 @@ ticker: APA
 style: THEME
 framework_preference: lynch_garp_v1
 entry_date: 2026-05-03
-last_reviewed: '2026-05-03'
-current_allocation: 0.47%
-cost_basis: 3189.07
+last_reviewed: '2026-06-25'
+current_allocation: 0.22%
+cost_basis: 1608.3
 time_horizon: 2 to 3 years
 triggers:
   fwd_pe_add_below: 8               # add at deep oil cycle trough multiples if Permian thesis intact
@@ -14,10 +14,10 @@ triggers:
   price_add_below: 18               # lean in if beaten down to near asset-value levels
   price_trim_above: 45              # evaluate size reduction at recovery highs
   discount_from_52w_high_add: 0.40  # deep value add trigger; APA is volatile
-  revenue_growth_floor_pct: null    # commodity-price-driven; revenue growth is less meaningful than FCF/bbl
-  operating_margin_floor_pct: null
+  revenue_growth_floor_pct:         # commodity-price-driven; revenue growth is less meaningful than FCF/bbl
+  operating_margin_floor_pct:
   style_size_ceiling_pct: 3.0
-  current_weight_pct: null
+  current_weight_pct:
 drawdown_tolerance_pct: 0.40        # commodity E&P; high volatility is the price of admission
 panic_buy_trigger_drawdown_pct: 0.30
 ---
@@ -57,24 +57,28 @@ Cost basis: ~$3,189 total. APA has been among the worst-performing E&P stocks ov
 - Rotation priority: high; this is a speculative thematic with a clear exit trigger (Suriname FID announced or definitively abandoned).
 
 <!-- region:position_state -->
-**Current Allocation:** 0.47%
-**Cost Basis:** $3,189.07
+**Current Allocation:** 0.22%
+**Cost Basis:** $1,608.30
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** THEME
 **Size Ceiling:** 3.00%
-**Drift:** -2.53%
+**Drift:** -2.78%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
-No recent transactions found.
+- 2026-06-24: Sell -70.0 @ $32.85
+- 2026-06-17: Sell -50.0 @ $34.14
+- 2026-05-13: Sell -6.0 @ $36.96
+- 2026-05-11: Sell -50.0 @ $36.70
+- 2026-05-06: Buy 20.0 @ $38.81
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
-No realized G/L history.
+Total Realized G/L: $-27.00 over 2 closed lots. Total Proceeds: $2,056.95.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-05-03 14:58: Auto-sync allocation 0.47%, drift -2.53%
+2026-06-25 08:03: Auto-sync allocation 0.22%, drift -2.78%
 <!-- endregion:change_log -->

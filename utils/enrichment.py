@@ -75,26 +75,41 @@ def enrich_positions(df: pd.DataFrame) -> pd.DataFrame:
             try:
                 t = tickers_obj.tickers[ticker]
                 info = t.info
-                
+
                 # Metadata
                 # Fetch basic beta from info, fallback to 1.0
                 beta = info.get("beta", 1.0)
-                
+
+                # yfinance now returns dividendYield in percent-scale (8.45 for
+                # 8.45%, not the raw fraction 0.0845) -- confirmed live against
+                # JEPI/JPIE/GOOG on 2026-07-05. Dividing unconditionally by 100
+                # matches how utils/csv_parser.py already treats Schwab's own
+                # CSV yield column. The >0.25 clamp is a second-layer guard in
+                # case a ticker's value is still out of range after scaling.
+                raw_yield = info.get("dividendYield")
+                dividend_yield = (raw_yield / 100.0) if raw_yield else 0.0
+                if dividend_yield > 0.25:
+                    print(f"Warning: {ticker} dividend yield {dividend_yield:.2%} still looks too high after /100 scaling; dividing again.")
+                    dividend_yield = dividend_yield / 100.0
+
                 enriched_data[ticker] = {
-                    'dividend_yield': info.get("dividendYield", 0.0) if info.get("dividendYield") else 0.0,
+                    'dividend_yield': dividend_yield,
                     'sector': info.get("sector"),
+                    'asset_class_override': None,
                     'beta': beta,
                     'long_name': info.get("longName") or info.get("shortName") or "",
                 }
-                
+
                 # Apply Ticker Overrides from config
                 if ticker in config.TICKER_OVERRIDES:
                     overrides = config.TICKER_OVERRIDES[ticker]
                     for key, val in overrides.items():
-                        if key in enriched_data[ticker] or key == 'asset_class':
-                            # Map asset_class override to 'sector' in this loop
-                            target_key = 'sector' if key == 'asset_class' else key
-                            enriched_data[ticker][target_key] = val
+                        if key == 'asset_class':
+                            # Explicit overrides target the real Asset Class
+                            # column, never the Sector column (see below).
+                            enriched_data[ticker]['asset_class_override'] = val
+                        elif key in enriched_data[ticker]:
+                            enriched_data[ticker][key] = val
 
             except Exception as e:
                 print(f"Failed to fetch metadata for {ticker}: {e}")
@@ -104,8 +119,19 @@ def enrich_positions(df: pd.DataFrame) -> pd.DataFrame:
 
     # 3. Apply enrichment to DataFrame
     yield_col_target = 'dividend_yield' if 'dividend_yield' in df.columns else 'Dividend Yield'
-    sector_col_target = 'asset_class' if 'asset_class' in df.columns else 'Asset Class'
+    # yfinance's GICS sector (Technology, Utilities, ...) is NOT an asset class
+    # (Equity, Fixed Income, Cash, ...) -- it must never overwrite Asset Class.
+    # It goes in its own Sector column; explicit TICKER_OVERRIDES asset_class
+    # entries (e.g. BABA) are the only thing allowed to touch Asset Class.
+    sector_col_target = 'sector' if 'sector' in df.columns else 'Sector'
+    asset_class_col_target = 'asset_class' if 'asset_class' in df.columns else 'Asset Class'
     income_col_target = 'est_annual_income' if 'est_annual_income' in df.columns else 'Est Annual Income'
+
+    # Guarantee the Sector column exists even if every enriched ticker this run
+    # happens to have sector=None (e.g. a top-20 list made entirely of ETFs) --
+    # otherwise the fallback loop below raises KeyError on first access.
+    if sector_col_target not in df.columns:
+        df[sector_col_target] = pd.NA
 
     for ticker, info in enriched_data.items():
         if info is None: continue
@@ -115,12 +141,13 @@ def enrich_positions(df: pd.DataFrame) -> pd.DataFrame:
                 df.loc[idx, yield_col_target] = info['dividend_yield']
             if info['sector'] is not None:
                 df.loc[idx, sector_col_target] = info['sector']
+            if info.get('asset_class_override') is not None:
+                df.loc[idx, asset_class_col_target] = info['asset_class_override']
             if info.get('long_name'):
                 df.loc[idx, desc_col] = info['long_name']
 
-            # Recalculate Est Annual Income
+            # Recalculate Est Annual Income using the now-correctly-scaled yield
             if info['dividend_yield'] is not None:
-                # info['dividend_yield'] is a raw decimal (e.g. 0.025 for 2.5%)
                 df.loc[idx, income_col_target] = df.loc[idx, mv_col] * info['dividend_yield']
 
     # 3b. Name-only lookup for remaining invested tickers that still have empty descriptions
@@ -152,9 +179,15 @@ def enrich_positions(df: pd.DataFrame) -> pd.DataFrame:
             # If description is still empty, use ticker symbol as minimum
             if pd.isna(df.loc[idx, desc_col]) or str(df.loc[idx, desc_col]).strip() == "":
                 df.loc[idx, desc_col] = row[ticker_col]
-            # If sector is still missing/Other, try get_sector_fast
+            # If sector is still missing/Other, try get_sector_fast.
+            # get_sector_fast() currently raises AttributeError (config.ETF_KEYWORDS
+            # does not exist) -- guard so a broken fallback classifier can't take
+            # down the whole snapshot; pre-existing bug, out of scope for this fix.
             if pd.isna(df.loc[idx, sector_col_target]) or df.loc[idx, sector_col_target] == "Other":
-                df.loc[idx, sector_col_target] = get_sector_fast(row[desc_col])
+                try:
+                    df.loc[idx, sector_col_target] = get_sector_fast(row[desc_col])
+                except Exception as e:
+                    print(f"get_sector_fast failed for {row[ticker_col]}: {e}")
 
     return df
 

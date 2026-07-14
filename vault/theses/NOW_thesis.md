@@ -1,13 +1,13 @@
 ---
 ticker: NOW
 style: GARP
-framework_preference: null
-entry_date: null
-last_reviewed: '2026-05-03'
+framework_preference:
+entry_date:
+last_reviewed: '2026-07-14'
 triggers:
   price_trim_above: 250.00
-cost_basis: 15110.87
-current_allocation: 2.11%
+cost_basis: 8100.84
+current_allocation: 0.01%
 ---
 # NOW — Investment Thesis
 
@@ -46,28 +46,28 @@ priority: very low
 - 2026-04: Initiated. Thesis intact. Massive unrealized gains. Monitoring Pro-tier AI adoption rates, cRPO (current remaining performance obligations) growth, and renewal rates.
 
 <!-- region:position_state -->
-**Current Allocation:** 2.11%
-**Cost Basis:** $15,110.87
+**Current Allocation:** 0.01%
+**Cost Basis:** $8,100.84
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** GARP
 **Size Ceiling:** 9.00%
-**Drift:** -6.89%
+**Drift:** -8.99%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
-- 2026-04-30: Sell -15.0 @ $87.56
-- 2026-04-24: Buy 10.0 @ $88.10
-- 2026-04-23: Buy 15.0 @ $85.57
-- 2026-04-23: Buy 25.0 @ $87.35
-- 2026-04-22: Buy 10.0 @ $103.25
+- 2026-06-25: Sell -100.0 @ $90.61
+- 2026-06-02: Buy 6.0 @ $128.90
+- 2026-06-02: Buy 4.0 @ $128.90
+- 2026-05-26: Sell -2.0 @ $101.37
+- 2026-05-26: Sell -17.0 @ $101.37
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
-Total Realized G/L: $0.00 over 3 closed lots. Total Proceeds: $1,224.00.
+Total Realized G/L: $-300.00 over 8 closed lots. Total Proceeds: $3,763.17.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-05-03 14:58: Auto-sync allocation 2.11%, drift -6.89%
+2026-07-14 10:51: Auto-sync allocation 0.01%, drift -8.99%
 <!-- endregion:change_log -->

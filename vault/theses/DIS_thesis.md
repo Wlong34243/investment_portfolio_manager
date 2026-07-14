@@ -1,13 +1,13 @@
 ---
 ticker: DIS
 style: THEME
-framework_preference: null
-entry_date: null
-last_reviewed: '2026-05-03'
+framework_preference:
+entry_date:
+last_reviewed: '2026-07-13'
 triggers:
   price_trim_above: 134.00
-cost_basis: 5214.62
-current_allocation: 0.67%
+cost_basis: 8058.91
+current_allocation: 0.01%
 ---
 # DIS — Investment Thesis
 
@@ -46,17 +46,19 @@ priority: low
 - 2026-04: Initiated. Thesis intact. Monitoring streaming operating margins, park attendance volume vs. pricing, and the rollout of the flagship ESPN app.
 
 <!-- region:position_state -->
-**Current Allocation:** 0.67%
-**Cost Basis:** $5,214.62
+**Current Allocation:** 0.01%
+**Cost Basis:** $8,058.91
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** THEME
 **Size Ceiling:** 3.00%
-**Drift:** -2.33%
+**Drift:** -2.99%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
+- 2026-06-04: Sell -20.0 @ $100.78
+- 2026-05-08: Buy 45.0 @ $108.00
 - 2026-04-16: Buy 10.0 @ $104.00
 <!-- endregion:transaction_log -->
 
@@ -65,5 +67,5 @@ No realized G/L history.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-05-03 14:58: Auto-sync allocation 0.67%, drift -2.33%
+2026-07-13 10:28: Auto-sync allocation 0.01%, drift -2.99%
 <!-- endregion:change_log -->

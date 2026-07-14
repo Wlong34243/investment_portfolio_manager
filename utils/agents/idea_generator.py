@@ -34,11 +34,18 @@ class Candidate(BaseModel):
     notable_concerns: Optional[str] = None
 
 
+class MarketTheme(BaseModel):
+    theme: str
+    sources: list[str]
+    summary: str
+
+
 class IdeaGeneratorOutput(BaseModel):
     bundle_hash: str
     generated_at: Optional[datetime] = None
     transcripts_analyzed: list[str]
     candidates: list[Candidate]
+    market_themes: list[MarketTheme] = []
     notes: Optional[str] = None
 
 
@@ -105,7 +112,7 @@ def _find_latest_composite(bundle_dir: Path = Path("bundles")) -> Path:
 def run_idea_generator(
     composite_bundle_path: Optional[str] = None,
     since_days: int = 7,
-    max_tokens: int = 8000,
+    max_tokens: int = 16000,
 ) -> IdeaGeneratorOutput:
     """
     End-to-end idea generator.
@@ -262,9 +269,25 @@ def write_idea_report(
             lines.append("---")
             lines.append("")
 
+    if output.market_themes:
+        lines += ["## Market Themes & Macro Observations", ""]
+        for mt in output.market_themes:
+            lines.append(f"### {mt.theme}")
+            lines.append("")
+            if mt.sources:
+                lines.append(f"**Sources:** {', '.join(mt.sources)}  ")
+            lines.append(mt.summary)
+            lines.append("")
+
     lines += ["## Notes", ""]
     lines.append(output.notes if output.notes else "_No additional notes._")
     lines.append("")
+    lines += [
+        "---",
+        "",
+        "_Want Claude's independent read of these same transcripts? Ask Claude Code: \"what would the idea generator list look like if you processed the transcripts instead of Gemini?\"_",
+        "",
+    ]
 
     markdown = "\n".join(lines)
 

@@ -1,13 +1,13 @@
 ---
 ticker: DELL
 style: GARP
-framework_preference: null
-entry_date: null
-last_reviewed: '2026-05-03'
+framework_preference:
+entry_date:
+last_reviewed: '2026-07-14'
 triggers:
   price_trim_above: 165.00
-cost_basis: 3881.19
-current_allocation: 0.95%
+cost_basis: 654.18
+current_allocation: 0.00%
 ---
 # DELL — Investment Thesis
 
@@ -47,27 +47,28 @@ priority: low
 - 2026-04: Initiated. Thesis intact. Monitoring AI server backlog conversion, ISG operating margins, and early enterprise adoption of AI PCs.
 
 <!-- region:position_state -->
-**Current Allocation:** 0.95%
-**Cost Basis:** $3,881.19
+**Current Allocation:** 0.00%
+**Cost Basis:** $654.18
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** GARP
 **Size Ceiling:** 9.00%
-**Drift:** -8.05%
+**Drift:** -9.00%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
-- 2026-04-24: Sell -10.0 @ $216.48
-- 2026-01-30: Dividend 0.0 @ $0.00
-- 2026-01-30: Dividend 0.0 @ $0.00
-- 2026-01-30: Dividend 0.0 @ $0.00
+- 2026-06-29: Sell -5.0 @ $387.58
+- 2026-05-12: Sell -20.0 @ $235.26
+- 2026-05-05: Sell -1.0 @ $215.95
+- 2026-05-01: Dividend 0.0 @ $0.00
+- 2026-05-01: Dividend 0.0 @ $0.00
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
-Total Realized G/L: $1,223.00 over 7 closed lots. Total Proceeds: $8,169.00.
+Total Realized G/L: $4,793.19 over 17 closed lots. Total Proceeds: $21,257.59.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-05-03 14:58: Auto-sync allocation 0.95%, drift -8.05%
+2026-07-14 10:51: Auto-sync allocation 0.00%, drift -9.00%
 <!-- endregion:change_log -->

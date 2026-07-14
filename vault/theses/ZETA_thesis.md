@@ -3,20 +3,20 @@ ticker: ZETA
 style: THEME
 framework_preference: thematic_specialist_v1
 entry_date: 2026-05
-last_reviewed: '2026-05-18'
-current_allocation: 1.23%
-cost_basis: null
+last_reviewed: '2026-07-14'
+current_allocation: 0.01%
+cost_basis: 3254.52
 time_horizon: 1 to 3 years
 triggers:
-  fwd_pe_add_below: null            # not yet GAAP-profitable in a steady-state sense; use other metrics
-  fwd_pe_trim_above: null
-  fwd_pe_historical_median: null
+  fwd_pe_add_below:                 # not yet GAAP-profitable in a steady-state sense; use other metrics
+  fwd_pe_trim_above:
+  fwd_pe_historical_median:
   ev_revenue_trim_above: 8          # rough EV/revenue ceiling; trim if multiple gets stretched
-  price_add_below: null             # too volatile to set; build on discount-from-highs
-  price_trim_above: null            # set after position is sized; speculative, not level-driven
+  price_add_below:                  # too volatile to set; build on discount-from-highs
+  price_trim_above:                 # set after position is sized; speculative, not level-driven
   discount_from_52w_high_add: 0.25  # add on 25%+ drawdowns from highs absent structural news
   revenue_growth_floor_pct: 25      # this needs to be a hypergrowth story; below 25% the thesis breaks
-  operating_margin_floor_pct: null
+  operating_margin_floor_pct:
   style_size_ceiling_pct: 2.0       # speculative single name — strict cap
   current_weight_pct: 1.23
 drawdown_tolerance_pct: 0.50        # this is a speculative AI play; 50% drawdowns are within range
@@ -87,17 +87,14 @@ Two reasons:
 - Rotation priority: medium — first to be cut if I need to raise cash or if a higher-conviction AI thematic emerges.
 
 <!-- region:position_state -->
-**Current Allocation:** 1.23%
-**Cost Basis:** TBD (cost basis flow not yet visible in bundle)
-**Unrealized G/L:** TBD
+**Current Allocation:** 0.01%
+**Cost Basis:** $3,254.52
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
-**Style:** THEME (Speculative AI / Martech)
-**Size Ceiling:** 2.00% (strict)
-**Working Target:** 1.5-2.0%
-**Drawdown Tolerance:** 50%
-**Drift:** -0.27% to target
+**Style:** THEME
+**Size Ceiling:** 3.00%
+**Drift:** -2.99%
 <!-- endregion:sizing -->
 
 <!-- region:sourcing_disclosure -->
@@ -105,5 +102,15 @@ Two reasons:
 <!-- endregion:sourcing_disclosure -->
 
 <!-- region:change_log -->
-2026-05-18: Position initiated. New thesis file created. Sourced from social media AI recommendation. Sized as speculative satellite with strict 2% cap and 50% drawdown tolerance encoded. Honest sourcing disclosure included.
+2026-07-14 10:51: Auto-sync allocation 0.01%, drift -2.99%
 <!-- endregion:change_log -->
+
+<!-- region:transaction_log -->
+- 2026-07-09: Sell -100.0 @ $21.89
+- 2026-05-14: Buy 100.0 @ $16.39
+- 2026-05-12: Buy 200.0 @ $16.16
+<!-- endregion:transaction_log -->
+
+<!-- region:realized_gl -->
+No realized G/L history.
+<!-- endregion:realized_gl -->

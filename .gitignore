@@ -57,3 +57,15 @@ audit_results.txt
 
 # Podcast transcripts — large data files, not committed
 data/podcast_transcripts/
+
+# Podcast summaries — regenerated per run, same treatment as transcripts/bundles
+data/podcast_summaries/
+
+# Agent output reports — regenerated per run, not committed (agent_outputs/{agent}/*.md)
+agent_outputs/
+
+# Google Drive backup upload staging — transient, created by `pm backup`
+.tmp.driveupload/
+
+# Windows Explorer folder-customization files — pure OS noise, not project content
+desktop.ini

@@ -1,11 +1,11 @@
 ---
 ticker: CRWV
 style: THEME
-framework_preference: null
-entry_date: null
-last_reviewed: '2026-05-03'
+framework_preference:
+entry_date:
+last_reviewed: '2026-07-14'
 cost_basis: 7092.53
-current_allocation: 1.55%
+current_allocation: 0.01%
 ---
 # CRWV — Investment Thesis
 
@@ -45,14 +45,14 @@ priority: medium (due to high volatility and debt profile)
 - 2026-04: Initiated. Thesis intact. Up significantly from $76 cost basis. Monitoring the Anthropic deal rollout, conversion of backlog to recognized revenue, and overall debt service levels.
 
 <!-- region:position_state -->
-**Current Allocation:** 1.55%
+**Current Allocation:** 0.01%
 **Cost Basis:** $7,092.53
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** THEME
 **Size Ceiling:** 3.00%
-**Drift:** -1.45%
+**Drift:** -2.99%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -68,5 +68,5 @@ No realized G/L history.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-05-03 14:58: Auto-sync allocation 1.55%, drift -1.45%
+2026-07-14 10:51: Auto-sync allocation 0.01%, drift -2.99%
 <!-- endregion:change_log -->

@@ -50,6 +50,21 @@ Use natural language. Examples:
 ## current_holdings_overlap guidance
 List only tickers that genuinely overlap thematically or by sector. Empty list if it's truly new exposure.
 
+## Market Themes (market_themes field)
+In addition to specific candidates, capture 3–8 recurring macro or thematic observations from across the transcripts that seemed significant — Fed policy shifts, commodity cycle views, sector-level structural changes, notable risk flags, or consensus views that multiple speakers reinforced.
+
+For each theme:
+- **theme**: A short descriptive title (e.g., "Worsh Fed signals sustained hawkishness")
+- **sources**: List the specific transcript filenames or speaker names that raised it
+- **summary**: 2–3 sentences on what was said and why it matters for a portfolio investor
+
+Rules for market_themes:
+- Only include themes that appeared meaningfully — not passing mentions
+- Must be distinct from the specific candidates already captured
+- Include things speakers disagreed on if the disagreement itself is portfolio-relevant
+- Include risk flags even if no candidate is actionable from them (e.g., "equity issuance surge as a market-top signal")
+- Skip pure trading philosophy or podcast meta-commentary
+
 ## Hard rules
 - No price targets
 - No buy/sell recommendations

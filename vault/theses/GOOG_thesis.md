@@ -3,19 +3,19 @@ ticker: GOOG
 style: GARP
 framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: '2026-05-18'
-current_allocation: 5.29%
-cost_basis: 17938.09
+last_reviewed: '2026-07-14'
+current_allocation: 0.05%
+cost_basis: 20327.72
 time_horizon: 3 to 5 years
 triggers:
   fwd_pe_add_below: 20              # add on AI/reg fear-driven pullbacks
   fwd_pe_trim_above: 32             # trim only if multiple gets to peak-AI-mania territory
-  fwd_pe_historical_median: null
+  fwd_pe_historical_median:
   price_add_below: 320              # lean in on panic, not on routine pullback
   price_trim_above: 450.00          # raised from $395 — ecosystem + optionality thesis intact
-  discount_from_52w_high_add: null
+  discount_from_52w_high_add:
   revenue_growth_floor_pct: 8
-  operating_margin_floor_pct: null
+  operating_margin_floor_pct:
   style_size_ceiling_pct: 9.0
   current_weight_pct: 5.29
 drawdown_tolerance_pct: 0.30
@@ -78,18 +78,28 @@ I will exit or sharply reduce only on **structural** breaks:
 - Rotation priority: very low.
 
 <!-- region:position_state -->
-**Current Allocation:** 5.29%
-**Cost Basis:** $17,938.09
-**Unrealized G/L:** +$14,349.77 (+80.0%)
+**Current Allocation:** 0.05%
+**Cost Basis:** $20,327.72
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** GARP
 **Size Ceiling:** 9.00%
-**Working Soft Cap:** 6.00% (conviction exception)
-**Drift:** -0.71% to soft cap
+**Drift:** -8.95%
 <!-- endregion:sizing -->
 
 <!-- region:change_log -->
-2026-05-18: Trim trigger raised from $395 to $450. Added explicit private-stake optionality framing (SpaceX, Anthropic, Other Bets). Added tax-aware hold rationale for April 2027 LT conversion.
+2026-07-14 10:51: Auto-sync allocation 0.05%, drift -8.95%
 <!-- endregion:change_log -->
+
+<!-- region:transaction_log -->
+- 2026-06-15: Buy 0.0389 @ $368.85
+- 2026-06-02: Buy 6.0 @ $358.19
+- 2026-05-26: Buy 5.0 @ $382.40
+- 2026-05-11: Sell -5.0 @ $392.79
+- 2026-05-11: Sell -5.0 @ $392.79
+<!-- endregion:transaction_log -->
+
+<!-- region:realized_gl -->
+Total Realized G/L: $13,846.64 over 10 closed lots. Total Proceeds: $27,202.04.
+<!-- endregion:realized_gl -->

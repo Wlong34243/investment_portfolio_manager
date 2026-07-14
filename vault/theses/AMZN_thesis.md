@@ -3,21 +3,21 @@ ticker: AMZN
 style: GARP
 framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: '2026-05-03'
-current_allocation: 5.24%
-cost_basis: 30572.04
+last_reviewed: '2026-07-14'
+current_allocation: 0.04%
+cost_basis: 22514.87
 time_horizon: 3 to 5 years
 triggers:
   fwd_pe_add_below: 9                # add when market prices in "credit disaster"
   fwd_pe_trim_above: 13              # trim when network + cycle optimism fully priced
-  fwd_pe_historical_median: null
+  fwd_pe_historical_median:
   price_add_below: 200               # reload if selloff is macro/credit, not execution failure
   price_trim_above: 245.00              # reconsider size as network rerating plays out
-  discount_from_52w_high_add: null
+  discount_from_52w_high_add:
   revenue_growth_floor_pct: 5        # mature financial; focus is EPS & ROE, not topline sprint
-  operating_margin_floor_pct: null   # monitor ROE and efficiency ratio instead
+  operating_margin_floor_pct:        # monitor ROE and efficiency ratio instead
   style_size_ceiling_pct: 7.0        # cyclicality + regulatory + integration risk
-  current_weight_pct: null
+  current_weight_pct:
 ---
 # COF — Investment Thesis
 
@@ -71,28 +71,28 @@ I will exit or materially cut the position if the **structural** elements of the
 4. A clearly superior risk‑adjusted opportunity in financials or payments emerges, where capital can earn a higher through‑the‑cycle IRR with less integration and regulatory complexity.[file:2]  
 
 <!-- region:position_state -->
-**Current Allocation:** 5.24%
-**Cost Basis:** $30,572.04
+**Current Allocation:** 0.04%
+**Cost Basis:** $22,514.87
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** GARP
 **Size Ceiling:** 9.00%
-**Drift:** -3.76%
+**Drift:** -8.96%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
+- 2026-05-11: Sell -15.0 @ $270.60
+- 2026-05-11: Sell -5.0 @ $270.60
+- 2026-05-08: Sell -4.0 @ $272.24
 - 2026-04-15: Buy 5.0 @ $247.57
 - 2026-02-09: Buy 5.0 @ $207.14
-- 2026-02-06: Buy 5.0 @ $207.85
-- 2026-02-06: Buy 3.0 @ $205.12
-- 2026-02-05: Buy 3.0 @ $222.26
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
-No realized G/L history.
+Total Realized G/L: $1,390.71 over 5 closed lots. Total Proceeds: $6,500.91.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-05-03 14:58: Auto-sync allocation 5.24%, drift -3.76%
+2026-07-14 10:51: Auto-sync allocation 0.04%, drift -8.96%
 <!-- endregion:change_log -->

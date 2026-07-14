@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+## [2026-06-15] — Podcast pipeline diagnosis + idea generator auto-ingest
+
+### Fixed
+- **`weekly_podcast_sync.py` never saved raw transcripts**: The automated pipeline fetched YouTube transcripts into memory, ran Gemini analysis, and wrote to Sheets — but never wrote `.txt` files to `data/podcast_transcripts/`. The idea generator reads exclusively from that directory, so it found 0 transcripts on every run since June 2. Fixed by saving the full transcript text to `data/podcast_transcripts/` immediately after the YouTube fetch, before the Gemini step.
+- **`batch_podcast_sync.py` swallowed subprocess errors**: On failure, it logged `result.stderr` — but all error messages in `weekly_podcast_sync.py` go to stdout via `print()`. The actual error was invisible in both local runs and GitHub Actions logs. Fixed to combine stdout + stderr in the failure log output (last 10 lines).
+
+### Diagnosed (not fixed — requires architectural decision)
+- **GitHub Actions podcast cron silently failing**: YouTube blocks transcript requests from Azure cloud IPs (GitHub Actions runner infrastructure). Every episode fails with `RequestBlocked` within ~2 seconds. The workflow reports green because `batch_podcast_sync.py` exits 0 regardless of channel failures. Last successful GitHub Actions podcast run was June 2, 2026. Workaround: run `pm ingest podcasts --live` locally; local machine IPs are not blocked.
+
+### Changed
+- **`pm agent ideas` now auto-ingests before analyzing**: Added podcast ingestion as Step 1 of the `agent ideas` command. Calls `podcast_batch(live=True)` to fetch new transcripts (respecting the dedup log), then runs the idea generator on whatever is on disk. If ingestion fails, the generator still runs with existing transcripts. Use `--skip-ingest` to bypass and go straight to the generator.
+
 ## [2026-06-04] — Morning cascade extension + reliability fixes
 
 ### Added

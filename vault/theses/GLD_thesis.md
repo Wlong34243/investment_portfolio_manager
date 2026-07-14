@@ -3,21 +3,21 @@ ticker: GLD
 style: ETF
 framework_preference: macro_hedge_v1
 entry_date: 2026-05-03
-last_reviewed: '2026-05-03'
-current_allocation: 0.18%
-cost_basis: 1277.52
+last_reviewed: '2026-07-14'
+current_allocation: 0.01%
+cost_basis: 6910.6
 time_horizon: 3 to 5 years
 triggers:
-  fwd_pe_add_below: null            # gold has no earnings; PE triggers not applicable
-  fwd_pe_trim_above: null
-  fwd_pe_historical_median: null
+  fwd_pe_add_below:                 # gold has no earnings; PE triggers not applicable
+  fwd_pe_trim_above:
+  fwd_pe_historical_median:
   price_add_below: 220              # add on meaningful pullback if macro hedge thesis intact
   price_trim_above: 400             # evaluate trimming if gold is running on pure momentum/panic
   discount_from_52w_high_add: 0.15  # add on 15% pullback; gold drawdowns tend to be buy opportunities
-  revenue_growth_floor_pct: null
-  operating_margin_floor_pct: null
+  revenue_growth_floor_pct:
+  operating_margin_floor_pct:
   style_size_ceiling_pct: 8.0
-  current_weight_pct: null
+  current_weight_pct:
 ---
 # GLD — Investment Thesis
 
@@ -59,18 +59,21 @@ Cost basis: ~$1,278 total at entry. Gold had already moved significantly from 20
 - Rotation priority: low urgency; add opportunistically on pullbacks, not on momentum.
 
 <!-- region:position_state -->
-**Current Allocation:** 0.18%
-**Cost Basis:** $1,277.52
+**Current Allocation:** 0.01%
+**Cost Basis:** $6,910.60
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** ETF
 **Size Ceiling:** 8.00%
-**Drift:** -7.82%
+**Drift:** -7.99%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
-No recent transactions found.
+- 2026-06-25: Buy 6.0 @ $368.33
+- 2026-06-02: Sell -5.0 @ $413.39
+- 2026-05-08: Buy 3.0 @ $435.14
+- 2026-05-01: Buy 3.0 @ $425.84
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
@@ -78,5 +81,5 @@ No realized G/L history.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-05-03 14:58: Auto-sync allocation 0.18%, drift -7.82%
+2026-07-14 10:51: Auto-sync allocation 0.01%, drift -7.99%
 <!-- endregion:change_log -->

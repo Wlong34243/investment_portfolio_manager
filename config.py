@@ -181,6 +181,7 @@ POSITION_COLUMNS = [
     'Weight',
     'Import Date',
     'Fingerprint',
+    'Sector',
 ]
 
 SNAPSHOT_COLUMNS = [
@@ -374,6 +375,7 @@ POSITION_COL_MAP = {
     'weight': 'Weight',
     'import_date': 'Import Date',
     'fingerprint': 'Fingerprint',
+    'sector': 'Sector',
 }
 
 AI_SUGGESTED_ALLOCATION_COL_MAP = {

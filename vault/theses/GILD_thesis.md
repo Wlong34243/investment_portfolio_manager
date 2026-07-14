@@ -1,11 +1,11 @@
 ---
 ticker: GILD
-style: BORING
+style: FUND
 framework_preference: lynch_garp_v1
 entry_date: 2026-05-03
-last_reviewed: '2026-05-03'
-current_allocation: 0.67%
-cost_basis: 4573.08
+last_reviewed: '2026-07-14'
+current_allocation: 0.02%
+cost_basis: 12374.9
 time_horizon: 3 to 5 years
 triggers:
   fwd_pe_add_below: 12              # add when HIV durability fears or pipeline disappointment drives discount
@@ -17,7 +17,7 @@ triggers:
   revenue_growth_floor_pct: 2       # HIV is mature but durable; flat to low single digit is acceptable
   operating_margin_floor_pct: 35
   style_size_ceiling_pct: 5.0
-  current_weight_pct: null
+  current_weight_pct:
 drawdown_tolerance_pct: 0.25
 panic_buy_trigger_drawdown_pct: 0.15
 ---
@@ -63,18 +63,22 @@ Cost basis: ~$4,573 total. GILD entered during a period of uncertainty around th
 - Rotation priority: low; this is a slow-moving income-plus-optionality position.
 
 <!-- region:position_state -->
-**Current Allocation:** 0.67%
-**Cost Basis:** $4,573.08
+**Current Allocation:** 0.02%
+**Cost Basis:** $12,374.90
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** FUND
 **Size Ceiling:** 5.00%
-**Drift:** -4.33%
+**Drift:** -4.98%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
-No recent transactions found.
+- 2026-05-14: Buy 10.0 @ $133.32
+- 2026-05-08: Buy 5.0 @ $131.02
+- 2026-05-04: Buy 10.0 @ $132.82
+- 2026-05-04: Buy 7.0 @ $132.56
+- 2026-05-04: Buy 7.0 @ $132.07
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
@@ -82,5 +86,5 @@ No realized G/L history.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-05-03 14:58: Auto-sync allocation 0.67%, drift -4.33%
+2026-07-14 10:51: Auto-sync allocation 0.02%, drift -4.98%
 <!-- endregion:change_log -->

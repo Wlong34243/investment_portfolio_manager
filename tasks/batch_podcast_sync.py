@@ -163,26 +163,33 @@ def main():
                 for line in result.stdout.strip().split("\n")[-5:]:
                     logger.info(f"    {line}")
 
-            # Record in dedup log
+            # Record in dedup log and save immediately -- not just at the end
+            # of the whole channel loop. Each episode costs a transcript
+            # download + a Gemini call, so a run covering several new
+            # episodes can run long; if the caller's timeout kills this
+            # process partway through, saving only at the end would discard
+            # every episode already completed in this run, and the next run
+            # would redo that same work from scratch. Saving here means a
+            # mid-run kill only loses the one episode in flight.
             processed[video_id] = {
                 "channel": channel_name,
                 "title": title,
                 "processed_at": datetime.now().isoformat(),
             }
+            if args.live:
+                save_processed_videos(processed)
         else:
             logger.error(f"  FAILED for {channel_name} (exit code {result.returncode})")
-            if result.stderr:
-                for line in result.stderr.strip().split("\n")[-5:]:
-                    logger.error(f"    {line}")
+            output = (result.stdout or "") + (result.stderr or "")
+            for line in output.strip().split("\n")[-10:]:
+                logger.error(f"    {line}")
             results["failed"].append(channel_name)
             continue
 
         results["processed"].append(channel_name)
 
-    # Only persist the dedup log on --live runs. Dry runs are non-destructive
-    # so a subsequent --live run sees the episodes as new and processes them.
-    if args.live:
-        save_processed_videos(processed)
+    # Dry runs are non-destructive so a subsequent --live run sees the
+    # episodes as new and processes them -- nothing to persist here.
 
     # Summary
     logger.info("=== Summary ===")

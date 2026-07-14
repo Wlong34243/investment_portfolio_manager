@@ -34,6 +34,33 @@ app = typer.Typer()
 
 EXCLUDE_TICKERS = set(config.VALUATION_SKIP)
 
+# Explicit column order -- every row is reindexed to exactly this list before
+# writing, so rows can never drift out of alignment with the header (the tab
+# previously had 13-cell rows under 14 headers). Deriving every column-letter
+# reference (here and in format_sheets_dashboard_v2.py) from this list's
+# .index() instead of hardcoding letters means a future column add/remove
+# doesn't silently misalign conditional formatting the way removing
+# "Forward P/E (FMP)" would have if left hardcoded.
+VALUATION_CARD_COLUMNS = [
+    "Ticker", "Name", "Position MV", "Sector", "Market Cap", "Price",
+    "Trim Target", "Add Target", "Trailing P/E", "Forward P/E (yf)",
+    "P/B", "PEG", "Gross Margin", "ROIC", "D/E", "Rev Growth YoY",
+    "Div Yield %", "Payout Ratio", "52w Low", "52w High",
+    "52w Position %", "Discount from 52w High %", "Valuation_Signal",
+    "FMP_Data_Available", "Last Updated",
+]
+
+
+def col_letter(col_name: str) -> str:
+    """Column name -> spreadsheet column letter, derived from VALUATION_CARD_COLUMNS."""
+    idx = VALUATION_CARD_COLUMNS.index(col_name)
+    letters = ""
+    idx += 1
+    while idx > 0:
+        idx, rem = divmod(idx - 1, 26)
+        letters = chr(65 + rem) + letters
+    return letters
+
 
 # ---------------------------------------------------------------------------
 # Bundle helpers
@@ -147,11 +174,6 @@ def fetch_ticker_valuation(
             or fundamentals.get("trailing_pe")
             or info.get("trailingPE")
         )
-        forward_pe = (
-            fmp_data.get("forward_pe")
-            or fundamentals.get("forward_pe")
-            or info.get("forwardPE")
-        )
         peg = (
             fmp_data.get("peg_ratio")
             or fundamentals.get("peg_ratio")
@@ -193,16 +215,23 @@ def fetch_ticker_valuation(
              except (TypeError, ValueError):
                  raw_div_yield = None
 
+        # FMP's bundled market_cap is stored in billions (e.g. 4346.31 meaning
+        # $4.346T), unlike every other numeric field in this bundle -- confirmed
+        # 2026-07-05 by comparing GOOG's bundled value against yfinance's raw
+        # dollar figure for the same day (exact 1e9 ratio). Using it as-is would
+        # render as a wildly wrong "$0.0M" once a real number format is applied.
+        raw_fmp_market_cap = fmp_data.get("market_cap")
+        market_cap = (raw_fmp_market_cap * 1e9) if raw_fmp_market_cap else info.get("marketCap")
+
         return {
             "Ticker":               ticker_symbol,
             "Name":                 info.get("shortName", ""),
             "Sector":               info.get("sector", ""),
-            "Market Cap":           fmp_data.get("market_cap") or info.get("marketCap"),
+            "Market Cap":           market_cap,
             "Price":                price,
             "Trim Target":          triggers.get("price_trim_above"),
             "Add Target":           triggers.get("price_add_below"),
             "Trailing P/E":         trailing_pe,
-            "Forward P/E (FMP)":    fmp_data.get("forward_pe"),
             "Forward P/E (yf)":     info.get("forwardPE"),
             "P/B":                  info.get("priceToBook"),
             "PEG":                  peg,
@@ -310,17 +339,32 @@ def main(
         return
 
     df_val = pd.DataFrame(results)
-    # Sort by market cap descending, MONITOR rows last
+
+    # Position MV: what Bill actually owns of this ticker, not the company's
+    # own market cap -- joined from Holdings_Current so the card ranks by
+    # portfolio weight, matching how Bill actually uses it (valuations +
+    # current holding market value).
+    mv_map = dict(zip(
+        df_holdings["Ticker"],
+        pd.to_numeric(df_holdings["Market Value"], errors="coerce").fillna(0.0),
+    ))
+    df_val["Position MV"] = df_val["Ticker"].map(mv_map).fillna(0.0)
+
+    # Every row gets exactly VALUATION_CARD_COLUMNS, in order -- guarantees no
+    # row can ever drift out of alignment with the header.
+    df_val = df_val.reindex(columns=VALUATION_CARD_COLUMNS)
+
+    # Sort by position size descending, MONITOR rows last
     monitor_mask = df_val["Valuation_Signal"] == "MONITOR"
     df_val = pd.concat([
-        df_val[~monitor_mask].sort_values(by="Market Cap", ascending=False, na_position="last"),
-        df_val[monitor_mask],
+        df_val[~monitor_mask].sort_values(by="Position MV", ascending=False, na_position="last"),
+        df_val[monitor_mask].sort_values(by="Position MV", ascending=False, na_position="last"),
     ], ignore_index=True)
     df_val = df_val.fillna("")
 
     if not live:
         print("\nDRY RUN: Valuation Data Preview")
-        print(df_val[["Ticker", "Trailing P/E", "Forward P/E (FMP)", "PEG",
+        print(df_val[["Ticker", "Position MV", "Trailing P/E", "Forward P/E (yf)", "PEG",
                        "Valuation_Signal", "FMP_Data_Available"]].to_string(index=False))
         return
 
@@ -356,30 +400,42 @@ def main(
             textFormat=TextFormat(bold=True, foregroundColor=COLOR_WHITE),
             horizontalAlignment="CENTER"
         )
-        format_cell_range(ws_val, "A1:Y1", header_fmt)
+        format_cell_range(ws_val, f"A1:{col_letter('Last Updated')}1", header_fmt)
         set_frozen(ws_val, rows=1)
-        
-        # Numeric Formats
-        fmt_curr = CellFormat(numberFormat=NumberFormat(type='CURRENCY', pattern='$#,##0.00'))
-        fmt_num = CellFormat(numberFormat=NumberFormat(type='NUMBER', pattern='0.00'))
-        fmt_pct = CellFormat(numberFormat=NumberFormat(type='PERCENT', pattern='0.00%'))
-        
-        # Price (E), Trim (F), Add (G), 52w Low (S), 52w High (T)
-        for col_let in ["E", "F", "G", "S", "T"]:
-            format_cell_range(ws_val, f"{col_let}2:{col_let}200", fmt_curr)
-            
-        # P/E Ratios (H, I, J), P/B (K), PEG (L), D/E (O)
-        for col_let in ["H", "I", "J", "K", "L", "O"]:
-            format_cell_range(ws_val, f"{col_let}2:{col_let}200", fmt_num)
 
-        # Margins/Growth/Yield (M, N, P, Q, R, U, V)
-        for col_let in ["M", "N", "P", "Q", "R", "U", "V"]:
-            format_cell_range(ws_val, f"{col_let}2:{col_let}200", fmt_pct)
+        # Numeric Formats -- every range is derived from VALUATION_CARD_COLUMNS
+        # via col_letter(), not hardcoded, so a future column add/remove can't
+        # silently misalign these ranges the way the old hardcoded letters did
+        # for Trim/Add/Trailing P/E once "Forward P/E (FMP)" was removed.
+        fmt_curr = CellFormat(numberFormat=NumberFormat(type='CURRENCY', pattern='$#,##0.00'))
+        fmt_dollar0 = CellFormat(numberFormat=NumberFormat(type='CURRENCY', pattern='$#,##0'))
+        fmt_marketcap = CellFormat(numberFormat=NumberFormat(
+            type='NUMBER',
+            pattern='[>999999999999]$0.00,,,,"T";[>999999999]$0.0,,,"B";$0.0,,"M"',
+        ))
+        fmt_pe = CellFormat(numberFormat=NumberFormat(type='NUMBER', pattern='0.0'))
+        fmt_peg = CellFormat(numberFormat=NumberFormat(type='NUMBER', pattern='0.00'))
+        fmt_pct = CellFormat(numberFormat=NumberFormat(type='PERCENT', pattern='0.0%'))
+
+        def fmt_col(col_name, fmt):
+            letter = col_letter(col_name)
+            format_cell_range(ws_val, f"{letter}2:{letter}200", fmt)
+
+        fmt_col("Position MV", fmt_dollar0)
+        fmt_col("Market Cap", fmt_marketcap)
+        for name in ("Price", "Trim Target", "Add Target", "52w Low", "52w High"):
+            fmt_col(name, fmt_curr)
+        for name in ("Trailing P/E", "Forward P/E (yf)", "P/B", "D/E"):
+            fmt_col(name, fmt_pe)
+        fmt_col("PEG", fmt_peg)
+        for name in ("Gross Margin", "ROIC", "Rev Growth YoY", "Div Yield %",
+                     "Payout Ratio", "52w Position %", "Discount from 52w High %"):
+            fmt_col(name, fmt_pct)
 
     except ImportError:
         print("  ! gspread_formatting not installed, skipping visual styles.")
 
-    print(f"\n✅ Successfully wrote {len(df_val)} rows to {tab_name}")
+    print(f"\nSuccessfully wrote {len(df_val)} rows to {tab_name}")
 
 
 if __name__ == "__main__":

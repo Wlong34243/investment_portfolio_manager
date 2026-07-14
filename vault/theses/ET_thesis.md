@@ -1,13 +1,13 @@
 ---
 ticker: ET
 style: THEME
-framework_preference: null
-entry_date: null
-last_reviewed: '2026-05-03'
+framework_preference:
+entry_date:
+last_reviewed: '2026-07-14'
 triggers:
   price_trim_above: 22.00
-cost_basis: 6382.26
-current_allocation: 1.09%
+cost_basis: 6465.59
+current_allocation: 0.01%
 ---
 # ET — Investment Thesis
 
@@ -47,28 +47,28 @@ priority: low
 - 2026-04: Initiated. Thesis intact. Monitoring distribution coverage ratios, debt reduction targets, and NGL export volumes.
 
 <!-- region:position_state -->
-**Current Allocation:** 1.09%
-**Cost Basis:** $6,382.26
+**Current Allocation:** 0.01%
+**Cost Basis:** $6,465.59
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** THEME
 **Size Ceiling:** 3.00%
-**Drift:** -1.91%
+**Drift:** -2.99%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
+- 2026-05-20: Buy 4.0982 @ $20.33
 - 2026-02-19: Buy 4.2443 @ $19.15
 - 2025-11-19: Buy 4.398 @ $16.95
 - 2025-11-19: Buy 8.5163 @ $16.95
 - 2025-08-19: Buy 9.9953 @ $17.31
-- 2025-08-19: Buy 15.4232 @ $17.31
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
-Total Realized G/L: $-238.00 over 6 closed lots. Total Proceeds: $2,931.00.
+Total Realized G/L: $-475.83 over 12 closed lots. Total Proceeds: $5,861.72.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-05-03 14:58: Auto-sync allocation 1.09%, drift -1.91%
+2026-07-14 10:51: Auto-sync allocation 0.01%, drift -2.99%
 <!-- endregion:change_log -->

@@ -3,19 +3,19 @@ ticker: XOM
 style: THEME
 framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
 entry_date: (PXD-close stock consideration date)
-last_reviewed: '2026-05-03'
-current_allocation: 2.48%
-cost_basis: 12518.57
+last_reviewed: '2026-07-14'
+current_allocation: 0.02%
+cost_basis: 11563.13
 time_horizon: 3 to 5 years
 triggers:
   fwd_pe_add_below: 9                 # add when market prices in "energy bust"
   fwd_pe_trim_above: 14               # trim if rerated to rich super-major multiple
-  fwd_pe_historical_median: null
+  fwd_pe_historical_median:
   price_add_below: 100                # add on macro/war scares or oil dips if thesis intact
   price_trim_above: 140.00               # harvest if multiple + oil both rich
-  discount_from_52w_high_add: null
+  discount_from_52w_high_add:
   revenue_growth_floor_pct: 0         # this is a FCF/dividend story, not top-line growth
-  operating_margin_floor_pct: null    # watch FCF yield vs. mid-cycle strip
+  operating_margin_floor_pct:         # watch FCF yield vs. mid-cycle strip
   style_size_ceiling_pct: 5.0         # cyclical + geopolitical + ESG/reg risk
   current_weight_pct: 2.8
 ---
@@ -73,28 +73,28 @@ I will exit or materially reduce if the **capital discipline or asset base edge*
 4. A clearly superior risk‑adjusted cash‑flow compounder or hedge emerges, making it rational to rotate out despite a still‑intact XOM thesis.[file:4]  
 
 <!-- region:position_state -->
-**Current Allocation:** 2.48%
-**Cost Basis:** $12,518.57
+**Current Allocation:** 0.02%
+**Cost Basis:** $11,563.13
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** THEME
 **Size Ceiling:** 3.00%
-**Drift:** -0.52%
+**Drift:** -2.98%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
+- 2026-06-10: Buy 0.6053 @ $151.00
 - 2026-04-10: Buy 10.0 @ $152.64
 - 2026-03-10: Buy 0.5377 @ $149.79
 - 2026-01-26: Sell -15.0 @ $134.83
 - 2025-12-11: Buy 0.6101 @ $119.18
-- 2025-10-31: Buy 2.0 @ $114.76
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
-Total Realized G/L: $453.00 over 1 closed lots. Total Proceeds: $2,022.00.
+Total Realized G/L: $906.00 over 2 closed lots. Total Proceeds: $4,044.00.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-05-03 14:58: Auto-sync allocation 2.48%, drift -0.52%
+2026-07-14 10:51: Auto-sync allocation 0.02%, drift -2.98%
 <!-- endregion:change_log -->

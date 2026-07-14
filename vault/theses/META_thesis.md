@@ -3,19 +3,19 @@ ticker: META
 style: GARP
 framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: '2026-05-03'
-current_allocation: 1.51%
-cost_basis: 7174.97
+last_reviewed: '2026-07-14'
+current_allocation: 0.03%
+cost_basis: 11592.71
 time_horizon: 3 to 5+ years
 triggers:
   fwd_pe_add_below: 18              # add if ads/engagement solid but market panics
   fwd_pe_trim_above: 28             # trim if multiple rich AND RL spend re-accelerates
-  fwd_pe_historical_median: null
-  price_add_below: null             # valuation + KPIs drive actions, not price levels alone
+  fwd_pe_historical_median:
+  price_add_below:                  # valuation + KPIs drive actions, not price levels alone
   price_trim_above: 841.00
-  discount_from_52w_high_add: null
+  discount_from_52w_high_add:
   revenue_growth_floor_pct: 8       # want at least high single-digit top line
-  operating_margin_floor_pct: null  # focus on FCF margin and Reality Labs losses
+  operating_margin_floor_pct:       # focus on FCF margin and Reality Labs losses
   style_size_ceiling_pct: 4.0       # below MSFT given higher idiosyncratic risk
   current_weight_pct: 1.6
 ---
@@ -78,22 +78,22 @@ I will trim or exit META if any of the following become clear, structural trends
 2. Zuckerberg abandons “Year of Efficiency” discipline and aggressively ramps Reality Labs spend without 
 
 <!-- region:position_state -->
-**Current Allocation:** 1.51%
-**Cost Basis:** $7,174.97
+**Current Allocation:** 0.03%
+**Cost Basis:** $11,592.71
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** GARP
 **Size Ceiling:** 9.00%
-**Drift:** -7.49%
+**Drift:** -8.97%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
-- 2026-04-30: Buy 3.0 @ $605.12
-- 2026-03-26: Buy 0.0134 @ $552.20
-- 2026-03-26: Dividend 0.0 @ $0.00
-- 2025-12-23: Buy 0.008 @ $663.91
-- 2025-09-29: Buy 0.0078 @ $744.67
+- 2026-06-25: Buy 0.0231 @ $546.89
+- 2026-06-25: Dividend 0.0 @ $0.00
+- 2026-06-04: Buy 4.0 @ $639.18
+- 2026-06-03: Buy 2.0 @ $616.12
+- 2026-06-03: Buy 1.0 @ $616.12
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
@@ -101,5 +101,5 @@ No realized G/L history.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-05-03 14:58: Auto-sync allocation 1.51%, drift -7.49%
+2026-07-14 10:51: Auto-sync allocation 0.03%, drift -8.97%
 <!-- endregion:change_log -->
