@@ -434,7 +434,7 @@ def _check_transactions_freshness() -> CheckResult:
             result.status = WARN
             result.detail = f"Most recent: {most_recent} ({days_ago} days ago) — may be stale"
 
-        result.verbose = f"Date range: {min(parsed)} → {most_recent}  ({len(parsed)} rows)"
+        result.verbose = f"Date range: {min(parsed)} -> {most_recent}  ({len(parsed)} rows)"
     except Exception as e:
         result.detail = f"Transactions check failed: {e}"
     return result
@@ -524,16 +524,20 @@ def _check_tax_control_freshness() -> CheckResult:
         ss = gc.open_by_key(config.PORTFOLIO_SHEET_ID)
         ws = ss.worksheet(config.TAB_TAX_CONTROL)
 
-        # "Last Updated" is in Col G, Row 3
-        # col_values(7) gives G
-        dates_raw = ws.col_values(7)
-        if len(dates_raw) < 3:
-            result.detail = "Tax_Control KPI row is empty"
+        # KPI strip: row 2 = labels, row 3 = values. Look up by label so
+        # column position changes don't break this. "Refreshed" is the tab
+        # rebuild timestamp; "Last Updated" is data recency (last realized
+        # sale) and can legitimately sit for months without any sales.
+        kpi_rows = ws.get_values("A2:Z3")
+        if len(kpi_rows) < 2:
+            result.detail = "Tax_Control KPI rows are empty"
             return result
-        
-        last_updated_str = dates_raw[2] # G3
+        labels, values = kpi_rows[0], kpi_rows[1]
+        kpis = {l: values[i] if i < len(values) else "" for i, l in enumerate(labels) if l}
+
+        last_updated_str = kpis.get("Refreshed") or kpis.get("Last Updated", "")
         if not last_updated_str or last_updated_str == "N/A":
-            result.detail = "Tax_Control 'Last Updated' is empty/NA"
+            result.detail = "Tax_Control 'Refreshed'/'Last Updated' is empty/NA"
             return result
 
         try:

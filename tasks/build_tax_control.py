@@ -190,7 +190,9 @@ def compute_tax_control_data() -> Dict[str, Any]:
     # Offset Capacity: total taxable gains currently showing
     tax_offset_capacity = net_taxable_est if net_taxable_est > 0 else 0
     
-    # Last updated: most recent Import Date in the filtered rows
+    # Last updated: most recent Import Date in the filtered rows — this is
+    # DATA recency (last realized sale), not refresh recency. "Refreshed"
+    # below carries the rebuild timestamp; health checks read that one.
     last_updated = "N/A"
     if not df_year.empty:
         try:
@@ -206,6 +208,7 @@ def compute_tax_control_data() -> Dict[str, Any]:
         "Tax Offset Capacity": tax_offset_capacity,
         "Wash Sale Count": int(wash_sale_count),
         "Last Updated": last_updated,
+        "Refreshed": datetime.now().strftime("%Y-%m-%d"),
         "ST_Gains": ytd_st_gains,
         "ST_Losses": ytd_st_losses,
         "LT_Gains": ytd_lt_gains,

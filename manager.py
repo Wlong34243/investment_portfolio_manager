@@ -27,6 +27,12 @@ _ROOT = Path(__file__).resolve().parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
+# Windows consoles default to cp1252; unencodable chars (arrows, emoji) must
+# degrade to '?' rather than crash the command mid-output.
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        _stream.reconfigure(errors="replace")
+
 import pandas as pd
 import typer
 from rich.console import Console

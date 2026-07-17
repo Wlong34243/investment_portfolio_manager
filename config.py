@@ -129,6 +129,7 @@ TAX_CONTROL_KPI_LABELS = [
     "Tax Offset Capacity",
     "Wash Sale Count",
     "Last Updated",
+    "Refreshed",
 ]
 
 TAX_CONTROL_LOTS_COLUMNS = [
