@@ -3,7 +3,7 @@ ticker: BBJP
 style: ETF
 framework_preference:
 entry_date:
-last_reviewed: '2026-07-14'
+last_reviewed: '2026-07-17'
 cost_basis: 5138.87
 current_allocation: 0.01%
 ---
@@ -67,5 +67,5 @@ Total Realized G/L: $23.22 over 7 closed lots. Total Proceeds: $13,016.33.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-14 10:51: Auto-sync allocation 0.01%, drift -7.99%
+2026-07-17 09:51: Auto-sync allocation 0.01%, drift -7.99%
 <!-- endregion:change_log -->

@@ -1,11 +1,12 @@
 ---
 ticker: NFLX
-style: 
-framework_preference: 
+style:
+framework_preference:
 entry_date:
-last_reviewed:
+last_reviewed: '2026-07-17'
+cost_basis: 4055.53
+current_allocation: 0.01%
 ---
-
 # NFLX — Investment Thesis
 
 ## Style
@@ -41,3 +42,29 @@ priority: very low (never sell a compounding monopoly without a broken thesis)
 
 ## Review Log
 - 2026-04: Initiated. Thesis intact. Massive unrealized gains. Monitoring ad-tier ARPU (Average Revenue Per User), live sports integration, and capital return programs.
+
+<!-- region:position_state -->
+**Current Allocation:** 0.01%
+**Cost Basis:** $4,055.53
+<!-- endregion:position_state -->
+
+<!-- region:sizing -->
+**Style:** None
+**Size Ceiling:** 0.00%
+**Drift:** +0.00%
+<!-- endregion:sizing -->
+
+<!-- region:transaction_log -->
+- 2026-07-16: Buy 30.0 @ $73.78
+- 2026-07-16: Buy 25.0 @ $73.68
+- 2026-04-16: Sell -10.0 @ $108.11
+- 2026-03-20: Buy 10.0 @ $91.22
+<!-- endregion:transaction_log -->
+
+<!-- region:realized_gl -->
+Total Realized G/L: $337.87 over 2 closed lots. Total Proceeds: $2,162.08.
+<!-- endregion:realized_gl -->
+
+<!-- region:change_log -->
+2026-07-17 09:51: Auto-sync allocation 0.01%, drift +0.00%
+<!-- endregion:change_log -->

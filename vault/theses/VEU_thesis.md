@@ -3,7 +3,7 @@ ticker: VEU
 style: ETF
 framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: '2026-07-14'
+last_reviewed: '2026-07-17'
 current_allocation: 0.02%
 cost_basis: 11688.99
 time_horizon: 3 to 7 years
@@ -88,5 +88,5 @@ Total Realized G/L: $1,329.20 over 22 closed lots. Total Proceeds: $29,697.85.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-14 10:51: Auto-sync allocation 0.02%, drift -7.98%
+2026-07-17 09:51: Auto-sync allocation 0.02%, drift -7.98%
 <!-- endregion:change_log -->

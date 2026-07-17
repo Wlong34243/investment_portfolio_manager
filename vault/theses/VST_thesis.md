@@ -3,13 +3,13 @@ ticker: VST
 style: THEME
 framework_preference: Thesis-first, scale-in, consensus-target trim discipline
 entry_date: 2026-05-03
-last_reviewed: '2026-07-14'
+last_reviewed: '2026-07-17'
 triggers:
   entry_price: 159.00
   seed_position_weight: 0.64%
   price_trim_above: consensus_price_target
 cost_basis: 14672.28
-current_allocation: 0.03%
+current_allocation: 0.02%
 ---
 # VST — Investment Thesis
 
@@ -50,14 +50,14 @@ priority: medium
 - 2026-05: Initiated at $159.00 as a 0.64% seed position. Trim discipline tied to consensus price targets. Monitoring AI-driven load growth, regional power-market tightness, merchant generation capture, and capital-allocation execution.
 
 <!-- region:position_state -->
-**Current Allocation:** 0.03%
+**Current Allocation:** 0.02%
 **Cost Basis:** $14,672.28
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** THEME
 **Size Ceiling:** 3.00%
-**Drift:** -2.97%
+**Drift:** -2.98%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -73,5 +73,5 @@ No realized G/L history.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-14 10:51: Auto-sync allocation 0.03%, drift -2.97%
+2026-07-17 09:51: Auto-sync allocation 0.02%, drift -2.98%
 <!-- endregion:change_log -->

@@ -3,7 +3,7 @@ ticker: IGV
 style: ETF
 framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: '2026-07-14'
+last_reviewed: '2026-07-17'
 current_allocation: 0.01%
 cost_basis: 5938.82
 time_horizon: 3 to 5 years
@@ -88,5 +88,5 @@ Total Realized G/L: $-1,128.95 over 30 closed lots. Total Proceeds: $34,890.52.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-14 10:51: Auto-sync allocation 0.01%, drift -7.99%
+2026-07-17 09:51: Auto-sync allocation 0.01%, drift -7.99%
 <!-- endregion:change_log -->

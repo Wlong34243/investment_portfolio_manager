@@ -3,7 +3,7 @@ ticker: NOW
 style: GARP
 framework_preference:
 entry_date:
-last_reviewed: '2026-07-14'
+last_reviewed: '2026-07-17'
 triggers:
   price_trim_above: 250.00
 cost_basis: 8100.84
@@ -69,5 +69,5 @@ Total Realized G/L: $-300.00 over 8 closed lots. Total Proceeds: $3,763.17.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-14 10:51: Auto-sync allocation 0.01%, drift -8.99%
+2026-07-17 09:51: Auto-sync allocation 0.01%, drift -8.99%
 <!-- endregion:change_log -->

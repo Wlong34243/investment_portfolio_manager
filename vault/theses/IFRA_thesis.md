@@ -3,7 +3,7 @@ ticker: IFRA
 style: ETF
 framework_preference:
 entry_date:
-last_reviewed: '2026-07-14'
+last_reviewed: '2026-07-17'
 cost_basis: 9159.56
 current_allocation: 0.02%
 ---
@@ -67,5 +67,5 @@ Total Realized G/L: $2,214.55 over 12 closed lots. Total Proceeds: $11,671.89.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-14 10:51: Auto-sync allocation 0.02%, drift -7.98%
+2026-07-17 09:51: Auto-sync allocation 0.02%, drift -7.98%
 <!-- endregion:change_log -->

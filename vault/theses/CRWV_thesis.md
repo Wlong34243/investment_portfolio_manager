@@ -3,7 +3,7 @@ ticker: CRWV
 style: THEME
 framework_preference:
 entry_date:
-last_reviewed: '2026-07-14'
+last_reviewed: '2026-07-17'
 cost_basis: 7092.53
 current_allocation: 0.01%
 ---
@@ -68,5 +68,5 @@ No realized G/L history.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-14 10:51: Auto-sync allocation 0.01%, drift -2.99%
+2026-07-17 09:51: Auto-sync allocation 0.01%, drift -2.99%
 <!-- endregion:change_log -->

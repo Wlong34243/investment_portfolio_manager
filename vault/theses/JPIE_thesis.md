@@ -3,7 +3,7 @@ ticker: JPIE
 style: ETF
 framework_preference: psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: '2026-07-14'
+last_reviewed: '2026-07-17'
 current_allocation: 0.05%
 cost_basis: 31640.0
 time_horizon: 0 to 3 years (tactical cash & ballast)
@@ -90,5 +90,5 @@ Total Realized G/L: $52.13 over 73 closed lots. Total Proceeds: $97,848.14.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-14 10:51: Auto-sync allocation 0.05%, drift -7.95%
+2026-07-17 09:51: Auto-sync allocation 0.05%, drift -7.95%
 <!-- endregion:change_log -->

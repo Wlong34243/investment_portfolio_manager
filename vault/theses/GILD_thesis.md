@@ -3,7 +3,7 @@ ticker: GILD
 style: FUND
 framework_preference: lynch_garp_v1
 entry_date: 2026-05-03
-last_reviewed: '2026-07-14'
+last_reviewed: '2026-07-17'
 current_allocation: 0.02%
 cost_basis: 12374.9
 time_horizon: 3 to 5 years
@@ -86,5 +86,5 @@ No realized G/L history.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-14 10:51: Auto-sync allocation 0.02%, drift -4.98%
+2026-07-17 09:51: Auto-sync allocation 0.02%, drift -4.98%
 <!-- endregion:change_log -->

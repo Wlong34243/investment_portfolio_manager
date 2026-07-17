@@ -3,7 +3,7 @@ ticker: VRT
 style: THEME
 framework_preference: thematic_specialist_v1, lynch_garp_v1
 entry_date: 2026-05
-last_reviewed: '2026-07-14'
+last_reviewed: '2026-07-17'
 current_allocation: 0.01%
 cost_basis: 9693.23
 time_horizon: 2 to 4 years
@@ -95,11 +95,11 @@ Current allocation 0.56%. This is starter-position size. The plan:
 <!-- region:sizing -->
 **Style:** THEME
 **Size Ceiling:** 3.00%
-**Drift:** -2.98%
+**Drift:** -2.99%
 <!-- endregion:sizing -->
 
 <!-- region:change_log -->
-2026-07-14 10:51: Auto-sync allocation 0.01%, drift -2.98%
+2026-07-17 09:51: Auto-sync allocation 0.01%, drift -2.99%
 <!-- endregion:change_log -->
 
 <!-- region:transaction_log -->

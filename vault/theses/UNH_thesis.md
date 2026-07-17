@@ -3,8 +3,8 @@ ticker: UNH
 style: GARP
 framework_preference: lynch_garp_v1, psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: '2026-07-14'
-current_allocation: 0.02%
+last_reviewed: '2026-07-17'
+current_allocation: 0.03%
 cost_basis: 11397.97
 time_horizon: 1 to 3 years
 triggers:
@@ -84,14 +84,14 @@ At 2.22% the position is sub-scale. Two valid paths from here:
 - Re-evaluate quarterly; full close-out by Q4 2026 if neither trim nor rebuild trigger fires.
 
 <!-- region:position_state -->
-**Current Allocation:** 0.02%
+**Current Allocation:** 0.03%
 **Cost Basis:** $11,397.97
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** GARP
 **Size Ceiling:** 9.00%
-**Drift:** -8.98%
+**Drift:** -8.97%
 <!-- endregion:sizing -->
 
 <!-- region:wash_sale_watch -->
@@ -99,7 +99,7 @@ At 2.22% the position is sub-scale. Two valid paths from here:
 <!-- endregion:wash_sale_watch -->
 
 <!-- region:change_log -->
-2026-07-14 10:51: Auto-sync allocation 0.02%, drift -8.98%
+2026-07-17 09:51: Auto-sync allocation 0.03%, drift -8.97%
 <!-- endregion:change_log -->
 
 <!-- region:transaction_log -->

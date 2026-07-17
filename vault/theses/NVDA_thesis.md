@@ -3,7 +3,7 @@ ticker: NVDA
 style: GARP
 framework_preference:
 entry_date:
-last_reviewed: '2026-07-14'
+last_reviewed: '2026-07-17'
 triggers:
   price_trim_above: 265.00
 cost_basis: 17166.17
@@ -69,5 +69,5 @@ Total Realized G/L: $108.00 over 2 closed lots. Total Proceeds: $1,958.00.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-14 10:51: Auto-sync allocation 0.03%, drift -8.97%
+2026-07-17 09:51: Auto-sync allocation 0.03%, drift -8.97%
 <!-- endregion:change_log -->

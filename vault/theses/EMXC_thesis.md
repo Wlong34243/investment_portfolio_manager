@@ -3,8 +3,8 @@ ticker: EMXC
 style: ETF
 framework_preference:
 entry_date:
-last_reviewed: '2026-07-14'
-cost_basis: 22283.92
+last_reviewed: '2026-07-17'
+cost_basis: 22763.47
 current_allocation: 0.04%
 ---
 # EMXC — Investment Thesis
@@ -45,7 +45,7 @@ priority: medium
 
 <!-- region:position_state -->
 **Current Allocation:** 0.04%
-**Cost Basis:** $22,283.92
+**Cost Basis:** $22,763.47
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
@@ -55,11 +55,11 @@ priority: medium
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
+- 2026-07-15: Buy 5.0 @ $95.91
 - 2026-06-08: Buy 15.0 @ $96.20
 - 2026-06-05: Buy 5.0 @ $97.04
 - 2026-06-01: Buy 15.0 @ $103.19
 - 2026-05-29: Buy 3.0 @ $101.52
-- 2026-05-29: Buy 12.0 @ $101.52
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
@@ -67,5 +67,5 @@ No realized G/L history.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-14 10:51: Auto-sync allocation 0.04%, drift -7.96%
+2026-07-17 09:51: Auto-sync allocation 0.04%, drift -7.96%
 <!-- endregion:change_log -->

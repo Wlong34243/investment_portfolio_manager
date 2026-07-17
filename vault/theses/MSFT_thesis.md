@@ -3,9 +3,9 @@ ticker: MSFT
 style: GARP
 framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: '2026-07-14'
+last_reviewed: '2026-07-17'
 current_allocation: 0.01%
-cost_basis: 9169.8
+cost_basis: 2920.13
 time_horizon: 5+ years
 triggers:
   price_trim_above: 587.00
@@ -50,7 +50,7 @@ I will trim or exit if:[file:28]
 
 <!-- region:position_state -->
 **Current Allocation:** 0.01%
-**Cost Basis:** $9,169.80
+**Cost Basis:** $2,920.13
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
@@ -60,11 +60,11 @@ I will trim or exit if:[file:28]
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
+- 2026-07-15: Sell -10.0 @ $387.21
+- 2026-07-14: Sell -5.0 @ $387.15
 - 2026-06-29: Sell -10.0 @ $373.14
 - 2026-06-25: Sell -5.0 @ $363.01
 - 2026-05-12: Sell -15.0 @ $408.28
-- 2026-05-08: Buy 5.0 @ $416.74
-- 2026-05-05: Buy 2.0 @ $410.24
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
@@ -72,5 +72,5 @@ Total Realized G/L: $1.56 over 12 closed lots. Total Proceeds: $13,540.79.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-14 10:51: Auto-sync allocation 0.01%, drift -8.99%
+2026-07-17 09:51: Auto-sync allocation 0.01%, drift -8.99%
 <!-- endregion:change_log -->

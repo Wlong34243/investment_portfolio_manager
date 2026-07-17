@@ -3,7 +3,7 @@ ticker: ZETA
 style: THEME
 framework_preference: thematic_specialist_v1
 entry_date: 2026-05
-last_reviewed: '2026-07-14'
+last_reviewed: '2026-07-17'
 current_allocation: 0.01%
 cost_basis: 3254.52
 time_horizon: 1 to 3 years
@@ -102,7 +102,7 @@ Two reasons:
 <!-- endregion:sourcing_disclosure -->
 
 <!-- region:change_log -->
-2026-07-14 10:51: Auto-sync allocation 0.01%, drift -2.99%
+2026-07-17 09:51: Auto-sync allocation 0.01%, drift -2.99%
 <!-- endregion:change_log -->
 
 <!-- region:transaction_log -->

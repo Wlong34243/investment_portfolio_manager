@@ -3,7 +3,7 @@ ticker: VEA
 style: ETF
 framework_preference:
 entry_date:
-last_reviewed: '2026-07-14'
+last_reviewed: '2026-07-17'
 cost_basis: 16254.04
 current_allocation: 0.03%
 ---
@@ -67,5 +67,5 @@ Total Realized G/L: $2,332.22 over 18 closed lots. Total Proceeds: $24,396.33.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-14 10:51: Auto-sync allocation 0.03%, drift -7.97%
+2026-07-17 09:51: Auto-sync allocation 0.03%, drift -7.97%
 <!-- endregion:change_log -->

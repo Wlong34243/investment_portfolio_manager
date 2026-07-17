@@ -3,9 +3,9 @@ ticker: AMZN
 style: GARP
 framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: '2026-07-14'
+last_reviewed: '2026-07-17'
 current_allocation: 0.04%
-cost_basis: 22514.87
+cost_basis: 24968.17
 time_horizon: 3 to 5 years
 triggers:
   fwd_pe_add_below: 9                # add when market prices in "credit disaster"
@@ -72,7 +72,7 @@ I will exit or materially cut the position if the **structural** elements of the
 
 <!-- region:position_state -->
 **Current Allocation:** 0.04%
-**Cost Basis:** $22,514.87
+**Cost Basis:** $24,968.17
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
@@ -82,11 +82,11 @@ I will exit or materially cut the position if the **structural** elements of the
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
+- 2026-07-14: Buy 10.0 @ $245.33
 - 2026-05-11: Sell -15.0 @ $270.60
 - 2026-05-11: Sell -5.0 @ $270.60
 - 2026-05-08: Sell -4.0 @ $272.24
 - 2026-04-15: Buy 5.0 @ $247.57
-- 2026-02-09: Buy 5.0 @ $207.14
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
@@ -94,5 +94,5 @@ Total Realized G/L: $1,390.71 over 5 closed lots. Total Proceeds: $6,500.91.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-14 10:51: Auto-sync allocation 0.04%, drift -8.96%
+2026-07-17 09:51: Auto-sync allocation 0.04%, drift -8.96%
 <!-- endregion:change_log -->

@@ -3,7 +3,7 @@ ticker: XBI
 style: ETF
 framework_preference:
 entry_date:
-last_reviewed: '2026-07-14'
+last_reviewed: '2026-07-17'
 cost_basis: 16757.49
 current_allocation: 0.04%
 ---
@@ -67,5 +67,5 @@ Total Realized G/L: $5,249.40 over 17 closed lots. Total Proceeds: $28,828.99.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-14 10:51: Auto-sync allocation 0.04%, drift -7.96%
+2026-07-17 09:51: Auto-sync allocation 0.04%, drift -7.96%
 <!-- endregion:change_log -->

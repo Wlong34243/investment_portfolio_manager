@@ -3,7 +3,7 @@ ticker: AVGO
 style: GARP
 framework_preference:
 entry_date:
-last_reviewed: '2026-07-14'
+last_reviewed: '2026-07-17'
 triggers:
   price_trim_above: 195.00
 cost_basis: 12002.91
@@ -68,5 +68,5 @@ No realized G/L history.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-14 10:51: Auto-sync allocation 0.02%, drift -8.98%
+2026-07-17 09:51: Auto-sync allocation 0.02%, drift -8.98%
 <!-- endregion:change_log -->

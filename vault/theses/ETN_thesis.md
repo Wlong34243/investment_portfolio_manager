@@ -3,7 +3,7 @@ ticker: ETN
 style: GARP
 framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: '2026-07-14'
+last_reviewed: '2026-07-17'
 current_allocation: 0.01%
 cost_basis: 7589.55  # post-split
 time_horizon: 3 to 5 years
@@ -81,7 +81,7 @@ I will exit or materially cut if the **core structural edge or demand environmen
 <!-- region:sizing -->
 **Style:** GARP
 **Size Ceiling:** 9.00%
-**Drift:** -8.98%
+**Drift:** -8.99%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -96,5 +96,5 @@ Total Realized G/L: $1,813.72 over 2 closed lots. Total Proceeds: $7,031.72.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-14 10:51: Auto-sync allocation 0.01%, drift -8.98%
+2026-07-17 09:51: Auto-sync allocation 0.01%, drift -8.99%
 <!-- endregion:change_log -->

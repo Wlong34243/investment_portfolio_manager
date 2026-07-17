@@ -3,7 +3,7 @@ ticker: ET
 style: THEME
 framework_preference:
 entry_date:
-last_reviewed: '2026-07-14'
+last_reviewed: '2026-07-17'
 triggers:
   price_trim_above: 22.00
 cost_basis: 6465.59
@@ -70,5 +70,5 @@ Total Realized G/L: $-475.83 over 12 closed lots. Total Proceeds: $5,861.72.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-14 10:51: Auto-sync allocation 0.01%, drift -2.99%
+2026-07-17 09:51: Auto-sync allocation 0.01%, drift -2.99%
 <!-- endregion:change_log -->

@@ -3,7 +3,7 @@ ticker: DELL
 style: GARP
 framework_preference:
 entry_date:
-last_reviewed: '2026-07-14'
+last_reviewed: '2026-07-17'
 triggers:
   price_trim_above: 165.00
 cost_basis: 654.18
@@ -70,5 +70,5 @@ Total Realized G/L: $4,793.19 over 17 closed lots. Total Proceeds: $21,257.59.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-14 10:51: Auto-sync allocation 0.00%, drift -9.00%
+2026-07-17 09:51: Auto-sync allocation 0.00%, drift -9.00%
 <!-- endregion:change_log -->

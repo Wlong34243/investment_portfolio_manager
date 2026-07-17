@@ -3,7 +3,7 @@ ticker: XLF
 style: ETF
 framework_preference:
 entry_date:
-last_reviewed: '2026-07-14'
+last_reviewed: '2026-07-17'
 cost_basis: 537.9
 current_allocation: 0.00%
 ---
@@ -67,5 +67,5 @@ Total Realized G/L: $-53.76 over 21 closed lots. Total Proceeds: $14,766.25.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-14 10:51: Auto-sync allocation 0.00%, drift -8.00%
+2026-07-17 09:51: Auto-sync allocation 0.00%, drift -8.00%
 <!-- endregion:change_log -->
