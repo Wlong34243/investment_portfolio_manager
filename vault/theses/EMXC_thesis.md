@@ -3,9 +3,9 @@ ticker: EMXC
 style: ETF
 framework_preference:
 entry_date:
-last_reviewed: '2026-07-17'
-cost_basis: 22763.47
-current_allocation: 0.04%
+last_reviewed: '2026-07-27'
+cost_basis: 14153.94
+current_allocation: 2.28%
 ---
 # EMXC — Investment Thesis
 
@@ -15,8 +15,14 @@ Geopolitical De-risking / Emerging Markets / Thematic Growth
 ## Core Thesis
 Buying the structural growth of emerging markets while explicitly amputating the severe, uninvestable risks of the Chinese Communist Party. Upside is driven by massive demographic tailwinds in India, the dominance of Taiwanese semiconductors (TSMC), and the resurgence of Latin American commodities. EMXC is a direct play on "friend-shoring" and the restructuring of the global supply chain away from China. The key question is whether these ex-China markets possess enough domestic consumption and manufacturing capacity to thrive without relying on a booming Chinese economy. Judgment: yes.
 
+**Position reduced 2026-07-20 on Taiwan concentration risk. Held smaller, deliberately.**
+
+The ex-China construction still holds. What changed is my read of what "ex-China" actually buys: stripping out China does not strip out China *risk*, it concentrates it into a single strait. The fund's largest exposures are Taiwanese and Korean semiconductor names, so the diversification I thought I was buying is substantially a levered bet on Taiwan staying quiet. That is a risk I am willing to hold in size only when I am being paid for it, and I am not sure I am.
+
+So the position is smaller, not gone. India, reshoring and LatAm commodities are still worth owning; I just want less of the concentration that comes bundled with them.
+
 ## Entry Context
-Cost basis: ~$82.50 (Assumed). At this level, you are paying a premium compared to traditional Emerging Market indexes (like EEM), but that premium is the exact cost of avoiding China's deflationary, heavily regulated, and geopolitically toxic market. Buying here reflects a conviction that the "China discount" is permanent, and capital will structurally flow into the hands of its regional neighbors.
+Cost basis $14,153.94 across 145 remaining shares (~$97.61/sh blended), currently ~-5.9%. The earlier "~$82.50 (Assumed)" figure was a placeholder and was never accurate — replaced with actual basis from the bundle.
 
 ## Bull Case
 - **The India Engine:** With China stripped out, India becomes a dominant weighting in this ETF. India offers the hyper-growth, expanding middle class, and business-friendly demographics that China offered 20 years ago.
@@ -25,41 +31,50 @@ Cost basis: ~$82.50 (Assumed). At this level, you are paying a premium compared 
 - **Commodity Exposure:** Strong allocations to Brazil and Latin America provide a natural hedge against global inflation and a play on the energy transition (copper, lithium).
 
 ## Key Risks
-- **The Strong Dollar:** Emerging markets price their debt in US Dollars. If US interest rates stay structurally high and the dollar remains incredibly strong, it crushes emerging market currencies and stifles their economic growth.
-- **Geopolitical Vulnerability:** While you avoid China directly, EMXC’s massive reliance on Taiwan makes the ETF incredibly vulnerable to a Chinese blockade or invasion of the island, which would instantly crash the fund.
-- **Contagion:** If China's economy falls into a severe, multi-year depression, the ripple effects will still severely hurt global trade, dragging down the export-heavy economies held inside EMXC.
+- **Concentration masquerading as diversification (primary — this is what drove the 2026-07 reduction):** "Ex-China" removes one country and overweights two. The fund's top exposures are Taiwanese and Korean foundry/memory names, so a broad EM allocation behaves like a semiconductor position. Two consequences: (a) the Taiwan geopolitical risk below is not a tail scenario, it is the fund's dominant single factor; (b) it stacks on top of QQQM, NVDA and AVGO rather than diversifying them — see the ETF look-through in any recent bundle.
+- **Geopolitical Vulnerability:** A Chinese blockade or invasion of Taiwan would crash the fund. Given the concentration above, treat this as the central risk, not a footnote.
+- **AI-cycle correlation:** Because the top holdings are AI-hardware supply chain, EMXC now trades with the AI complex. It sold off with the July 2026 Asian chip selloff for reasons unrelated to the India/reshoring/LatAm thesis I actually want exposure to.
+- **The Strong Dollar:** EMs price debt in USD. Structurally high US rates and a strong dollar crush EM currencies and growth.
+- **Contagion:** A severe multi-year Chinese depression still damages the export-heavy economies held inside EMXC.
 
 ## Scaling State
-next_step: hold
+next_step: reduce
+
+Reduced to 145 shares (~2.26%) on 2026-07-20. Hold here; no adds. Further trims acceptable if I want the underlying themes expressed with less semiconductor beta — but note that harvesting more of the remaining -$829.89 unrealized loss requires care: 5 shares of the 7/20 loss were already disallowed by the 2026-07-15 purchase.
 
 ## Rotation Priority
 priority: medium
 
 ## Exit Conditions
+- Taiwan/Korea semiconductor weight in the fund rises further without a corresponding widening of the valuation discount — i.e. I am taking more concentration for no additional compensation.
+- A cleaner expression of the parts I actually want (India, reshoring, LatAm) becomes available at reasonable cost, making the bundled semiconductor exposure unnecessary.
 - The US dollar enters a historic, multi-year super-cycle that permanently impairs emerging market debt service capabilities.
 - China successfully invades or blockades Taiwan, destroying the semiconductor foundation of the ETF.
 - A sweeping democratic and capital-friendly regime change occurs in China, making it investable again and rendering the "ex-China" strategy obsolete.
 
 ## Review Log
 - 2026-04: Initiated. Thesis intact. Monitoring Indian equity valuations, TSMC monthly revenue, and US Dollar Index (DXY) strength.
+- 2026-07-15: Bought 5 shares @ $95.91. (Creates the wash-sale overlap noted in Scaling State.)
+- 2026-07-20: **Reduced on Taiwan concentration risk.** Sold 100 shares @ $92.50 (≈$9,250) and same-day bought 125 BBJP @ $73.39–73.48 (≈$9,181). Substitution thesis: move international risk budget out of single-strait semiconductor concentration and into Japanese corporate governance reform, which is a domestic structural story rather than a geopolitical one. Rotation not yet in Trade_Log — run `derive_rotations` and promote.
+- 2026-07-26: Thesis rewritten to match the decision. Scaling state hold → reduce. Concentration risk promoted to primary risk. Replaced the placeholder "~$82.50 (Assumed)" cost basis with actual basis from the bundle.
 
 <!-- region:position_state -->
-**Current Allocation:** 0.04%
-**Cost Basis:** $22,763.47
+**Current Allocation:** 2.28%
+**Cost Basis:** $14,153.94
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** ETF
 **Size Ceiling:** 8.00%
-**Drift:** -7.96%
+**Drift:** -5.72%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
+- 2026-07-20: Sell -100.0 @ $92.50
 - 2026-07-15: Buy 5.0 @ $95.91
 - 2026-06-08: Buy 15.0 @ $96.20
 - 2026-06-05: Buy 5.0 @ $97.04
 - 2026-06-01: Buy 15.0 @ $103.19
-- 2026-05-29: Buy 3.0 @ $101.52
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
@@ -67,5 +82,5 @@ No realized G/L history.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-17 09:51: Auto-sync allocation 0.04%, drift -7.96%
+2026-07-27 08:36: Auto-sync allocation 2.28%, drift -5.72%
 <!-- endregion:change_log -->

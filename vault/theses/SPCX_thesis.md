@@ -3,9 +3,9 @@ ticker: SPCX
 style: THEME
 framework_preference:
 entry_date:
-last_reviewed: '2026-07-17'
+last_reviewed: '2026-07-20'
 cost_basis: 2423.85
-current_allocation: 0.31%
+current_allocation: 0.00%
 ---
 # SPCX — Investment Thesis
 
@@ -43,3 +43,27 @@ priority: low
 
 ## Review Log
 - 2026-07: Thesis file created. Moonshot accounting: judge in years, ignore quarterly drawdowns, never average down beyond the theme budget.
+
+<!-- region:position_state -->
+**Current Allocation:** 0.00%
+**Cost Basis:** $2,423.85
+<!-- endregion:position_state -->
+
+<!-- region:sizing -->
+**Style:** THEME
+**Size Ceiling:** 3.00%
+**Drift:** -3.00%
+<!-- endregion:sizing -->
+
+<!-- region:transaction_log -->
+- 2026-06-25: Buy 10.0 @ $155.12
+- 2026-06-15: Buy 5.0 @ $174.53
+<!-- endregion:transaction_log -->
+
+<!-- region:realized_gl -->
+No realized G/L history.
+<!-- endregion:realized_gl -->
+
+<!-- region:change_log -->
+2026-07-20 09:33: Auto-sync allocation 0.00%, drift -3.00%
+<!-- endregion:change_log -->

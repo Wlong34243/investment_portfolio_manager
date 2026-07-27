@@ -3,9 +3,9 @@ ticker: XBI
 style: ETF
 framework_preference:
 entry_date:
-last_reviewed: '2026-07-17'
+last_reviewed: '2026-07-27'
 cost_basis: 16757.49
-current_allocation: 0.04%
+current_allocation: 3.66%
 ---
 # XBI — Investment Thesis
 
@@ -44,14 +44,14 @@ priority: medium (due to high volatility, requires occasional rebalancing)
 - 2026-04: Initiated. Thesis intact. Monitoring the M&A environment, FDA approval trends, and the trajectory of the 10-year Treasury yield.
 
 <!-- region:position_state -->
-**Current Allocation:** 0.04%
+**Current Allocation:** 3.66%
 **Cost Basis:** $16,757.49
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** ETF
 **Size Ceiling:** 8.00%
-**Drift:** -7.96%
+**Drift:** -4.34%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -67,5 +67,5 @@ Total Realized G/L: $5,249.40 over 17 closed lots. Total Proceeds: $28,828.99.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-17 09:51: Auto-sync allocation 0.04%, drift -7.96%
+2026-07-27 08:36: Auto-sync allocation 3.66%, drift -4.34%
 <!-- endregion:change_log -->

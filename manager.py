@@ -1116,9 +1116,10 @@ def morning(
     continue_on_warning: bool = typer.Option(True, "--continue-on-warning/--strict", help="Continue past health warnings."),
     skip_vault_sync: bool = typer.Option(False, "--skip-vault-sync", help="Skip vault sync to markdown theses."),
     skip_composite: bool = typer.Option(False, "--skip-composite", help="Skip building composite bundle."),
+    skip_export: bool = typer.Option(False, "--skip-export", help="Skip building the AI briefing package in exports/."),
 ):
     """
-    Run the full market-open pipeline: health -> Schwab sync -> snapshot -> podcast sync -> dashboard refresh -> vault sync -> composite bundle.
+    Run the full market-open pipeline: health -> Schwab sync -> snapshot -> podcast sync -> dashboard refresh -> vault sync -> composite bundle -> AI briefing export.
     """
     from tasks.health import run_all_checks, exit_code as health_exit_code, CRITICAL, FAIL, WARN, PASS
     from tasks.build_valuation_card import main as build_val
@@ -1337,6 +1338,57 @@ def morning(
             step_results.append(("Composite Bundle", "fail"))
     else:
         step_results.append(("Composite Bundle", "skip"))
+
+    # 10. Export AI Briefing Package
+    # Morning already does every piece of work the briefing needs; it used to stop
+    # one step short and leave the user to run make_ai_briefing.bat by hand. This
+    # turns the composite bundle built above into the uploadable package.
+    if not skip_export:
+        console.print("\n[bold cyan]STEP 9 - Exporting AI Briefing Package...[/]")
+        try:
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "tasks/export_ai_briefing.py",
+                    "--lookthrough", "refresh",
+                    "--no-open",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=300,
+            )
+            out = (result.stdout or "") + (result.stderr or "")
+
+            # Surface the preflight block - it names vault problems (theses for
+            # positions no longer held, missing scaling sections) that the export
+            # works around but the user should still see.
+            if "--- Preflight ---" in out:
+                for line in out.splitlines():
+                    if line.strip().startswith(("SKIPPED", "BLOCKING")) or "thesis files have no" in line:
+                        console.print(f"  [yellow]{line.strip()}[/]")
+
+            pkg_line = next(
+                (l for l in out.splitlines() if l.startswith("Package: ")), None
+            )
+            if result.returncode == 0 and pkg_line:
+                console.print(f"[green]Briefing package:[/] {pkg_line.replace('Package: ', '')}")
+                console.print("[dim]Upload SUBMIT_ME.md from that folder.[/]")
+                step_results.append(("AI Briefing", "pass"))
+            elif result.returncode != 0:
+                console.print("[yellow]Export halted on blocking issues (see above).[/]")
+                console.print("[dim]Override: python tasks\\export_ai_briefing.py --lookthrough refresh --force[/]")
+                step_results.append(("AI Briefing", "warn"))
+            else:
+                console.print("[yellow]Export finished but no package path was reported.[/]")
+                step_results.append(("AI Briefing", "warn"))
+        except subprocess.TimeoutExpired:
+            console.print("[yellow]Export timed out after 5 minutes (ETF holdings fetch may be slow).[/]")
+            step_results.append(("AI Briefing", "warn"))
+        except Exception as e:
+            console.print(f"[red]Briefing export failed: {e}[/]")
+            step_results.append(("AI Briefing", "fail"))
+    else:
+        step_results.append(("AI Briefing", "skip"))
 
     _morning_summary(console, mode_label, step_results, tx_ok, snapshot_ok, tax_refreshed, skip_tax, start_time)
 

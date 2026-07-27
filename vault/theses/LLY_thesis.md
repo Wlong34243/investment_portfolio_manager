@@ -3,9 +3,9 @@ ticker: LLY
 style: GARP
 framework_preference:
 entry_date:
-last_reviewed: '2026-07-17'
-cost_basis: 5784.86
-current_allocation: 1.00%
+last_reviewed: '2026-07-27'
+cost_basis: 11689.51
+current_allocation: 2.03%
 ---
 # LLY — Investment Thesis
 
@@ -43,3 +43,29 @@ priority: medium
 
 ## Review Log
 - 2026-07: Thesis file created. Designated add-target for proceeds from AI-creator trims (LRCX/CRWV/ZETA candidate rotation).
+
+<!-- region:position_state -->
+**Current Allocation:** 2.03%
+**Cost Basis:** $11,689.51
+<!-- endregion:position_state -->
+
+<!-- region:sizing -->
+**Style:** GARP
+**Size Ceiling:** 9.00%
+**Drift:** -6.97%
+<!-- endregion:sizing -->
+
+<!-- region:transaction_log -->
+- 2026-07-17: Buy 5.0 @ $1,180.93
+- 2026-06-30: Buy 2.0 @ $1,209.00
+- 2026-06-25: Buy 3.0 @ $1,122.29
+- 2026-01-27: Sell -4.0 @ $1,051.86
+<!-- endregion:transaction_log -->
+
+<!-- region:realized_gl -->
+Total Realized G/L: $51.78 over 2 closed lots. Total Proceeds: $8,414.42.
+<!-- endregion:realized_gl -->
+
+<!-- region:change_log -->
+2026-07-27 08:36: Auto-sync allocation 2.03%, drift -6.97%
+<!-- endregion:change_log -->

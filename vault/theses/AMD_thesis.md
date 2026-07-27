@@ -3,7 +3,7 @@ ticker: AMD
 style: GARP
 framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: '2026-07-17'
+last_reviewed: '2026-07-20'
 current_allocation: 0.01%
 cost_basis: 1816.35
 time_horizon: 3 to 5 years
@@ -90,5 +90,5 @@ Total Realized G/L: $6,478.04 over 4 closed lots. Total Proceeds: $12,917.59.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-17 09:51: Auto-sync allocation 0.01%, drift -8.99%
+2026-07-20 09:33: Auto-sync allocation 0.01%, drift -8.99%
 <!-- endregion:change_log -->

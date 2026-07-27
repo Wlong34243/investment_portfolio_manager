@@ -3,9 +3,9 @@ ticker: JPIE
 style: ETF
 framework_preference: psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: '2026-07-17'
-current_allocation: 0.05%
-cost_basis: 31640.0
+last_reviewed: '2026-07-27'
+current_allocation: 4.72%
+cost_basis: 28177.63
 time_horizon: 0 to 3 years (tactical cash & ballast)
 triggers:
   fwd_pe_add_below:
@@ -67,21 +67,21 @@ I will reduce or exit JPIE and move to simpler cash/T‑bills if:
 4. I want to fund a large, high‑conviction equity purchase during a major dislocation; JPIE is a first source of liquidity.  
 
 <!-- region:position_state -->
-**Current Allocation:** 0.05%
-**Cost Basis:** $31,640.00
+**Current Allocation:** 4.72%
+**Cost Basis:** $28,177.63
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** ETF
 **Size Ceiling:** 8.00%
-**Drift:** -7.95%
+**Drift:** -3.28%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
+- 2026-07-23: Sell -75.0 @ $45.74
 - 2026-07-13: Sell -100.0 @ $45.78
 - 2026-07-06: Sell -110.0 @ $45.90
 - 2026-06-30: Sell -100.0 @ $46.05
-- 2026-06-25: Sell -71.0 @ $46.04
 - 2026-06-25: Sell -19.0 @ $46.04
 <!-- endregion:transaction_log -->
 
@@ -90,5 +90,5 @@ Total Realized G/L: $52.13 over 73 closed lots. Total Proceeds: $97,848.14.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-17 09:51: Auto-sync allocation 0.05%, drift -7.95%
+2026-07-27 08:36: Auto-sync allocation 4.72%, drift -3.28%
 <!-- endregion:change_log -->

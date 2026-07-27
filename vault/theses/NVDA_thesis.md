@@ -3,11 +3,11 @@ ticker: NVDA
 style: GARP
 framework_preference:
 entry_date:
-last_reviewed: '2026-07-17'
+last_reviewed: '2026-07-27'
 triggers:
   price_trim_above: 265.00
 cost_basis: 17166.17
-current_allocation: 0.03%
+current_allocation: 3.45%
 ---
 # NVDA — Investment Thesis
 
@@ -46,14 +46,14 @@ priority: low
 - 2026-04: Initiated. Thesis intact. Monitoring Blackwell architecture deployment, hyperscaler CapEx guidance, and gross margin resilience.
 
 <!-- region:position_state -->
-**Current Allocation:** 0.03%
+**Current Allocation:** 3.45%
 **Cost Basis:** $17,166.17
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** GARP
 **Size Ceiling:** 9.00%
-**Drift:** -8.97%
+**Drift:** -5.55%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -69,5 +69,5 @@ Total Realized G/L: $108.00 over 2 closed lots. Total Proceeds: $1,958.00.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-17 09:51: Auto-sync allocation 0.03%, drift -8.97%
+2026-07-27 08:36: Auto-sync allocation 3.45%, drift -5.55%
 <!-- endregion:change_log -->

@@ -35,6 +35,9 @@ bundles/
 # FMP local cache — regenerable, do not commit
 data/fmp_cache/
 
+# ETF look-through holdings cache (yfinance) — regenerable, do not commit
+data/etf_holdings_cache/
+
 Books/
 
 # Phase 4 Exports
@@ -43,8 +46,9 @@ exports/
 # Podcast bundles — transient convenience artifacts, not committed
 data/podcast_bundles/
 
-# Vault thesis backups — archive-before-overwrite artifacts, regenerable
-vault/theses/*.bak.*
+# Archive-before-overwrite backups — regenerable, produced anywhere a pipeline
+# script overwrites a file in place (root docs, core/, tasks/, vault/theses/)
+*.bak.*
 
 # Excel files
 *.xlsx

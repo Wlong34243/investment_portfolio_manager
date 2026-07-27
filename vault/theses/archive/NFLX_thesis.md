@@ -3,7 +3,7 @@ ticker: NFLX
 style:
 framework_preference:
 entry_date:
-last_reviewed: '2026-07-17'
+last_reviewed: '2026-07-20'
 cost_basis: 4055.53
 current_allocation: 0.01%
 ---
@@ -66,5 +66,5 @@ Total Realized G/L: $337.87 over 2 closed lots. Total Proceeds: $2,162.08.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-17 09:51: Auto-sync allocation 0.01%, drift +0.00%
+2026-07-20 09:33: Auto-sync allocation 0.01%, drift +0.00%
 <!-- endregion:change_log -->

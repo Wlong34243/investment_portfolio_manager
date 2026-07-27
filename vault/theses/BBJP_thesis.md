@@ -3,9 +3,9 @@ ticker: BBJP
 style: ETF
 framework_preference:
 entry_date:
-last_reviewed: '2026-07-17'
-cost_basis: 5138.87
-current_allocation: 0.01%
+last_reviewed: '2026-07-27'
+cost_basis: 14319.37
+current_allocation: 2.43%
 ---
 # BBJP — Investment Thesis
 
@@ -44,22 +44,22 @@ priority: low
 - 2026-04: Initiated. Thesis intact. Monitoring BOJ interest rate policy, Japanese wage negotiation data (Shunto), and corporate buyback announcements.
 
 <!-- region:position_state -->
-**Current Allocation:** 0.01%
-**Cost Basis:** $5,138.87
+**Current Allocation:** 2.43%
+**Cost Basis:** $14,319.37
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** ETF
 **Size Ceiling:** 8.00%
-**Drift:** -7.99%
+**Drift:** -5.57%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
+- 2026-07-20: Buy 69.0 @ $73.48
+- 2026-07-20: Buy 6.0 @ $73.48
+- 2026-07-20: Buy 50.0 @ $73.39
 - 2026-05-13: Buy 10.0 @ $75.65
 - 2026-05-08: Buy 10.0 @ $74.90
-- 2026-05-04: Sell -11.0 @ $72.09
-- 2026-05-01: Sell -50.0 @ $71.90
-- 2026-05-01: Sell -120.0 @ $71.91
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
@@ -67,5 +67,5 @@ Total Realized G/L: $23.22 over 7 closed lots. Total Proceeds: $13,016.33.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-17 09:51: Auto-sync allocation 0.01%, drift -7.99%
+2026-07-27 08:36: Auto-sync allocation 2.43%, drift -5.57%
 <!-- endregion:change_log -->

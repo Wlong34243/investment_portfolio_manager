@@ -3,11 +3,11 @@ ticker: ET
 style: THEME
 framework_preference:
 entry_date:
-last_reviewed: '2026-07-17'
+last_reviewed: '2026-07-27'
 triggers:
   price_trim_above: 22.00
 cost_basis: 6465.59
-current_allocation: 0.01%
+current_allocation: 1.30%
 ---
 # ET — Investment Thesis
 
@@ -47,14 +47,14 @@ priority: low
 - 2026-04: Initiated. Thesis intact. Monitoring distribution coverage ratios, debt reduction targets, and NGL export volumes.
 
 <!-- region:position_state -->
-**Current Allocation:** 0.01%
+**Current Allocation:** 1.30%
 **Cost Basis:** $6,465.59
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** THEME
 **Size Ceiling:** 3.00%
-**Drift:** -2.99%
+**Drift:** -1.70%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -70,5 +70,5 @@ Total Realized G/L: $-475.83 over 12 closed lots. Total Proceeds: $5,861.72.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-17 09:51: Auto-sync allocation 0.01%, drift -2.99%
+2026-07-27 08:36: Auto-sync allocation 1.30%, drift -1.70%
 <!-- endregion:change_log -->

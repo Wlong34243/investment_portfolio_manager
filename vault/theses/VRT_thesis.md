@@ -3,8 +3,8 @@ ticker: VRT
 style: THEME
 framework_preference: thematic_specialist_v1, lynch_garp_v1
 entry_date: 2026-05
-last_reviewed: '2026-07-17'
-current_allocation: 0.01%
+last_reviewed: '2026-07-27'
+current_allocation: 1.50%
 cost_basis: 9693.23
 time_horizon: 2 to 4 years
 triggers:
@@ -88,18 +88,18 @@ Current allocation 0.56%. This is starter-position size. The plan:
 - Rotation priority: medium — building, not trimming, in current setup.
 
 <!-- region:position_state -->
-**Current Allocation:** 0.01%
+**Current Allocation:** 1.50%
 **Cost Basis:** $9,693.23
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** THEME
 **Size Ceiling:** 3.00%
-**Drift:** -2.99%
+**Drift:** -1.50%
 <!-- endregion:sizing -->
 
 <!-- region:change_log -->
-2026-07-17 09:51: Auto-sync allocation 0.01%, drift -2.99%
+2026-07-27 08:36: Auto-sync allocation 1.50%, drift -1.50%
 <!-- endregion:change_log -->
 
 <!-- region:transaction_log -->

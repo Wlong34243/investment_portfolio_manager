@@ -3,9 +3,9 @@ ticker: GLD
 style: ETF
 framework_preference: macro_hedge_v1
 entry_date: 2026-05-03
-last_reviewed: '2026-07-17'
-current_allocation: 0.01%
-cost_basis: 6910.6
+last_reviewed: '2026-07-27'
+current_allocation: 1.01%
+cost_basis: 6537.43
 time_horizon: 3 to 5 years
 triggers:
   fwd_pe_add_below:                 # gold has no earnings; PE triggers not applicable
@@ -59,17 +59,18 @@ Cost basis: ~$1,278 total at entry. Gold had already moved significantly from 20
 - Rotation priority: low urgency; add opportunistically on pullbacks, not on momentum.
 
 <!-- region:position_state -->
-**Current Allocation:** 0.01%
-**Cost Basis:** $6,910.60
+**Current Allocation:** 1.01%
+**Cost Basis:** $6,537.43
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** ETF
 **Size Ceiling:** 8.00%
-**Drift:** -7.99%
+**Drift:** -6.99%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
+- 2026-07-21: Sell -1.0 @ $373.18
 - 2026-06-25: Buy 6.0 @ $368.33
 - 2026-06-02: Sell -5.0 @ $413.39
 - 2026-05-08: Buy 3.0 @ $435.14
@@ -81,5 +82,5 @@ No realized G/L history.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-17 09:51: Auto-sync allocation 0.01%, drift -7.99%
+2026-07-27 08:36: Auto-sync allocation 1.01%, drift -6.99%
 <!-- endregion:change_log -->

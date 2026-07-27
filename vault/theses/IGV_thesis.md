@@ -3,9 +3,9 @@ ticker: IGV
 style: ETF
 framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: '2026-07-17'
-current_allocation: 0.01%
-cost_basis: 5938.82
+last_reviewed: '2026-07-27'
+current_allocation: 0.08%
+cost_basis: 428.15
 time_horizon: 3 to 5 years
 triggers:
   fwd_pe_add_below:               # ETF; use macro/sector signals instead of PE
@@ -65,22 +65,22 @@ I’ll consider exiting or cutting IGV if:[file:26]
 4. I can build a higher‑conviction basket of specific software/AI applications (e.g., MSFT, NOW, CRWD) at attractive valuations, making IGV redundant as a broad proxy.  
 
 <!-- region:position_state -->
-**Current Allocation:** 0.01%
-**Cost Basis:** $5,938.82
+**Current Allocation:** 0.08%
+**Cost Basis:** $428.15
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** ETF
 **Size Ceiling:** 8.00%
-**Drift:** -7.99%
+**Drift:** -7.92%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
+- 2026-07-17: Sell -68.0 @ $92.56
 - 2026-06-29: Sell -25.0 @ $90.76
 - 2026-06-25: Sell -50.0 @ $86.07
 - 2026-06-25: Sell -20.0 @ $84.53
 - 2026-05-26: Sell -25.0 @ $94.22
-- 2026-05-21: Sell -10.0 @ $92.18
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
@@ -88,5 +88,5 @@ Total Realized G/L: $-1,128.95 over 30 closed lots. Total Proceeds: $34,890.52.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-17 09:51: Auto-sync allocation 0.01%, drift -7.99%
+2026-07-27 08:36: Auto-sync allocation 0.08%, drift -7.92%
 <!-- endregion:change_log -->

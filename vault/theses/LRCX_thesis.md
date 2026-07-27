@@ -3,9 +3,9 @@ ticker: LRCX
 style: GARP
 framework_preference: lynch_garp_v1
 entry_date: 2026-05-03
-last_reviewed: '2026-07-17'
-current_allocation: 0.02%
-cost_basis: 8462.62
+last_reviewed: '2026-07-20'
+current_allocation: 0.00%
+cost_basis: 1295.7
 time_horizon: 3 to 5 years
 triggers:
   fwd_pe_add_below: 18              # add on semi cycle fear; LRCX historically re-rates fast off trough
@@ -63,22 +63,22 @@ Cost basis: ~$255.51 per share. At entry LRCX traded at a compressed forward mul
 - Rotation priority: medium; semi-equipment is cyclical but the unit intensity thesis is high conviction.
 
 <!-- region:position_state -->
-**Current Allocation:** 0.02%
-**Cost Basis:** $8,462.62
+**Current Allocation:** 0.00%
+**Cost Basis:** $1,295.70
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** GARP
 **Size Ceiling:** 9.00%
-**Drift:** -8.98%
+**Drift:** -9.00%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
+- 2026-07-17: Sell -27.0 @ $312.53
 - 2026-06-18: Sell -15.0 @ $395.90
 - 2026-05-07: Buy 5.0 @ $285.95
 - 2026-05-05: Buy 5.0 @ $272.38
 - 2026-05-04: Buy 7.0 @ $256.32
-- 2026-05-04: Buy 5.0 @ $259.14
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
@@ -86,5 +86,5 @@ No realized G/L history.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-17 09:51: Auto-sync allocation 0.02%, drift -8.98%
+2026-07-20 09:33: Auto-sync allocation 0.00%, drift -9.00%
 <!-- endregion:change_log -->

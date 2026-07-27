@@ -109,12 +109,28 @@ def gather_thesis_sync_data(as_of_date: Optional[str] = None, tickers: Optional[
             ticker_gl = realized_df[realized_df['Ticker'] == ticker].to_dict('records')
             realized = ticker_gl
         
-        # Weight in sheet might be 0.0 if not computed yet
-        market_value = row.get('Market Value', 0.0)
-        weight = row.get('Weight', 0.0)
-        if weight == 0.0 and total_market_value > 0:
+        # Weight: always recompute from market value rather than trusting the
+        # sheet's 'Weight' column.
+        #
+        # BUGFIX 2026-07-26: that column stores a FRACTION (position MV / total
+        # MV), not a percentage. The previous code used it raw whenever it was
+        # non-zero, so every thesis file was written with an allocation 100x too
+        # small (NOW 1.09% -> "0.01%", JEPI 9.92% -> "0.10%"). Because drift is
+        # weight - ceiling, that made drift negative for all 35 positions and
+        # silently suppressed every real ceiling breach (JEPI, QQQM, MELI).
+        # manager.py already worked around this with a `max <= 1.5` heuristic;
+        # that heuristic is itself unsafe for a book whose largest position is
+        # under 1.5%, so recompute deterministically here instead.
+        market_value = float(row.get('Market Value', 0.0) or 0.0)
+        if total_market_value > 0:
             weight = (market_value / total_market_value) * 100.0
-        
+        else:
+            # Degenerate case only (no priced positions). Fall back to the
+            # stored column, coercing a fractional value up to percent.
+            weight = float(row.get('Weight', 0.0) or 0.0)
+            if 0.0 < weight <= 1.5:
+                weight *= 100.0
+
         payloads[ticker] = TickerSyncPayload(
             ticker=ticker,
             style=style,

@@ -3,84 +3,57 @@ ticker: VEU
 style: ETF
 framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: '2026-07-17'
-current_allocation: 0.02%
-cost_basis: 11688.99
+last_reviewed: '2026-07-27'
+current_allocation: 0.42%
+cost_basis: 2302.8
 time_horizon: 3 to 7 years
 triggers:
-  fwd_pe_add_below:                   # ETF; focus on macro and project pipeline, not PE
+  fwd_pe_add_below:
   fwd_pe_trim_above:
   fwd_pe_historical_median:
-  price_add_below: 52                 # add if sentiment weak but funding/AI build-out intact
-  price_trim_above: 70                # trim if infra/AI hype rich vs earnings & backlogs
+  price_add_below:
+  price_trim_above:
   discount_from_52w_high_add:
   revenue_growth_floor_pct:
   operating_margin_floor_pct:
-  style_size_ceiling_pct: 5.0         # core-ish thematic; below broad SPY/VOO sleeve
-  current_weight_pct: 3.0
+  style_size_ceiling_pct: 8.0
+  current_weight_pct:
 ---
-# IFRA — Investment Thesis
+# VEU — Investment Thesis
 
-## Core Thesis (Physical Backbone of AI & Reshoring)
+## Core Thesis
 
-I own IFRA as a **tangible, policy‑backed way to play the AI and reshoring build‑out**, not just generic “value.”. Upside is driven by trillions in committed US infrastructure and industrial policy (IIJA, CHIPS Act, IRA) plus corporate reshoring and grid upgrades needed to power AI data centers, fabs, and EVs..
+Ex-US broad-market ballast ETF. Bill is selling out of VEU — this thesis exists to document the exit, not to argue for continued ownership.
 
-IFRA concentrates the companies doing the physical work — construction, engineering, rail, utilities, grid equipment, materials — making it my “steel and concrete” complement to semis and cloud in the AI theme..
+## Scaling State
+next_step: exit
 
-## Entry Context & Why IFRA vs Just More SPY
+## Rotation Priority
+priority: high
 
-Cost basis: 56.69.. At this level I am not chasing high‑flying growth; I’m buying a dividend‑paying basket with deep order backlogs that front‑runs federal and corporate capex rolling out over many years..
+## Exit Conditions
+- Standing exit: no further ex-US ballast allocation via VEU. Proceeds redeploy per current allocation plan.
 
-Why IFRA instead of just the rest in SPY:
-- SPY: broad, cap‑weighted US; lots of tech and financials; infrastructure exposure diluted.  
-- IFRA: explicit tilt to **real‑asset beneficiaries** of policy and AI power demand; more direct exposure to the picks‑and‑shovels of reshoring and grid modernization..  
-
-I treat IFRA as a **targeted factor/sector overlay** on top of broad market exposure, not a replacement for SPY.
-
-## Bull Case (Why I Feel Good Owning This 3%)
-
-- Legislative tailwinds: Over $1T legally committed to roads, bridges, broadband, and grid; this creates inelastic, multi‑year revenue pipelines relatively insulated from normal cycles..  
-- Reshoring mega‑trend: Fabs, battery plants, and manufacturing moving back to North America require huge amounts of construction, engineering, and localized power..  
-- Grid modernization: AI data centers, EVs, and electrification push an aging grid to its limits, forcing decades of upgrades for utilities and equipment makers..  
-- Inflation linkage: Hard‑asset businesses with pricing power can pass on higher costs, making IFRA a decent inflation hedge relative to pure growth equities..  
-
-## Key Risks & Guardrails
-
-- Labor / supply bottlenecks: Skilled labor shortages or materials issues can delay projects and compress margins despite strong demand..  
-- Red tape and timing risk: Permitting, NEPA reviews, and local politics can slow or stall projects, pushing out revenue recognition..  
-- Cost of capital: Infrastructure is capex heavy; sustained high rates raise financing costs for utilities and constructors..  
-
-Behaviorally:
-- I will treat IFRA as a **steady, policy‑anchored thematic** holding, accepting slower, grind‑higher returns vs my AI semis.  
-- I will not panic‑sell over near‑term project delays as long as funding and long‑term demand drivers (AI build‑out, grid stress, reshoring) remain intact.  
-
-## Hard Exit / Trim Conditions
-
-I will trim or reconsider IFRA (vs just owning more SPY/VOO) if:.
-
-1. A major political shift leads to repeal/defunding of big infrastructure/industrial bills, structurally shrinking the pipeline of projects.  
-2. Chronic labor shortages and runaway costs turn big contracts into low‑margin or loss‑making projects across the portfolio, with no sign of improvement..  
-3. Rates stay high and financing conditions tighten enough that utilities and infra names struggle to fund their capex plans.  
-4. My portfolio already has substantial infra/real‑asset exposure through other names (ETN, XOM, utilities, etc.), making IFRA redundant relative to simply adding to broad SPY.  
-5. A clearly superior infra/AI‑linked vehicle (e.g., more focused grid/AI infra ETF at similar or lower cost) appears with better risk/reward.  
+## Review Log
+- 2026-07-20: Thesis rewritten. Prior file content was a mislabeled duplicate of the IFRA thesis. Rebuilt to reflect Bill's actual current stance: selling out of the position.
 
 <!-- region:position_state -->
-**Current Allocation:** 0.02%
-**Cost Basis:** $11,688.99
+**Current Allocation:** 0.42%
+**Cost Basis:** $2,302.80
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** ETF
 **Size Ceiling:** 8.00%
-**Drift:** -7.98%
+**Drift:** -7.58%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
+- 2026-07-17: Sell -115.0 @ $81.55
 - 2026-05-11: Buy 50.0 @ $83.38
 - 2026-04-09: Buy 20.0 @ $78.45
 - 2026-04-01: Sell -20.0 @ $76.02
 - 2026-03-10: Buy 5.0 @ $77.35
-- 2026-03-06: Sell -175.0 @ $76.17
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
@@ -88,5 +61,5 @@ Total Realized G/L: $1,329.20 over 22 closed lots. Total Proceeds: $29,697.85.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-17 09:51: Auto-sync allocation 0.02%, drift -7.98%
+2026-07-27 08:36: Auto-sync allocation 0.42%, drift -7.58%
 <!-- endregion:change_log -->

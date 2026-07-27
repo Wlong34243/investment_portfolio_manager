@@ -3,8 +3,8 @@ ticker: CRWV
 style: THEME
 framework_preference:
 entry_date:
-last_reviewed: '2026-07-17'
-cost_basis: 7092.53
+last_reviewed: '2026-07-20'
+cost_basis: 3227.7
 current_allocation: 0.01%
 ---
 # CRWV — Investment Thesis
@@ -46,21 +46,21 @@ priority: medium (due to high volatility and debt profile)
 
 <!-- region:position_state -->
 **Current Allocation:** 0.01%
-**Cost Basis:** $7,092.53
+**Cost Basis:** $3,227.70
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** THEME
 **Size Ceiling:** 3.00%
-**Drift:** -2.99%
+**Drift:** -3.00%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
+- 2026-07-17: Sell -50.0 @ $73.95
 - 2026-04-28: Buy 10.0 @ $107.59
 - 2026-03-30: Buy 10.0 @ $67.84
 - 2026-03-03: Buy 16.0 @ $72.20
 - 2026-03-03: Buy 9.0 @ $72.20
-- 2026-02-27: Buy 5.0 @ $78.08
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
@@ -68,5 +68,5 @@ No realized G/L history.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-17 09:51: Auto-sync allocation 0.01%, drift -2.99%
+2026-07-20 09:33: Auto-sync allocation 0.01%, drift -3.00%
 <!-- endregion:change_log -->

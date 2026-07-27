@@ -3,9 +3,9 @@ ticker: GOOG
 style: GARP
 framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: '2026-07-17'
-current_allocation: 0.05%
-cost_basis: 20327.72
+last_reviewed: '2026-07-27'
+current_allocation: 5.54%
+cost_basis: 26733.42
 time_horizon: 3 to 5 years
 triggers:
   fwd_pe_add_below: 20              # add on AI/reg fear-driven pullbacks
@@ -78,26 +78,26 @@ I will exit or sharply reduce only on **structural** breaks:
 - Rotation priority: very low.
 
 <!-- region:position_state -->
-**Current Allocation:** 0.05%
-**Cost Basis:** $20,327.72
+**Current Allocation:** 5.54%
+**Cost Basis:** $26,733.42
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** GARP
 **Size Ceiling:** 9.00%
-**Drift:** -8.95%
+**Drift:** -3.46%
 <!-- endregion:sizing -->
 
 <!-- region:change_log -->
-2026-07-17 09:51: Auto-sync allocation 0.05%, drift -8.95%
+2026-07-27 08:36: Auto-sync allocation 5.54%, drift -3.46%
 <!-- endregion:change_log -->
 
 <!-- region:transaction_log -->
+- 2026-07-23: Buy 10.0 @ $319.96
+- 2026-07-23: Buy 10.0 @ $320.61
 - 2026-06-15: Buy 0.0389 @ $368.85
 - 2026-06-02: Buy 6.0 @ $358.19
 - 2026-05-26: Buy 5.0 @ $382.40
-- 2026-05-11: Sell -5.0 @ $392.79
-- 2026-05-11: Sell -5.0 @ $392.79
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->

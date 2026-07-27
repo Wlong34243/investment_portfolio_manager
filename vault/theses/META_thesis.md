@@ -3,8 +3,8 @@ ticker: META
 style: GARP
 framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: '2026-07-17'
-current_allocation: 0.03%
+last_reviewed: '2026-07-27'
+current_allocation: 2.47%
 cost_basis: 11592.71
 time_horizon: 3 to 5+ years
 triggers:
@@ -78,14 +78,14 @@ I will trim or exit META if any of the following become clear, structural trends
 2. Zuckerberg abandons “Year of Efficiency” discipline and aggressively ramps Reality Labs spend without 
 
 <!-- region:position_state -->
-**Current Allocation:** 0.03%
+**Current Allocation:** 2.47%
 **Cost Basis:** $11,592.71
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** GARP
 **Size Ceiling:** 9.00%
-**Drift:** -8.97%
+**Drift:** -6.53%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -101,5 +101,5 @@ No realized G/L history.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-17 09:51: Auto-sync allocation 0.03%, drift -8.97%
+2026-07-27 08:36: Auto-sync allocation 2.47%, drift -6.53%
 <!-- endregion:change_log -->

@@ -3,8 +3,8 @@ ticker: XOM
 style: THEME
 framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
 entry_date: (PXD-close stock consideration date)
-last_reviewed: '2026-07-17'
-current_allocation: 0.03%
+last_reviewed: '2026-07-27'
+current_allocation: 2.64%
 cost_basis: 11563.13
 time_horizon: 3 to 5 years
 triggers:
@@ -73,14 +73,14 @@ I will exit or materially reduce if the **capital discipline or asset base edge*
 4. A clearly superior risk‑adjusted cash‑flow compounder or hedge emerges, making it rational to rotate out despite a still‑intact XOM thesis.[file:4]  
 
 <!-- region:position_state -->
-**Current Allocation:** 0.03%
+**Current Allocation:** 2.64%
 **Cost Basis:** $11,563.13
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** THEME
 **Size Ceiling:** 3.00%
-**Drift:** -2.97%
+**Drift:** -0.36%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -96,5 +96,5 @@ Total Realized G/L: $906.00 over 2 closed lots. Total Proceeds: $4,044.00.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-17 09:51: Auto-sync allocation 0.03%, drift -2.97%
+2026-07-27 08:36: Auto-sync allocation 2.64%, drift -0.36%
 <!-- endregion:change_log -->

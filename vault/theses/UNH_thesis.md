@@ -3,9 +3,9 @@ ticker: UNH
 style: GARP
 framework_preference: lynch_garp_v1, psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: '2026-07-17'
-current_allocation: 0.03%
-cost_basis: 11397.97
+last_reviewed: '2026-07-27'
+current_allocation: 3.21%
+cost_basis: 15643.57
 time_horizon: 1 to 3 years
 triggers:
   fwd_pe_add_below: 14
@@ -23,7 +23,7 @@ panic_buy_trigger_drawdown_pct: 0.20
 ---
 # UNH — Investment Thesis (Revised 2026-05-18)
 
-## Style Change: From Defensive Core to Tactical Recovery Trade
+## Core Thesis (Style Change: From Defensive Core to Tactical Recovery Trade)
 
 When I entered UNH in April 2026, the thesis was "dominant healthcare compounder bought during forced repricing, hold as a defensive anchor." That thesis worked. UNH ran from the high-$280s back into the mid-$350s and I took meaningful profits.
 
@@ -84,14 +84,14 @@ At 2.22% the position is sub-scale. Two valid paths from here:
 - Re-evaluate quarterly; full close-out by Q4 2026 if neither trim nor rebuild trigger fires.
 
 <!-- region:position_state -->
-**Current Allocation:** 0.03%
-**Cost Basis:** $11,397.97
+**Current Allocation:** 3.21%
+**Cost Basis:** $15,643.57
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** GARP
 **Size Ceiling:** 9.00%
-**Drift:** -8.97%
+**Drift:** -5.79%
 <!-- endregion:sizing -->
 
 <!-- region:wash_sale_watch -->
@@ -99,15 +99,15 @@ At 2.22% the position is sub-scale. Two valid paths from here:
 <!-- endregion:wash_sale_watch -->
 
 <!-- region:change_log -->
-2026-07-17 09:51: Auto-sync allocation 0.03%, drift -8.97%
+2026-07-27 08:36: Auto-sync allocation 3.21%, drift -5.79%
 <!-- endregion:change_log -->
 
 <!-- region:transaction_log -->
+- 2026-07-20: Buy 10.0 @ $424.56
 - 2026-05-11: Sell -15.0 @ $380.99
 - 2026-05-11: Sell -20.0 @ $380.99
 - 2026-04-24: Sell -10.0 @ $354.18
 - 2026-04-23: Sell -5.0 @ $354.30
-- 2026-04-16: Buy 10.0 @ $317.53
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
