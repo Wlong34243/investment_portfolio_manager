@@ -3,8 +3,8 @@ ticker: AMZN
 style: GARP
 framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: '2026-07-27'
-current_allocation: 4.29%
+last_reviewed: '2026-07-31'
+current_allocation: 4.75%
 cost_basis: 24968.17
 time_horizon: 3 to 5 years
 triggers:
@@ -17,7 +17,6 @@ triggers:
   revenue_growth_floor_pct:
   operating_margin_floor_pct:
   style_size_ceiling_pct: 9.0
-  current_weight_pct:
 ---
 # AMZN — Investment Thesis
 
@@ -47,15 +46,21 @@ GARP-by-intuition core holding — sized and scaled like the rest of the GARP bu
 ## Review Log
 - 2026-07-20: Thesis rewritten. Prior file content was a mislabeled duplicate of the COF thesis (frontmatter ticker had been corrected in June, but body was never fixed). Rebuilt from scratch using Bill's actual AMZN reasoning: AWS stability, data-center networking/AI build-out, daily-user conviction.
 
+## Scaling State
+next_step: [BILL]
+
+## Rotation Priority
+priority: [BILL]
+
 <!-- region:position_state -->
-**Current Allocation:** 4.29%
+**Current Allocation:** 4.75%
 **Cost Basis:** $24,968.17
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** GARP
 **Size Ceiling:** 9.00%
-**Drift:** -4.71%
+**Drift:** -4.25%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -64,6 +69,12 @@ GARP-by-intuition core holding — sized and scaled like the rest of the GARP bu
 - 2026-05-11: Sell -5.0 @ $270.60
 - 2026-05-08: Sell -4.0 @ $272.24
 - 2026-04-15: Buy 5.0 @ $247.57
+- 2026-02-09: Buy 5.0 @ $207.14
+- 2026-02-06: Buy 5.0 @ $207.85
+- 2026-02-06: Buy 3.0 @ $205.12
+- 2026-02-05: Buy 3.0 @ $222.26
+- 2026-02-05: Buy 2.0 @ $222.26
+- 2026-01-29: Buy 5.0 @ $238.86
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
@@ -71,5 +82,5 @@ Total Realized G/L: $1,390.71 over 5 closed lots. Total Proceeds: $6,500.91.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-27 08:36: Auto-sync allocation 4.29%, drift -4.71%
+2026-07-31 08:23: Auto-sync allocation 4.75%, drift -4.25%
 <!-- endregion:change_log -->

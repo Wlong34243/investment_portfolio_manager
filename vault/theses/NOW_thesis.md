@@ -3,10 +3,10 @@ ticker: NOW
 style: GARP
 framework_preference:
 entry_date:
-last_reviewed: '2026-07-27'
+last_reviewed: '2026-07-31'
 triggers: {}
 cost_basis: 6765.69
-current_allocation: 1.10%
+current_allocation: 1.18%
 ---
 # NOW — Investment Thesis
 
@@ -60,14 +60,14 @@ Funding source of choice for higher-conviction ideas. The 2026-06-25 sell alread
 - 2026-07-26: Thesis rewritten to match the decision. Scaling state hold → reduce; priority very low → high. Removed stale `price_trim_above: 250.00` trigger (stock ~$98.78; the trigger was unreachable and would never have fired). Prior bull case retained for reference but marked non-operative.
 
 <!-- region:position_state -->
-**Current Allocation:** 1.10%
+**Current Allocation:** 1.18%
 **Cost Basis:** $6,765.69
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** GARP
 **Size Ceiling:** 9.00%
-**Drift:** -7.90%
+**Drift:** -7.82%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -76,6 +76,22 @@ Funding source of choice for higher-conviction ideas. The 2026-06-25 sell alread
 - 2026-06-02: Buy 4.0 @ $128.90
 - 2026-05-26: Sell -2.0 @ $101.37
 - 2026-05-26: Sell -17.0 @ $101.37
+- 2026-05-26: Sell -56.0 @ $101.37
+- 2026-05-26: Sell -15.0 @ $101.34
+- 2026-05-14: Buy 15.0 @ $90.62
+- 2026-05-11: Buy 45.0 @ $91.18
+- 2026-05-06: Buy 10.0 @ $89.25
+- 2026-04-30: Sell -15.0 @ $87.56
+- 2026-04-24: Buy 10.0 @ $88.10
+- 2026-04-23: Buy 25.0 @ $87.35
+- 2026-04-23: Buy 15.0 @ $85.57
+- 2026-04-22: Buy 10.0 @ $103.25
+- 2026-04-21: Buy 1.0 @ $100.33
+- 2026-04-21: Buy 10.0 @ $100.61
+- 2026-04-21: Buy 9.0 @ $100.33
+- 2026-04-20: Buy 10.0 @ $99.27
+- 2026-04-15: Buy 50.0 @ $91.50
+(showing 20 most recent of 26)
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
@@ -83,5 +99,5 @@ Total Realized G/L: $-300.00 over 8 closed lots. Total Proceeds: $3,763.17.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-27 08:36: Auto-sync allocation 1.10%, drift -7.90%
+2026-07-31 08:23: Auto-sync allocation 1.18%, drift -7.82%
 <!-- endregion:change_log -->

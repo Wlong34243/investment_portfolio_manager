@@ -34,10 +34,23 @@ import logging
 import os
 import time
 
+try:
+    import config
+    ISSUER_ALIASES = getattr(config, "ISSUER_ALIASES", {})
+except ImportError:
+    ISSUER_ALIASES = {}
+
 CACHE_DIR = os.path.join("data", "etf_holdings_cache")
 CACHE_TTL_SECONDS = 30 * 24 * 3600  # holdings drift slowly; monthly is plenty
 
 logger = logging.getLogger(__name__)
+
+
+def _canonical_symbol(symbol: str) -> str:
+    """Fold a dual-listed / secondary symbol into its canonical issuer symbol
+    per config.ISSUER_ALIASES (e.g. GOOGL -> GOOG, SKHY -> 000660.KS)."""
+    symbol = symbol.upper()
+    return ISSUER_ALIASES.get(symbol, symbol)
 
 
 def _cache_path(ticker: str) -> str:
@@ -134,12 +147,24 @@ def compute_lookthrough(positions, etf_tickers, use_network: bool = True):
 
     Every number is a FLOOR: only the top ~10 holdings of each fund are known,
     so true indirect exposure is at least this much and probably more.
+
+    Symbols are folded through config.ISSUER_ALIASES before aggregating, so
+    a dual-listed issuer (GOOG/GOOGL, or a direct US listing vs. its
+    ETF-embedded foreign listing) reports as one row, not two. The row
+    collapses; the original symbol names that fed it stay visible in `via`.
     """
+    etf_tickers_upper = {e.upper() for e in etf_tickers}
+
     direct = {}
+    direct_aliased_from = {}  # canonical symbol -> set of original direct symbols it absorbed
     for p in positions:
         t = (p.get("ticker") or "").upper()
-        if t:
-            direct[t] = direct.get(t, 0.0) + float(p.get("weight_pct") or 0.0)
+        if not t:
+            continue
+        canon = _canonical_symbol(t)
+        direct[canon] = direct.get(canon, 0.0) + float(p.get("weight_pct") or 0.0)
+        if canon != t:
+            direct_aliased_from.setdefault(canon, set()).add(t)
 
     indirect = {}
     via = {}
@@ -156,7 +181,7 @@ def compute_lookthrough(positions, etf_tickers, use_network: bool = True):
             continue
         resolved.append(etf)
         for h in holdings:
-            sym = h["symbol"]
+            sym = _canonical_symbol(h["symbol"])
             contribution = etf_weight * (h["weight_pct"] / 100.0)
             if contribution <= 0:
                 continue
@@ -165,19 +190,22 @@ def compute_lookthrough(positions, etf_tickers, use_network: bool = True):
 
     rows = []
     for sym in set(list(direct) + list(indirect)):
-        if sym in etf_tickers:
+        if sym in etf_tickers_upper:
             continue  # don't double-count the funds themselves
         d = direct.get(sym, 0.0)
         i = indirect.get(sym, 0.0)
         if i <= 0:
             continue  # only interesting where a fund adds hidden exposure
+        sources = list(via.get(sym, []))
+        for original in sorted(direct_aliased_from.get(sym, ())):
+            sources.insert(0, "%s (direct)" % original)
         rows.append(
             {
                 "symbol": sym,
                 "direct_pct": round(d, 2),
                 "indirect_pct": round(i, 2),
                 "total_pct": round(d + i, 2),
-                "via": ", ".join(via.get(sym, [])),
+                "via": ", ".join(sources),
             }
         )
 

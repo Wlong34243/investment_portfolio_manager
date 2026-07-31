@@ -3,8 +3,8 @@ ticker: XOM
 style: THEME
 framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
 entry_date: (PXD-close stock consideration date)
-last_reviewed: '2026-07-27'
-current_allocation: 2.64%
+last_reviewed: '2026-07-31'
+current_allocation: 2.69%
 cost_basis: 11563.13
 time_horizon: 3 to 5 years
 triggers:
@@ -17,7 +17,6 @@ triggers:
   revenue_growth_floor_pct: 0         # this is a FCF/dividend story, not top-line growth
   operating_margin_floor_pct:         # watch FCF yield vs. mid-cycle strip
   style_size_ceiling_pct: 5.0         # cyclical + geopolitical + ESG/reg risk
-  current_weight_pct: 2.8
 ---
 # XOM — Investment Thesis
 
@@ -72,15 +71,21 @@ I will exit or materially reduce if the **capital discipline or asset base edge*
 3. Severe regulatory or geopolitical events (e.g., expropriation, punitive taxes, or operational shutdowns) permanently impair key assets like Guyana.[file:4]  
 4. A clearly superior risk‑adjusted cash‑flow compounder or hedge emerges, making it rational to rotate out despite a still‑intact XOM thesis.[file:4]  
 
+## Scaling State
+next_step: [BILL]
+
+## Rotation Priority
+priority: [BILL]
+
 <!-- region:position_state -->
-**Current Allocation:** 2.64%
+**Current Allocation:** 2.69%
 **Cost Basis:** $11,563.13
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** THEME
 **Size Ceiling:** 3.00%
-**Drift:** -0.36%
+**Drift:** -0.31%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -89,6 +94,9 @@ I will exit or materially reduce if the **capital discipline or asset base edge*
 - 2026-03-10: Buy 0.5377 @ $149.79
 - 2026-01-26: Sell -15.0 @ $134.83
 - 2025-12-11: Buy 0.6101 @ $119.18
+- 2025-10-31: Buy 2.0 @ $114.76
+- 2025-09-11: Buy 0.4419 @ $112.33
+- 2025-06-10: Buy 1.465 @ $107.23
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
@@ -96,5 +104,5 @@ Total Realized G/L: $906.00 over 2 closed lots. Total Proceeds: $4,044.00.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-27 08:36: Auto-sync allocation 2.64%, drift -0.36%
+2026-07-31 08:23: Auto-sync allocation 2.69%, drift -0.31%
 <!-- endregion:change_log -->

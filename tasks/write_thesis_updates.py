@@ -56,10 +56,10 @@ def format_realized_summary(realized_gl: List[dict]) -> str:
     
     return f"Total Realized G/L: ${total_gain:,.2f} over {count} closed lots. Total Proceeds: ${total_proceeds:,.2f}."
 
-def format_transaction_log(transactions: List[dict]) -> str:
+def format_transaction_log(transactions: List[dict], total_count: int = 0) -> str:
     if not transactions:
         return "No recent transactions found."
-    
+
     lines = []
     for tx in transactions:
         date = tx.get('Trade Date', 'N/A')
@@ -67,7 +67,10 @@ def format_transaction_log(transactions: List[dict]) -> str:
         qty = tx.get('Quantity', 0)
         price = tx.get('Price', 0)
         lines.append(f"- {date}: {action} {qty} @ ${price:,.2f}")
-    
+
+    if total_count > len(transactions):
+        lines.append(f"(showing {len(transactions)} most recent of {total_count})")
+
     return "\n".join(lines)
 
 import difflib
@@ -113,9 +116,14 @@ def write_thesis_updates(
             mgr.update_frontmatter(fm_updates)
             
             # 2. Update Triggers block
+            # current_weight_pct was removed from thesis frontmatter entirely
+            # (2026-07-29): it duplicated region:position_state and could not be
+            # kept in sync because update_triggers() only matches a standalone
+            # fenced ```yaml triggers block, which no active thesis file uses --
+            # triggers live inside the main frontmatter instead. The region is
+            # the sole source of truth for current weight now.
             trig_updates = {
                 "style_size_ceiling_pct": p.size_ceiling_pct,
-                "current_weight_pct": p.current_allocation_pct
             }
             mgr.update_triggers(trig_updates)
             
@@ -132,7 +140,10 @@ def write_thesis_updates(
             mgr.replace_region("sizing", sizing_content)
             
             # Transaction Log
-            mgr.replace_region("transaction_log", format_transaction_log(p.transactions))
+            mgr.replace_region(
+                "transaction_log",
+                format_transaction_log(p.transactions, p.transactions_total_count),
+            )
             
             # Realized G/L
             mgr.replace_region("realized_gl", format_realized_summary(p.realized_gl))

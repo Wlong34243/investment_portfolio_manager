@@ -3,8 +3,8 @@ ticker: GOOG
 style: GARP
 framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: '2026-07-27'
-current_allocation: 5.54%
+last_reviewed: '2026-07-31'
+current_allocation: 5.77%
 cost_basis: 26733.42
 time_horizon: 3 to 5 years
 triggers:
@@ -17,7 +17,6 @@ triggers:
   revenue_growth_floor_pct: 8
   operating_margin_floor_pct:
   style_size_ceiling_pct: 9.0
-  current_weight_pct: 5.29
 drawdown_tolerance_pct: 0.30
 panic_buy_trigger_drawdown_pct: 0.20
 ---
@@ -70,26 +69,29 @@ I will exit or sharply reduce only on **structural** breaks:
 4. Gemini visibly falling behind peer frontier models for 2+ consecutive product cycles.
 5. A clearly superior risk-adjusted opportunity that justifies the tax cost of exiting.
 
-## Scaling State & Priority
+## Scaling State
 
 - Next step: **hold through Google I/O 2026 and into April 2027 for LT conversion**, then re-evaluate.
 - Add bias: on >20% drawdown driven by sentiment, not structural news.
 - Trim bias: only above $450 or on hard-exit trigger.
+
+## Rotation Priority
+
 - Rotation priority: very low.
 
 <!-- region:position_state -->
-**Current Allocation:** 5.54%
+**Current Allocation:** 5.77%
 **Cost Basis:** $26,733.42
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** GARP
 **Size Ceiling:** 9.00%
-**Drift:** -3.46%
+**Drift:** -3.23%
 <!-- endregion:sizing -->
 
 <!-- region:change_log -->
-2026-07-27 08:36: Auto-sync allocation 5.54%, drift -3.46%
+2026-07-31 08:23: Auto-sync allocation 5.77%, drift -3.23%
 <!-- endregion:change_log -->
 
 <!-- region:transaction_log -->
@@ -98,6 +100,14 @@ I will exit or sharply reduce only on **structural** breaks:
 - 2026-06-15: Buy 0.0389 @ $368.85
 - 2026-06-02: Buy 6.0 @ $358.19
 - 2026-05-26: Buy 5.0 @ $382.40
+- 2026-05-11: Sell -5.0 @ $392.79
+- 2026-05-11: Sell -5.0 @ $392.79
+- 2026-05-08: Sell -7.0 @ $393.73
+- 2026-05-08: Sell -3.0 @ $393.73
+- 2026-03-16: Buy 0.0622 @ $304.52
+- 2025-12-15: Buy 0.0816 @ $309.05
+- 2025-09-15: Buy 0.1343 @ $250.24
+- 2025-06-16: Buy 0.0737 @ $177.26
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->

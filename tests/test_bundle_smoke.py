@@ -165,6 +165,83 @@ def test_auto_raises_when_schwab_fails_and_no_csv(
         )
 
 
+# --- CSV fallback path smoke coverage ---
+#
+# The CSV parser is the disaster-recovery path for when the Schwab API is
+# unavailable. An AttributeError on config.ETF_KEYWORDS reached runtime
+# uncaught (fixed reactively by defining the constant in config.py) precisely
+# because this path had no smoke coverage of its own -- only exercised
+# indirectly through core.bundle's CSV-source tests above, which don't touch
+# get_sector_fast()/find_account_sections() directly.
+
+def test_csv_parser_imports_and_constants_resolve():
+    """utils/csv_parser.py must import cleanly, and every module-level
+    config.* constant it references must resolve -- this is exactly the
+    AttributeError class of bug (config.ETF_KEYWORDS) that reached runtime
+    uncaught."""
+    import config
+    from utils import csv_parser  # noqa: F401 - import must not raise
+
+    for name in ("ACCOUNT_SECTION_PATTERNS", "ETF_KEYWORDS", "CASH_TICKERS", "DEFAULT_CASH_YIELD_PCT"):
+        assert hasattr(config, name), f"config.{name} referenced by csv_parser.py but not defined"
+
+
+def test_csv_parser_fixture_returns_populated_positions():
+    """A parse run against an existing repo fixture must return positions
+    with ticker/market_value/cost_basis populated -- no new test data."""
+    from utils.csv_parser import parse_schwab_csv
+
+    sample_csv = _find_sample_csv()
+    if sample_csv is None:
+        pytest.skip("No Schwab positions CSV found in repo root")
+
+    df = parse_schwab_csv(sample_csv.read_bytes())
+
+    assert not df.empty, "parser must return at least one position"
+    for col in ("ticker", "market_value", "cost_basis"):
+        assert col in df.columns, f"missing column: {col}"
+    assert df["ticker"].notna().all()
+    assert (df["market_value"] > 0).any(), "at least one position must carry a positive market value"
+
+
+def test_csv_parser_aggregates_multi_account_positions():
+    """The same ticker held in multiple accounts must be summed, not
+    duplicated -- find_account_sections()'s reason for existing.
+    All-Accounts-Positions-2026-04-07-113205.csv holds AMD in three accounts
+    (10 + 8 + 27 shares); the aggregated row must total 45."""
+    from utils.csv_parser import parse_schwab_csv
+
+    root = Path(__file__).parent.parent
+    fixture = root / "All-Accounts-Positions-2026-04-07-113205.csv"
+    if not fixture.exists():
+        pytest.skip("Expected multi-account fixture not present")
+
+    df = parse_schwab_csv(fixture.read_bytes())
+    amd_rows = df[df["ticker"] == "AMD"]
+
+    assert len(amd_rows) == 1, "multi-account AMD must aggregate to a single row, not one per account"
+    assert amd_rows.iloc[0]["quantity"] == pytest.approx(45.0)
+
+
+def test_csv_parser_preserves_fractional_shares():
+    """Fractional share quantities must never be rounded (the parser's own
+    stated invariant). Same fixture: GOOG is split 10 + 90.2781 shares across
+    two accounts, aggregating to 100.2781 -- rounding either the per-account
+    or the aggregated quantity would silently misstate the position."""
+    from utils.csv_parser import parse_schwab_csv
+
+    root = Path(__file__).parent.parent
+    fixture = root / "All-Accounts-Positions-2026-04-07-113205.csv"
+    if not fixture.exists():
+        pytest.skip("Expected multi-account fixture not present")
+
+    df = parse_schwab_csv(fixture.read_bytes())
+    goog_rows = df[df["ticker"] == "GOOG"]
+
+    assert len(goog_rows) == 1
+    assert goog_rows.iloc[0]["quantity"] == pytest.approx(100.2781)
+
+
 def test_schwab_path_sets_data_source(monkeypatch, tmp_path):
     '''
     When the Schwab path is taken, the bundle's data_source field
@@ -189,7 +266,7 @@ def test_schwab_path_sets_data_source(monkeypatch, tmp_path):
                 "tax_treatment": "taxable",
             }
         ])
-        return df, "abc1234567890def", []
+        return df, "abc1234567890def", [], []
 
     monkeypatch.setattr("core.bundle._build_from_schwab", fake_schwab)
 

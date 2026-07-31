@@ -17,7 +17,6 @@ triggers:
   revenue_growth_floor_pct: 15         # High growth expectation for autonomous segment
   operating_margin_floor_pct: null
   style_size_ceiling_pct: 6.0         # Current sizing is at the personal ceiling for this style
-  current_weight_pct: 6.0
 ---
 # KTOS — Investment Thesis
 
@@ -79,7 +78,6 @@ triggers:
   
       # Position management
   style_size_ceiling_pct: 0.0
-  current_weight_pct: 0.2701673544166237
 ```
 
 <!-- region:position_state -->

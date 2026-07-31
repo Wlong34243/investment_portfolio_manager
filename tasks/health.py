@@ -14,8 +14,10 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import sys
 import time as _time
+import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
@@ -616,3 +618,66 @@ def exit_code(results: list[CheckResult]) -> int:
     if has_any_fail_or_warn:
         return 2
     return 0
+
+
+# ---------------------------------------------------------------------------
+# Health-failure sentinel
+#
+# A critical health failure in an unattended run (Task Scheduler / cron) used
+# to print to a log file nobody reads and then just... stop. The next two
+# scheduled runs proceeded once the token was manually fixed, but nothing
+# ever recorded that a gap had happened, so a stale bundle looked identical
+# to a fresh one to anyone not reading logs by hand. This sentinel makes that
+# gap a file on disk instead of a log line: present means "the last attempt
+# hit a critical failure and nothing has succeeded since."
+# ---------------------------------------------------------------------------
+
+HEALTH_SENTINEL_PATH = Path("logs") / "HEALTH_FAILURE.flag"
+
+
+def write_failure_sentinel(results: list[CheckResult]) -> Path:
+    """Record a critical health failure to a sentinel file. Overwrites any
+    prior sentinel (a fresh failure supersedes the last one, it doesn't
+    stack).
+
+    Includes a run_id (PID + uuid4) so that if two morning runs ever
+    overlap (a scheduled run and a manual one), whichever run clears the
+    sentinel can be told apart from whichever run wrote it -- Gemini's
+    2026-07-29 review flagged the bare-flag version of this as a race
+    (one run's success deleting a flag a concurrent run just raised, or
+    vice versa). The run_id alone doesn't prevent the race -- see the
+    pipeline lock in manager.py's morning() -- but it makes the sentinel
+    self-describing if the lock is ever bypassed."""
+    failing = [r for r in results if r.level == CRITICAL and r.status == FAIL]
+    HEALTH_SENTINEL_PATH.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "run_id": f"{os.getpid()}-{uuid.uuid4().hex[:8]}",
+        "timestamp_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "failing_checks": [
+            {"name": r.name, "label": r.label, "detail": r.detail} for r in failing
+        ],
+        "remediation": "python manager.py login  (or schwab_emergency_reauth.bat), then re-run morning",
+    }
+    HEALTH_SENTINEL_PATH.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    return HEALTH_SENTINEL_PATH
+
+
+def clear_failure_sentinel() -> bool:
+    """Delete the sentinel if present. Returns True if a sentinel was cleared."""
+    if HEALTH_SENTINEL_PATH.exists():
+        HEALTH_SENTINEL_PATH.unlink()
+        return True
+    return False
+
+
+def read_failure_sentinel() -> dict | None:
+    """Return the sentinel payload if a health failure is currently flagged,
+    else None. Used by downstream consumers (dashboard footer, AI briefing
+    export) to render/disclose degraded state instead of silently looking
+    fresh."""
+    if not HEALTH_SENTINEL_PATH.exists():
+        return None
+    try:
+        return json.loads(HEALTH_SENTINEL_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None

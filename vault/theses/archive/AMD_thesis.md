@@ -17,7 +17,6 @@ triggers:
   revenue_growth_floor_pct: 15       # still want mid-teens+ given AI ramp
   operating_margin_floor_pct:        # watch DC segment margins and mix
   style_size_ceiling_pct: 4.0        # high beta / dual-front-competition risk
-  current_weight_pct: 2.2
 ---
 # AMD — Investment Thesis
 

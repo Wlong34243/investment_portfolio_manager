@@ -12,13 +12,14 @@ Usage:
     python manager.py bundle composite
 """
 
+import atexit
 import json
 import subprocess
 import time
 import sys
 import os
 import re
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from pathlib import Path
 from typing import Optional, List
 
@@ -339,6 +340,52 @@ def journal_rotation(
             console.print(f"[red]ERROR: Failed to write to Sheet: {e}[/]")
             raise typer.Exit(code=1)
 
+_PIPELINE_LOCK_PATH = Path("logs") / "pipeline.lock"
+_STALE_LOCK_HOURS = 3  # a hung run this old is treated as dead, not blocking
+
+
+def _acquire_pipeline_lock():
+    """Refuse to start a second `morning` run while one is already in
+    progress. Gemini's 2026-07-29 review of the health-sentinel design
+    flagged that a scheduled run and a manual run overlapping could race on
+    logs/HEALTH_FAILURE.flag (one run's success deleting a flag the other
+    just raised, or vice versa) -- serializing the whole pipeline here is
+    the simpler fix, versus trying to make the sentinel itself concurrency-safe.
+    Released automatically at process exit via atexit, so it doesn't require
+    wrapping this large function in try/finally."""
+    _PIPELINE_LOCK_PATH.parent.mkdir(parents=True, exist_ok=True)
+    if _PIPELINE_LOCK_PATH.exists():
+        age_hours = (time.time() - _PIPELINE_LOCK_PATH.stat().st_mtime) / 3600
+        if age_hours < _STALE_LOCK_HOURS:
+            try:
+                holder = _PIPELINE_LOCK_PATH.read_text(encoding="utf-8").strip()
+            except OSError:
+                holder = "unknown"
+            console.print(
+                f"[red]Another `morning` run appears to be in progress ({holder}, "
+                f"{age_hours * 60:.0f}m old). Refusing to start a second one -- if that "
+                f"run is dead, delete {_PIPELINE_LOCK_PATH} and retry.[/]"
+            )
+            raise typer.Exit(code=1)
+        console.print(
+            f"[yellow]Stale {_PIPELINE_LOCK_PATH} ({age_hours:.1f}h old) -- treating the "
+            "prior run as dead and taking over.[/]"
+        )
+
+    _PIPELINE_LOCK_PATH.write_text(
+        f"pid={os.getpid()} started={datetime.now().isoformat()}", encoding="utf-8"
+    )
+
+    def _release():
+        try:
+            if _PIPELINE_LOCK_PATH.exists():
+                _PIPELINE_LOCK_PATH.unlink()
+        except OSError:
+            pass
+
+    atexit.register(_release)
+
+
 def run_health_report(verbose: bool = False):
     """Execution logic for health checks, returns exit code."""
     from tasks.health import run_all_checks, exit_code, CRITICAL, WARNING, PASS, WARN, FAIL
@@ -394,7 +441,7 @@ def run_health_report(verbose: bool = False):
         summary_parts.append(f"[red]{n_fail} failed[/red]")
     console.print("  ".join(summary_parts))
     console.print()
-    return exit_code(results)
+    return exit_code(results), results
 
 
 @app.command()
@@ -405,7 +452,7 @@ def health(
     Run pipeline health checks — Schwab tokens, API connectivity, Sheet, bundle age,
     FMP cache coverage, yfinance, transactions freshness, thesis coverage.
     """
-    code = run_health_report(verbose=verbose)
+    code, _results = run_health_report(verbose=verbose)
     raise typer.Exit(code=code)
 
 
@@ -509,7 +556,8 @@ def vault_sync(
     ticker: str = typer.Option(None, "--ticker"),
     live: bool = typer.Option(False, "--live"),
     force: bool = typer.Option(False, "--force"),
-    show_diff: bool = typer.Option(False, "--show-diff")
+    show_diff: bool = typer.Option(False, "--show-diff"),
+    txn_limit: int = typer.Option(None, "--txn-limit", help="Max transactions per position in the thesis transaction log (default from config.THESIS_TXN_LOG_LIMIT)."),
 ):
     """Sync Sheets data into thesis files."""
     from core.thesis_sync_data import gather_thesis_sync_data
@@ -517,7 +565,7 @@ def vault_sync(
 
     with console.status("[cyan]Gathering sync data..."):
         tickers = [ticker.upper()] if ticker else None
-        payloads = gather_thesis_sync_data(tickers=tickers)
+        payloads = gather_thesis_sync_data(tickers=tickers, txn_limit=txn_limit)
 
     if not payloads:
         console.print("[yellow]No data found.[/]")
@@ -916,6 +964,141 @@ See attached context.json.
     console.print(f"\nNext: paste [bold]prompt.md[/] into your LLM, attach [bold]context.json[/].")
 
 
+@clean_app.command("theses")
+def clean_theses(
+    live: bool = typer.Option(False, "--live", help="Archive orphan thesis files. Default: DRY RUN."),
+    min_age_days: int = typer.Option(
+        7, "--min-age-days",
+        help="Fallback freshness guard used only if Holdings_Current's Import Date can't be read.",
+    ),
+):
+    """
+    Detect thesis files under vault/theses/*.md for tickers no longer held,
+    and move them to vault/theses/archive/.
+
+    A position bought between Schwab syncs is, by definition, absent from
+    Holdings_Current -- so without a freshness guard this command archives
+    the thesis for a position that was just opened (see SKHY, 2026-07-29).
+    A thesis is skipped, not archived, when its frontmatter entry_date or
+    its file mtime is on or after the Holdings_Current refresh date.
+    """
+    from utils.sheet_readers import get_gspread_client, read_gsheet_robust
+    import shutil
+
+    # Get current held tickers
+    held_tickers = set()
+    refresh_date = None
+    try:
+        client = get_gspread_client()
+        ss = client.open_by_key(config.PORTFOLIO_SHEET_ID)
+        ws = ss.worksheet(config.TAB_HOLDINGS_CURRENT)
+        df_h = read_gsheet_robust(ws)
+        if not df_h.empty:
+            # "Import Date" is stamped on every row by the same sync that
+            # writes Holdings_Current itself -- the closest thing this sheet
+            # has to a refresh footer.
+            if "Import Date" in df_h.columns:
+                import_dates = []
+                for raw in df_h["Import Date"].dropna().astype(str):
+                    raw = raw.strip()[:10]
+                    try:
+                        import_dates.append(datetime.strptime(raw, "%Y-%m-%d").date())
+                    except ValueError:
+                        continue
+                if import_dates:
+                    refresh_date = max(import_dates)
+            df_h = df_h[~df_h["Ticker"].astype(str).isin(config.CASH_TICKERS)]
+            held_tickers = set(df_h["Ticker"].astype(str).str.strip().str.upper())
+    except Exception as e:
+        console.print(f"[yellow]Could not query live sheet for held tickers: {e}. Falling back to latest bundle.[/]")
+        try:
+            candidates = sorted(Path("bundles").glob("context_bundle_*.json"), key=lambda p: p.stat().st_mtime)
+            if candidates:
+                with open(candidates[-1], "r", encoding="utf-8") as fh:
+                    data = json.load(fh)
+                held_tickers = {p["ticker"].strip().upper() for p in data.get("positions", []) if not p.get("is_cash")}
+        except Exception as e2:
+            console.print(f"[red]Failed to fetch held tickers: {e2}[/]")
+            raise typer.Exit(code=1)
+
+    if not held_tickers:
+        console.print("[red]No held tickers found. Aborting safety check to avoid deleting everything.[/]")
+        raise typer.Exit(code=1)
+
+    if refresh_date is not None:
+        cutoff_date = refresh_date
+        cutoff_label = f"Holdings_Current refresh ({refresh_date.isoformat()})"
+    else:
+        cutoff_date = date.today() - timedelta(days=min_age_days)
+        cutoff_label = f"--min-age-days={min_age_days} cutoff ({cutoff_date.isoformat()})"
+        console.print(
+            f"[yellow]Could not read Holdings_Current's Import Date -- falling back to {cutoff_label}.[/]"
+        )
+
+    # Scan theses dir
+    theses_dir = Path("vault/theses")
+    archive_dir = theses_dir / "archive"
+    archive_dir.mkdir(parents=True, exist_ok=True)
+
+    theses_files = list(theses_dir.glob("*_thesis.md"))
+    orphans = []
+    skipped = []
+    for tf in theses_files:
+        ticker = tf.stem.replace("_thesis", "").upper()
+        if ticker in held_tickers:
+            continue
+
+        entry_date = None
+        try:
+            raw = tf.read_text(encoding="utf-8")
+            m = re.search(r"^entry_date:\s*['\"]?(\d{4}-\d{2}-\d{2})", raw, re.MULTILINE)
+            if m:
+                entry_date = datetime.strptime(m.group(1), "%Y-%m-%d").date()
+        except Exception:
+            pass
+        mtime_date = datetime.fromtimestamp(tf.stat().st_mtime).date()
+
+        if (entry_date is not None and entry_date >= cutoff_date) or mtime_date >= cutoff_date:
+            skipped.append((ticker, tf))
+            continue
+
+        orphans.append((ticker, tf))
+
+    if skipped:
+        for ticker, tf in sorted(skipped):
+            console.print(
+                f"[yellow]SKIPPED {ticker}: thesis newer than {cutoff_label} -- "
+                "position may not have synced yet.[/]"
+            )
+
+    if not orphans:
+        console.print("[green]No orphan thesis files to archive.[/]")
+        return
+
+    mode = "LIVE" if live else "DRY RUN"
+    console.print(f"[bold cyan]Orphan Thesis Archiving — {mode}[/]")
+    console.print(f"Found {len(orphans)} orphan thesis file(s):")
+    for ticker, tf in sorted(orphans):
+        console.print(f"  - {ticker} ({tf.name})")
+
+    if not live:
+        console.print("[yellow]\nDRY RUN — no files moved. Re-run with --live to archive these files.[/]")
+        return
+
+    # Perform move in live mode
+    moved_count = 0
+    for ticker, tf in orphans:
+        dest = archive_dir / tf.name
+        try:
+            shutil.move(str(tf), str(dest))
+            console.print(f"  [green]Archived:[/] {tf.name} -> {dest}")
+            moved_count += 1
+        except Exception as e:
+            console.print(f"  [red]Failed to archive {tf.name}: {e}[/]")
+
+    console.print(f"\n[bold green]SUCCESS:[/] Archived {moved_count} orphan thesis file(s).")
+
+
 @clean_app.command("exports")
 @export_app.command("cleanup")
 def export_cleanup(
@@ -1121,6 +1304,7 @@ def morning(
     """
     Run the full market-open pipeline: health -> Schwab sync -> snapshot -> podcast sync -> dashboard refresh -> vault sync -> composite bundle -> AI briefing export.
     """
+    _acquire_pipeline_lock()
     from tasks.health import run_all_checks, exit_code as health_exit_code, CRITICAL, FAIL, WARN, PASS
     from tasks.build_valuation_card import main as build_val
     from tasks.build_decision_view import main as build_dec
@@ -1131,6 +1315,7 @@ def morning(
     
     start_time = time.time()
     mode_label = "LIVE" if live else "DRY RUN"
+
     step_results = []
     snapshot_ok = False
     tx_ok = False
@@ -1139,12 +1324,29 @@ def morning(
     # 1. Health Check
     if not skip_health:
         console.print("\n[bold cyan]STEP 0 - Health Check[/]")
-        code = run_health_report()
-        
+        code, health_results = run_health_report()
+        from tasks.health import write_failure_sentinel, clear_failure_sentinel
+
         # Determine worst status from the report
         if code == 1:
             step_results.append(("Health", "fail"))
             console.print(Panel("[bold red]Cannot proceed — Critical health failures detected.[/]", style="red"))
+            if not sys.stdin.isatty():
+                # Unattended run (Task Scheduler / cron): never block on an
+                # interactive prompt. Fail fast with a clear log line instead
+                # -- and, unlike before, leave a sentinel on disk so the next
+                # run (or anything reading exports/) knows a gap happened
+                # instead of everyone finding out by reading the log by hand.
+                sentinel_path = write_failure_sentinel(health_results)
+                console.print(
+                    "[red]UNATTENDED RUN: critical health failure — skipping interactive "
+                    "reauth prompt. Fix manually: `python manager.py login` or "
+                    "schwab_emergency_reauth.bat, then re-run morning.[/]\n"
+                    f"[red]Wrote {sentinel_path} — cleared automatically on the next run "
+                    "that passes health.[/]"
+                )
+                _morning_summary(console, mode_label, step_results, tx_ok, snapshot_ok, tax_refreshed, skip_tax, start_time)
+                raise typer.Exit(code=1)
             from rich.prompt import Confirm
             if Confirm.ask("Would you like to run the Schwab reauthentication script now?"):
                 subprocess.run([sys.executable, "scripts/schwab_manual_reauth.py"])
@@ -1153,12 +1355,15 @@ def morning(
             raise typer.Exit(code=1)
         elif code == 2:
             step_results.append(("Health", "warn"))
+            clear_failure_sentinel()  # no critical failure this run -- any prior gap is over
             if not continue_on_warning:
                 console.print(Panel("[bold yellow]Health warnings detected — halting (--strict mode).[/]", style="yellow"))
                 _morning_summary(console, mode_label, step_results, tx_ok, snapshot_ok, tax_refreshed, skip_tax, start_time)
                 raise typer.Exit(code=2)
         else:
             step_results.append(("Health", "pass"))
+            if clear_failure_sentinel():
+                console.print("[green]Cleared logs/HEALTH_FAILURE.flag — health is back to green.[/]")
     else:
         step_results.append(("Health", "skip"))
 
@@ -1389,6 +1594,32 @@ def morning(
             step_results.append(("AI Briefing", "fail"))
     else:
         step_results.append(("AI Briefing", "skip"))
+
+    # 11. Derive Rotations (Writes Trade_Log_Staging if live)
+    console.print("\n[bold cyan]STEP 10 - Deriving Candidate Rotations...[/]")
+    try:
+        from tasks.derive_rotations import _read_transactions, derive_clusters, write_staging
+        # Look back 90 days (default lookback)
+        lookback_since = date.today() - timedelta(days=90)
+        df_rot = _read_transactions(since=lookback_since, until=date.today())
+        if df_rot.empty:
+            console.print("[yellow]No transactions found in lookback window.[/]")
+            step_results.append(("Derive Rotations", "pass"))
+        else:
+            clusters = derive_clusters(df_rot, window_days=1)
+            if not clusters:
+                console.print("[yellow]No candidate rotations derived.[/]")
+                step_results.append(("Derive Rotations", "pass"))
+            else:
+                n_written = write_staging(clusters, dry_run=not live, dry_run_verify=False)
+                if live:
+                    console.print(f"[green]Successfully derived {len(clusters)} candidate rotations. Wrote {n_written} new rows to Trade_Log_Staging.[/]")
+                else:
+                    console.print(f"[yellow]DRY RUN: Derived {len(clusters)} candidate rotations. Run with --live to write to Trade_Log_Staging.[/]")
+                step_results.append(("Derive Rotations", "pass"))
+    except Exception as e:
+        console.print(f"[red]Derive rotations failed: {e}[/]")
+        step_results.append(("Derive Rotations", "fail"))
 
     _morning_summary(console, mode_label, step_results, tx_ok, snapshot_ok, tax_refreshed, skip_tax, start_time)
 

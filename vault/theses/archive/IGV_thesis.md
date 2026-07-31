@@ -17,7 +17,6 @@ triggers:
   revenue_growth_floor_pct:       # focus on holdings' growth & margins, not ETF revenue
   operating_margin_floor_pct:
   style_size_ceiling_pct: 5.0     # cap SaaS basket size; rest handled via core names (MSFT, etc.)
-  current_weight_pct: 3.0
 ---
 # IGV — Investment Thesis
 

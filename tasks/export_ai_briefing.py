@@ -198,6 +198,21 @@ which file doesn't say so yet.
 """
 
 
+def _level_coverage():
+    """Import lazily so a missing utils/level_coverage.py degrades to None
+    rather than crashing the whole export. This module is run as a script
+    (python tasks/export_ai_briefing.py), so sys.path[0] is tasks/, not the
+    repo root -- same fix as build_lookthrough()'s utils/etf_holdings import."""
+    repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if repo_root not in sys.path:
+        sys.path.insert(0, repo_root)
+    try:
+        from utils.level_coverage import compute_level_coverage
+        return compute_level_coverage
+    except ImportError:
+        return None
+
+
 def find_newest_bundle():
     candidates = glob.glob(os.path.join("bundles", "composite_bundle_*.json"))
     if not candidates:
@@ -680,6 +695,15 @@ def extract_section(body, heading):
     return m.group(1).strip()
 
 
+def extract_section_any(body, headings):
+    """Try each heading spelling in order, return the first section found."""
+    for heading in headings:
+        section = extract_section(body, heading)
+        if section is not None:
+            return section, heading
+    return None, None
+
+
 def first_paragraph(section_text):
     if not section_text:
         return None
@@ -688,20 +712,114 @@ def first_paragraph(section_text):
 
 
 def extract_key_value(section_text, key):
+    """Pull a `key: value` line out of a section.
+
+    Tolerant of a leading list marker (`-`/`*`), bold wrapping around the
+    label (`**Next step:**`), a `_`/` ` separator (`next_step` or
+    `Next step`), and case. Only the label is normalized -- whatever markdown
+    the value itself carries is returned untouched, matching the pre-fix
+    behavior for plain `key: value` lines.
+    """
     if not section_text:
         return None
-    m = re.search(r"^" + re.escape(key) + r":\s*(.*)$", section_text, re.MULTILINE)
-    if not m:
+    key_variant = key.replace("_", "[ _]")
+    label_pattern = re.compile(r"^(?:" + key_variant + r")\s*:\s*(.*)$", re.IGNORECASE)
+    for raw_line in section_text.splitlines():
+        line = raw_line.strip()
+        line = re.sub(r"^[-*]\s+", "", line)
+        line = re.sub(r"^\*\*([^*]+?)\*\*", r"\1", line)
+        m = label_pattern.match(line)
+        if m:
+            value = m.group(1).strip()
+            if value:
+                return value
+    return None
+
+
+def extract_state_field(body, heading, key):
+    """Resolve a `key:`-style field (Scaling State/next_step, Rotation
+    Priority/priority) with a three-way disclosure state instead of a single
+    silent '(missing)'.
+
+    Returns (display_value, state) where state is one of:
+      "ok"     - key found, value used as-is
+      "prose"  - key not found but the section has prose; first paragraph
+                 used as a fallback value, tagged so it's visibly a fallback
+      "empty"  - section exists but has no usable content
+      "absent" - the heading itself is not present in the file
+    """
+    section = extract_section(body, heading)
+    if section is None:
+        return "(missing)", "absent"
+    if not section.strip():
+        return "(missing)", "empty"
+    value = extract_key_value(section, key)
+    if value:
+        return value, "ok"
+    prose = first_paragraph(section)
+    if prose:
+        return "(prose) " + prose, "prose"
+    return "(missing)", "empty"
+
+
+def extract_recent_entries(body, heading, n):
+    """Last n top-level `- ` list entries from a section (oldest-first logs
+    like Review Log are written chronologically, so "most recent" is the
+    tail, not the head)."""
+    section = extract_section(body, heading)
+    if not section:
         return None
-    return m.group(1).strip()
+    entries, current = [], []
+    for line in section.splitlines():
+        if re.match(r"^- ", line):
+            if current:
+                entries.append("\n".join(current))
+            current = [line]
+        elif current:
+            current.append(line)
+    if current:
+        entries.append("\n".join(current))
+    if not entries:
+        return None
+    return entries[-n:]
 
 
-def build_theses_md(styles_path, held_tickers=None, issues=None):
+# Sections shipped in full at each --thesis-detail level. "minimal" ships
+# none of these (just the Core Thesis first paragraph, as before the
+# 2026-07-29 fix). "standard" is the default. "full" adds the context
+# sections that are informative but not drift-control inputs.
+STANDARD_FULL_SECTIONS = [
+    ("Key Risks", ["Key Risks"]),
+    ("Exit Conditions", ["Hard Exit Conditions", "Exit Conditions"]),
+]
+FULL_EXTRA_SECTIONS = [
+    ("Bull Case", ["Bull Case", "Bull Case Drivers"]),
+    ("Origin", ["Origin"]),
+    ("Why This Fits My Portfolio", ["Why This Fits My Portfolio"]),
+]
+REVIEW_LOG_RECENT_N = 3
+
+
+def _state_preflight_message(ticker, heading, key, state):
+    if state == "absent":
+        return "%s: no '## %s' section." % (ticker, heading)
+    if state == "prose":
+        return (
+            "%s: %s is prose, not '%s:' -- parsed by fallback, consider "
+            "normalizing." % (ticker, heading, key)
+        )
+    if state == "empty":
+        return "%s: '## %s' section is empty." % (ticker, heading)
+    return None
+
+
+def build_theses_md(styles_path, held_tickers=None, issues=None, detail="standard", provenance=None):
     lines = []
     held = set(held_tickers or [])
     issues = issues if issues is not None else []
     covered = set()
-    missing_scaling, missing_priority, markers_stripped = [], [], []
+    markers_stripped_by_ticker = {}
+    omitted_sections_seen = set()
 
     if os.path.exists(styles_path):
         with open(styles_path, "r", encoding="utf-8") as f:
@@ -719,6 +837,9 @@ def build_theses_md(styles_path, held_tickers=None, issues=None):
     else:
         lines.append("(styles.json not found)")
         lines.append("")
+
+    disclosure_placeholder_index = len(lines)
+    lines.append("")  # filled in after the loop, once omissions are known
 
     thesis_files = sorted(glob.glob(os.path.join("vault", "theses", "*_thesis.md")))
     for path in thesis_files:
@@ -742,33 +863,88 @@ def build_theses_md(styles_path, held_tickers=None, issues=None):
         style = fm.get("style", "(missing)")
         last_reviewed = fm.get("last_reviewed", "(missing)")
 
-        scaling_section = extract_section(body, "Scaling State")
-        next_step = extract_key_value(scaling_section, "next_step")
-        if next_step is None:
-            next_step = "(missing)"
-            missing_scaling.append(ticker)
+        next_step, scaling_state = extract_state_field(body, "Scaling State", "next_step")
+        msg = _state_preflight_message("%s" % ticker, "Scaling State", "next_step", scaling_state)
+        if msg:
+            issues.append(msg)
 
-        rotation_section = extract_section(body, "Rotation Priority")
-        priority = extract_key_value(rotation_section, "priority")
-        if priority is None:
-            priority = "(missing)"
-            missing_priority.append(ticker)
+        priority, priority_state = extract_state_field(body, "Rotation Priority", "priority")
+        msg = _state_preflight_message("%s" % ticker, "Rotation Priority", "priority", priority_state)
+        if msg:
+            issues.append(msg)
 
         core_section = extract_section(body, "Core Thesis")
-        core_para = first_paragraph(core_section)
-        if core_para is None:
-            core_para = "(missing)"
+        if core_section is None:
             issues.append("BLOCKING %s: no '## Core Thesis' section found." % ticker)
-        core_para, n_markers = strip_citation_markers(core_para)
+            core_full = "(missing)"
+        elif detail == "minimal":
+            core_full = first_paragraph(core_section) or "(missing)"
+        else:
+            core_full = core_section
+        core_full, n_markers = strip_citation_markers(core_full)
         if n_markers:
-            markers_stripped.append("%s(%d)" % (ticker, n_markers))
+            markers_stripped_by_ticker[ticker] = markers_stripped_by_ticker.get(ticker, 0) + n_markers
 
         lines.append(
             "### %s — style: %s | scaling: %s | priority: %s | reviewed: %s"
             % (ticker, style, next_step, priority, last_reviewed)
         )
-        lines.append(core_para)
+        lines.append("**Core Thesis**")
+        lines.append(core_full)
         lines.append("")
+
+        if detail in ("standard", "full"):
+            for label, heading_variants in STANDARD_FULL_SECTIONS:
+                section, _ = extract_section_any(body, heading_variants)
+                if section is None:
+                    continue
+                section, n = strip_citation_markers(section)
+                if n:
+                    markers_stripped_by_ticker[ticker] = markers_stripped_by_ticker.get(ticker, 0) + n
+                lines.append("**%s**" % label)
+                lines.append(section)
+                lines.append("")
+
+            lines.append("**Scaling State**")
+            lines.append(
+                extract_section(body, "Scaling State") or "(missing)"
+            )
+            lines.append("")
+
+            lines.append("**Rotation Priority**")
+            lines.append(
+                extract_section(body, "Rotation Priority") or "(missing)"
+            )
+            lines.append("")
+
+            recent_log = extract_recent_entries(body, "Review Log", REVIEW_LOG_RECENT_N)
+            if recent_log:
+                lines.append("**Review Log (%d most recent)**" % len(recent_log))
+                lines.append("\n".join(recent_log))
+                lines.append("")
+
+        if detail == "full":
+            for label, heading_variants in FULL_EXTRA_SECTIONS:
+                section, _ = extract_section_any(body, heading_variants)
+                if section:
+                    lines.append("**%s**" % label)
+                    lines.append(section)
+                    lines.append("")
+        elif detail == "standard":
+            for label, heading_variants in FULL_EXTRA_SECTIONS:
+                section, _ = extract_section_any(body, heading_variants)
+                if section:
+                    omitted_sections_seen.add(label)
+        # minimal: everything past the core paragraph is omitted
+        if detail == "minimal":
+            for label, heading_variants in STANDARD_FULL_SECTIONS + FULL_EXTRA_SECTIONS + [
+                ("Scaling State (full section)", ["Scaling State"]),
+                ("Rotation Priority (full section)", ["Rotation Priority"]),
+                ("Review Log", ["Review Log"]),
+            ]:
+                section, _ = extract_section_any(body, heading_variants)
+                if section:
+                    omitted_sections_seen.add(label)
 
         # Per-position transaction log. This lives in a <!-- region:transaction_log -->
         # block that strip_regions() used to delete before export, which left the
@@ -787,22 +963,25 @@ def build_theses_md(styles_path, held_tickers=None, issues=None):
         issues.append(
             "BLOCKING: held positions with no thesis file: %s" % ", ".join(uncovered)
         )
-    if missing_scaling:
-        issues.append(
-            "%d thesis files have no '## Scaling State' section, so drift checks "
-            "against scaling state are impossible for them: %s"
-            % (len(missing_scaling), ", ".join(sorted(missing_scaling)))
-        )
-    if missing_priority:
-        issues.append(
-            "%d thesis files have no '## Rotation Priority' section: %s"
-            % (len(missing_priority), ", ".join(sorted(missing_priority)))
-        )
-    if markers_stripped:
-        issues.append(
-            "Stripped [file:N]/[web:N] markers at export from: %s"
-            % ", ".join(sorted(markers_stripped))
-        )
+    if markers_stripped_by_ticker and provenance is not None:
+        provenance["stripped_markers"] = {t: n for t, n in sorted(markers_stripped_by_ticker.items())}
+
+    included = ["Core Thesis"]
+    if detail in ("standard", "full"):
+        included += ["Key Risks", "Exit Conditions", "Scaling State", "Rotation Priority",
+                     "Review Log (%d most recent)" % REVIEW_LOG_RECENT_N]
+    if detail == "full":
+        included += ["Bull Case", "Origin", "Why This Fits My Portfolio"]
+    omitted = sorted(omitted_sections_seen - set(included))
+    disclosure = (
+        "Sections included per position (--thesis-detail=%s): %s. "
+        "Sections omitted at export: %s. "
+        "Transaction logs show only the most recent entries per position (capped "
+        "by the vault sync writer) and are NOT complete position history; a "
+        "capped log states so inline as '(showing N most recent of M)'."
+        % (detail, ", ".join(included), ", ".join(omitted) if omitted else "(none)")
+    )
+    lines[disclosure_placeholder_index] = disclosure
 
     return to_ascii("\n".join(lines) + "\n")
 
@@ -831,6 +1010,19 @@ def main():
             "'off' skips the section."
         ),
     )
+    parser.add_argument(
+        "--thesis-detail",
+        choices=["full", "standard", "minimal"],
+        default="standard",
+        help=(
+            "How much of each thesis file to ship in theses.md. 'standard' "
+            "(default) ships Core Thesis, Key Risks, Exit Conditions, Scaling "
+            "State, Rotation Priority, and the 3 most recent Review Log entries. "
+            "'full' adds Bull Case/Origin/Why This Fits My Portfolio. 'minimal' "
+            "reproduces the pre-2026-07-29 behavior (Core Thesis first paragraph "
+            "only) for size-constrained runs."
+        ),
+    )
     args = parser.parse_args()
 
     bundle_path = find_newest_bundle()
@@ -849,6 +1041,7 @@ def main():
     os.makedirs(pkg_dir)
 
     issues = []
+    provenance = {}
     styles_path = os.path.join("data", "styles.json")
     styles = load_styles(styles_path)
     style_map = build_style_map()
@@ -856,11 +1049,19 @@ def main():
     positions = bundle.get("_market_data", {}).get("positions", [])
     held_tickers = {p.get("ticker") for p in positions if p.get("ticker")}
 
+    compute_level_coverage = _level_coverage()
+    level_coverage = (
+        compute_level_coverage(held_tickers - {"CASH_MANUAL"})
+        if compute_level_coverage else None
+    )
+
     portfolio_md = build_portfolio_md(
         bundle, style_map=style_map, styles=styles, lookthrough_mode=args.lookthrough
     )
     podcasts_md = build_podcasts_md(args.days)
-    theses_md = build_theses_md(styles_path, held_tickers=held_tickers, issues=issues)
+    theses_md = build_theses_md(
+        styles_path, held_tickers=held_tickers, issues=issues, detail=args.thesis_detail, provenance=provenance
+    )
     prompt_md = PROMPT_PAYLOAD.replace("{DATE}", now.strftime("%Y-%m-%d"))
 
     blocking = [i for i in issues if i.startswith("BLOCKING")]
@@ -876,7 +1077,28 @@ def main():
         )
         sys.exit(1)
 
+    # Prepend staleness banner if degraded health sentinel is present
+    from tasks.health import read_failure_sentinel
+    sentinel = read_failure_sentinel()
+    if sentinel:
+        banner = (
+            "=========================================================================\n"
+            "WARNING: PORTFOLIO DATA IS DEGRADED AND STALE (CRITICAL HEALTH FAILURE)\n"
+            f"Failing checks since (UTC): {sentinel.get('timestamp_utc', 'N/A')}\n"
+        )
+        for fc in sentinel.get("failing_checks", []):
+            banner += f"  - {fc.get('label', fc.get('name', 'Unknown'))}: {fc.get('detail', '')}\n"
+        banner += f"Remediation: {sentinel.get('remediation', 'N/A')}\n"
+        banner += "=========================================================================\n\n"
+        banner = to_ascii(banner)
+
+        portfolio_md = banner + portfolio_md
+        theses_md = banner + theses_md
+
     submit_me_md = "\n\n---\n\n".join([prompt_md, portfolio_md, podcasts_md, theses_md])
+    if sentinel:
+        # Prepend to the composite file too
+        submit_me_md = banner + submit_me_md
 
     file_map = {
         "prompt.md": prompt_md,
@@ -896,12 +1118,23 @@ def main():
         with open(path, "rb") as f:
             hashes[name] = hashlib.sha256(f.read()).hexdigest()
 
+    SIZE_WARN_BYTES = 250_000
+    if sizes.get("SUBMIT_ME.md", 0) > SIZE_WARN_BYTES:
+        print(
+            "WARNING: SUBMIT_ME.md is %d bytes (> %d byte guideline). Consider "
+            "--thesis-detail minimal or --lookthrough off for this run."
+            % (sizes["SUBMIT_ME.md"], SIZE_WARN_BYTES)
+        )
+
     manifest = {
         "composite_hash": bundle.get("composite_hash"),
         "bundle_path": bundle_path,
         "generated_at": now.strftime("%Y-%m-%dT%H:%M:%S"),
         "days_window": args.days,
         "days_window_applies_to": "podcast summaries only",
+        "thesis_detail": args.thesis_detail,
+        "level_coverage": level_coverage,
+        "provenance": provenance,
         "files": sizes,
         "file_sha256": hashes,
         "preflight_issues": issues,

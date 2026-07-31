@@ -3,8 +3,8 @@ ticker: UNH
 style: GARP
 framework_preference: lynch_garp_v1, psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: '2026-07-27'
-current_allocation: 3.21%
+last_reviewed: '2026-07-31'
+current_allocation: 3.20%
 cost_basis: 15643.57
 time_horizon: 1 to 3 years
 triggers:
@@ -17,7 +17,6 @@ triggers:
   revenue_growth_floor_pct: 5
   operating_margin_floor_pct:
   style_size_ceiling_pct: 5.0       # lowered from 7 — defensive but I no longer want it at 6%+ weight
-  current_weight_pct: 2.22
 drawdown_tolerance_pct: 0.25
 panic_buy_trigger_drawdown_pct: 0.20
 ---
@@ -77,21 +76,24 @@ At 2.22% the position is sub-scale. Two valid paths from here:
 3. Clear evidence of competitive moat erosion.
 4. Price reaches $380 with no thesis-improving news — close the residual.
 
-## Scaling State & Priority
+## Scaling State
 
 - Next step: **hold residual position; close above $380; rebuild only below $290 on clean pullback**.
-- Rotation priority: medium — eligible to close on further strength and redeploy to core ETFs.
 - Re-evaluate quarterly; full close-out by Q4 2026 if neither trim nor rebuild trigger fires.
 
+## Rotation Priority
+
+- Rotation priority: medium — eligible to close on further strength and redeploy to core ETFs.
+
 <!-- region:position_state -->
-**Current Allocation:** 3.21%
+**Current Allocation:** 3.20%
 **Cost Basis:** $15,643.57
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** GARP
 **Size Ceiling:** 9.00%
-**Drift:** -5.79%
+**Drift:** -5.80%
 <!-- endregion:sizing -->
 
 <!-- region:wash_sale_watch -->
@@ -99,7 +101,7 @@ At 2.22% the position is sub-scale. Two valid paths from here:
 <!-- endregion:wash_sale_watch -->
 
 <!-- region:change_log -->
-2026-07-27 08:36: Auto-sync allocation 3.21%, drift -5.79%
+2026-07-31 08:23: Auto-sync allocation 3.20%, drift -5.80%
 <!-- endregion:change_log -->
 
 <!-- region:transaction_log -->
@@ -108,6 +110,22 @@ At 2.22% the position is sub-scale. Two valid paths from here:
 - 2026-05-11: Sell -20.0 @ $380.99
 - 2026-04-24: Sell -10.0 @ $354.18
 - 2026-04-23: Sell -5.0 @ $354.30
+- 2026-04-16: Buy 10.0 @ $317.53
+- 2026-04-16: Buy 20.0 @ $317.00
+- 2026-04-10: Sell -25.0 @ $308.25
+- 2026-04-10: Sell -1.0 @ $305.20
+- 2026-04-09: Sell -5.0 @ $304.95
+- 2026-04-07: Sell -18.0 @ $304.11
+- 2026-04-07: Sell -8.0 @ $303.21
+- 2026-03-25: Buy 1.0 @ $268.47
+- 2026-03-25: Buy 4.0 @ $268.47
+- 2026-01-28: Buy 10.0 @ $290.88
+- 2026-01-27: Buy 10.0 @ $288.10
+- 2026-01-27: Buy 5.0 @ $288.54
+- 2026-01-26: Buy 5.0 @ $349.50
+- 2026-01-23: Buy 3.0 @ $355.04
+- 2026-01-23: Buy 10.0 @ $355.43
+(showing 20 most recent of 22)
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->

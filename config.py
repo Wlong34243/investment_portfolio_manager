@@ -63,6 +63,11 @@ THESES_DIR = VAULT_DIR / "theses"
 TRANSCRIPTS_DIR = VAULT_DIR / "transcripts"
 RESEARCH_DIR = VAULT_DIR / "research"
 
+# Max transactions kept in a thesis file's <!-- region:transaction_log -->
+# block. Default covers the current position for typical lot counts; override
+# per-run with `vault sync --txn-limit`.
+THESIS_TXN_LOG_LIMIT = int(os.getenv("THESIS_TXN_LOG_LIMIT", "20"))
+
 # ---------------------------------------------------------------------------
 # AI Model Configuration
 # ---------------------------------------------------------------------------
@@ -85,6 +90,21 @@ BETA_EXCLUDE     = ['CASH', 'Fixed Income', 'MMDA', 'REDEEMED', 'SGOV']
 
 # Backward compatibility / Aliases
 CASH_EQUIVALENT_TICKERS = CASH_TICKERS
+
+# ---------------------------------------------------------------------------
+# Issuer aliases for ETF look-through aggregation
+# ---------------------------------------------------------------------------
+# The look-through keys on ticker symbol, so the same issuer under two
+# symbols (a share class, or a direct US listing vs. the ETF-embedded
+# foreign listing) reports as two separate companies -- e.g. GOOG/GOOGL, or
+# SKHY (Nasdaq) vs. 000660.KS (KRX, held inside EMXC/VEA). Maps a symbol to
+# the canonical symbol it should be aggregated under. Hand-maintained by
+# design -- extend as dual listings actually get held; do not attempt
+# automated issuer resolution via a vendor.
+ISSUER_ALIASES = {
+    "GOOGL": "GOOG",
+    "SKHY": "000660.KS",
+}
 
 # ---------------------------------------------------------------------------
 # Valuation Agent Skips (Legacy - being replaced by VALUATION_SKIP)
@@ -442,6 +462,22 @@ BETA_EXCLUDE_TICKERS = {'CASH_MANUAL', 'QACDS', 'CASH & CASH INVESTMENTS', 'SGOV
 
 # Number of positions to enrich via yfinance (by market value, descending)
 TOP_N_ENRICH = 50
+
+# ---------------------------------------------------------------------------
+# ETF Sector Classification Keywords
+# ---------------------------------------------------------------------------
+ETF_KEYWORDS = {
+    "Technology": ["QQQ", "IGV", "XLK", "Technology", "Software", "Semiconductor"],
+    "Financials": ["XLF", "Financial", "Bank", "Insurance"],
+    "Healthcare": ["XLV", "Healthcare", "Biotech", "Medical", "Pharma"],
+    "Energy": ["XLE", "Energy", "Oil", "Gas", "Pipeline"],
+    "Materials": ["XLB", "Materials", "Gold", "Mining"],
+    "Utilities": ["XLU", "Utilities", "Power", "Water"],
+    "Real Estate": ["XLRE", "Real Estate", "REIT"],
+    "Industrials": ["XLI", "Industrials", "Defense", "Aerospace"],
+    "Consumer Discretionary": ["XLY", "Consumer Discretionary", "Retail"],
+    "Consumer Staples": ["XLP", "Consumer Staples", "Food", "Beverage"],
+}
 
 # ---------------------------------------------------------------------------
 # Ticker-specific Data Overrides (Manual Corrections)

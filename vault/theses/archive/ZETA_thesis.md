@@ -18,7 +18,6 @@ triggers:
   revenue_growth_floor_pct: 25      # this needs to be a hypergrowth story; below 25% the thesis breaks
   operating_margin_floor_pct:
   style_size_ceiling_pct: 2.0       # speculative single name — strict cap
-  current_weight_pct: 1.23
 drawdown_tolerance_pct: 0.50        # this is a speculative AI play; 50% drawdowns are within range
 panic_buy_trigger_drawdown_pct: 0.35
 ---

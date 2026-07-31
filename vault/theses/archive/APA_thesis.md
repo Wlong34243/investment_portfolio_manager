@@ -17,7 +17,6 @@ triggers:
   revenue_growth_floor_pct:         # commodity-price-driven; revenue growth is less meaningful than FCF/bbl
   operating_margin_floor_pct:
   style_size_ceiling_pct: 3.0
-  current_weight_pct:
 drawdown_tolerance_pct: 0.40        # commodity E&P; high volatility is the price of admission
 panic_buy_trigger_drawdown_pct: 0.30
 ---

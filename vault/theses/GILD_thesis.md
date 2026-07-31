@@ -3,8 +3,8 @@ ticker: GILD
 style: FUND
 framework_preference: lynch_garp_v1
 entry_date: 2026-05-03
-last_reviewed: '2026-07-27'
-current_allocation: 2.06%
+last_reviewed: '2026-07-31'
+current_allocation: 2.07%
 cost_basis: 12374.9
 time_horizon: 3 to 5 years
 triggers:
@@ -17,7 +17,6 @@ triggers:
   revenue_growth_floor_pct: 2       # HIV is mature but durable; flat to low single digit is acceptable
   operating_margin_floor_pct: 35
   style_size_ceiling_pct: 5.0
-  current_weight_pct:
 drawdown_tolerance_pct: 0.25
 panic_buy_trigger_drawdown_pct: 0.15
 ---
@@ -57,20 +56,21 @@ Cost basis: ~$4,573 total. GILD entered during a period of uncertainty around th
 3. A cheaper, superior oral HIV regimen from a competitor achieves meaningful formulary access at the expense of Biktarvy or Sunlenca.
 4. Lenacapavir for PrEP fails FDA approval and Trodelvy shows no label expansion progress — removing both near-term catalysts simultaneously.
 
-## Scaling State & Priority
+## Scaling State
+next_step: hold; add on weakness below $90 if HIV franchise metrics are intact
 
-- Next step: hold at current 0.67%; add on weakness below $90 if HIV franchise metrics are intact.
-- Rotation priority: low; this is a slow-moving income-plus-optionality position.
+## Rotation Priority
+priority: low -- this is a slow-moving income-plus-optionality position
 
 <!-- region:position_state -->
-**Current Allocation:** 2.06%
+**Current Allocation:** 2.07%
 **Cost Basis:** $12,374.90
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** FUND
 **Size Ceiling:** 5.00%
-**Drift:** -2.94%
+**Drift:** -2.93%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -79,6 +79,10 @@ Cost basis: ~$4,573 total. GILD entered during a period of uncertainty around th
 - 2026-05-04: Buy 10.0 @ $132.82
 - 2026-05-04: Buy 7.0 @ $132.56
 - 2026-05-04: Buy 7.0 @ $132.07
+- 2026-05-04: Buy 10.0 @ $132.53
+- 2026-05-01: Buy 10.0 @ $130.68
+- 2026-05-01: Buy 10.0 @ $130.57
+- 2026-05-01: Buy 15.0 @ $130.71
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
@@ -86,5 +90,5 @@ No realized G/L history.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-27 08:36: Auto-sync allocation 2.06%, drift -2.94%
+2026-07-31 08:23: Auto-sync allocation 2.07%, drift -2.93%
 <!-- endregion:change_log -->

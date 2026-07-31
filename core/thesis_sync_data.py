@@ -23,15 +23,22 @@ class TickerSyncPayload(BaseModel):
     cost_basis: float
     last_reviewed: str
     transactions: List[dict] = []
+    transactions_total_count: int = 0
     realized_gl: List[dict] = []
     drift_pct: float = 0.0
 
-def gather_thesis_sync_data(as_of_date: Optional[str] = None, tickers: Optional[List[str]] = None) -> Dict[str, TickerSyncPayload]:
+def gather_thesis_sync_data(
+    as_of_date: Optional[str] = None,
+    tickers: Optional[List[str]] = None,
+    txn_limit: Optional[int] = None,
+) -> Dict[str, TickerSyncPayload]:
     """
     Gather data for syncing vault theses.
     """
     if as_of_date is None:
         as_of_date = datetime.now().strftime("%Y-%m-%d")
+    if txn_limit is None:
+        txn_limit = config.THESIS_TXN_LOG_LIMIT
         
     logging.info(f"Gathering thesis sync data as of {as_of_date}...")
     
@@ -97,11 +104,15 @@ def gather_thesis_sync_data(as_of_date: Optional[str] = None, tickers: Optional[
         
         size_ceiling = styles_config.get(style, {}).get("size_ceiling_pct", 0.0)
         
-        # Get recent transactions (last 5)
+        # Recent transactions, capped at txn_limit. Track the true total so
+        # the thesis file can disclose "(showing N most recent of M)" rather
+        # than silently dropping older history.
         transactions = []
+        txn_total_count = 0
         if not transactions_df.empty:
-            ticker_tx = transactions_df[transactions_df['Ticker'] == ticker].sort_values('Trade Date', ascending=False).head(5)
-            transactions = ticker_tx.to_dict('records')
+            all_ticker_tx = transactions_df[transactions_df['Ticker'] == ticker].sort_values('Trade Date', ascending=False)
+            txn_total_count = len(all_ticker_tx)
+            transactions = all_ticker_tx.head(txn_limit).to_dict('records')
         
         # Get realized GL
         realized = []
@@ -139,6 +150,7 @@ def gather_thesis_sync_data(as_of_date: Optional[str] = None, tickers: Optional[
             cost_basis=row.get('Cost Basis', 0.0),
             last_reviewed=as_of_date,
             transactions=transactions,
+            transactions_total_count=txn_total_count,
             realized_gl=realized,
             drift_pct=weight - size_ceiling if size_ceiling > 0 else 0.0
         )

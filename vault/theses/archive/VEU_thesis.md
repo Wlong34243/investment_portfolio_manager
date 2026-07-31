@@ -17,7 +17,6 @@ triggers:
   revenue_growth_floor_pct:
   operating_margin_floor_pct:
   style_size_ceiling_pct: 8.0
-  current_weight_pct:
 ---
 # VEU — Investment Thesis
 

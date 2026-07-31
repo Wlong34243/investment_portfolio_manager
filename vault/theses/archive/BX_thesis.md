@@ -17,7 +17,6 @@ triggers:
   revenue_growth_floor_pct: 10      # fee-related earnings should compound; miss signals fundraising stall
   operating_margin_floor_pct: null
   style_size_ceiling_pct: 9.0
-  current_weight_pct: null
 drawdown_tolerance_pct: 0.30
 panic_buy_trigger_drawdown_pct: 0.20
 ---

@@ -3,8 +3,8 @@ ticker: ETN
 style: THEME
 framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: '2026-07-27'
-current_allocation: 1.52%
+last_reviewed: '2026-07-31'
+current_allocation: 1.55%
 cost_basis: 7589.55  # post-split
 time_horizon: 3 to 5 years
 triggers:
@@ -17,7 +17,6 @@ triggers:
   revenue_growth_floor_pct:
   operating_margin_floor_pct:
   style_size_ceiling_pct: 3.0
-  current_weight_pct:
 ---
 # ETN — Investment Thesis
 
@@ -43,15 +42,21 @@ Thematic Specialist bucket — market-position bet on AI infrastructure buildout
 ## Review Log
 - 2026-07-20: Thesis rewritten. Prior file content was a mislabeled duplicate of the NVDA thesis (frontmatter ticker had been corrected in June, but body was never fixed). Rebuilt using Bill's actual ETN reasoning: thematic AI-buildout power-infrastructure support play.
 
+## Scaling State
+next_step: [BILL]
+
+## Rotation Priority
+priority: [BILL]
+
 <!-- region:position_state -->
-**Current Allocation:** 1.52%
+**Current Allocation:** 1.55%
 **Cost Basis:** $7,589.55
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** THEME
 **Size Ceiling:** 3.00%
-**Drift:** -1.48%
+**Drift:** -1.45%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -66,5 +71,5 @@ Total Realized G/L: $1,813.72 over 2 closed lots. Total Proceeds: $7,031.72.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-27 08:36: Auto-sync allocation 1.52%, drift -1.48%
+2026-07-31 08:23: Auto-sync allocation 1.55%, drift -1.45%
 <!-- endregion:change_log -->

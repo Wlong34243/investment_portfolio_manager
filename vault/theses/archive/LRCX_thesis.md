@@ -17,7 +17,6 @@ triggers:
   revenue_growth_floor_pct: 5       # floor for WFE growth environment; miss signals cycle deterioration
   operating_margin_floor_pct: 42    # world-class margins; contraction below here is a thesis check
   style_size_ceiling_pct: 9.0
-  current_weight_pct:
 drawdown_tolerance_pct: 0.35        # semi equipment is cyclical; 35% from cost is within thesis
 panic_buy_trigger_drawdown_pct: 0.25
 ---

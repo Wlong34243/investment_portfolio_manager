@@ -17,7 +17,6 @@ triggers:
   revenue_growth_floor_pct: 3        # need at least low growth; flat/decline is a warning
   operating_margin_floor_pct: null   # focus on FCF and buyback intensity
   style_size_ceiling_pct: 2.0        # low-conviction, China-regulatory tail risk
-  current_weight_pct: 1.8
 ---
 # BABA — Investment Thesis
 

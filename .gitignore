@@ -3,6 +3,9 @@ service_account.json
 .env
 .streamlit/secrets.toml
 
+# Automation logs
+logs/
+
 # Python
 __pycache__/
 *.py[cod]
@@ -58,6 +61,13 @@ data/podcast_bundles/
 
 # One-off audit artifacts
 audit_results.txt
+bundle_audit.md
+
+# Runtime-generated, contains real account dollar figures — not committed
+data/account_balances.json
+
+# Runtime-generated Schwab token alert (local mirror of the GCS blob)
+schwab_alert.json
 
 # Podcast transcripts — large data files, not committed
 data/podcast_transcripts/

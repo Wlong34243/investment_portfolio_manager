@@ -3,9 +3,9 @@ ticker: WSM
 style: FUND
 framework_preference:
 entry_date:
-last_reviewed: '2026-07-27'
-cost_basis: 13880.45
-current_allocation: 2.26%
+last_reviewed: '2026-07-31'
+cost_basis: 15037.73
+current_allocation: 2.52%
 ---
 # WSM — Investment Thesis
 
@@ -44,22 +44,26 @@ priority: medium
 - 2026-07: Thesis file created. Underwater entry is by design (dip-buying quality); watch margins, not the stock price.
 
 <!-- region:position_state -->
-**Current Allocation:** 2.26%
-**Cost Basis:** $13,880.45
+**Current Allocation:** 2.52%
+**Cost Basis:** $15,037.73
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** FUND
 **Size Ceiling:** 5.00%
-**Drift:** -2.74%
+**Drift:** -2.48%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
+- 2026-07-27: Buy 5.0 @ $231.46
 - 2026-07-20: Buy 10.0 @ $226.33
 - 2026-07-17: Buy 10.0 @ $230.07
 - 2026-06-30: Buy 10.0 @ $236.14
 - 2026-06-29: Buy 9.0 @ $240.09
 - 2026-06-26: Buy 5.0 @ $237.47
+- 2026-06-25: Buy 5.0 @ $241.05
+- 2026-06-25: Buy 9.0 @ $240.16
+- 2026-06-25: Buy 1.0 @ $240.16
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
@@ -67,5 +71,5 @@ No realized G/L history.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-27 08:36: Auto-sync allocation 2.26%, drift -2.74%
+2026-07-31 08:23: Auto-sync allocation 2.52%, drift -2.48%
 <!-- endregion:change_log -->

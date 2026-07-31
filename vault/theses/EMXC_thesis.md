@@ -3,7 +3,7 @@ ticker: EMXC
 style: ETF
 framework_preference:
 entry_date:
-last_reviewed: '2026-07-27'
+last_reviewed: '2026-07-31'
 cost_basis: 14153.94
 current_allocation: 2.28%
 ---
@@ -75,6 +75,15 @@ priority: medium
 - 2026-06-08: Buy 15.0 @ $96.20
 - 2026-06-05: Buy 5.0 @ $97.04
 - 2026-06-01: Buy 15.0 @ $103.19
+- 2026-05-29: Buy 3.0 @ $101.52
+- 2026-05-29: Buy 12.0 @ $101.52
+- 2026-05-11: Buy 50.0 @ $98.08
+- 2026-05-08: Buy 10.0 @ $97.28
+- 2026-05-01: Buy 10.0 @ $91.53
+- 2026-04-15: Buy 25.0 @ $87.85
+- 2026-04-14: Buy 15.0 @ $87.44
+- 2026-04-10: Buy 40.0 @ $84.95
+- 2026-04-10: Buy 20.0 @ $85.17
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
@@ -82,5 +91,5 @@ No realized G/L history.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-27 08:36: Auto-sync allocation 2.28%, drift -5.72%
+2026-07-31 08:23: Auto-sync allocation 2.28%, drift -5.72%
 <!-- endregion:change_log -->

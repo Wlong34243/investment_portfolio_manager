@@ -3,9 +3,9 @@ ticker: APO
 style: GARP
 framework_preference:
 entry_date:
-last_reviewed: '2026-07-27'
+last_reviewed: '2026-07-31'
 cost_basis: 12606.9
-current_allocation: 2.18%
+current_allocation: 2.13%
 ---
 # APO — Investment Thesis
 
@@ -45,14 +45,14 @@ priority: medium
 - 2026-07: Thesis file created. Watch credit quality disclosures and Athene spread, not AUM headlines.
 
 <!-- region:position_state -->
-**Current Allocation:** 2.18%
+**Current Allocation:** 2.13%
 **Cost Basis:** $12,606.90
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** GARP
 **Size Ceiling:** 9.00%
-**Drift:** -6.82%
+**Drift:** -6.87%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -68,5 +68,5 @@ No realized G/L history.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-27 08:36: Auto-sync allocation 2.18%, drift -6.82%
+2026-07-31 08:23: Auto-sync allocation 2.13%, drift -6.87%
 <!-- endregion:change_log -->

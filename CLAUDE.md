@@ -91,10 +91,15 @@ Agents interact strictly with the composite hash via `ask_gemini_composite()`.
 | `core/bundle.py` | Market bundle assembly + hashing |
 | `core/vault_bundle.py` | Vault bundle assembly |
 | `core/composite_bundle.py` | Composite bundle assembly |
+| `tasks/export_ai_briefing.py` | Assembles the AI briefing package (`prompt.md`/`portfolio.md`/`podcasts.md`/`theses.md`/`SUBMIT_ME.md`) for pasting into a frontier LLM; runs automatically as the last step of `manager.py morning` |
+| `tasks/derive_rotations.py` | Clusters sell/buy transactions into candidate rotation records, writes to `Trade_Log_Staging` for manual review before promotion to `Trade_Log`; runs automatically (dry-run) as STEP 10 of `manager.py morning` |
+| `tasks/health.py` | Pipeline health checks; also owns the `logs/HEALTH_FAILURE.flag` sentinel (`write_/read_/clear_failure_sentinel()`) that `manager.py morning`, `build_command_center.py`, and `export_ai_briefing.py` all read to render/disclose degraded state instead of going silently stale |
 | `utils/gemini_client.py` | `ask_gemini()`, `ask_gemini_composite()`, `SAFETY_PREAMBLE` |
 | `utils/sheet_readers.py` | Google Sheets reads with three-way credential chain (ADC → Streamlit secrets → local file) |
 | `utils/csv_parser.py` | Schwab CSV fallback parser |
 | `utils/schwab_client.py` | Schwab API client (read-only) |
+| `utils/etf_holdings.py` | ETF look-through holdings (yfinance-based, disk-cached) for the AI briefing export's single-name concentration check |
+| `utils/level_coverage.py` | Cross-references held positions against thesis frontmatter (Trim/Add levels, `last_reviewed`) to report coverage gaps; standalone (filesystem only), used by both `build_command_center.py` and `export_ai_briefing.py` |
 | `utils/agents/idea_generator.py` | Idea Generator agent (v1 shipped May 2026) |
 | `prompts/idea_generator.md` | Idea Generator system prompt |
 | `pipeline.py` | Legacy orchestrator (shim only; new work goes to `manager.py`) |

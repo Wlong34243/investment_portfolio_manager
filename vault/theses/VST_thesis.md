@@ -3,13 +3,13 @@ ticker: VST
 style: THEME
 framework_preference: Thesis-first, scale-in, consensus-target trim discipline
 entry_date: 2026-05-03
-last_reviewed: '2026-07-27'
+last_reviewed: '2026-07-31'
 triggers:
   entry_price: 159.00
   seed_position_weight: 0.64%
   price_trim_above: consensus_price_target
-cost_basis: 14672.28
-current_allocation: 2.66%
+cost_basis: 15471.18
+current_allocation: 2.55%
 ---
 # VST — Investment Thesis
 
@@ -35,7 +35,7 @@ Initial purchase at $159.00 for a 0.64% seed position. The entry is being made a
 - **Opportunity Cost:** Selling a stronger technical name to buy a weaker one can backfire if the downtrend persists longer than expected.
 
 ## Scaling State
-next_step: seed established at 0.64%; add only on thesis confirmation or improved technical structure
+next_step: position built to 2.63% via six buys (05-03 through 07-27), 0.37% headroom to the 3.00% THEME ceiling. The 07-27 add at $159.78 was the highest price paid in the sequence, executed under this file's own "improved technical structure" trigger — treat the seed as confirmed, not pending. Hold; further adds only on renewed technical confirmation or explicit thesis re-confirmation. Trim discipline unchanged: consensus price target per Exit Conditions.
 
 ## Rotation Priority
 priority: medium
@@ -48,24 +48,31 @@ priority: medium
 
 ## Review Log
 - 2026-05: Initiated at $159.00 as a 0.64% seed position. Trim discipline tied to consensus price targets. Monitoring AI-driven load growth, regional power-market tightness, merchant generation capture, and capital-allocation execution.
+- 2026-07-28: Scaling State updated. File had continued to describe a 0.64% seed after five further buys; position is 2.63%, 0.37% under the THEME ceiling. No thesis change.
 
 <!-- region:position_state -->
-**Current Allocation:** 2.66%
-**Cost Basis:** $14,672.28
+**Current Allocation:** 2.55%
+**Cost Basis:** $15,471.18
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** THEME
 **Size Ceiling:** 3.00%
-**Drift:** -0.34%
+**Drift:** -0.45%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
+- 2026-07-27: Buy 5.0 @ $159.78
 - 2026-06-08: Buy 15.0 @ $146.89
 - 2026-05-14: Buy 10.0 @ $140.51
 - 2026-05-08: Buy 10.0 @ $152.23
 - 2026-05-06: Buy 5.0 @ $157.13
 - 2026-05-05: Buy 5.0 @ $161.51
+- 2026-05-04: Buy 10.0 @ $161.77
+- 2026-05-04: Buy 5.0 @ $162.00
+- 2026-04-30: Buy 15.0 @ $159.12
+- 2026-04-29: Buy 5.0 @ $154.29
+- 2026-04-28: Buy 5.0 @ $161.23
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
@@ -73,5 +80,5 @@ No realized G/L history.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-27 08:36: Auto-sync allocation 2.66%, drift -0.34%
+2026-07-31 08:23: Auto-sync allocation 2.55%, drift -0.45%
 <!-- endregion:change_log -->

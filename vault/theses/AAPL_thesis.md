@@ -3,9 +3,9 @@ ticker: AAPL
 style: GARP
 framework_preference:
 entry_date:
-last_reviewed: '2026-07-27'
-cost_basis: 11365.65
-current_allocation: 1.98%
+last_reviewed: '2026-07-31'
+cost_basis: 12694.17
+current_allocation: 2.02%
 ---
 # AAPL — Investment Thesis
 
@@ -45,17 +45,18 @@ priority: low
 - 2026-07: Thesis file created. Product-conviction GARP entry; Bill's stated expectation is a path to $400.
 
 <!-- region:position_state -->
-**Current Allocation:** 1.98%
-**Cost Basis:** $11,365.65
+**Current Allocation:** 2.02%
+**Cost Basis:** $12,694.17
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** GARP
 **Size Ceiling:** 9.00%
-**Drift:** -7.02%
+**Drift:** -6.98%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
+- 2026-07-30: Buy 4.0 @ $332.13
 - 2026-07-20: Buy 10.0 @ $328.36
 - 2026-07-17: Buy 10.0 @ $332.66
 - 2026-07-15: Buy 5.0 @ $323.43
@@ -67,5 +68,5 @@ No realized G/L history.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-27 08:36: Auto-sync allocation 1.98%, drift -7.02%
+2026-07-31 08:23: Auto-sync allocation 2.02%, drift -6.98%
 <!-- endregion:change_log -->

@@ -3,9 +3,9 @@ ticker: XLF
 style: ETF
 framework_preference:
 entry_date:
-last_reviewed: '2026-07-27'
+last_reviewed: '2026-07-31'
 cost_basis: 7329.3
-current_allocation: 1.24%
+current_allocation: 1.25%
 ---
 # XLF — Investment Thesis
 
@@ -44,14 +44,14 @@ priority: low
 - 2026-04: Initiated. Thesis intact. Monitoring the 2-year/10-year Treasury yield curve, consumer credit card delinquency rates, and M&A volume.
 
 <!-- region:position_state -->
-**Current Allocation:** 1.24%
+**Current Allocation:** 1.25%
 **Cost Basis:** $7,329.30
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** ETF
 **Size Ceiling:** 8.00%
-**Drift:** -6.76%
+**Drift:** -6.75%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -60,6 +60,13 @@ priority: low
 - 2026-06-24: Buy 10.0 @ $53.79
 - 2026-06-24: Buy 100.0 @ $53.78
 - 2026-05-05: Sell -10.0 @ $51.52
+- 2026-05-04: Sell -49.0 @ $52.16
+- 2026-05-04: Sell -21.0 @ $52.16
+- 2026-03-20: Buy 15.0 @ $48.92
+- 2026-03-03: Buy 10.0 @ $50.37
+- 2026-02-11: Sell -100.0 @ $53.00
+- 2026-02-09: Buy 20.0 @ $54.22
+- 2026-01-23: Buy 30.0 @ $53.07
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
@@ -67,5 +74,5 @@ Total Realized G/L: $-53.76 over 21 closed lots. Total Proceeds: $14,766.25.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-27 08:36: Auto-sync allocation 1.24%, drift -6.76%
+2026-07-31 08:23: Auto-sync allocation 1.25%, drift -6.75%
 <!-- endregion:change_log -->

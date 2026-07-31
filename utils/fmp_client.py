@@ -890,6 +890,76 @@ def get_fmp_fundamentals_bundle(ticker: str, asset_class: str = "", forward_pe_o
     return result
 
 
+def get_earnings_calendar_cached(tickers: List[str]) -> dict[str, str]:
+    """
+    Fetch earnings calendar for tickers within +/- 3 days of today.
+    Cached daily in data/fmp_cache/earnings_calendar.json.
+    Returns a mapping of ticker -> YYYY-MM-DD string.
+    """
+    api_key = get_fmp_api_key()
+    if not api_key:
+        return {}
+
+    cache_path = FMP_CACHE_DIR / "earnings_calendar.json"
+    
+    # Check if cache exists and was modified today (same calendar date)
+    cache_valid = False
+    if cache_path.exists():
+        try:
+            mtime = datetime.fromtimestamp(cache_path.stat().st_mtime)
+            if mtime.date() == datetime.now().date():
+                cache_valid = True
+        except Exception:
+            pass
+
+    if cache_valid:
+        try:
+            cached_data = json.loads(cache_path.read_text(encoding="utf-8"))
+            return cached_data
+        except Exception:
+            pass
+
+    # Cache miss/stale, make live FMP call
+    # Range is today - 3 days to today + 3 days
+    start_date = (datetime.now() - timedelta(days=3)).strftime("%Y-%m-%d")
+    end_date = (datetime.now() + timedelta(days=3)).strftime("%Y-%m-%d")
+    url = f"{BASE_URL}/earnings-calendar?from={start_date}&to={end_date}&apikey={api_key}"
+    
+    try:
+        _fmp_rate_limit()
+        response = requests.get(url, timeout=15)
+        if response.status_code == 402:
+            logging.warning("FMP 402 — earnings-calendar subscription limit")
+            return {}
+        response.raise_for_status()
+        data = response.json()
+        if not data:
+            return {}
+        
+        # Build mapping ticker -> date (YYYY-MM-DD)
+        mapping = {}
+        for entry in data:
+            symbol = str(entry.get("symbol", "")).strip().upper()
+            if symbol in tickers:
+                date_str = entry.get("date", "")
+                if date_str:
+                    mapping[symbol] = date_str[:10]
+        
+        # Save to cache
+        FMP_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        cache_path.write_text(json.dumps(mapping, indent=2), encoding="utf-8")
+        return mapping
+    except Exception as e:
+        logging.warning("FMP earnings calendar fetch failed: %s", e)
+        # Fallback to expired cache if available
+        if cache_path.exists():
+            try:
+                return json.loads(cache_path.read_text(encoding="utf-8"))
+            except Exception:
+                pass
+        return {}
+
+
 if __name__ == "__main__":
     print("Testing FMP Client...")
     print(get_key_metrics("AMZN"))

@@ -3,8 +3,8 @@ ticker: META
 style: GARP
 framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: '2026-07-27'
-current_allocation: 2.47%
+last_reviewed: '2026-07-31'
+current_allocation: 2.21%
 cost_basis: 11592.71
 time_horizon: 3 to 5+ years
 triggers:
@@ -17,7 +17,6 @@ triggers:
   revenue_growth_floor_pct: 8       # want at least high single-digit top line
   operating_margin_floor_pct:       # focus on FCF margin and Reality Labs losses
   style_size_ceiling_pct: 4.0       # below MSFT given higher idiosyncratic risk
-  current_weight_pct: 1.6
 ---
 # META — Investment Thesis
 
@@ -51,7 +50,6 @@ Cost basis: 379.72. I bought during the massive “Year of Efficiency” recover
 
 META is a core but not max‑size AI/attention compounder in the portfolio.
 
-- Current allocation: 1.6%.  
 - Role: High‑cash‑flow consumer‑internet and AI‑ads pillar, complementary to MSFT’s enterprise/AI footprint.  
 - Style ceiling: I will allow META to grow, but I cap it below MSFT due to higher regulatory and CEO‑concentration risk.
 
@@ -77,15 +75,21 @@ I will trim or exit META if any of the following become clear, structural trends
 1. Ad revenue declines for several consecutive quarters due to new privacy rules or platform changes that Meta cannot route around.  
 2. Zuckerberg abandons “Year of Efficiency” discipline and aggressively ramps Reality Labs spend without 
 
+## Scaling State
+next_step: [BILL]
+
+## Rotation Priority
+priority: [BILL]
+
 <!-- region:position_state -->
-**Current Allocation:** 2.47%
+**Current Allocation:** 2.21%
 **Cost Basis:** $11,592.71
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** GARP
 **Size Ceiling:** 9.00%
-**Drift:** -6.53%
+**Drift:** -6.79%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -94,6 +98,12 @@ I will trim or exit META if any of the following become clear, structural trends
 - 2026-06-04: Buy 4.0 @ $639.18
 - 2026-06-03: Buy 2.0 @ $616.12
 - 2026-06-03: Buy 1.0 @ $616.12
+- 2026-04-30: Buy 3.0 @ $605.12
+- 2026-03-26: Buy 0.0134 @ $552.20
+- 2026-03-26: Dividend 0.0 @ $0.00
+- 2025-12-23: Buy 0.008 @ $663.91
+- 2025-09-29: Buy 0.0078 @ $744.67
+- 2025-06-26: Buy 0.0102 @ $721.34
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
@@ -101,5 +111,5 @@ No realized G/L history.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-27 08:36: Auto-sync allocation 2.47%, drift -6.53%
+2026-07-31 08:23: Auto-sync allocation 2.21%, drift -6.79%
 <!-- endregion:change_log -->

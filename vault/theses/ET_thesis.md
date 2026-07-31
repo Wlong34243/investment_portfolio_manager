@@ -3,7 +3,7 @@ ticker: ET
 style: THEME
 framework_preference:
 entry_date:
-last_reviewed: '2026-07-27'
+last_reviewed: '2026-07-31'
 triggers:
   price_trim_above: 22.00
 cost_basis: 6465.59
@@ -63,6 +63,9 @@ priority: low
 - 2025-11-19: Buy 4.398 @ $16.95
 - 2025-11-19: Buy 8.5163 @ $16.95
 - 2025-08-19: Buy 9.9953 @ $17.31
+- 2025-08-19: Buy 15.4232 @ $17.31
+- 2025-05-20: Buy 15.0781 @ $18.11
+- 2025-05-20: Buy 7.9792 @ $18.11
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
@@ -70,5 +73,5 @@ Total Realized G/L: $-475.83 over 12 closed lots. Total Proceeds: $5,861.72.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-27 08:36: Auto-sync allocation 1.30%, drift -1.70%
+2026-07-31 08:23: Auto-sync allocation 1.30%, drift -1.70%
 <!-- endregion:change_log -->

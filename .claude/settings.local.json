@@ -46,7 +46,12 @@
       "Bash(grep -n \"u2705\\\\|✅\\\\|\\\\\\\\\\\\\\\\u2705\" \"C:\\\\Users\\\\WLong\\\\Investment_Portfolio\\\\utils\\\\schwab_client.py\")",
       "Bash(grep *)",
       "Bash(pm vault *)",
-      "Bash(echo \"grep exit: $?\")"
+      "Bash(echo \"grep exit: $?\")",
+      "Bash(git mv *)",
+      "PowerShell(Start-Process -FilePath \"cmd.exe\" -ArgumentList '/c', 'python -c \"import sys; print\\(chr\\(65\\),sys.stdin.isatty\\(\\)\\)\" > C:\\\\Users\\\\WLong\\\\AppData\\\\Local\\\\Temp\\\\isatty_out.txt 2>&1' -RedirectStandardInput \"C:\\\\Users\\\\WLong\\\\AppData\\\\Local\\\\Temp\\\\empty_stdin.txt\" -Wait -NoNewWindow)",
+      "Bash(awk '/^def morning\\\\\\(/{start=NR} start && /^@app.command|^def [a-z]/ && NR>start+5 {print NR\": \"$0; exit}' manager.py)",
+      "Bash(awk -F: '$1>1110')",
+      "Bash(powershell -Command \"Get-Process python -ErrorAction SilentlyContinue | Select-Object Id,StartTime,Path\")"
     ]
   }
 }

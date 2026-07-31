@@ -33,13 +33,14 @@ import config
 from utils.sheet_readers import get_gspread_client, read_gsheet_robust
 from utils.sheet_writers import safe_execute
 from utils.agent_signals import get_latest_agent_outputs, ACTION_SEVERITIES
+from utils.level_coverage import compute_level_coverage, format_footer_line
 
 logger = logging.getLogger(__name__)
 
-# Position table columns, left to right (A..O)
+# Position table columns, left to right (A..P)
 _POS_COLS = [
     "Ticker", "MV", "Wt%", "Price", "Day%", "UGL $", "UGL %",
-    "Fwd P/E", "PEG", "52w %", "Trim", "Add", "->Trim %", "->Add %", "Signal",
+    "Fwd P/E", "PEG", "52w %", "Trim", "Add", "->Trim %", "->Add %", "Signal", "Earnings",
 ]
 _NCOLS = 18  # widest row is the KPI strip (9 label/value pairs = 18 cells)
 _DATA_START_ROW = 5
@@ -84,21 +85,48 @@ def _latest_bundle_hash() -> str:
 
 def _schwab_token_status() -> str:
     try:
+        from datetime import timezone
+        # Check sentinel first for an active failure
+        from tasks.health import read_failure_sentinel
+        sentinel = read_failure_sentinel()
+        if sentinel:
+            # Check if schwab token was a failing check
+            for fc in sentinel.get("failing_checks", []):
+                if "schwab_token" in fc.get("name", ""):
+                    return "AUTH REQUIRED"
+            # Parse timestamp to report how long the pipeline has been degraded
+            ts_str = sentinel.get("timestamp_utc")
+            if ts_str:
+                try:
+                    ts = datetime.strptime(ts_str, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+                    delta_days = (datetime.now(timezone.utc) - ts).days
+                    return f"STALE ({delta_days}d)"
+                except Exception:
+                    return "STALE"
+            return "DEGRADED"
+
         from google.cloud import storage
         client = storage.Client()
         blob = client.bucket(config.SCHWAB_TOKEN_BUCKET).blob(config.SCHWAB_TOKEN_BLOB_ACCOUNTS)
         data = json.loads(blob.download_as_text())
         expires_at = data.get("expires_at")
         if not expires_at:
-            return "n/a"
+            return "AUTH REQUIRED"
         delta_days = (float(expires_at) - time.time()) / 86400
         if delta_days < 0:
-            return "Expired"
+            return f"STALE ({abs(delta_days):.0f}d)"
         if delta_days < 2:
             return "Expiring soon"
         return "OK"
     except Exception:
-        return "n/a"
+        try:
+            from tasks.health import read_failure_sentinel
+            sentinel = read_failure_sentinel()
+            if sentinel:
+                return "AUTH REQUIRED"
+        except Exception:
+            pass
+        return "AUTH REQUIRED"
 
 
 def _fmp_cache_age() -> str:
@@ -323,6 +351,10 @@ def _build_position_table(
     tickers = df_h["Ticker"].astype(str).tolist()
     ranges_52w = _fetch_52w_ranges(tickers)
 
+    # Fetch cached earnings calendar dates +/- 3 days from FMP
+    from utils.fmp_client import get_earnings_calendar_cached
+    earnings_map = get_earnings_calendar_cached(tickers)
+
     results = []
     for _, row in df_h.iterrows():
         ticker = str(row["Ticker"])
@@ -347,6 +379,23 @@ def _build_position_table(
         signal, rationale = _ticker_signal(df_agent, ticker)
         no_valuation = fwd_pe is None and peg is None and trim is None and add is None
 
+        # Compute Earnings proximity flag (+/- 3 days)
+        earnings_val = ""
+        earning_date_str = earnings_map.get(ticker)
+        if earning_date_str:
+            try:
+                e_date = datetime.strptime(earning_date_str, "%Y-%m-%d").date()
+                today_date = datetime.now().date()
+                delta_days = (e_date - today_date).days
+                if delta_days == 0:
+                    earnings_val = "TODAY"
+                elif delta_days > 0:
+                    earnings_val = f"T+{delta_days}"
+                else:
+                    earnings_val = f"T-{abs(delta_days)}"
+            except Exception:
+                pass
+
         results.append({
             "Ticker": ticker,
             "MV": float(row["Market Value"]),
@@ -365,6 +414,7 @@ def _build_position_table(
             "Signal": signal,
             "Rationale": rationale,
             "no_valuation": no_valuation,
+            "Earnings": earnings_val,
         })
     return results
 
@@ -379,6 +429,7 @@ def _build_grid(
     positions: list[dict],
     health: dict,
     spy_ytd_raw: Optional[float],
+    level_coverage: Optional[dict] = None,
 ) -> list[list]:
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
 
@@ -415,19 +466,22 @@ def _build_grid(
         grid.append(_pad([
             pos["Ticker"], pos["MV"], pos["Wt%"], pos["Price"], pos["Day%"],
             pos["UGL $"], pos["UGL %"], pos["Fwd P/E"], pos["PEG"], pos["52w %"],
-            pos["Trim"], pos["Add"], pos["->Trim %"], pos["->Add %"], pos["Signal"],
+            pos["Trim"], pos["Add"], pos["->Trim %"], pos["->Add %"], pos["Signal"], pos["Earnings"],
         ]))
 
     # blank
     grid.append(_pad([]))
 
     # Last row: system health
-    grid.append(_pad([
+    footer_row = [
         "Last Refresh", health["last_refresh"],
         "Bundle Hash", health["bundle_hash"],
         "Schwab Token", health["schwab_token"],
         "FMP Cache Age", health["fmp_cache_age"],
-    ]))
+    ]
+    if level_coverage:
+        footer_row += ["Levels", format_footer_line(level_coverage)]
+    grid.append(_pad(footer_row))
 
     # None -> "" so gspread never has to serialize a bare null into a cell
     return [["" if c is None else c for c in row] for row in grid]
@@ -462,6 +516,7 @@ def _fmt_preview(val, kind: str) -> str:
 def _print_dry_run(
     headline: dict, beta: Optional[float], positions: list[dict],
     health: dict, spy_ytd_raw: Optional[float], n_rules: int, n_notes: int,
+    level_coverage: Optional[dict] = None,
 ) -> None:
     from rich.console import Console
     from rich.table import Table
@@ -504,12 +559,16 @@ def _print_dry_run(
             _fmt_preview(pos["->Trim %"], "%"),
             _fmt_preview(pos["->Add %"], "%"),
             pos["Signal"] or "",
+            pos["Earnings"] or "",
         )
     console.print(table)
-    console.print(
+    footer = (
         f"Last Refresh {health['last_refresh']}  |  Bundle {health['bundle_hash']}  |  "
         f"Schwab {health['schwab_token']}  |  FMP Cache {health['fmp_cache_age']}"
     )
+    if level_coverage:
+        footer += f"  |  {format_footer_line(level_coverage)}"
+    console.print(footer)
     console.print(f"[dim]Would write {n_rules} conditional-format rules and {n_notes} cell notes.[/]")
     console.print("[dim]DRY RUN — no Sheet writes. Re-run with --live to apply.[/]")
 
@@ -581,7 +640,7 @@ def _apply_formatting(ws, headline: dict, positions: list[dict]) -> None:
     ranges.append(("R2:R2", CellFormat(textFormat=TextFormat(bold=True), numberFormat=float2_fmt)))
 
     # R4 header row
-    ranges.append(("A4:O4", CellFormat(backgroundColor=GREY_BG, textFormat=TextFormat(bold=True))))
+    ranges.append(("A4:P4", CellFormat(backgroundColor=GREY_BG, textFormat=TextFormat(bold=True))))
 
     # Position table columns
     d0, d1 = _DATA_START_ROW, data_end
@@ -635,7 +694,7 @@ def _apply_formatting(ws, headline: dict, positions: list[dict]) -> None:
 
         # Row banding on the position table
         rules.append(ConditionalFormatRule(
-            ranges=[GridRange.from_a1_range(f"A{d0}:O{d1}", ws)],
+            ranges=[GridRange.from_a1_range(f"A{d0}:P{d1}", ws)],
             booleanRule=BooleanRule(condition=BooleanCondition("CUSTOM_FORMULA", ["=ISEVEN(ROW())"]), format=CellFormat(backgroundColor=GREY_BG)),
         ))
 
@@ -674,7 +733,7 @@ def _apply_formatting(ws, headline: dict, positions: list[dict]) -> None:
         set_column_widths(ws, [
             ("A", 70), ("B", 110), ("C", 70), ("D", 90), ("E", 80),
             ("F", 100), ("G", 80), ("H", 80), ("I", 70), ("J", 70),
-            ("K", 90), ("L", 90), ("M", 90), ("N", 90), ("O", 90),
+            ("K", 90), ("L", 90), ("M", 90), ("N", 90), ("O", 90), ("P", 90),
         ])
     except Exception as e:
         logger.warning("Column widths failed: %s", e)
@@ -713,14 +772,15 @@ def main(live: bool = False) -> None:
     positions = _build_position_table(holdings_rows, valuation_rows, df_agent)
     health = _check_system_health()
     spy_ytd_raw = _spy_ytd_pct()
+    level_coverage = compute_level_coverage([p["Ticker"] for p in positions])
 
     n_notes = sum(1 for p in positions if p.get("Rationale"))
 
     if not live:
-        _print_dry_run(headline, beta, positions, health, spy_ytd_raw, _N_CONDITIONAL_RULES, n_notes)
+        _print_dry_run(headline, beta, positions, health, spy_ytd_raw, _N_CONDITIONAL_RULES, n_notes, level_coverage)
         return
 
-    grid = _build_grid(headline, beta, positions, health, spy_ytd_raw)
+    grid = _build_grid(headline, beta, positions, health, spy_ytd_raw, level_coverage)
 
     existing_tabs = {ws.title for ws in ss.worksheets()}
     if config.TAB_DASHBOARD not in existing_tabs:

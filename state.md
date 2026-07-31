@@ -1,6 +1,6 @@
 # Investment Portfolio Manager — Current State
 
-**Last updated:** 2026-07-26
+**Last updated:** 2026-07-31
 **Maintainer:** Bill (sole user)
 
 This is the "where are we" document. Open this at the start of any coding session.
@@ -13,7 +13,7 @@ This is the "where are we" document. Open this at the start of any coding sessio
 - `core/bundle.py` — market bundle assembly with SHA-256 canonical hashing
 - `core/vault_bundle.py` — thesis files, transcripts, research; per-document hashing
 - `core/composite_bundle.py` — thin wrapper linking market + vault + recent rotations from `Trade_Log`
-- 41 thesis files parsed from `vault/theses/`
+- 35 thesis files parsed from `vault/theses/` (38 archived in `vault/theses/archive/`, including 6 orphans archived 2026-07-29: AMD, CRWV, DELL, LRCX, MSFT, SPCX; IGV and VEU archived since as further orphans). New positions pending reconciliation: `IBM_thesis.md` (2026-07-27) and `SKHY_thesis.md` (2026-07-29) — see What's Next.
 - `bundles/` directory holds serialized JSON bundles with hash-verified integrity
 - Composite bundle includes Tier 2 data (`recent_rotations` from Google Sheets `Trade_Log`)
 
@@ -49,7 +49,22 @@ This is the "where are we" document. Open this at the start of any coding sessio
 - Assembles `prompt.md` + `portfolio.md` + `podcasts.md` + `theses.md` into a dated `exports/` package plus a concatenated `SUBMIT_ME.md` for pasting into a frontier LLM
 - `build_podcasts_md()` reads `data/podcast_summaries/*.md`, selects by filename date within the `--days` window, and filters via `podcast_signal()` — summaries whose Sector Allocations table is a single catch-all `Broad Market` row, or tagged `No actionable thesis`, are withheld and listed
 - **Ground Rules v2 added 2026-07-26** — governing principle plus 8 hard rules, each traceable to a specific failure in the 2026-07-26 briefing. See CHANGELOG. Key standing constraints: never infer liquidity posture from this export (`CASH_MANUAL` does **not** represent the cash position); ballast/core holdings are exempt from ceiling flags; scan ±3 days for an offsetting leg before calling anything drift
+- **`manager.py morning` now produces this export automatically (STEP 9, committed 2026-07-27 in `7882b1c`)** — `run_morning_sync.bat` alone is sufficient; `make_ai_briefing.bat` remains for an export without a full sync. `--skip-export` opts out of a given morning run.
 - **Manual (non-YouTube) source ingestion is currently hand-work**: finished summaries can be dropped straight into `data/podcast_summaries/` — this path is fully downstream of the YouTube fetcher and requires no video ID. Mark such files with a `PROVENANCE:` footer so they are not mistaken for transcript-derived summaries
+- **Briefing integrity hardening (2026-07-29)** — full P0/P1/P2 pass. See CHANGELOG `[2026-07-29] — Briefing integrity hardening` for the complete list; headline changes:
+  - `theses.md` ships full Key Risks/Exit Conditions/Scaling State/Rotation Priority/Review Log per position by default (`--thesis-detail standard`), not just the Core Thesis first paragraph, with a disclosure line naming what's included/omitted
+  - Scaling State / Rotation Priority parsing now handles prose and bulleted/bold labels instead of silently misreporting a present section as missing
+  - `current_weight_pct` removed from thesis frontmatter (region block is now the only source of truth for current weight — the field could never actually stay in sync)
+  - Transaction log cap raised from a hardcoded 5 to `config.THESIS_TXN_LOG_LIMIT` (20), with inline `(showing N of M)` disclosure when still capped
+  - New level-coverage report (`utils/level_coverage.py`), health-failure sentinel + pipeline lock (`logs/HEALTH_FAILURE.flag`, `logs/pipeline.lock`), and an Earnings-proximity column on the Command Center
+  - `derive_rotations` now runs as STEP 10 of `pm morning` (dry-run staging only)
+- **Post-hardening cleanup + thesis prose hygiene (2026-07-29)** — two same-day follow-up batches. See CHANGELOG `[2026-07-29] — Post-hardening cleanup + thesis prose hygiene`. Headline changes:
+  - `pm clean theses --live` now skips any thesis newer than the `Holdings_Current` refresh instead of archiving a position opened since the last sync
+  - ETF look-through aggregates dual-listed issuers (`config.ISSUER_ALIASES`: GOOGL→GOOG, SKHY→000660.KS) instead of splitting one company's exposure across two symbol rows
+  - CSV fallback parser now has smoke test coverage (previously zero) after an `ETF_KEYWORDS` `AttributeError` reached runtime
+  - New standalone `tasks/lint_theses.py` — read-only vault linter for stale prose weight claims, duplicate state values, combined headers, unresolved `[BILL]` placeholders, stale reviews
+  - GLD/META prose weight claims deleted (not corrected) to stop silently drifting from the synced figure; 14 files scaffolded with empty `## Scaling State`/`## Rotation Priority` sections (`[BILL]` placeholder, no inferred values)
+- **Pipeline-lock duplicate bug fixed (2026-07-30)** — a leftover primitive lock block in `morning()`, never removed when `_acquire_pipeline_lock()` was added, made every `pm morning --live` run fail immediately with "another instance is currently running" even with no second instance present. See CHANGELOG `[2026-07-30]`.
 
 ### Automation
 - GitHub Actions: podcast pipeline Friday 5pm EST cron + `workflow_dispatch` — **currently non-functional**: YouTube blocks transcript requests from Azure cloud runner IPs. The workflow reports green but processes 0 episodes. Last successful automated run: June 2, 2026.
@@ -61,22 +76,20 @@ This is the "where are we" document. Open this at the start of any coding sessio
 
 ## What's Next
 
-### Do this first: apply the thesis sync fix
-`core/thesis_sync_data.py` was fixed 2026-07-26 but **the thesis files still contain the bad values** — they are only rewritten on next sync.
+### Do this first: review and promote `Trade_Log_Staging`
+`tasks/derive_rotations.py` now runs automatically as STEP 10 of every `pm morning` (dry-run staging only, 2026-07-29), on top of the 17 candidate clusters already staged 2026-07-27 — `Trade_Log` had zero rotations logged in 97 days going into that first run. None are promoted yet; this needs a manual pass, not just a skim, because **the clustering algorithm bundles every sell and every buy inside its window into one row rather than pairing the actual substitution legs.** Concretely:
+- The cluster anchored **2026-06-24** contains the real NOW + IGV → APO / KRE / MELI / LLY rotation, but bundled with five unrelated sells (XLE, APA, QQQM, SAP, MSFT, JPIE, PPA) and nine unrelated buys (COF, XLF, CFG, JEPI, META, VTI, FITB, SPCX, WSM, GLD).
+- The cluster anchored **2026-07-20** contains the real EMXC → BBJP rotation, bundled with unrelated sells (MSFT, CRWV, NFLX, DELL, LRCX, GLD, AMD, SPCX) and buys (JEPI, AAPL, QQQM, WSM, UNH).
 
-```
-python manager.py vault sync                 # DRY RUN - inspect the diff
-python manager.py vault sync --live          # promote
-```
+For each row: trim to the actual substitution pair, fill `Implicit_Bet`/`Thesis_Brief`, then promote. See CHANGELOG `[2026-07-27]` for the full diagnosis; the clustering logic itself (`window_days`, transitive same/adjacent-day grouping in `derive_clusters()`) is still unfixed and will produce the same conflation on every run, including the automatic ones now.
 
-Expect all 35 synced files to show a changed `current_allocation` and `**Drift:**`, and JEPI / QQQM / MELI to flip to positive drift. Until this runs, every drift figure in the vault is wrong and no ceiling breach is visible. See `THESIS_SYNC_FIX_2026-07-26.md`.
+~~Six orphaned thesis files also need archiving~~ — done 2026-07-29: AMD, CRWV, DELL, LRCX, MSFT, SPCX moved to `vault/theses/archive/`.
 
-### Then: reconcile `Trade_Log`
-Zero rotations logged in 97 days while at least two occurred. Run `derive_rotations`, review `Trade_Log_Staging`, promote:
-- **2026-07-20** EMXC −100 sh (≈$9,250) → BBJP +125 sh (≈$9,181). Substitution thesis: reduce single-strait Taiwan/foundry concentration, redeploy into Japanese governance reform.
-- **2026-06-25** NOW + IGV proceeds (≈$15.1K) → APO / KRE / MELI / LLY (≈$15.5K). *Inferred from top-5 per-position logs only — confirm before promoting.*
+### New positions to reconcile: IBM, SKHY
+- **IBM** — initiated 2026-07-27 (`vault/theses/IBM_thesis.md`, style `FUND`), funded by trimming IGV/VEU/JEPI.
+- **SKHY** — initiated 2026-07-29 (`vault/theses/SKHY_thesis.md`); opened after that morning's `Holdings_Current` refresh, so it wasn't yet in the bundle as of the post-hardening-cleanup batch and carries 4 unresolved `[BILL]` placeholders by design.
 
-Six orphaned thesis files also need archiving or exit confirmation: AMD, CRWV, DELL, LRCX, MSFT, SPCX. MSFT/HWM/IREN/CFG were April 2026 rotation buys that no longer appear in holdings with no logged exit.
+For each: run a Schwab sync (`pm morning --live` covers it), then `pm vault sync --live` to replace the thesis file's placeholder cost basis/allocation with real numbers. Verify neither was swept by `pm clean theses --live` before its first sync landed.
 
 ### Immediate priority: Valuation Drift Monitor
 Sell-side signal generation. Tracks changes in fundamentals (forward P/E, PEG, three-statement quality, dividend coverage) across current holdings vs original thesis baseline. Likely requires adding FMP fundamentals to the market bundle.
@@ -92,6 +105,9 @@ Acceptance criteria for v1:
 Not started yet. Following same fire-fire-aim pattern as Idea Generator: ship minimum viable version, iterate based on real output.
 
 ### Watchlist items (deferred, not blocking)
+- **`config.DRY_RUN` defaults to `False`, not `True`** — `os.getenv("DRY_RUN", "False").lower() == "true"` is backwards from the stated hard rule if the env var is unset. Found 2026-07-29; not fixed because it's dead in the active path — only `archive/streamlit_legacy/` and the legacy `pipeline.py` shim read it, and every live command enforces dry-run-by-default independently via its own `--live` flag. Worth fixing or removing so the name stops being misleading.
+- **`lint_theses.py` stale-weight regex has at least two known false-positive patterns** — first run (2026-07-29) flagged VRT and VST alongside the real GLD/META bug. On inspection neither was real: VRT's match was a `1.6%` figure describing *ETN's* ceiling headroom in a sentence about VRT, not VRT's own weight; VST's match was inside a dated Review Log entry (accurate as of 2026-07-28), not an undated current-state claim. Left both files untouched. Worth tightening the regex (subject scoping, and excluding dated Review Log lines) before wiring the linter into preflight.
+- **Two Schwab-token health signals can disagree** — `tasks/health.py`'s check and `build_command_center.py`'s own GCS blob lookup (`_schwab_token_status()`) are independent and were observed to report different states (WARN "expiry unknown" vs. `AUTH REQUIRED`) in the same session, 2026-07-29. Both now correctly avoid rendering `n/a`, but they aren't reconciled to the same underlying check.
 - **Split the `ETF` style in `styles.json`** into `BALLAST_CORE` (JEPI, JPIE, VTI, COWZ, VEA — high or no ceiling) and `SECTOR_ETF` (XBI, IGV, KRE, XLF, IFRA, EWZ, EMXC, BBJP, GLD — 8%). Until then, ceiling flags on ballast are noise and crowd out the one that survives recalibration (MELI, 0.06% over). The briefing prompt suppresses these flags as a stopgap; the taxonomy is the real fix.
 - **Manual source-ingest CLI command** — a `pm vault add-summary` style path that runs the same Gemini summarization on a pasted transcript or third-party digest, writes to `data/podcast_summaries/` with a non-YouTube provenance stamp. Reuses existing code, no new vendor. Currently hand-work; deferred by decision 2026-07-26.
 - **`manager.py:850` weight heuristic** — `max <= 1.5 → *100` is unsafe for a book whose largest position is under 1.5% and percent-stored. Harmless at current concentration (max 9.92%). Durable fix is producer-side: write percentages, drop both workarounds.
@@ -137,7 +153,7 @@ Not started yet. Following same fire-fire-aim pattern as Idea Generator: ship mi
 
 | | |
 |---|---|
-| **Portfolio size** | $589,395.86 across 36 positions (bundle `75caa01bedab`, 2026-07-26) |
+| **Portfolio size** | $593,201.73 across 36 positions (bundle `80262d14c656`, 2026-07-27) — IBM not yet included, pending sync |
 | **Cash** | **Not captured in this export.** `CASH_MANUAL` ($1,755.56 / 0.30%) does not represent the cash position — cash is held outside what the bundle sees. Draw no liquidity conclusions from bundle data. |
 | **Primary data path** | Schwab API (read-only) |
 | **Fallback data path** | Schwab CSV |
@@ -163,6 +179,10 @@ Not started yet. Following same fire-fire-aim pattern as Idea Generator: ship mi
 
 ## Recent Decisions Log
 
+- **2026-07-30** — Found and fixed a bug where `pm morning --live` refused to start on every run: a leftover primitive lock block in `morning()` collided with `_acquire_pipeline_lock()` (added the day before), which had already created the same lock file a few lines earlier. Removed the dead duplicate; not a stale-lock issue, there was never a real second instance.
+- **2026-07-29** — Ran the full briefing-integrity-hardening prompt (P0/P1/P2), jointly with a parallel Gemini CLI session working the same prompt file. Notable calls: deleted `current_weight_pct` from thesis frontmatter rather than fixing the sync path that could never actually write it (it matched a fenced-block format no active file uses); serialized `pm morning` behind a `logs/pipeline.lock` file (auto-released via `atexit`) after Gemini's review flagged a race between a scheduled and a manual run both touching `logs/HEALTH_FAILURE.flag`. Caught one live bug mid-build from the parallel session: a `provenance` param had been added to `build_theses_md()` without ever being passed from `main()`, silently dropping the citation-marker disclosure it was meant to carry — fixed before it shipped.
+- **2026-07-29** — Ran two same-day follow-up batches (post-hardening cleanup, thesis prose hygiene). Notable calls: fixed `pm clean theses` to skip theses newer than the `Holdings_Current` refresh rather than archiving a just-opened position (live case: SKHY); added a hand-maintained `ISSUER_ALIASES` map instead of automated issuer resolution for the ETF look-through; deleted (not corrected) GLD/META's stale prose weight claims, and left VRT/VST alone after `lint_theses.py` flagged them but manual inspection showed both were false positives, not the same bug.
+- **2026-07-27** — Committed the 2026-07-26 exporter/thesis-sync fix (`7882b1c`) after verifying it end-to-end — it had been sitting uncommitted since the prior session. Also ran `derive_rotations` for the first time in 97 days (17 candidates staged, unreviewed — see What's Next) and initiated a new position, IBM, on a Stephanie-Link-sourced value thesis (~19 P/E post-selloff), funded by trimming IGV/VEU/JEPI.
 - **2026-07-26** — Ingested the Spotify weekly podcast aggregate as a single first-class source in its own voice, rather than decomposing it into constituent episode files. Rationale: decomposition made one digest appear as three agreeing sources in theme extraction, and discarded the aggregate's own synthesis. Manual-ingest CLI command deferred; hand-drop into `data/podcast_summaries/` for now.
 - **2026-07-26** — Established the standing principle that **the vault and `Trade_Log` lag Bill's decisions and are not evidence against them**. Encoded as Ground Rules v2 in the briefing prompt. Three of the sharpest findings in the 2026-07-26 briefing (cash posture, EMXC "drift", NOW "data artifact") dissolved on contact with actual intent; all three were documentation gaps reported as behavioral incoherence.
 - **2026-07-26** — Fixed the thesis sync allocation bug that hid all ceiling breaches. Chose deterministic recomputation from market value over replicating `manager.py`'s `max <= 1.5` heuristic, which is itself unsafe for a sufficiently diversified book.

@@ -3,8 +3,8 @@ ticker: GLD
 style: ETF
 framework_preference: macro_hedge_v1
 entry_date: 2026-05-03
-last_reviewed: '2026-07-27'
-current_allocation: 1.01%
+last_reviewed: '2026-07-31'
+current_allocation: 1.00%
 cost_basis: 6537.43
 time_horizon: 3 to 5 years
 triggers:
@@ -17,7 +17,6 @@ triggers:
   revenue_growth_floor_pct:
   operating_margin_floor_pct:
   style_size_ceiling_pct: 8.0
-  current_weight_pct:
 ---
 # GLD — Investment Thesis
 
@@ -53,20 +52,21 @@ Cost basis: ~$1,278 total at entry. Gold had already moved significantly from 20
 3. A higher-conviction portfolio hedge opportunity (TIPS ladder, alternative macro hedge) emerges that offers better risk-adjusted portfolio protection per dollar allocated.
 4. Gold price runs to extreme valuation versus real rates or historical ranges, suggesting a momentum-driven overshoot disconnected from macro fundamentals.
 
-## Scaling State & Priority
+## Scaling State
+next_step: starter size; build toward 3-5% over time as a portfolio stabilizer
 
-- Current 0.18% is a starter; build toward 3–5% over time as a portfolio stabilizer.
-- Rotation priority: low urgency; add opportunistically on pullbacks, not on momentum.
+## Rotation Priority
+priority: low -- add opportunistically on pullbacks, not on momentum
 
 <!-- region:position_state -->
-**Current Allocation:** 1.01%
+**Current Allocation:** 1.00%
 **Cost Basis:** $6,537.43
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** ETF
 **Size Ceiling:** 8.00%
-**Drift:** -6.99%
+**Drift:** -7.00%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -82,5 +82,5 @@ No realized G/L history.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-27 08:36: Auto-sync allocation 1.01%, drift -6.99%
+2026-07-31 08:23: Auto-sync allocation 1.00%, drift -7.00%
 <!-- endregion:change_log -->

@@ -3,7 +3,7 @@ ticker: JPIE
 style: ETF
 framework_preference: psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: '2026-07-27'
+last_reviewed: '2026-07-31'
 current_allocation: 4.72%
 cost_basis: 28177.63
 time_horizon: 0 to 3 years (tactical cash & ballast)
@@ -17,7 +17,6 @@ triggers:
   revenue_growth_floor_pct:
   operating_margin_floor_pct:
   style_size_ceiling_pct: 10.0 # cap “dry powder with risk” so equities still drive returns
-  current_weight_pct: 8.5
 ---
 # JPIE — Investment Thesis
 
@@ -66,6 +65,12 @@ I will reduce or exit JPIE and move to simpler cash/T‑bills if:
 3. The Fed cuts rates aggressively and JPIE’s yield drifts down toward money‑market levels, removing its edge.[file:10][web:16][web:18]  
 4. I want to fund a large, high‑conviction equity purchase during a major dislocation; JPIE is a first source of liquidity.  
 
+## Scaling State
+next_step: [BILL]
+
+## Rotation Priority
+priority: [BILL]
+
 <!-- region:position_state -->
 **Current Allocation:** 4.72%
 **Cost Basis:** $28,177.63
@@ -83,6 +88,22 @@ I will reduce or exit JPIE and move to simpler cash/T‑bills if:
 - 2026-07-06: Sell -110.0 @ $45.90
 - 2026-06-30: Sell -100.0 @ $46.05
 - 2026-06-25: Sell -19.0 @ $46.04
+- 2026-06-25: Sell -10.0 @ $46.04
+- 2026-06-25: Sell -71.0 @ $46.04
+- 2026-06-01: Sell -100.0 @ $45.88
+- 2026-05-27: Sell -150.0 @ $46.01
+- 2026-05-14: Sell -17.0 @ $46.00
+- 2026-05-08: Buy 100.0 @ $46.06
+- 2026-05-08: Buy 100.0 @ $46.06
+- 2026-04-17: Sell -75.0 @ $46.25
+- 2026-04-16: Buy 200.0 @ $46.16
+- 2026-04-16: Buy 100.0 @ $46.16
+- 2026-04-16: Buy 200.0 @ $46.16
+- 2026-04-10: Sell -500.0 @ $46.09
+- 2026-04-07: Buy 50.0 @ $45.90
+- 2026-04-07: Buy 500.0 @ $45.88
+- 2026-03-26: Buy 3.0 @ $45.95
+(showing 20 most recent of 32)
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
@@ -90,5 +111,5 @@ Total Realized G/L: $52.13 over 73 closed lots. Total Proceeds: $97,848.14.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-27 08:36: Auto-sync allocation 4.72%, drift -3.28%
+2026-07-31 08:23: Auto-sync allocation 4.72%, drift -3.28%
 <!-- endregion:change_log -->
