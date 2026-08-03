@@ -78,6 +78,9 @@ data/podcast_summaries/
 # Spotify Studio digest corpus mirror + sha256 ledger — regenerated per run
 data/spotify_digests/
 
+# Cached moment extraction (tasks/extract_moments.py) — regenerated per transcript
+data/moments/
+
 # Agent output reports — regenerated per run, not committed (agent_outputs/{agent}/*.md)
 agent_outputs/
 

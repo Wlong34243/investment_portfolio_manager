@@ -573,7 +573,171 @@ def podcast_signal(text):
     return True, title
 
 
-def build_podcasts_md(days):
+ZERO_EXPOSURE_MOMENT_ORDER = [
+    "position_disclosure", "specific_claim", "reversal", "non_consensus", "disagreement",
+]
+MAIN_MOMENT_ORDER = [
+    "reversal", "disagreement", "non_consensus", "specific_claim", "position_disclosure",
+]
+MOMENTS_CAP_PER_DAY = 8
+ZERO_EXPOSURE_SHARE_WARN_PCT = 20.0
+
+
+def build_moments_md(days, positions, composite_hash="unknown"):
+    """'## High-Signal Moments' block for podcasts.md.
+
+    Pure filesystem: reads data/moments/*.moments.json (written by
+    tasks/extract_moments.py), resolves relevance fresh against the live
+    position/thesis set, ranks, and renders. No Gemini call, no network,
+    no flag -- see prompts/moment_extraction_2026-08-02.md Step 2b. Do not
+    add a live-extraction path here; that invariant is the point.
+    """
+    from utils.agents.moment_extractor import (
+        load_cached_moments, resolve_relevance, rehydrate_cached_moment,
+        build_thesis_body_index, build_lookthrough_symbols, passes_portfolio_hook_filter,
+    )
+    from utils.moment_windows import load_ticker_aliases, load_macro_terms
+
+    today = datetime.now().date()
+    cached = load_cached_moments()
+
+    held_tickers = {p["ticker"].upper() for p in positions if p.get("ticker")} - {"CASH_MANUAL"}
+    thesis_bodies = build_thesis_body_index()
+    thesis_tickers = set(thesis_bodies.keys())
+    lookthrough_symbols = build_lookthrough_symbols(positions, use_network=False)
+    ticker_aliases = load_ticker_aliases()
+    macro_terms = load_macro_terms()
+
+    zero_bucket, main_bucket = [], []
+    disagreements = 0
+    resolved_count = 0
+    no_hook_dropped = 0
+
+    for raw in cached:
+        d = parse_summary_date(raw.get("source_episode", ""))
+        if d is None:
+            continue
+        age_days = (today - d).days
+        if not (0 <= age_days <= days):
+            continue
+
+        relevance, _detail = resolve_relevance(
+            raw.get("tickers_touched", []), held_tickers, thesis_tickers,
+            lookthrough_symbols, ticker_aliases, thesis_bodies,
+        )
+
+        try:
+            candidate = rehydrate_cached_moment(raw, relevance)
+        except Exception:
+            # Stale (pre-context, v1) cache entry -- not yet re-extracted
+            # under the current schema. Excluded from both the render and
+            # the reported stats below rather than counted as a real
+            # resolution, since it can't be rendered either way.
+            continue
+
+        resolved_count += 1
+        guess = raw.get("gemini_relevance_guess")
+        if guess is not None and guess != relevance:
+            disagreements += 1
+
+        # Fix 2: drop moments with no discernible relationship to the book
+        # at all -- not even ZERO_EXPOSURE. A private hotel-investing
+        # anecdote with no ticker and no held-name mention doesn't belong
+        # in either subsection.
+        if not passes_portfolio_hook_filter(candidate, held_tickers, ticker_aliases, macro_terms):
+            no_hook_dropped += 1
+            continue
+
+        if relevance == "ZERO_EXPOSURE":
+            zero_bucket.append(candidate)
+        else:
+            main_bucket.append(candidate)
+
+    zero_bucket.sort(key=lambda c: ZERO_EXPOSURE_MOMENT_ORDER.index(c.moment_type)
+                      if c.moment_type in ZERO_EXPOSURE_MOMENT_ORDER else 99)
+    main_bucket.sort(key=lambda c: MAIN_MOMENT_ORDER.index(c.moment_type)
+                      if c.moment_type in MAIN_MOMENT_ORDER else 99)
+
+    # Round-robin the two ranked queues into an 8-total cap, starting with
+    # zero-exposure, so a naive cap can never silently bury the section
+    # this build exists to populate.
+    picks_zero, picks_main = [], []
+    zi = mi = 0
+    turn = "zero"
+    while len(picks_zero) + len(picks_main) < MOMENTS_CAP_PER_DAY and (
+        zi < len(zero_bucket) or mi < len(main_bucket)
+    ):
+        if turn == "zero" and zi < len(zero_bucket):
+            picks_zero.append(zero_bucket[zi]); zi += 1
+        elif turn == "main" and mi < len(main_bucket):
+            picks_main.append(main_bucket[mi]); mi += 1
+        elif zi < len(zero_bucket):
+            picks_zero.append(zero_bucket[zi]); zi += 1
+        elif mi < len(main_bucket):
+            picks_main.append(main_bucket[mi]); mi += 1
+        turn = "main" if turn == "zero" else "zero"
+
+    total_in_window = len(zero_bucket) + len(main_bucket)
+    zero_share_pct = (len(zero_bucket) / total_in_window * 100.0) if total_in_window else 0.0
+
+    CONTEXT_EXCERPT_CHARS = 280
+
+    def _render_entry(c):
+        tickers = ", ".join(c.tickers_touched) if c.tickers_touched else "(none)"
+        context_excerpt = (c.context or "").strip()
+        if len(context_excerpt) > CONTEXT_EXCERPT_CHARS:
+            context_excerpt = context_excerpt[:CONTEXT_EXCERPT_CHARS].rstrip() + "..."
+        return "\n".join([
+            '- "%s"' % c.fragment,
+            "  %s" % c.why_it_matters,
+            "  > %s" % context_excerpt,
+            "  %s, %s, tickers: %s, relevance: %s" % (
+                c.source_episode, c.moment_type, tickers, c.relevance,
+            ),
+        ])
+
+    lines = ["## High-Signal Moments", "", "composite_hash: %s" % composite_hash]
+    if total_in_window:
+        lines.append(
+            "%d moment(s) in the last %d day(s) -- %d zero-exposure (%.0f%% share), "
+            "%d dropped for no portfolio hook. Python-vs-Gemini relevance disagreement: %d/%d."
+            % (total_in_window, days, len(zero_bucket), zero_share_pct, no_hook_dropped,
+               disagreements, resolved_count)
+        )
+        if zero_share_pct < ZERO_EXPOSURE_SHARE_WARN_PCT:
+            lines.append(
+                "WARNING: zero-exposure share is under %.0f%% -- the ADJACENT legs may be "
+                "over-catching and this build may be failing its primary purpose. Reported, "
+                "not auto-tuned." % ZERO_EXPOSURE_SHARE_WARN_PCT
+            )
+    else:
+        lines.append("0 moments cached in the last %d day(s)." % days)
+    lines.append("")
+
+    lines.append("### Zero-Exposure Ideas")
+    lines.append("")
+    if picks_zero:
+        for c in picks_zero:
+            lines.append(_render_entry(c))
+            lines.append("")
+    else:
+        lines.append("(no high-signal moments in window)")
+        lines.append("")
+
+    lines.append("### Portfolio-Relevant Moments")
+    lines.append("")
+    if picks_main:
+        for c in picks_main:
+            lines.append(_render_entry(c))
+            lines.append("")
+    else:
+        lines.append("(no high-signal moments in window)")
+        lines.append("")
+
+    return to_ascii("\n".join(lines) + "\n")
+
+
+def build_podcasts_md(days, positions=None, composite_hash="unknown"):
     today = datetime.now().date()
     files = glob.glob(os.path.join("data", "podcast_summaries", "*.md"))
     selected = []
@@ -625,7 +789,9 @@ def build_podcasts_md(days):
     else:
         lines.append("(no podcast summaries with allocation signal in the selected date range)")
 
-    return to_ascii("\n".join(lines) + "\n")
+    podcasts_md = to_ascii("\n".join(lines) + "\n")
+    moments_md = build_moments_md(days, positions or [], composite_hash=composite_hash)
+    return podcasts_md + "\n---\n\n" + moments_md
 
 
 def extract_frontmatter(text):
@@ -1110,7 +1276,9 @@ def main():
         bundle, style_map=style_map, styles=styles, lookthrough_mode=args.lookthrough,
         ceiling_overrides=ceiling_overrides,
     )
-    podcasts_md = build_podcasts_md(args.days)
+    podcasts_md = build_podcasts_md(
+        args.days, positions=positions, composite_hash=bundle.get("composite_hash", "unknown")
+    )
     theses_md = build_theses_md(
         styles_path, held_tickers=held_tickers, issues=issues, detail=args.thesis_detail, provenance=provenance
     )

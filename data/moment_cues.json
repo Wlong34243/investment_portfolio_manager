@@ -1,0 +1,67 @@
+{
+  "_comment": "Cue-phrase config for utils/moment_windows.py. Tune here, no code change. See prompts/moment_extraction_2026-08-02.md Step 1 and prompts/moment_extraction_v2_fix_2026-08-02.md Fix 0b. Dead written-English patterns (zero hits across the 147-transcript corpus per the v2 diagnostic: 'we exited', \"I've changed my mind\", 'I was wrong about', 'nobody is talking about', 'the thing people miss') are kept, not deleted -- they cost nothing and may hit a future transcript that speaks more formally.",
+  "reversal": {
+    "patterns": [
+      "I've changed my mind",
+      "I changed my mind",
+      "I was wrong about",
+      "we sold",
+      "we exited",
+      "used to think",
+      "turns out I was wrong",
+      "I kind of changed my mind",
+      "we got out of",
+      "we're out of",
+      "I don't think that anymore"
+    ]
+  },
+  "non_consensus": {
+    "patterns": [
+      "nobody is talking about",
+      "nobody's talking about",
+      "the thing people miss",
+      "the thing people are missing",
+      "what people are missing"
+    ],
+    "contrast_pairs": [
+      {"lead": "the consensus is", "contrast": "but", "window_chars": 300},
+      {"lead": "everyone thinks", "contrast": "but", "window_chars": 300}
+    ]
+  },
+  "position_disclosure": {
+    "patterns": [
+      "I own",
+      "we're long",
+      "we bought",
+      "my largest position",
+      "our biggest holding"
+    ]
+  },
+  "specific_claim": {
+    "patterns": [
+      "trading at",
+      "multiple of",
+      "capex",
+      "margin",
+      "guidance"
+    ],
+    "requires_ticker_proximity": true,
+    "proximity_chars": 1200
+  },
+  "disagreement": {
+    "patterns": [
+      "I disagree",
+      "that's wrong",
+      "i'd push back",
+      "I'd push back"
+    ],
+    "requires_speaker_marker_proximity": true,
+    "speaker_marker": ">>",
+    "proximity_chars": 200
+  },
+  "macro_terms": [
+    "rates", "inflation", "the fed", "credit", "recession", "the long end",
+    "yields", "the yield curve", "monetary policy", "quantitative easing",
+    "cpi", "the treasury", "the dollar"
+  ]
+}

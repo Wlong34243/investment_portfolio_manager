@@ -1512,6 +1512,29 @@ def morning(
     else:
         step_results.append(("Spotify Digests", "skip"))
 
+    # 5c. Extract High-Signal Moments (cached, position-independent; skips
+    #     transcripts already processed, so a normal morning only pays for
+    #     the 2-5 new episodes from STEP 4 above). Non-fatal: one bad
+    #     transcript must not break the rest of the pipeline.
+    if not skip_podcasts:
+        console.print("\n[bold cyan]STEP 4c - Extracting High-Signal Moments...[/]")
+        try:
+            from tasks.extract_moments import run_extract_moments
+            moments_result = run_extract_moments()
+            n_new = len(moments_result["processed"])
+            n_failed = len(moments_result["failed"])
+            label = f"Moments ({n_new} new transcript(s))"
+            if n_failed > 0:
+                console.print(f"  [yellow]! {n_failed} transcript(s) failed extraction[/]")
+                step_results.append((label, "warn"))
+            else:
+                step_results.append((label, "pass"))
+        except Exception as e:
+            console.print(f"[yellow]Moment extraction error: {e}[/]")
+            step_results.append(("Moments", "warn"))
+    else:
+        step_results.append(("Moments", "skip"))
+
     # 6. Refresh Dashboard (Rebuild Views from Bundle)
     console.print("\n[bold cyan]STEP 5 - Refreshing Dashboard...[/]")
     try:
@@ -1731,6 +1754,30 @@ def dislocation_scan(
     console.print(f"[green]Universe:[/] {payload['universe_size']} tickers, {payload['flagged_count']} flagged.")
     console.print(f"  JSON: {result['json_path']}")
     console.print(f"  Markdown: {result['md_path']}")
+
+
+@app.command("extract-moments")
+def extract_moments(
+    force: Optional[str] = typer.Option(None, "--force", help="Transcript filename or stem to force re-extraction of."),
+    limit: Optional[int] = typer.Option(None, "--limit", help="Max number of NEW transcripts to process this run."),
+):
+    """
+    Cached high-signal moment extraction (reversal / non_consensus /
+    position_disclosure / specific_claim / disagreement) over podcast
+    transcripts. Position-independent and idempotent -- skips any
+    transcript with an existing data/moments/*.moments.json cache file.
+    Relevance tagging happens later, at export time, never here.
+    """
+    from tasks.extract_moments import run_extract_moments
+    result = run_extract_moments(force=force, limit=limit)
+    console.print(
+        f"[green]Moments:[/] processed {len(result['processed'])}, "
+        f"skipped {len(result['skipped'])} (cached), "
+        f"failed {len(result['failed'])}, "
+        f"{result['total_candidates']} candidate(s) written."
+    )
+    if result["failed"]:
+        console.print(f"[yellow]Failed: {', '.join(result['failed'])}[/]")
 
 
 @app.command("login")
