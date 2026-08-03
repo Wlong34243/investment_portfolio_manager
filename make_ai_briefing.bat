@@ -1,5 +1,5 @@
 @echo off
-cd /d C:\Users\WLong\Investment_Portfolio
+cd /d "%~dp0"
 echo Refreshing composite bundle...
 python manager.py bundle composite
 if errorlevel 1 echo WARNING: bundle refresh failed, using newest existing bundle.
