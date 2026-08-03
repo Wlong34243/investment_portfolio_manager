@@ -494,6 +494,36 @@ def screen_by_metrics(criteria: dict) -> pd.DataFrame:
         return pd.DataFrame()
 
 
+def get_market_movers(direction: str = "losers") -> list[dict]:
+    """
+    FMP /stable/biggest-losers (or /biggest-gainers) -- today's largest single-
+    day movers across the whole market, unfiltered by market cap or quality.
+    Used by tasks/dislocation_scan.py as a discovery source beyond current
+    holdings/watchlist; callers are expected to apply their own market-cap
+    and quality filters, since this endpoint returns plenty of penny-stock
+    and leveraged-ETF noise. Returns [] on any failure -- discovery is a
+    nice-to-have, never worth failing the scan over.
+    """
+    api_key = get_fmp_api_key()
+    if not api_key:
+        return []
+
+    endpoint = "biggest-losers" if direction == "losers" else "biggest-gainers"
+    url = f"{BASE_URL}/{endpoint}?apikey={api_key}"
+    try:
+        _fmp_rate_limit()
+        resp = requests.get(url, timeout=10)
+        if resp.status_code in (402, 429):
+            logging.warning("FMP %d for %s -- skipping discovery screen", resp.status_code, endpoint)
+            return []
+        resp.raise_for_status()
+        data = resp.json()
+        return data if isinstance(data, list) else []
+    except Exception as e:
+        logging.warning("FMP %s fetch failed: %s", endpoint, e)
+        return []
+
+
 @lru_cache(maxsize=128)
 def get_financial_statements(ticker: str) -> dict:
     """
@@ -637,6 +667,8 @@ def get_fundamentals(ticker: str, bundle_quote: dict = None, asset_class: str = 
                 "payout_ratio":   ["payoutRatio"],
                 "pb_ratio":       ["priceToBook"],
                 "current_ratio":  ["currentRatio"],
+                "free_cashflow":  ["freeCashflow"],
+                "price":          ["currentPrice", "regularMarketPrice"],
             }
             for internal, yf_keys in _YF_MAP.items():
                 if result.get(internal) is None:

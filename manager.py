@@ -1327,9 +1327,10 @@ def morning(
     skip_vault_sync: bool = typer.Option(False, "--skip-vault-sync", help="Skip vault sync to markdown theses."),
     skip_composite: bool = typer.Option(False, "--skip-composite", help="Skip building composite bundle."),
     skip_export: bool = typer.Option(False, "--skip-export", help="Skip building the AI briefing package in exports/."),
+    skip_dislocation: bool = typer.Option(False, "--skip-dislocation", help="Skip the dislocation scan."),
 ):
     """
-    Run the full market-open pipeline: health -> Schwab sync -> snapshot -> podcast sync -> dashboard refresh -> vault sync -> composite bundle -> AI briefing export.
+    Run the full market-open pipeline: health -> Schwab sync -> snapshot -> podcast sync -> dashboard refresh -> vault sync -> composite bundle -> AI briefing export -> derive rotations -> dislocation scan.
     """
     _acquire_pipeline_lock()
     from tasks.health import run_all_checks, exit_code as health_exit_code, CRITICAL, FAIL, WARN, PASS
@@ -1648,6 +1649,24 @@ def morning(
         console.print(f"[red]Derive rotations failed: {e}[/]")
         step_results.append(("Derive Rotations", "fail"))
 
+    # 12. Dislocation Scan (facts-only screen; no Sheet writes in v1)
+    if not skip_dislocation:
+        console.print("\n[bold cyan]STEP 11 - Dislocation Scan...[/]")
+        try:
+            from tasks.dislocation_scan import run_scan
+            scan_result = run_scan(live=live)
+            payload = scan_result["payload"]
+            console.print(
+                f"[green]Dislocation scan:[/] {payload['universe_size']} tickers, "
+                f"{payload['flagged_count']} flagged. {scan_result['md_path']}"
+            )
+            step_results.append(("Dislocation Scan", "pass"))
+        except Exception as e:
+            console.print(f"[red]Dislocation scan failed: {e}[/]")
+            step_results.append(("Dislocation Scan", "fail"))
+    else:
+        step_results.append(("Dislocation Scan", "skip"))
+
     _morning_summary(console, mode_label, step_results, tx_ok, snapshot_ok, tax_refreshed, skip_tax, start_time)
 
     # Exit with code based on worst step
@@ -1659,6 +1678,24 @@ def morning(
     if worst == "fail": raise typer.Exit(code=1)
     if worst == "warn": raise typer.Exit(code=2)
     raise typer.Exit(code=0)
+
+
+@app.command("dislocation-scan")
+def dislocation_scan(
+    live: bool = typer.Option(False, "--live", help="Reserved for future Sheet-write promotion; currently a no-op."),
+    losers_limit: int = typer.Option(50, "--losers-limit", help="Max FMP biggest-losers candidates to evaluate before the market-cap floor."),
+):
+    """
+    Facts-only daily screen for the quality-franchise / double-digit-selloff /
+    cheap-forward-multiple pattern across current holdings, data/watchlist.json,
+    and FMP's biggest-losers list. No price targets, no buy/sell language.
+    """
+    from tasks.dislocation_scan import run_scan
+    result = run_scan(losers_limit=losers_limit, live=live)
+    payload = result["payload"]
+    console.print(f"[green]Universe:[/] {payload['universe_size']} tickers, {payload['flagged_count']} flagged.")
+    console.print(f"  JSON: {result['json_path']}")
+    console.print(f"  Markdown: {result['md_path']}")
 
 
 @app.command("login")

@@ -124,6 +124,18 @@ ISSUER_ALIASES = {
 }
 
 # ---------------------------------------------------------------------------
+# Dislocation Scanner (tasks/dislocation_scan.py)
+# ---------------------------------------------------------------------------
+# A ticker is flagged when it clears the drawdown bar AND the multiple bar
+# AND the quality floor -- all three, not any one. Facts only, no price
+# targets: these are screen thresholds, not buy signals.
+DISLOCATION_MIN_MARKET_CAP   = 10_000_000_000  # large/mid-cap only; excludes screener noise
+DISLOCATION_MIN_DRAWDOWN_52W = 0.15            # 15% off the 52-week high ...
+DISLOCATION_MIN_5D_RETURN    = -0.10           # ... or a -10% 5-day move (either trips it)
+DISLOCATION_MAX_FWD_PE       = 18.0
+DISLOCATION_MIN_GROSS_MARGIN = 0.30            # quality floor: margin > 30% OR positive FCF
+
+# ---------------------------------------------------------------------------
 # Valuation Agent Skips (Legacy - being replaced by VALUATION_SKIP)
 # ---------------------------------------------------------------------------
 # Asset classes and tickers to exclude from valuation analysis (ETFs, Funds, etc. have no P/E)
