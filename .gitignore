@@ -89,3 +89,9 @@ agent_outputs/
 
 # Windows Explorer folder-customization files — pure OS noise, not project content
 desktop.ini
+
+# Claude Code local permission/session settings — machine-local, not project content
+.claude/settings.local.json
+
+# Processed-video ledger — regenerated per run, same treatment as podcast_summaries/
+data/processed_videos.json
