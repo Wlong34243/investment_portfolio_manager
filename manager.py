@@ -94,6 +94,9 @@ app.add_typer(export_app, name="export")
 podcast_app = typer.Typer(help="Podcast transcript collection and optional AI analysis.")
 app.add_typer(podcast_app, name="podcast")
 
+publish_app = typer.Typer(help="Publish small, stable output to a Drive-synced folder for reading on other devices.")
+app.add_typer(publish_app, name="publish")
+
 # --- AGENT GROUP ---
 agent_app = typer.Typer(help="AI agents that consume the composite bundle and produce local output.")
 app.add_typer(agent_app, name="agent")
@@ -1725,6 +1728,24 @@ def morning(
     else:
         step_results.append(("Dislocation Scan", "skip"))
 
+    # 13. Publish analysis outputs to Drive (non-fatal; Drive letter may not
+    # exist on some future machine -- degrades to warn, never aborts).
+    console.print("\n[bold cyan]STEP 12 - Publishing Analysis to Drive...[/]")
+    try:
+        from scripts.backup_to_drive import publish_analysis
+        publish_result = publish_analysis(live=live)
+        if publish_result["warn"]:
+            console.print(f"[yellow]{publish_result['warn']}[/]")
+            step_results.append(("Publish Analysis", "warn"))
+        else:
+            n_copied = len(publish_result["copied"])
+            console.print(f"[green]Publish analysis:[/] {n_copied} file(s) copied, "
+                           f"{len(publish_result['skipped'])} unchanged.")
+            step_results.append((f"Publish Analysis ({n_copied} copied)", "pass"))
+    except Exception as e:
+        console.print(f"[yellow]Publish analysis error: {e}[/]")
+        step_results.append(("Publish Analysis", "warn"))
+
     _morning_summary(console, mode_label, step_results, tx_ok, snapshot_ok, tax_refreshed, skip_tax, start_time)
 
     # Exit with code based on worst step
@@ -1754,6 +1775,30 @@ def dislocation_scan(
     console.print(f"[green]Universe:[/] {payload['universe_size']} tickers, {payload['flagged_count']} flagged.")
     console.print(f"  JSON: {result['json_path']}")
     console.print(f"  Markdown: {result['md_path']}")
+
+
+@publish_app.command("analysis")
+def publish_analysis_cmd(
+    live: bool = typer.Option(False, "--live", help="Actually copy files. Default: DRY RUN."),
+):
+    """
+    One-way, newest-wins copy of agent_outputs/{ai_briefing_analysis,ideas,
+    dislocation_scan}/*.md to a Drive-synced folder (default G:\\My Drive\\
+    Portfolio_Analysis, override with PORTFOLIO_ANALYSIS_DRIVE_DIR). Never
+    deletes at the destination; skips files with an identical SHA-256.
+    """
+    from scripts.backup_to_drive import publish_analysis
+    result = publish_analysis(live=live)
+    if result["warn"]:
+        console.print(f"[yellow]WARN: {result['warn']}[/]")
+        raise typer.Exit(code=0)
+    mode = "LIVE" if live else "DRY RUN"
+    console.print(
+        f"[green][{mode}][/] considered {len(result['considered'])}, "
+        f"copied {len(result['copied'])}, skipped {len(result['skipped'])} (identical hash)."
+    )
+    for name in result["copied"]:
+        console.print(f"  copied: {name}")
 
 
 @app.command("extract-moments")
