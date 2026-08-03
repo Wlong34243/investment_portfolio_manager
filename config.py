@@ -47,6 +47,23 @@ SCHWAB_TOKEN_BUCKET   = os.getenv("SCHWAB_TOKEN_BUCKET", "portfolio-manager-toke
 SCHWAB_ACCOUNT_HASH   = os.getenv("SCHWAB_ACCOUNT_HASH", "")
 SCHWAB_CALLBACK_URL   = os.getenv("SCHWAB_CALLBACK_URL", "https://127.0.0.1")
 
+# Trailing digits (comma-separated) of the Schwab accounts this system
+# represents. Live enumeration on 2026-08-03 (read-only get_accounts() call)
+# found SIX accounts linked to this API token, not the three the repo's CSV
+# exports implied -- with heavily overlapping holdings across them (JEPI in
+# 5 of 6). Bill confirmed the primary portfolio (~$591-596K, matching
+# CLAUDE.md/state.md) is the SUM of three of those six: masked ...6499,
+# ...8767, ...5119 ($595,405.90 combined). The other three (...4151, ...0217,
+# ...9753) are excluded. utils/schwab_client.py's fetch_positions()/
+# fetch_transactions()/fetch_tax_lots() match each account's number's last
+# 4 digits against this list and skip anything that doesn't match (see
+# prompts/schwab_account_scope_fix_2026-08-03.md). Empty = no filtering (old,
+# pre-fix behavior).
+SCHWAB_PRIMARY_ACCOUNT_SUFFIXES = [
+    s.strip() for s in os.getenv("SCHWAB_PRIMARY_ACCOUNT_SUFFIXES", "6499,8767,5119").split(",")
+    if s.strip()
+]
+
 # Token blob names in GCS (one per app — Market Data client cannot read accounts blob)
 SCHWAB_TOKEN_BLOB_ACCOUNTS = "token_accounts.json"
 SCHWAB_TOKEN_BLOB_MARKET   = "token_market.json"

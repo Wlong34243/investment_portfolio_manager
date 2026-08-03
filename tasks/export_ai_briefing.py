@@ -243,13 +243,14 @@ def check_bundle_age(bundle):
         print("WARNING: bundle is %.1f hours old" % age_hours)
 
 
-def build_portfolio_md(bundle, style_map=None, styles=None, lookthrough_mode="cache"):
+def build_portfolio_md(bundle, style_map=None, styles=None, lookthrough_mode="cache", ceiling_overrides=None):
     md = bundle.get("_market_data", {})
     positions = md.get("positions", [])
     tax_lots = md.get("tax_lots", [])
     rotations = bundle.get("recent_rotations", [])
     style_map = style_map or {}
     styles = styles or {}
+    ceiling_overrides = ceiling_overrides or {}
 
     lines = []
     lines.append("# Portfolio — %s" % bundle.get("timestamp_utc", "unknown"))
@@ -288,7 +289,7 @@ def build_portfolio_md(bundle, style_map=None, styles=None, lookthrough_mode="ca
         )
 
     lines.append("")
-    lines.extend(build_ceiling_check(sorted_positions, style_map, styles))
+    lines.extend(build_ceiling_check(sorted_positions, style_map, styles, ceiling_overrides))
     lines.extend(build_lookthrough(sorted_positions, style_map, lookthrough_mode))
     lines.append("## Tax Lots")
     lines.append("")
@@ -455,12 +456,17 @@ def rotation_staleness(rotations, bundle_ts):
     return gap if gap > 30 else None
 
 
-def build_ceiling_check(positions, style_map, styles):
+def build_ceiling_check(positions, style_map, styles, ceiling_overrides=None):
     """Deterministic size-ceiling breach table.
 
     The ceilings ship in theses.md but nothing ever checked them, and the join
     required to check them by hand (ticker -> style -> ceiling) is exactly the
     kind of step a model skips or fumbles. Compute it here instead.
+
+    ceiling_overrides (ticker -> %) takes precedence over the style default
+    when present -- a thesis file's own style_size_ceiling_pct (e.g. META's
+    4.0, deliberately below the GARP default of 9.0) is a manual, per-ticker
+    decision and must not be silently replaced by the style-wide number.
     """
     lines = ["## Style Size Ceiling Check", ""]
     if not styles or not style_map:
@@ -468,6 +474,7 @@ def build_ceiling_check(positions, style_map, styles):
         lines.append("")
         return lines
 
+    ceiling_overrides = ceiling_overrides or {}
     breaches, near, totals, unmapped = [], [], {}, []
     for p in positions:
         ticker = p.get("ticker", "")
@@ -478,7 +485,8 @@ def build_ceiling_check(positions, style_map, styles):
                 unmapped.append(ticker)
             continue
         totals[style] = totals.get(style, 0.0) + weight
-        ceiling = (styles.get(style) or {}).get("size_ceiling_pct")
+        override = ceiling_overrides.get(ticker)
+        ceiling = override if override is not None else (styles.get(style) or {}).get("size_ceiling_pct")
         if ceiling is None:
             continue
         if weight > ceiling:
@@ -678,6 +686,38 @@ def build_style_map():
         if style:
             style_map[ticker] = style
     return style_map
+
+
+CEILING_OVERRIDE_RE = re.compile(r"style_size_ceiling_pct:\s*([0-9.]+)")
+
+
+def build_ceiling_overrides():
+    """ticker -> manually-set size-ceiling override (%), read from the
+    frontmatter's `triggers:` block. extract_frontmatter()'s flat, per-line
+    parser can't see this key -- it's nested under `triggers:`, and that
+    parser only matches unindented top-level lines -- so this regexes the
+    raw frontmatter block directly instead. Ticker with no override present
+    is simply absent from the returned dict; caller falls back to the style
+    default. See prompts/schwab_account_scope_fix_2026-08-03.md Deliverable 3."""
+    overrides = {}
+    for path in sorted(glob.glob(os.path.join("vault", "theses", "*_thesis.md"))):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                raw = f.read()
+        except OSError:
+            continue
+        fm, _ = extract_frontmatter(raw)
+        ticker = fm.get("ticker") or os.path.basename(path).replace("_thesis.md", "")
+        m = re.match(r"^---\s*\n(.*?)\n---\s*\n", raw, re.DOTALL)
+        if not m:
+            continue
+        override_m = CEILING_OVERRIDE_RE.search(m.group(1))
+        if override_m:
+            try:
+                overrides[ticker] = float(override_m.group(1))
+            except ValueError:
+                pass
+    return overrides
 
 
 def load_styles(styles_path):
@@ -1045,6 +1085,7 @@ def main():
     styles_path = os.path.join("data", "styles.json")
     styles = load_styles(styles_path)
     style_map = build_style_map()
+    ceiling_overrides = build_ceiling_overrides()
 
     positions = bundle.get("_market_data", {}).get("positions", [])
     held_tickers = {p.get("ticker") for p in positions if p.get("ticker")}
@@ -1056,7 +1097,8 @@ def main():
     )
 
     portfolio_md = build_portfolio_md(
-        bundle, style_map=style_map, styles=styles, lookthrough_mode=args.lookthrough
+        bundle, style_map=style_map, styles=styles, lookthrough_mode=args.lookthrough,
+        ceiling_overrides=ceiling_overrides,
     )
     podcasts_md = build_podcasts_md(args.days)
     theses_md = build_theses_md(

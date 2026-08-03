@@ -76,6 +76,55 @@ def get_market_client() -> schwab.client.Client | None:
         logging.error(f"Failed to initialize Market client: {e}")
         return None
 
+_warned_no_account_scope = False
+
+
+def _warn_if_unscoped() -> None:
+    """One-time warning (per process) that account filtering is off. Called
+    at the top of each fetch_* function rather than per-account so it can't
+    spam the log."""
+    global _warned_no_account_scope
+    if not config.SCHWAB_PRIMARY_ACCOUNT_SUFFIXES and not _warned_no_account_scope:
+        logging.warning(
+            "schwab_client: SCHWAB_PRIMARY_ACCOUNT_SUFFIXES is unset -- aggregating "
+            "ALL linked Schwab accounts (pre-fix behavior). Set it to scope to "
+            "the confirmed accounts. See prompts/schwab_account_scope_fix_2026-08-03.md."
+        )
+        _warned_no_account_scope = True
+
+
+def _is_primary_account(raw_acct_num) -> bool:
+    """True if this account should be included in aggregation. Matches the
+    trailing digits of the account number against
+    config.SCHWAB_PRIMARY_ACCOUNT_SUFFIXES (a list -- the primary portfolio
+    is confirmed to be the SUM of three accounts, not one; see the config
+    comment for how that was determined). Empty config = include everything
+    (old behavior) -- see _warn_if_unscoped()."""
+    suffixes = config.SCHWAB_PRIMARY_ACCOUNT_SUFFIXES
+    if not suffixes:
+        return True
+    acct_str = str(raw_acct_num or "")
+    return any(acct_str.endswith(suffix) for suffix in suffixes)
+
+
+def _classify_tax_treatment(acct_type_raw: str) -> str:
+    """Schwab account `type` -> our tax_treatment label. Single source of
+    truth for fetch_positions() and fetch_tax_lots(), which previously each
+    had their own copy of this logic. A 401(k)/QRP account's `type` doesn't
+    contain 'ROTH' or 'IRA', so it used to fall through to 'taxable' --
+    identical to the real taxable account -- which is why the cross-account
+    'mixed'-tax-treatment safety net never caught the contamination this was
+    built to prevent. 401(k) is treated the same as IRA ('tax_deferred') per
+    Bill's confirmation 2026-08-03 -- nothing downstream currently needs a
+    finer-grained distinction."""
+    t = (acct_type_raw or "").upper()
+    if "ROTH" in t:
+        return "tax_exempt"
+    if "IRA" in t or "401" in t or "QRP" in t:
+        return "tax_deferred"
+    return "taxable"
+
+
 def fetch_positions(client: schwab.client.Client) -> pd.DataFrame:
     """
     Fetch and aggregate positions from ALL linked Schwab accounts.
@@ -91,6 +140,7 @@ def fetch_positions(client: schwab.client.Client) -> pd.DataFrame:
 
     Returns empty DataFrame on error or if no invested positions found.
     """
+    _warn_if_unscoped()
     try:
         r = client.get_accounts(fields=client.Account.Fields.POSITIONS)
         r.raise_for_status()
@@ -117,6 +167,10 @@ def fetch_positions(client: schwab.client.Client) -> pd.DataFrame:
             raw_acct_num  = sa.get('accountNumber', '') or sa.get('accountId', '')
             masked_acct   = f"...{str(raw_acct_num)[-4:]}" if raw_acct_num else f"acct_{acct_idx}"
 
+            if not _is_primary_account(raw_acct_num):
+                logging.info("fetch_positions: skipping non-primary account %s", masked_acct)
+                continue
+
             # Cash from account-level balances (more reliable than sweep positions)
             balances    = sa.get('currentBalances', {})
             acct_cash   = float(balances.get('cashBalance', 0) or 0)
@@ -124,12 +178,7 @@ def fetch_positions(client: schwab.client.Client) -> pd.DataFrame:
 
             # Derive tax treatment from Schwab account type field
             acct_type = sa.get('type', '').upper()
-            if 'ROTH' in acct_type:
-                tax_treatment = 'tax_exempt'
-            elif 'IRA' in acct_type:
-                tax_treatment = 'tax_deferred'
-            else:
-                tax_treatment = 'taxable'
+            tax_treatment = _classify_tax_treatment(acct_type)
 
             positions = sa.get('positions', [])
             logging.debug(
@@ -425,6 +474,7 @@ def fetch_transactions(client: "schwab.client.Client", start_date=None, end_date
     Uses get_account_numbers() to retrieve the hashValue required for the
     transactions endpoint.
     """
+    _warn_if_unscoped()
     if not start_date:
         start_date = datetime.now() - timedelta(days=30)
     if not end_date:
@@ -451,6 +501,10 @@ def fetch_transactions(client: "schwab.client.Client", start_date=None, end_date
             continue
 
         masked = f"...{str(acct_num)[-4:]}" if acct_num else "...????"
+
+        if not _is_primary_account(acct_num):
+            logging.info("fetch_transactions: skipping non-primary account %s", masked)
+            continue
         txns = _fetch_account_transactions(client, acct_hash, start_date, end_date)
 
         if txns is None:
@@ -576,6 +630,7 @@ def fetch_tax_lots(client: "schwab.client.Client") -> list[dict]:
     """
     from utils.tax import classify_holding_period, days_until_long_term
 
+    _warn_if_unscoped()
     try:
         r = client.get_accounts(fields=client.Account.Fields.POSITIONS)
         r.raise_for_status()
@@ -589,11 +644,22 @@ def fetch_tax_lots(client: "schwab.client.Client") -> list[dict]:
     for acc in accounts:
         sa = acc.get('securitiesAccount', {})
         acct_hash = str(acc.get('hashValue') or sa.get('accountNumber', ''))
+        raw_acct_num = sa.get('accountNumber', '') or acct_hash
 
+        if not _is_primary_account(raw_acct_num):
+            masked = f"...{str(raw_acct_num)[-4:]}" if raw_acct_num else "...????"
+            logging.info("fetch_tax_lots: skipping non-primary account %s", masked)
+            continue
+
+        # utils.tax.Lot.account_type only models taxable/ira/roth/unknown (a
+        # narrower vocabulary than _classify_tax_treatment's), so 401(k)/QRP
+        # is folded into 'ira' here rather than introducing a 4th value --
+        # both are tax-deferred and neither triggers wash-sale rules, which
+        # is all this field is used for downstream.
         acct_type_raw = sa.get('type', '').upper()
         if 'ROTH' in acct_type_raw:
             account_type = 'roth'
-        elif 'IRA' in acct_type_raw:
+        elif 'IRA' in acct_type_raw or '401' in acct_type_raw or 'QRP' in acct_type_raw:
             account_type = 'ira'
         else:
             account_type = 'taxable'

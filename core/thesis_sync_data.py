@@ -82,6 +82,8 @@ def gather_thesis_sync_data(
         # 1. Check thesis frontmatter (if exists)
         thesis_path = Path(config.THESES_DIR) / f"{ticker}_thesis.md"
         style = None
+        fm = None
+        mgr = None
         if thesis_path.exists():
             mgr = ThesisManager(thesis_path)
             fm = mgr.get_frontmatter()
@@ -102,8 +104,32 @@ def gather_thesis_sync_data(
             elif style == "CASH":
                 style = "ETF" # Or similar, or None
         
-        size_ceiling = styles_config.get(style, {}).get("size_ceiling_pct", 0.0)
-        
+        # Preserve a manually-set per-ticker override (style_size_ceiling_pct,
+        # nested under the frontmatter's `triggers:` block) instead of always
+        # recomputing the style default. Before this fix, a deliberate
+        # override like META's 4.0 (below the GARP default of 9.0, "below
+        # MSFT given higher idiosyncratic risk") was silently overwritten
+        # back to the style default on every sync -- destructive, not just
+        # a display bug. Only the style default is used when no override
+        # exists yet.
+        size_ceiling_override = None
+        if fm:
+            triggers_fm = fm.get('triggers') or {}
+            raw_override = triggers_fm.get('style_size_ceiling_pct')
+            if raw_override in (None, '') and mgr is not None:
+                triggers_block = mgr.get_triggers() or {}
+                raw_override = triggers_block.get('style_size_ceiling_pct')
+            if raw_override not in (None, ''):
+                try:
+                    size_ceiling_override = float(raw_override)
+                except (TypeError, ValueError):
+                    size_ceiling_override = None
+
+        if size_ceiling_override is not None:
+            size_ceiling = size_ceiling_override
+        else:
+            size_ceiling = styles_config.get(style, {}).get("size_ceiling_pct", 0.0)
+
         # Recent transactions, capped at txn_limit. Track the true total so
         # the thesis file can disclose "(showing N most recent of M)" rather
         # than silently dropping older history.
