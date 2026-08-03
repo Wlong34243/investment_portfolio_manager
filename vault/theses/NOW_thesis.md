@@ -3,10 +3,10 @@ ticker: NOW
 style: GARP
 framework_preference:
 entry_date:
-last_reviewed: '2026-07-31'
+last_reviewed: '2026-08-03'
 triggers: {}
-cost_basis: 6765.69
-current_allocation: 1.18%
+cost_basis: 2735.4
+current_allocation: 0.39%
 ---
 # NOW — Investment Thesis
 
@@ -60,17 +60,18 @@ Funding source of choice for higher-conviction ideas. The 2026-06-25 sell alread
 - 2026-07-26: Thesis rewritten to match the decision. Scaling state hold → reduce; priority very low → high. Removed stale `price_trim_above: 250.00` trigger (stock ~$98.78; the trigger was unreachable and would never have fired). Prior bull case retained for reference but marked non-operative.
 
 <!-- region:position_state -->
-**Current Allocation:** 1.18%
-**Cost Basis:** $6,765.69
+**Current Allocation:** 0.39%
+**Cost Basis:** $2,735.40
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** GARP
 **Size Ceiling:** 9.00%
-**Drift:** -7.82%
+**Drift:** -8.61%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
+- 2026-07-31: Sell -35.0 @ $109.43
 - 2026-06-25: Sell -100.0 @ $90.61
 - 2026-06-02: Buy 6.0 @ $128.90
 - 2026-06-02: Buy 4.0 @ $128.90
@@ -90,8 +91,7 @@ Funding source of choice for higher-conviction ideas. The 2026-06-25 sell alread
 - 2026-04-21: Buy 10.0 @ $100.61
 - 2026-04-21: Buy 9.0 @ $100.33
 - 2026-04-20: Buy 10.0 @ $99.27
-- 2026-04-15: Buy 50.0 @ $91.50
-(showing 20 most recent of 26)
+(showing 20 most recent of 27)
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
@@ -99,5 +99,5 @@ Total Realized G/L: $-300.00 over 8 closed lots. Total Proceeds: $3,763.17.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-31 08:23: Auto-sync allocation 1.18%, drift -7.82%
+2026-08-03 09:36: Auto-sync allocation 0.39%, drift -8.61%
 <!-- endregion:change_log -->

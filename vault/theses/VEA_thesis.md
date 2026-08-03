@@ -3,9 +3,9 @@ ticker: VEA
 style: ETF
 framework_preference:
 entry_date:
-last_reviewed: '2026-07-31'
+last_reviewed: '2026-08-03'
 cost_basis: 16405.41
-current_allocation: 3.03%
+current_allocation: 2.01%
 ---
 # VEA — Investment Thesis
 
@@ -44,14 +44,14 @@ priority: very low (core foundational holding)
 - 2026-04: Initiated. Thesis intact. Monitoring the US Dollar Index (DXY), European GDP growth, and Japanese corporate governance reforms.
 
 <!-- region:position_state -->
-**Current Allocation:** 3.03%
+**Current Allocation:** 2.01%
 **Cost Basis:** $16,405.41
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** ETF
 **Size Ceiling:** 8.00%
-**Drift:** -4.97%
+**Drift:** -5.99%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -80,5 +80,5 @@ Total Realized G/L: $2,332.22 over 18 closed lots. Total Proceeds: $24,396.33.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-31 08:23: Auto-sync allocation 3.03%, drift -4.97%
+2026-08-03 09:36: Auto-sync allocation 2.01%, drift -5.99%
 <!-- endregion:change_log -->

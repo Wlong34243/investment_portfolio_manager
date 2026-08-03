@@ -3,9 +3,9 @@ ticker: EWZ
 style: ETF
 framework_preference:
 entry_date:
-last_reviewed: '2026-07-31'
+last_reviewed: '2026-08-03'
 cost_basis: 15674.58
-current_allocation: 2.56%
+current_allocation: 1.71%
 ---
 # EWZ — Investment Thesis
 
@@ -44,14 +44,14 @@ priority: medium (requires monitoring of global FX and commodity trends)
 - 2026-04: Initiated. Thesis intact. Monitoring Petrobras dividend announcements, iron ore prices, and USD/BRL exchange rates.
 
 <!-- region:position_state -->
-**Current Allocation:** 2.56%
+**Current Allocation:** 1.71%
 **Cost Basis:** $15,674.58
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** ETF
 **Size Ceiling:** 8.00%
-**Drift:** -5.44%
+**Drift:** -6.29%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -81,5 +81,5 @@ Total Realized G/L: $356.44 over 6 closed lots. Total Proceeds: $10,010.62.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-31 08:23: Auto-sync allocation 2.56%, drift -5.44%
+2026-08-03 09:36: Auto-sync allocation 1.71%, drift -6.29%
 <!-- endregion:change_log -->

@@ -3,9 +3,9 @@ ticker: META
 style: GARP
 framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: '2026-07-31'
-current_allocation: 2.21%
-cost_basis: 11592.71
+last_reviewed: '2026-08-03'
+current_allocation: 0.89%
+cost_basis: 8852.82
 time_horizon: 3 to 5+ years
 triggers:
   fwd_pe_add_below: 18              # add if ads/engagement solid but market panics
@@ -76,23 +76,56 @@ I will trim or exit META if any of the following become clear, structural trends
 2. Zuckerberg abandons “Year of Efficiency” discipline and aggressively ramps Reality Labs spend without 
 
 ## Scaling State
-next_step: [BILL]
+next_step: **trim complete, hold remainder** — transcribed from Bill 2026-07-31, not
+inferred. Partial trim executed on the Q2 conference call; staying in the position on
+the strength of Zuckerberg's effectiveness as an operator. No further trim contemplated,
+no add contemplated.
 
 ## Rotation Priority
-priority: [BILL]
+priority: **low** — position has just been right-sized; the rotation is done, not
+pending. [CONFIRM]
+
+## Review Log
+
+- **2026-07-31:** Partial trim. Bill's stated reason, verbatim in substance: **weak
+  business case presented during the Q2 conference call**, while remaining in the
+  position **for Zuckerberg's effectiveness**. Proceeds redeployed into two new
+  positions the same day — ES (regulated utility, yield) and SNOW (AI data layer). See
+  `ES_thesis.md` and `SNOW_thesis.md` for the buy-side of this rotation.
+
+  Context recorded at the time: Q2 revenue $60.80B (+28% YoY) beat consensus, but
+  diluted EPS of $6.18 missed the $7.22 estimate by ~14%, snapping a six-quarter beat
+  streak, with expenses up 55% YoY. The trim was a judgment on the *spending case as
+  presented on the call*, not on the ad business — ad impressions +14% and price per ad
+  +12% YoY were both intact. This distinction matters for the exit conditions above:
+  the Hard Exit criteria are written around ad economics breaking down, which is **not**
+  what happened here. What triggered the trim was closer to criterion 2 — an
+  unpersuasive case for a spending ramp — which the file leaves as an incomplete
+  sentence.
+
+  **Open item [BILL]:** the Hard Exit section ends mid-sentence at criterion 2
+  ("...aggressively ramps Reality Labs spend without"). Worth finishing, since that
+  criterion is the one this trim actually engaged.
+
+  **System finding:** frontmatter sets `style_size_ceiling_pct: 4.0` (explicitly "below
+  MSFT given higher idiosyncratic risk"), but the auto-synced sizing region below
+  reports a 9.00% ceiling and a −6.79% drift, i.e. the GARP class default. The custom
+  per-position ceiling is being ignored by whatever computes drift. Drift against the
+  intended 4.0% ceiling is −1.79%, not −6.79%. Logged for the repo, not resolved here.
 
 <!-- region:position_state -->
-**Current Allocation:** 2.21%
-**Cost Basis:** $11,592.71
+**Current Allocation:** 0.89%
+**Cost Basis:** $8,852.82
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** GARP
 **Size Ceiling:** 9.00%
-**Drift:** -6.79%
+**Drift:** -8.11%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
+- 2026-07-31: Sell -10.0 @ $549.82
 - 2026-06-25: Buy 0.0231 @ $546.89
 - 2026-06-25: Dividend 0.0 @ $0.00
 - 2026-06-04: Buy 4.0 @ $639.18
@@ -111,5 +144,5 @@ No realized G/L history.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-31 08:23: Auto-sync allocation 2.21%, drift -6.79%
+2026-08-03 09:36: Auto-sync allocation 0.89%, drift -8.11%
 <!-- endregion:change_log -->

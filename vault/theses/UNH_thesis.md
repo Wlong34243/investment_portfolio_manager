@@ -3,8 +3,8 @@ ticker: UNH
 style: GARP
 framework_preference: lynch_garp_v1, psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: '2026-07-31'
-current_allocation: 3.20%
+last_reviewed: '2026-08-03'
+current_allocation: 2.11%
 cost_basis: 15643.57
 time_horizon: 1 to 3 years
 triggers:
@@ -86,14 +86,14 @@ At 2.22% the position is sub-scale. Two valid paths from here:
 - Rotation priority: medium — eligible to close on further strength and redeploy to core ETFs.
 
 <!-- region:position_state -->
-**Current Allocation:** 3.20%
+**Current Allocation:** 2.11%
 **Cost Basis:** $15,643.57
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** GARP
 **Size Ceiling:** 9.00%
-**Drift:** -5.80%
+**Drift:** -6.89%
 <!-- endregion:sizing -->
 
 <!-- region:wash_sale_watch -->
@@ -101,7 +101,7 @@ At 2.22% the position is sub-scale. Two valid paths from here:
 <!-- endregion:wash_sale_watch -->
 
 <!-- region:change_log -->
-2026-07-31 08:23: Auto-sync allocation 3.20%, drift -5.80%
+2026-08-03 09:36: Auto-sync allocation 2.11%, drift -6.89%
 <!-- endregion:change_log -->
 
 <!-- region:transaction_log -->

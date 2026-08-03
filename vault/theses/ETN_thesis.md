@@ -3,8 +3,8 @@ ticker: ETN
 style: THEME
 framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: '2026-07-31'
-current_allocation: 1.55%
+last_reviewed: '2026-08-03'
+current_allocation: 1.03%
 cost_basis: 7589.55  # post-split
 time_horizon: 3 to 5 years
 triggers:
@@ -44,19 +44,20 @@ Thematic Specialist bucket — market-position bet on AI infrastructure buildout
 
 ## Scaling State
 next_step: [BILL]
+<!-- trade history (2026-07-31, informational only, not a stated plan): last activity 2026-05-08 (net -14sh in May: sell 7 on 05-04, buy 3 on 05-07, sell 10 on 05-08). Nothing since -- nearly 3 months stale relative to today. Separately, VRT's thesis (2026-07-29) names ETN as a possible rotation destination with real ceiling headroom, but that is VRT's plan, not a stated intent of this file. -->
 
 ## Rotation Priority
 priority: [BILL]
 
 <!-- region:position_state -->
-**Current Allocation:** 1.55%
+**Current Allocation:** 1.03%
 **Cost Basis:** $7,589.55
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** THEME
 **Size Ceiling:** 3.00%
-**Drift:** -1.45%
+**Drift:** -1.97%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -71,5 +72,5 @@ Total Realized G/L: $1,813.72 over 2 closed lots. Total Proceeds: $7,031.72.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-31 08:23: Auto-sync allocation 1.55%, drift -1.45%
+2026-08-03 09:36: Auto-sync allocation 1.03%, drift -1.97%
 <!-- endregion:change_log -->

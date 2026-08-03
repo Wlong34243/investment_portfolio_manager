@@ -3,8 +3,8 @@ ticker: XOM
 style: THEME
 framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
 entry_date: (PXD-close stock consideration date)
-last_reviewed: '2026-07-31'
-current_allocation: 2.69%
+last_reviewed: '2026-08-03'
+current_allocation: 1.77%
 cost_basis: 11563.13
 time_horizon: 3 to 5 years
 triggers:
@@ -72,20 +72,20 @@ I will exit or materially reduce if the **capital discipline or asset base edge*
 4. A clearly superior risk‑adjusted cash‑flow compounder or hedge emerges, making it rational to rotate out despite a still‑intact XOM thesis.[file:4]  
 
 ## Scaling State
-next_step: [BILL]
+next_step: [INFERRED] add — ongoing dollar-cost averaging via small buys, most recently 2026-06-10; one sell (15sh, 2026-01-26) against a steady buy pattern otherwise. Not a stated plan; inferred from trade history alone on 2026-07-31 and flagged as such — confirm or correct.
 
 ## Rotation Priority
-priority: [BILL]
+priority: [INFERRED] low — steady accumulation, no urgency signal in the trade pattern. Not a stated plan; inferred from trade history alone on 2026-07-31 and flagged as such — confirm or correct.
 
 <!-- region:position_state -->
-**Current Allocation:** 2.69%
+**Current Allocation:** 1.77%
 **Cost Basis:** $11,563.13
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** THEME
 **Size Ceiling:** 3.00%
-**Drift:** -0.31%
+**Drift:** -1.23%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -104,5 +104,5 @@ Total Realized G/L: $906.00 over 2 closed lots. Total Proceeds: $4,044.00.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-31 08:23: Auto-sync allocation 2.69%, drift -0.31%
+2026-08-03 09:36: Auto-sync allocation 1.77%, drift -1.23%
 <!-- endregion:change_log -->

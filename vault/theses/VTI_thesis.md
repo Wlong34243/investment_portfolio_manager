@@ -3,9 +3,9 @@ ticker: VTI
 style: ETF
 framework_preference:
 entry_date:
-last_reviewed: '2026-07-31'
+last_reviewed: '2026-08-03'
 cost_basis: 22641.9
-current_allocation: 3.84%
+current_allocation: 2.58%
 ---
 # VTI — Investment Thesis
 
@@ -43,14 +43,14 @@ priority: lowest
 - 2026-04: Initiated. Maintaining position to capture baseline market growth and prevent cash drag.
 
 <!-- region:position_state -->
-**Current Allocation:** 3.84%
+**Current Allocation:** 2.58%
 **Cost Basis:** $22,641.90
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** ETF
 **Size Ceiling:** 8.00%
-**Drift:** -4.16%
+**Drift:** -5.42%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -82,5 +82,5 @@ Total Realized G/L: $4,041.25 over 59 closed lots. Total Proceeds: $105,590.52.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-31 08:23: Auto-sync allocation 3.84%, drift -4.16%
+2026-08-03 09:36: Auto-sync allocation 2.58%, drift -5.42%
 <!-- endregion:change_log -->

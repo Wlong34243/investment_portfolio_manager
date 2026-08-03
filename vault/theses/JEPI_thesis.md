@@ -3,9 +3,9 @@ ticker: JEPI
 style: ETF
 framework_preference:
 entry_date:
-last_reviewed: '2026-07-31'
-cost_basis: 54952.55
-current_allocation: 9.45%
+last_reviewed: '2026-08-03'
+cost_basis: 294054.68
+current_allocation: 33.17%
 ---
 # JEPI — Investment Thesis
 
@@ -42,25 +42,29 @@ priority: low
 - 2026-07: Thesis file created. Role is ballast + income; largest position by design, not conviction.
 
 <!-- region:position_state -->
-**Current Allocation:** 9.45%
-**Cost Basis:** $54,952.55
+**Current Allocation:** 33.17%
+**Cost Basis:** $294,054.68
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** ETF
 **Size Ceiling:** 8.00%
-**Drift:** +1.45%
+**Drift:** +25.17%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
+- 2026-07-31: Sell -50.0 @ $57.24
+- 2026-07-31: Sell -1.0 @ $57.21
+- 2026-07-31: Sell -2.0 @ $57.21
+- 2026-07-31: Sell -42.0 @ $57.21
 - 2026-07-29: Sell -50.0 @ $57.44
 - 2026-07-20: Buy 150.0 @ $56.52
 - 2026-07-20: Buy 20.0 @ $56.52
 - 2026-07-20: Buy 40.0 @ $56.52
 - 2026-07-17: Buy 50.0 @ $56.87
 - 2026-06-30: Sell -75.0 @ $56.45
-- 2026-06-29: Buy 90.0 @ $56.36
 - 2026-06-29: Buy 90.0 @ $56.34
+- 2026-06-29: Buy 90.0 @ $56.36
 - 2026-06-24: Buy 20.0 @ $56.05
 - 2026-06-18: Buy 25.0 @ $56.19
 - 2026-06-16: Buy 70.0 @ $56.67
@@ -69,7 +73,7 @@ priority: low
 - 2026-06-08: Buy 100.0 @ $55.66
 - 2026-05-19: Buy 20.0 @ $56.13
 - 2026-02-05: Sell -15.0 @ $58.45
-- 2025-09-19: Buy 15.0 @ $56.88
+(showing 20 most recent of 21)
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
@@ -77,5 +81,5 @@ Total Realized G/L: $52.00 over 2 closed lots. Total Proceeds: $1,754.00.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-31 08:23: Auto-sync allocation 9.45%, drift +1.45%
+2026-08-03 09:36: Auto-sync allocation 33.17%, drift +25.17%
 <!-- endregion:change_log -->

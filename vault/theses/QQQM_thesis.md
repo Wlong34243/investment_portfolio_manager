@@ -3,9 +3,9 @@ ticker: QQQM
 style: ETF
 framework_preference:
 entry_date:
-last_reviewed: '2026-07-31'
+last_reviewed: '2026-08-03'
 cost_basis: 50764.61
-current_allocation: 8.72%
+current_allocation: 5.81%
 ---
 # QQQM — Investment Thesis
 
@@ -44,14 +44,14 @@ priority: very low (core foundational holding)
 - 2026-04: Initiated. Thesis intact. Monitoring overall tech multiples, mega-cap earnings growth, and the 10-year Treasury yield.
 
 <!-- region:position_state -->
-**Current Allocation:** 8.72%
+**Current Allocation:** 5.81%
 **Cost Basis:** $50,764.61
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** ETF
 **Size Ceiling:** 8.00%
-**Drift:** +0.72%
+**Drift:** -2.19%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -83,5 +83,5 @@ Total Realized G/L: $695.38 over 38 closed lots. Total Proceeds: $62,217.45.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-31 08:23: Auto-sync allocation 8.72%, drift +0.72%
+2026-08-03 09:36: Auto-sync allocation 5.81%, drift -2.19%
 <!-- endregion:change_log -->

@@ -3,9 +3,9 @@ ticker: EMXC
 style: ETF
 framework_preference:
 entry_date:
-last_reviewed: '2026-07-31'
+last_reviewed: '2026-08-03'
 cost_basis: 14153.94
-current_allocation: 2.28%
+current_allocation: 1.49%
 ---
 # EMXC — Investment Thesis
 
@@ -32,6 +32,7 @@ Cost basis $14,153.94 across 145 remaining shares (~$97.61/sh blended), currentl
 
 ## Key Risks
 - **Concentration masquerading as diversification (primary — this is what drove the 2026-07 reduction):** "Ex-China" removes one country and overweights two. The fund's top exposures are Taiwanese and Korean foundry/memory names, so a broad EM allocation behaves like a semiconductor position. Two consequences: (a) the Taiwan geopolitical risk below is not a tail scenario, it is the fund's dominant single factor; (b) it stacks on top of QQQM, NVDA and AVGO rather than diversifying them — see the ETF look-through in any recent bundle.
+- **SK Hynix is also held directly via SKHY (opened 2026-07-29).** See that file's Concentration Note for combined Korea/Taiwan semiconductor exposure across both positions — approximately 0.76-0.9% combined SK Hynix exposure alone (direct SKHY plus the look-through slice inside EMXC and VEA), before EMXC's broader Taiwan/Korea foundry weight. The ETF look-through table does not catch this on its own; it keys on ticker symbol, and SKHY (Nasdaq) / 000660.KS (KRX) are the same issuer under different symbols.
 - **Geopolitical Vulnerability:** A Chinese blockade or invasion of Taiwan would crash the fund. Given the concentration above, treat this as the central risk, not a footnote.
 - **AI-cycle correlation:** Because the top holdings are AI-hardware supply chain, EMXC now trades with the AI complex. It sold off with the July 2026 Asian chip selloff for reasons unrelated to the India/reshoring/LatAm thesis I actually want exposure to.
 - **The Strong Dollar:** EMs price debt in USD. Structurally high US rates and a strong dollar crush EM currencies and growth.
@@ -59,14 +60,14 @@ priority: medium
 - 2026-07-26: Thesis rewritten to match the decision. Scaling state hold → reduce. Concentration risk promoted to primary risk. Replaced the placeholder "~$82.50 (Assumed)" cost basis with actual basis from the bundle.
 
 <!-- region:position_state -->
-**Current Allocation:** 2.28%
+**Current Allocation:** 1.49%
 **Cost Basis:** $14,153.94
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** ETF
 **Size Ceiling:** 8.00%
-**Drift:** -5.72%
+**Drift:** -6.51%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -91,5 +92,5 @@ No realized G/L history.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-31 08:23: Auto-sync allocation 2.28%, drift -5.72%
+2026-08-03 09:36: Auto-sync allocation 1.49%, drift -6.51%
 <!-- endregion:change_log -->

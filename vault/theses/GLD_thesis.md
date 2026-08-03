@@ -3,8 +3,8 @@ ticker: GLD
 style: ETF
 framework_preference: macro_hedge_v1
 entry_date: 2026-05-03
-last_reviewed: '2026-07-31'
-current_allocation: 1.00%
+last_reviewed: '2026-08-03'
+current_allocation: 0.67%
 cost_basis: 6537.43
 time_horizon: 3 to 5 years
 triggers:
@@ -59,14 +59,14 @@ next_step: starter size; build toward 3-5% over time as a portfolio stabilizer
 priority: low -- add opportunistically on pullbacks, not on momentum
 
 <!-- region:position_state -->
-**Current Allocation:** 1.00%
+**Current Allocation:** 0.67%
 **Cost Basis:** $6,537.43
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** ETF
 **Size Ceiling:** 8.00%
-**Drift:** -7.00%
+**Drift:** -7.33%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -82,5 +82,5 @@ No realized G/L history.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-31 08:23: Auto-sync allocation 1.00%, drift -7.00%
+2026-08-03 09:36: Auto-sync allocation 0.67%, drift -7.33%
 <!-- endregion:change_log -->

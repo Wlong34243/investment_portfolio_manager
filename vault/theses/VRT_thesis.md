@@ -3,9 +3,9 @@ ticker: VRT
 style: THEME
 framework_preference: thematic_specialist_v1, lynch_garp_v1
 entry_date: 2026-05
-last_reviewed: '2026-07-31'
-current_allocation: 1.20%
-cost_basis: 9693.23
+last_reviewed: '2026-08-03'
+current_allocation: 0.94%
+cost_basis: 10902.73
 time_horizon: 2 to 4 years
 triggers:
   fwd_pe_add_below: 28              # add on cyclical / multiple-compression pullbacks
@@ -120,21 +120,22 @@ Tax posture if rotated: unrealized loss is roughly -$2,400 at $243. All lots in 
 - **Open items:** (1) compute implied Q4 from the Q1 actual; (2) listen to the 11:00 ET call for orders growth, backlog conversion and cancellation-rate commentary — if backlog grew against the $15B base and orders held, the miss is logistics; if backlog flattened, the Americas gap is demand and this file needs rewriting rather than defending; (3) populate Trim and Add price cells for VRT in the portfolio Sheet, which are currently blank, so the morning brief reports proximity for this position.
 
 <!-- region:position_state -->
-**Current Allocation:** 1.20%
-**Cost Basis:** $9,693.23
+**Current Allocation:** 0.94%
+**Cost Basis:** $10,902.73
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** THEME
 **Size Ceiling:** 3.00%
-**Drift:** -1.80%
+**Drift:** -2.06%
 <!-- endregion:sizing -->
 
 <!-- region:change_log -->
-2026-07-31 08:23: Auto-sync allocation 1.20%, drift -1.80%
+2026-08-03 09:36: Auto-sync allocation 0.94%, drift -2.06%
 <!-- endregion:change_log -->
 
 <!-- region:transaction_log -->
+- 2026-07-31: Buy 5.0 @ $241.90
 - 2026-06-11: Buy 5.0 @ $290.38
 - 2026-06-01: Buy 5.0 @ $319.50
 - 2026-05-27: Buy 10.0 @ $317.00

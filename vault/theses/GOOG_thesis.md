@@ -3,8 +3,8 @@ ticker: GOOG
 style: GARP
 framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: '2026-07-31'
-current_allocation: 5.77%
+last_reviewed: '2026-08-03'
+current_allocation: 4.16%
 cost_basis: 26733.42
 time_horizon: 3 to 5 years
 triggers:
@@ -80,18 +80,18 @@ I will exit or sharply reduce only on **structural** breaks:
 - Rotation priority: very low.
 
 <!-- region:position_state -->
-**Current Allocation:** 5.77%
+**Current Allocation:** 4.16%
 **Cost Basis:** $26,733.42
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** GARP
 **Size Ceiling:** 9.00%
-**Drift:** -3.23%
+**Drift:** -4.84%
 <!-- endregion:sizing -->
 
 <!-- region:change_log -->
-2026-07-31 08:23: Auto-sync allocation 5.77%, drift -3.23%
+2026-08-03 09:36: Auto-sync allocation 4.16%, drift -4.84%
 <!-- endregion:change_log -->
 
 <!-- region:transaction_log -->

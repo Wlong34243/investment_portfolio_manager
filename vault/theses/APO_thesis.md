@@ -3,9 +3,9 @@ ticker: APO
 style: GARP
 framework_preference:
 entry_date:
-last_reviewed: '2026-07-31'
+last_reviewed: '2026-08-03'
 cost_basis: 12606.9
-current_allocation: 2.13%
+current_allocation: 1.49%
 ---
 # APO — Investment Thesis
 
@@ -41,18 +41,57 @@ priority: medium
 - Regulatory action separates or constrains insurance-affiliated credit origination.
 - Evidence of deteriorating underwriting: rising non-accruals across the origination book.
 
+## Open Items
+
+- [ ] **RESEARCH QUEUE — flagged 2026-08-02, requested by Bill.** Nick Nemeth (Mispriced
+      Assets, via Monetary Matters) makes a named negative case on Apollo that attacks
+      **this thesis's core mechanism directly**, not its periphery: private-equity-owned
+      insurers as heavily leveraged holders of private credit and CLOs, with annuity
+      surrenders able to trigger a run with no federal backstop. He compares the
+      structural setup to 1929 rather than 2008, on scale. Apollo, Ares, Blackstone and
+      Blue Owl all ranked negatively.
+
+      **Why this is not just another bear take:** the Core Thesis above is "Apollo's edge
+      is Athene: the insurance balance sheet supplies permanent, low-cost funding."
+      Nemeth's argument is that the insurance balance sheet is the fragility, not the
+      edge. The two claims are about the same object and cannot both be right.
+
+      Specific questions to answer:
+      1. What is Athene's annuity surrender profile — surrender charge periods, the share
+         of the book currently in or near a surrender window, and the historical
+         surrender rate under rate stress?
+      2. What is the asset-liability duration mismatch, and how does it behave if the
+         long end moves materially (see the Clark ten-percent thesis in the same digest)?
+      3. What share of Athene's assets are private credit and CLOs Apollo itself
+         originated? Originate-to-hold is the stated advantage; concentration in
+         self-originated paper is the same fact viewed as a risk.
+      4. Is there a state-guaranty-association or other backstop, and what are its limits?
+         Nemeth's "no federal backstop" claim needs checking, not assuming.
+      5. Does this change Exit Condition 1 ("Athene funding costs rise structurally") from
+         a slow-moving watch item into something with an acute trigger?
+
+- [ ] Add the answer to Key Risks either way — currently the risks section gestures at
+      "opacity" and "rate sensitivity on the insurance liabilities side" without naming
+      the surrender-run mechanism.
+
 ## Review Log
 - 2026-07: Thesis file created. Watch credit quality disclosures and Athene spread, not AUM headlines.
+- **2026-08-02:** Research item opened (above). Sourced from the 2026-08-02 Spotify
+  aggregate digest. **Provenance note worth recording:** that digest tagged APO as
+  ZERO-EXPOSURE — i.e. it delivered a named negative view on a 2.21% position while
+  reporting the position as not held. Caught in the verification pass; see
+  `data/podcast_summaries/2026-08-02_Spotify_Podcast_Aggregate_The_Treasury_Bubble_Counter_Case_To_AI_Consensus.md`.
+  No position action taken or implied.
 
 <!-- region:position_state -->
-**Current Allocation:** 2.13%
+**Current Allocation:** 1.49%
 **Cost Basis:** $12,606.90
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** GARP
 **Size Ceiling:** 9.00%
-**Drift:** -6.87%
+**Drift:** -7.51%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -68,5 +107,5 @@ No realized G/L history.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-31 08:23: Auto-sync allocation 2.13%, drift -6.87%
+2026-08-03 09:36: Auto-sync allocation 1.49%, drift -7.51%
 <!-- endregion:change_log -->

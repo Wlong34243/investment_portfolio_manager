@@ -3,9 +3,9 @@ ticker: COWZ
 style: ETF
 framework_preference:
 entry_date:
-last_reviewed: '2026-07-31'
+last_reviewed: '2026-08-03'
 cost_basis: 11351.08
-current_allocation: 1.97%
+current_allocation: 1.32%
 ---
 # COWZ — Investment Thesis
 
@@ -42,14 +42,14 @@ priority: low
 - 2026-07: Thesis file created. Counterweight role — size it against tech beta, not on its own merits.
 
 <!-- region:position_state -->
-**Current Allocation:** 1.97%
+**Current Allocation:** 1.32%
 **Cost Basis:** $11,351.08
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** ETF
 **Size Ceiling:** 8.00%
-**Drift:** -6.03%
+**Drift:** -6.68%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -68,5 +68,5 @@ No realized G/L history.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-31 08:23: Auto-sync allocation 1.97%, drift -6.03%
+2026-08-03 09:36: Auto-sync allocation 1.32%, drift -6.68%
 <!-- endregion:change_log -->

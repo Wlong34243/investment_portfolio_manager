@@ -3,8 +3,8 @@ ticker: AMZN
 style: GARP
 framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: '2026-07-31'
-current_allocation: 4.75%
+last_reviewed: '2026-08-03'
+current_allocation: 3.38%
 cost_basis: 24968.17
 time_horizon: 3 to 5 years
 triggers:
@@ -48,19 +48,20 @@ GARP-by-intuition core holding — sized and scaled like the rest of the GARP bu
 
 ## Scaling State
 next_step: [BILL]
+<!-- trade history (2026-07-31, informational only, not a stated plan): bought through April 2026, sold 24sh in May (05-08, 05-11 x2), then resumed buying 10sh on 2026-07-14 (most recent). No single direction -- trim-then-readd, not a clear trend. -->
 
 ## Rotation Priority
 priority: [BILL]
 
 <!-- region:position_state -->
-**Current Allocation:** 4.75%
+**Current Allocation:** 3.38%
 **Cost Basis:** $24,968.17
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** GARP
 **Size Ceiling:** 9.00%
-**Drift:** -4.25%
+**Drift:** -5.62%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -82,5 +83,5 @@ Total Realized G/L: $1,390.71 over 5 closed lots. Total Proceeds: $6,500.91.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-31 08:23: Auto-sync allocation 4.75%, drift -4.25%
+2026-08-03 09:36: Auto-sync allocation 3.38%, drift -5.62%
 <!-- endregion:change_log -->

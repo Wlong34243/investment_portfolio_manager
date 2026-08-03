@@ -3,9 +3,9 @@ ticker: KRE
 style: ETF
 framework_preference:
 entry_date:
-last_reviewed: '2026-07-31'
-cost_basis: 11382.34
-current_allocation: 1.92%
+last_reviewed: '2026-08-03'
+cost_basis: 5244.31
+current_allocation: 0.60%
 ---
 # KRE — Investment Thesis
 
@@ -45,17 +45,18 @@ priority: medium
 - 2026-07: Thesis file created. Policy-window thesis; watch regulatory calendar, not just price.
 
 <!-- region:position_state -->
-**Current Allocation:** 1.92%
-**Cost Basis:** $11,382.34
+**Current Allocation:** 0.60%
+**Cost Basis:** $5,244.31
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** ETF
 **Size Ceiling:** 8.00%
-**Drift:** -6.08%
+**Drift:** -7.40%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
+- 2026-07-31: Sell -80.0 @ $75.96
 - 2026-07-30: Sell -100.0 @ $76.19
 - 2026-07-17: Buy 75.0 @ $76.84
 - 2026-06-29: Buy 25.0 @ $74.89
@@ -73,5 +74,5 @@ No realized G/L history.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-07-31 08:23: Auto-sync allocation 1.92%, drift -6.08%
+2026-08-03 09:36: Auto-sync allocation 0.60%, drift -7.40%
 <!-- endregion:change_log -->
