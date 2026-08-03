@@ -571,3 +571,16 @@ EXPORT_SCENARIOS = {
 PURGE_DEFAULT_DAYS_PODCASTS = 30
 PURGE_DEFAULT_DAYS_BUNDLES   = 30
 PURGE_DEFAULT_DAYS_EXPORTS   = 7
+
+# --- Spotify Studio digest ingestion (STEP 4b) ---
+SPOTIFY_STUDIO_TRANSCRIPTS_DIR = os.getenv(
+    "SPOTIFY_STUDIO_DIR",
+    os.path.join(
+        os.path.expanduser("~"),
+        "AppData", "Local", "Studio by Spotify Labs",
+        ".studio", "artifacts", "transcripts",
+    ),
+)
+SPOTIFY_DIGEST_WINDOW_DAYS = 7
+SPOTIFY_DIGEST_MIN_WORDS = 400          # below this, treat as truncated and skip
+SPOTIFY_DIGEST_SOURCE_LABEL = "Spotify Podcast Aggregate"

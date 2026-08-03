@@ -75,6 +75,9 @@ data/podcast_transcripts/
 # Podcast summaries — regenerated per run, same treatment as transcripts/bundles
 data/podcast_summaries/
 
+# Spotify Studio digest corpus mirror + sha256 ledger — regenerated per run
+data/spotify_digests/
+
 # Agent output reports — regenerated per run, not committed (agent_outputs/{agent}/*.md)
 agent_outputs/
 

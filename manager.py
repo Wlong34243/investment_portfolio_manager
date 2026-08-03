@@ -1252,6 +1252,21 @@ def podcast_batch(
     )
 
 
+@podcast_app.command("ingest-spotify")
+def podcast_ingest_spotify(
+    days: int = typer.Option(None, "--days", help="Ingestion window in days. Default: config.SPOTIFY_DIGEST_WINDOW_DAYS."),
+    live: bool = typer.Option(False, "--live", help="Write summary files and ledger. Default: DRY RUN."),
+    seed_ledger: bool = typer.Option(False, "--seed-ledger", help="Backfill ledger for already hand-ingested digests; generates no summary files."),
+):
+    """Ingest Spotify Studio daily allocation digests into data/podcast_summaries/."""
+    from tasks.ingest_spotify_digests import main as ingest_spotify_digests, seed_ledger as seed_spotify_ledger
+
+    if seed_ledger:
+        seed_spotify_ledger(live=live)
+    else:
+        ingest_spotify_digests(days=days, live=live)
+
+
 @podcast_app.command("bundle")
 def podcast_bundle(last_n: int = typer.Option(10, "--last-n", help="Number of most recent transcripts to include")):
     """Concatenate the N most recent transcripts into a single Markdown file for LLM use."""
@@ -1476,6 +1491,26 @@ def morning(
             step_results.append(("Podcasts", "warn"))
     else:
         step_results.append(("Podcasts", "skip"))
+
+    # 5b. Spotify Studio Digest Ingestion (non-fatal; folder may not exist on this machine)
+    if not skip_podcasts:
+        console.print("\n[bold cyan]STEP 4b - Spotify Digests...[/]")
+        try:
+            from tasks.ingest_spotify_digests import main as ingest_spotify_digests
+            spotify_result = ingest_spotify_digests(live=live)
+            n_new = len(spotify_result["ingested"])
+            label = f"Spotify Digests ({n_new} new)"
+            if spotify_result.get("warn"):
+                step_results.append((label, "warn"))
+            elif spotify_result["failed"]:
+                step_results.append((label, "warn"))
+            else:
+                step_results.append((label, "pass"))
+        except Exception as e:
+            console.print(f"[yellow]Spotify digest ingestion error: {e}[/]")
+            step_results.append(("Spotify Digests", "warn"))
+    else:
+        step_results.append(("Spotify Digests", "skip"))
 
     # 6. Refresh Dashboard (Rebuild Views from Bundle)
     console.print("\n[bold cyan]STEP 5 - Refreshing Dashboard...[/]")

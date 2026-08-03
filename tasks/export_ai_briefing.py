@@ -195,6 +195,16 @@ which file doesn't say so yet.
    taxonomy gap, a stale file, or missing data is a SYSTEM finding — group those
    separately from portfolio findings. Never lead with one, and never build
    "The obvious move" on one.
+
+9. One source is one source, regardless of length. The Spotify aggregate runs
+   4-8x longer than an episode summary because it synthesizes many episodes,
+   not because it carries more conviction. Do not weight a theme by how much
+   text supports it. Further: the aggregate lists the episodes it draws on
+   under "## Cited Episodes", and those episodes are frequently ingested
+   separately in the same window. Where an aggregate and a cited episode both
+   appear, treat the episode as the primary source for that theme and the
+   aggregate as commentary on it. Count the theme once. An aggregate agreeing
+   with an episode it is summarizing is not corroboration.
 """
 
 

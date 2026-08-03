@@ -5,7 +5,7 @@ with Pydantic schema enforcement.
 
 import logging
 from pydantic import BaseModel, Field
-from typing import List
+from typing import List, Optional
 from utils.gemini_client import ask_gemini
 import config
 
@@ -35,6 +35,23 @@ class PodcastStrategy(BaseModel):
     source_quality: str = Field(
         description="High / Medium / Low — how actionable was this content"
     )
+    suggested_title: Optional[str] = Field(
+        default=None,
+        description=(
+            "6-10 word title capturing the lead idea of the source. Only "
+            "requested for already-synthesized aggregate digests that carry "
+            "no title of their own."
+        ),
+    )
+    cited_sources: List[str] = Field(
+        default_factory=list,
+        description=(
+            "Shows and guests explicitly named or discussed in the source, "
+            "as 'Show Name: Guest Name' (guest omitted if not stated). Only "
+            "populated for aggregate digests that synthesize other episodes; "
+            "leave empty for a single-episode transcript."
+        ),
+    )
 
 
 def analyze_podcast(transcript: str, source_name: str = "Unknown Podcast") -> dict | None:
@@ -44,6 +61,7 @@ def analyze_podcast(transcript: str, source_name: str = "Unknown Podcast") -> di
     Returns dict (model_dump) on success, None on failure.
     """
     is_stax = "STAX" in source_name.upper()
+    is_aggregate = "AGGREGATE" in source_name.upper()
 
     if is_stax:
         role_instruction = (
@@ -53,6 +71,27 @@ def analyze_podcast(transcript: str, source_name: str = "Unknown Podcast") -> di
             "- If retail is net-buying a sector on a dip, analyze if that signals a 'buy the dip' consensus.\n"
             "- If a sector saw massive outflows, evaluate if it represents a rotation opportunity or a risk to avoid.\n"
             "- Use the flow data to build a GRANULAR sector-by-sector allocation (do not just output Broad Market).\n"
+        )
+    elif is_aggregate:
+        role_instruction = (
+            "You are a Chief Investment Officer parsing an already-synthesized third-party "
+            "weekly aggregate. The input is NOT a single-episode transcript — it is finished "
+            "editorial prose that itself summarizes a pool of podcast episodes and other "
+            "sources. Do not re-summarize it; your only job is the structured allocation "
+            "table plus two extraction fields.\n\n"
+            "AGGREGATE DATA INTERPRETATION:\n"
+            "- target_pct values are INFERRED from the digest's stated emphasis (how much space "
+            "and conviction it gives a theme), not extracted as published figures — the digest "
+            "does not publish percentages.\n"
+            "- Where the digest itself carries an unresolved tension or a disagreement between "
+            "sources it cites, preserve that as separate SectorTarget rows with the tension "
+            "named in notes. Do not average it into a single smoothed figure.\n"
+            "- suggested_title: write a 6-10 word title capturing the digest's lead idea. The "
+            "source file has no title of its own.\n"
+            "- cited_sources: list every show and guest the digest explicitly names or "
+            "discusses, as 'Show Name: Guest Name' (omit guest if not stated). This is used "
+            "downstream to avoid double-counting a theme that also appears in that episode's "
+            "own independently-ingested summary.\n"
         )
     else:
         role_instruction = (
