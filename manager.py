@@ -256,6 +256,33 @@ def journal_promote(
             console.print(f"[red]ERROR writing to {config.TAB_TRADE_LOG}: {e}[/]")
             raise typer.Exit(code=1)
 
+    # Post-write verification: re-read Trade_Log and confirm every fingerprint
+    # we just wrote actually landed before marking anything "promoted" in
+    # staging. gspread reporting append_rows() as successful is not proof the
+    # data survives -- a later full-range overwrite elsewhere (see
+    # scripts/backfill_trade_log_decision_context.py) can silently erase rows
+    # after the fact with no error on either side. Catches that class of
+    # failure at the only point that matters: before Trade_Log_Staging.Status
+    # claims something is true that isn't.
+    with console.status("[cyan]Verifying write..."):
+        try:
+            written_fingerprints = set(trade_ws.col_values(
+                config.TRADE_LOG_COLUMNS.index("Fingerprint") + 1
+            ))
+        except Exception as e:
+            console.print(f"[red]ERROR: could not verify write to {config.TAB_TRADE_LOG}: {e}[/]")
+            console.print("[yellow]Staging rows NOT marked promoted -- re-run after confirming Trade_Log manually.[/]")
+            raise typer.Exit(code=1)
+
+    missing = [r for r in trade_log_rows if r[-1] and r[-1] not in written_fingerprints]
+    if missing:
+        console.print(
+            f"[red]ERROR: {len(missing)} row(s) missing from {config.TAB_TRADE_LOG} "
+            "after write -- append reported success but verification read disagrees.[/]"
+        )
+        console.print("[yellow]Staging rows NOT marked promoted. Investigate before retrying.[/]")
+        raise typer.Exit(code=1)
+
     # Mark promoted rows in staging
     new_status_col = status_col_idx + 1
     with console.status("[cyan]Marking staging rows as 'promoted'..."):

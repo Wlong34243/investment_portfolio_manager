@@ -19,6 +19,7 @@ _ROOT = _HERE.parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
+import gspread.utils
 import config
 from utils.sheet_readers import get_gspread_client
 from tasks.derive_rotations import _get_historical_technicals
@@ -57,10 +58,20 @@ def backfill():
         return
 
     updated_count = 0
-    
+    # Batch of individual cell writes, applied via one batch_update call at the
+    # end -- never a full-range overwrite. A snapshot-then-write-the-whole-range
+    # pattern (the previous approach here) silently erases any row appended to
+    # this tab by a concurrent process (e.g. `pm journal promote --live`)
+    # between this script's initial read and its final write, since the stale
+    # in-memory snapshot simply doesn't contain that row. Per-cell targeted
+    # writes can only ever touch the six technical-indicator columns of rows
+    # this script actually read and decided to fill -- nothing else on the
+    # sheet is at risk regardless of what else happens concurrently.
+    cell_updates = []
+
     for i, row in enumerate(track(data, description="Backfilling technicals...")):
         row_num = i + 2
-        
+
         # Parse date
         try:
             dt_str = row[idx_date]
@@ -75,31 +86,28 @@ def backfill():
 
         sell_ticker = row[idx_sell_t].split(",")[0].strip() if row[idx_sell_t] else None
         buy_ticker = row[idx_buy_t].split(",")[0].strip() if row[idx_buy_t] else None
-        
+
         # Check if we need to backfill
         needs_fill = any(not row[idx] for idx in [idx_sell_rsi, idx_buy_rsi])
-        
+
         if needs_fill:
             if sell_ticker:
                 s_tech = _get_historical_technicals(sell_ticker, dt)
-                row[idx_sell_rsi] = str(s_tech.get("rsi") or "")
-                row[idx_sell_trend] = s_tech.get("trend", "")
-                row[idx_sell_ma200] = str(s_tech.get("ma200_dist") or "")
-            
+                cell_updates.append({"range": gspread.utils.rowcol_to_a1(row_num, idx_sell_rsi + 1), "values": [[str(s_tech.get("rsi") or "")]]})
+                cell_updates.append({"range": gspread.utils.rowcol_to_a1(row_num, idx_sell_trend + 1), "values": [[s_tech.get("trend", "")]]})
+                cell_updates.append({"range": gspread.utils.rowcol_to_a1(row_num, idx_sell_ma200 + 1), "values": [[str(s_tech.get("ma200_dist") or "")]]})
+
             if buy_ticker:
                 b_tech = _get_historical_technicals(buy_ticker, dt)
-                row[idx_buy_rsi] = str(b_tech.get("rsi") or "")
-                row[idx_buy_trend] = b_tech.get("trend", "")
-                row[idx_buy_ma200] = str(b_tech.get("ma200_dist") or "")
-            
-            # Update only these 6 columns for this row
-            # We'll build a batch update at the end or update individually if small
+                cell_updates.append({"range": gspread.utils.rowcol_to_a1(row_num, idx_buy_rsi + 1), "values": [[str(b_tech.get("rsi") or "")]]})
+                cell_updates.append({"range": gspread.utils.rowcol_to_a1(row_num, idx_buy_trend + 1), "values": [[b_tech.get("trend", "")]]})
+                cell_updates.append({"range": gspread.utils.rowcol_to_a1(row_num, idx_buy_ma200 + 1), "values": [[str(b_tech.get("ma200_dist") or "")]]})
+
             updated_count += 1
             time.sleep(0.5) # Avoid rate limits
 
-    if updated_count > 0:
-        # Write back full data
-        ws.update(range_name=f"A2", values=data, value_input_option="USER_ENTERED")
+    if cell_updates:
+        ws.batch_update(cell_updates, value_input_option="USER_ENTERED")
         console.print(f"[bold green]SUCCESS:[/] Backfilled {updated_count} rows in {config.TAB_TRADE_LOG}.")
     else:
         console.print("[green]No rows needed backfilling.[/]")
