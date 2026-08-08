@@ -1,5 +1,17 @@
 @echo off
 cd /d "%~dp0"
+
+:: Detect virtual environment
+if exist .venv\Scripts\activate.bat (
+    call .venv\Scripts\activate.bat
+) else if exist venv\Scripts\activate.bat (
+    call venv\Scripts\activate.bat
+) else if exist env\Scripts\activate.bat (
+    call env\Scripts\activate.bat
+) else (
+    echo [WARNING] No virtual environment detected in .venv, venv, or env. Using system Python.
+)
+
 echo Refreshing composite bundle...
 python manager.py bundle composite
 if errorlevel 1 echo WARNING: bundle refresh failed, using newest existing bundle.
