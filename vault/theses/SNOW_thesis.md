@@ -3,9 +3,9 @@ ticker: SNOW
 style: THEME
 framework_preference: thematic_specialist_v1
 entry_date: '2026-07-31'
-last_reviewed: '2026-08-03'
-current_allocation: 1.01%
-cost_basis: 8930.3
+last_reviewed: '2026-08-08'
+current_allocation: 1.62%
+cost_basis: 8930.300000001
 time_horizon: TBD - see open items
 triggers:
   entry_price:
@@ -391,14 +391,14 @@ later if the reasoning is not written down now.
   transferred in the wrong direction.
 
 <!-- region:position_state -->
-**Current Allocation:** 1.01%
+**Current Allocation:** 1.62%
 **Cost Basis:** $8,930.30
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** THEME
 **Size Ceiling:** 3.00%
-**Drift:** -1.99%
+**Drift:** -1.38%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -412,5 +412,5 @@ No realized G/L history.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-03 09:36: Auto-sync allocation 1.01%, drift -1.99%
+2026-08-08 09:05: Auto-sync allocation 1.62%, drift -1.38%
 <!-- endregion:change_log -->

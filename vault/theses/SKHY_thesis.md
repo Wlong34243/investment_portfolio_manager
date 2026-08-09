@@ -3,9 +3,9 @@ ticker: SKHY
 style: THEME
 framework_preference: thematic_specialist_v1
 entry_date: 2026-07-29
-last_reviewed: '2026-08-03'
-current_allocation: 0.60%
-cost_basis: 5284.48
+last_reviewed: '2026-08-08'
+current_allocation: 0.86%
+cost_basis: 5284.4800000007
 time_horizon: TBD - see open items
 triggers:
   entry_price: 138.00
@@ -178,14 +178,14 @@ priority: low — seed position, recently opened, no action contemplated.
   HBM having changed the cycle, not a bet that memory is cheap.
 
 <!-- region:position_state -->
-**Current Allocation:** 0.60%
+**Current Allocation:** 0.86%
 **Cost Basis:** $5,284.48
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** THEME
 **Size Ceiling:** 3.00%
-**Drift:** -2.40%
+**Drift:** -2.14%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -201,5 +201,5 @@ No realized G/L history.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-03 09:36: Auto-sync allocation 0.60%, drift -2.40%
+2026-08-08 09:05: Auto-sync allocation 0.86%, drift -2.14%
 <!-- endregion:change_log -->

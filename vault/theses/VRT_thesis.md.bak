@@ -3,8 +3,8 @@ ticker: VRT
 style: THEME
 framework_preference: thematic_specialist_v1, lynch_garp_v1
 entry_date: 2026-05
-last_reviewed: '2026-08-08'
-current_allocation: 3.11%
+last_reviewed: '2026-08-07'
+current_allocation: 3.14%
 cost_basis: 19854.969999999965
 time_horizon: 2 to 4 years
 triggers:
@@ -94,7 +94,7 @@ Current allocation 1.20% (30 shares, cost basis $9,693.23, avg $323.11). This re
 
 ## Scaling State
 
-next_step: **[BILL] Position is now 68 shares / 3.14% — in breach of the 3.00% ceiling** (bundle 6c531c97, 2026-08-07). The figures above (30 shares, 1.20%, "nominal headroom") are stale: the position more than doubled between the 2026-07-29 review and this bundle despite the add path being described as closed pending backlog-conversion evidence. Flag for Bill to reconcile — was this a deliberate add through the "closed" gate, and does the position need to be trimmed back toward the 2.0-2.5% target / 3.00% ceiling? Not resolved here; no new scaling state inferred.
+next_step: **Hold 30 shares. No adds.** Position is 1.20% against a 2.0-2.5% target and a 3.00% ceiling, so there is nominal headroom, but the add path is closed pending evidence, not price.
 
 The file's own drawdown triggers are firing right now and are being deliberately overridden: `discount_from_52w_high_add: 0.20` and `panic_buy_trigger_drawdown_pct: 0.25` are both satisfied at current levels (roughly -36% from the $379.94 52-week high). Those triggers were written for a de-rating in an intact thesis. What is in front of me is a possible execution problem, and averaging down into an unresolved management question is the one move this framework has no answer for. **The add trigger is now event-based, not price-based: a quarter in which backlog converts on schedule.** Until then, price weakness is not a signal.
 
@@ -106,7 +106,7 @@ Style note: this is THEME — market position over company quality. That tag is 
 
 priority: **high** — elevated from medium on 2026-07-29.
 
-This position is the weakest leg of a physical-AI-infrastructure sleeve (VST 3.55%, IFRA 1.90%, ETN 1.64%, VRT 3.14% = 10.23% of book) whose theme I still believe in — sleeve math corrected 2026-08-07 against bundle 6c531c97 (prior figures were stale). If capital is rotated out of VRT it should stay inside that sleeve rather than leaving the theme. ETN is the natural destination: same power-infrastructure exposure, a business I rate more highly, not substantially identical for wash-sale purposes, and it currently carries ~1.36% of headroom to its own 3.00% THEME ceiling. [BILL — VST's own headroom figure (previously cited as 0.37%) needs re-check: at 3.55% it now appears to be over its own 3.00% THEME ceiling, which may rule it out as a rotation destination.]
+This position is the weakest leg of a physical-AI-infrastructure sleeve (VST 2.51%, IFRA 1.74%, ETN 1.41%, VRT 1.20% = 6.86% of book) whose theme I still believe in. If capital is rotated out of VRT it should stay inside that sleeve rather than leaving the theme. ETN is the natural destination: same power-infrastructure exposure, a business I rate more highly, not substantially identical for wash-sale purposes, and it currently carries ~1.6% of headroom to its own 3.00% THEME ceiling versus VST's 0.37%.
 
 Tax posture if rotated: unrealized loss is roughly -$2,400 at $243. All lots in the transaction log were acquired 2026-05 through 2026-06, which implies **short-term** treatment — the more valuable offset, since it shelters short-term gains at ordinary rates. Verify holding periods and the ~10 shares predating 2026-05-27 in Schwab before acting; this file's transaction log shows only the five most recent entries. Wash-sale window is clean: no VRT purchase since 2026-06-11, so only the forward 30 days would constrain a re-entry.
 
@@ -118,21 +118,20 @@ Tax posture if rotated: unrealized loss is roughly -$2,400 at $243. All lots in 
   - **Actions:** added management-execution risk (was absent from this file). Added Hard Exit Condition 5 on backlog conversion. Suspended price-based add triggers in favor of an event-based trigger. Raised rotation priority to high. Corrected stale allocation (file read 0.56%; actual 1.20%).
   - **Not changed:** the core picks-and-shovels thesis. Nothing in this print contradicts the claim that AI datacenter buildout continues and needs integrated power and thermal infrastructure. What changed is my confidence that this particular operator captures it at this particular multiple.
 - **Open items:** (1) compute implied Q4 from the Q1 actual; (2) listen to the 11:00 ET call for orders growth, backlog conversion and cancellation-rate commentary — if backlog grew against the $15B base and orders held, the miss is logistics; if backlog flattened, the Americas gap is demand and this file needs rewriting rather than defending; (3) populate Trim and Add price cells for VRT in the portfolio Sheet, which are currently blank, so the morning brief reports proximity for this position.
-- **2026-08-07:** `next_step` and the Rotation Priority sleeve-math paragraph corrected in-session (68 shares / 3.14%, ceiling breach flagged `[BILL]`; sleeve total updated to 10.23%) ahead of `prompts/consolidate_and_thesis_repair_2026-08-07.md` Step 4, which specified the same edits. Edited directly rather than through the archive-before-overwrite convention; `VRT_thesis.md.bak` backfilled retroactively from pre-edit content to close that gap.
 
 <!-- region:position_state -->
-**Current Allocation:** 3.11%
+**Current Allocation:** 3.14%
 **Cost Basis:** $19,854.97
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** THEME
 **Size Ceiling:** 3.00%
-**Drift:** +0.11%
+**Drift:** +0.14%
 <!-- endregion:sizing -->
 
 <!-- region:change_log -->
-2026-08-08 09:05: Auto-sync allocation 3.11%, drift +0.11%
+2026-08-07 10:31: Auto-sync allocation 3.14%, drift +0.14%
 <!-- endregion:change_log -->
 
 <!-- region:transaction_log -->

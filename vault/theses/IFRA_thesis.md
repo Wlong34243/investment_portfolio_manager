@@ -3,9 +3,9 @@ ticker: IFRA
 style: ETF
 framework_preference:
 entry_date:
-last_reviewed: '2026-08-03'
-cost_basis: 9159.56
-current_allocation: 1.15%
+last_reviewed: '2026-08-08'
+cost_basis: 10568.379999999976
+current_allocation: 1.92%
 ---
 # IFRA — Investment Thesis
 
@@ -44,17 +44,20 @@ priority: low
 - 2026-04: Initiated. Thesis intact. Monitoring the pace of federal fund disbursement, industrial capacity utilization, and skilled labor availability.
 
 <!-- region:position_state -->
-**Current Allocation:** 1.15%
-**Cost Basis:** $9,159.56
+**Current Allocation:** 1.92%
+**Cost Basis:** $10,568.38
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** ETF
 **Size Ceiling:** 8.00%
-**Drift:** -6.85%
+**Drift:** -6.08%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
+- 2026-08-05: Buy 20.0 @ $61.69
+- 2026-08-05: Sell -20.0 @ $61.44
+- 2026-08-05: Buy 20.0 @ $61.71
 - 2026-07-09: Sell -50.0 @ $61.79
 - 2026-04-22: Sell -50.0 @ $59.40
 - 2026-03-18: Sell -50.0 @ $57.32
@@ -69,9 +72,9 @@ priority: low
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
-Total Realized G/L: $2,214.55 over 12 closed lots. Total Proceeds: $11,671.89.
+Total Realized G/L: $477.55 over 12 closed lots. Total Proceeds: $2,865.89.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-03 09:36: Auto-sync allocation 1.15%, drift -6.85%
+2026-08-08 09:05: Auto-sync allocation 1.92%, drift -6.08%
 <!-- endregion:change_log -->

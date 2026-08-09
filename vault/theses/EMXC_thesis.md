@@ -3,9 +3,9 @@ ticker: EMXC
 style: ETF
 framework_preference:
 entry_date:
-last_reviewed: '2026-08-03'
-cost_basis: 14153.94
-current_allocation: 1.49%
+last_reviewed: '2026-08-08'
+cost_basis: 14153.9400000045
+current_allocation: 2.27%
 ---
 # EMXC — Investment Thesis
 
@@ -60,14 +60,14 @@ priority: medium
 - 2026-07-26: Thesis rewritten to match the decision. Scaling state hold → reduce. Concentration risk promoted to primary risk. Replaced the placeholder "~$82.50 (Assumed)" cost basis with actual basis from the bundle.
 
 <!-- region:position_state -->
-**Current Allocation:** 1.49%
+**Current Allocation:** 2.27%
 **Cost Basis:** $14,153.94
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** ETF
 **Size Ceiling:** 8.00%
-**Drift:** -6.51%
+**Drift:** -5.73%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -92,5 +92,5 @@ No realized G/L history.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-03 09:36: Auto-sync allocation 1.49%, drift -6.51%
+2026-08-08 09:05: Auto-sync allocation 2.27%, drift -5.73%
 <!-- endregion:change_log -->

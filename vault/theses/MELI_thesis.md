@@ -3,9 +3,9 @@ ticker: MELI
 style: THEME
 framework_preference:
 entry_date:
-last_reviewed: '2026-08-03'
-cost_basis: 17073.46
-current_allocation: 2.14%
+last_reviewed: '2026-08-08'
+cost_basis: 17073.460000000297
+current_allocation: 3.00%
 ---
 # MELI — Investment Thesis
 
@@ -44,14 +44,14 @@ priority: medium
 - 2026-07: Thesis file created. At ceiling (~3.1% vs 3.0% THEME ceiling); adds come from the theme budget, not opportunism.
 
 <!-- region:position_state -->
-**Current Allocation:** 2.14%
+**Current Allocation:** 3.00%
 **Cost Basis:** $17,073.46
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** THEME
 **Size Ceiling:** 3.00%
-**Drift:** -0.86%
+**Drift:** +0.00%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -68,5 +68,5 @@ No realized G/L history.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-03 09:36: Auto-sync allocation 2.14%, drift -0.86%
+2026-08-08 09:05: Auto-sync allocation 3.00%, drift +0.00%
 <!-- endregion:change_log -->

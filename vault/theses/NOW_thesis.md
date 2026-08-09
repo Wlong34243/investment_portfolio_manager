@@ -3,10 +3,10 @@ ticker: NOW
 style: GARP
 framework_preference:
 entry_date:
-last_reviewed: '2026-08-03'
+last_reviewed: '2026-08-08'
 triggers: {}
 cost_basis: 2735.4
-current_allocation: 0.39%
+current_allocation: 0.62%
 ---
 # NOW — Investment Thesis
 
@@ -60,44 +60,44 @@ Funding source of choice for higher-conviction ideas. The 2026-06-25 sell alread
 - 2026-07-26: Thesis rewritten to match the decision. Scaling state hold → reduce; priority very low → high. Removed stale `price_trim_above: 250.00` trigger (stock ~$98.78; the trigger was unreachable and would never have fired). Prior bull case retained for reference but marked non-operative.
 
 <!-- region:position_state -->
-**Current Allocation:** 0.39%
+**Current Allocation:** 0.62%
 **Cost Basis:** $2,735.40
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** GARP
 **Size Ceiling:** 9.00%
-**Drift:** -8.61%
+**Drift:** -8.38%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
 - 2026-07-31: Sell -35.0 @ $109.43
 - 2026-06-25: Sell -100.0 @ $90.61
-- 2026-06-02: Buy 6.0 @ $128.90
 - 2026-06-02: Buy 4.0 @ $128.90
-- 2026-05-26: Sell -2.0 @ $101.37
-- 2026-05-26: Sell -17.0 @ $101.37
-- 2026-05-26: Sell -56.0 @ $101.37
+- 2026-06-02: Buy 6.0 @ $128.90
 - 2026-05-26: Sell -15.0 @ $101.34
+- 2026-05-26: Sell -56.0 @ $101.37
+- 2026-05-26: Sell -17.0 @ $101.37
+- 2026-05-26: Sell -2.0 @ $101.37
 - 2026-05-14: Buy 15.0 @ $90.62
 - 2026-05-11: Buy 45.0 @ $91.18
 - 2026-05-06: Buy 10.0 @ $89.25
 - 2026-04-30: Sell -15.0 @ $87.56
 - 2026-04-24: Buy 10.0 @ $88.10
-- 2026-04-23: Buy 25.0 @ $87.35
 - 2026-04-23: Buy 15.0 @ $85.57
+- 2026-04-23: Buy 25.0 @ $87.35
 - 2026-04-22: Buy 10.0 @ $103.25
-- 2026-04-21: Buy 1.0 @ $100.33
-- 2026-04-21: Buy 10.0 @ $100.61
 - 2026-04-21: Buy 9.0 @ $100.33
+- 2026-04-21: Buy 10.0 @ $100.61
+- 2026-04-21: Buy 1.0 @ $100.33
 - 2026-04-20: Buy 10.0 @ $99.27
 (showing 20 most recent of 27)
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
-Total Realized G/L: $-300.00 over 8 closed lots. Total Proceeds: $3,763.17.
+Total Realized G/L: $0.00 over 8 closed lots. Total Proceeds: $1,225.17.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-03 09:36: Auto-sync allocation 0.39%, drift -8.61%
+2026-08-08 09:05: Auto-sync allocation 0.62%, drift -8.38%
 <!-- endregion:change_log -->

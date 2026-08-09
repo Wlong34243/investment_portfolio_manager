@@ -3,9 +3,9 @@ ticker: GILD
 style: FUND
 framework_preference: lynch_garp_v1
 entry_date: 2026-05-03
-last_reviewed: '2026-08-03'
-current_allocation: 1.38%
-cost_basis: 12374.9
+last_reviewed: '2026-08-08'
+current_allocation: 1.42%
+cost_basis: 8445.974999998107
 time_horizon: 3 to 5 years
 triggers:
   fwd_pe_add_below: 12              # add when HIV durability fears or pipeline disappointment drives discount
@@ -63,17 +63,18 @@ next_step: hold; add on weakness below $90 if HIV franchise metrics are intact
 priority: low -- this is a slow-moving income-plus-optionality position
 
 <!-- region:position_state -->
-**Current Allocation:** 1.38%
-**Cost Basis:** $12,374.90
+**Current Allocation:** 1.42%
+**Cost Basis:** $8,445.97
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** FUND
 **Size Ceiling:** 5.00%
-**Drift:** -3.62%
+**Drift:** -3.58%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
+- 2026-08-07: Sell -30.0 @ $133.51
 - 2026-05-14: Buy 10.0 @ $133.32
 - 2026-05-08: Buy 5.0 @ $131.02
 - 2026-05-04: Buy 10.0 @ $132.82
@@ -90,5 +91,5 @@ No realized G/L history.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-03 09:36: Auto-sync allocation 1.38%, drift -3.62%
+2026-08-08 09:05: Auto-sync allocation 1.42%, drift -3.58%
 <!-- endregion:change_log -->

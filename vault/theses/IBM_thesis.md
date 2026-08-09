@@ -3,9 +3,9 @@ ticker: IBM
 style: FUND
 framework_preference:
 entry_date: '2026-07-27'
-last_reviewed: '2026-08-03'
-cost_basis: 7465.32
-current_allocation: 0.87%
+last_reviewed: '2026-08-08'
+cost_basis: 11391.830000000511
+current_allocation: 2.00%
 ---
 # IBM — Investment Thesis
 
@@ -47,17 +47,20 @@ priority: medium
 - 2026-07-27: Thesis file created. Entry sourced from Stephanie Link commentary (overdone selloff, ~19 P/E value case, Open Secure AI Alliance participation, CEO's AI-software positioning, and the post-miss analyst price-target cuts). Funded by trimming IGV, VEU, and JEPI.
 
 <!-- region:position_state -->
-**Current Allocation:** 0.87%
-**Cost Basis:** $7,465.32
+**Current Allocation:** 2.00%
+**Cost Basis:** $11,391.83
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** FUND
 **Size Ceiling:** 5.00%
-**Drift:** -4.13%
+**Drift:** -3.00%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
+- 2026-08-04: Buy 10.0 @ $230.31
+- 2026-08-04: Buy 5.0 @ $228.78
+- 2026-08-03: Buy 5.0 @ $227.00
 - 2026-07-31: Buy 5.0 @ $218.74
 - 2026-07-31: Buy 5.0 @ $221.54
 - 2026-07-30: Buy 10.0 @ $221.26
@@ -70,5 +73,5 @@ No realized G/L history.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-03 09:36: Auto-sync allocation 0.87%, drift -4.13%
+2026-08-08 09:05: Auto-sync allocation 2.00%, drift -3.00%
 <!-- endregion:change_log -->

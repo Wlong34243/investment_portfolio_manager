@@ -3,9 +3,9 @@ ticker: VTI
 style: ETF
 framework_preference:
 entry_date:
-last_reviewed: '2026-08-03'
-cost_basis: 22641.9
-current_allocation: 2.58%
+last_reviewed: '2026-08-08'
+cost_basis: 21199.2199999994
+current_allocation: 3.67%
 ---
 # VTI — Investment Thesis
 
@@ -43,14 +43,14 @@ priority: lowest
 - 2026-04: Initiated. Maintaining position to capture baseline market growth and prevent cash drag.
 
 <!-- region:position_state -->
-**Current Allocation:** 2.58%
-**Cost Basis:** $22,641.90
+**Current Allocation:** 3.67%
+**Cost Basis:** $21,199.22
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** ETF
 **Size Ceiling:** 8.00%
-**Drift:** -5.42%
+**Drift:** -4.33%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -58,8 +58,8 @@ priority: lowest
 - 2026-06-30: Buy 15.0 @ $368.69
 - 2026-06-25: Buy 15.0 @ $364.61
 - 2026-06-10: Buy 10.0 @ $361.82
-- 2026-06-05: Sell -70.0 @ $363.48
 - 2026-06-05: Sell -53.0 @ $363.33
+- 2026-06-05: Sell -70.0 @ $363.48
 - 2026-06-04: Sell -10.0 @ $371.91
 - 2026-06-02: Sell -10.0 @ $373.33
 - 2026-05-29: Buy 5.0 @ $372.33
@@ -67,20 +67,20 @@ priority: lowest
 - 2026-05-27: Buy 10.0 @ $369.45
 - 2026-05-26: Buy 10.0 @ $368.82
 - 2026-05-13: Buy 10.0 @ $361.71
-- 2026-05-11: Buy 10.0 @ $364.20
 - 2026-05-11: Buy 10.0 @ $364.17
-- 2026-05-08: Buy 10.0 @ $361.65
-- 2026-05-08: Buy 5.0 @ $361.80
+- 2026-05-11: Buy 10.0 @ $364.20
 - 2026-05-08: Buy 9.0 @ $362.42
+- 2026-05-08: Buy 5.0 @ $361.80
+- 2026-05-08: Buy 10.0 @ $361.65
 - 2026-05-07: Buy 5.0 @ $360.10
 - 2026-05-05: Buy 5.0 @ $357.14
 (showing 20 most recent of 41)
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
-Total Realized G/L: $4,041.25 over 59 closed lots. Total Proceeds: $105,590.52.
+Total Realized G/L: $1,885.25 over 59 closed lots. Total Proceeds: $46,442.52.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-03 09:36: Auto-sync allocation 2.58%, drift -5.42%
+2026-08-08 09:05: Auto-sync allocation 3.67%, drift -4.33%
 <!-- endregion:change_log -->

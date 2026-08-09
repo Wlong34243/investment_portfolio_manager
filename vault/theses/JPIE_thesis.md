@@ -3,9 +3,9 @@ ticker: JPIE
 style: ETF
 framework_preference: psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: '2026-08-03'
-current_allocation: 7.52%
-cost_basis: 67082.35
+last_reviewed: '2026-08-08'
+current_allocation: 0.84%
+cost_basis: 5099.850000003
 time_horizon: 0 to 3 years (tactical cash & ballast)
 triggers:
   fwd_pe_add_below:
@@ -72,20 +72,23 @@ next_step: [INFERRED] reduce — steady selling since 2026-06-01 (32 sell transa
 priority: [INFERRED] medium — activity is active and ongoing as of the most recent sell (2026-07-23), not urgent but not idle either. Not a stated plan; inferred from trade history alone on 2026-07-31 and flagged as such — confirm or correct.
 
 <!-- region:position_state -->
-**Current Allocation:** 7.52%
-**Cost Basis:** $67,082.35
+**Current Allocation:** 0.84%
+**Cost Basis:** $5,099.85
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** ETF
-**Size Ceiling:** 8.00%
-**Drift:** -0.48%
+**Size Ceiling:** 10.00%
+**Drift:** -9.16%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
-- 2026-07-31: Sell -100.0 @ $45.84
-- 2026-07-31: Sell -40.0 @ $45.84
+- 2026-08-06: Sell -25.0 @ $45.80
+- 2026-08-04: Sell -200.0 @ $45.78
+- 2026-08-03: Sell -100.0 @ $45.68
 - 2026-07-31: Sell -10.0 @ $45.84
+- 2026-07-31: Sell -40.0 @ $45.84
+- 2026-07-31: Sell -100.0 @ $45.84
 - 2026-07-23: Sell -75.0 @ $45.74
 - 2026-07-13: Sell -100.0 @ $45.78
 - 2026-07-06: Sell -110.0 @ $45.90
@@ -100,16 +103,13 @@ priority: [INFERRED] medium — activity is active and ongoing as of the most re
 - 2026-05-08: Buy 100.0 @ $46.06
 - 2026-04-17: Sell -75.0 @ $46.25
 - 2026-04-16: Buy 200.0 @ $46.16
-- 2026-04-16: Buy 200.0 @ $46.16
-- 2026-04-16: Buy 100.0 @ $46.16
-- 2026-04-10: Sell -500.0 @ $46.09
-(showing 20 most recent of 35)
+(showing 20 most recent of 38)
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
-Total Realized G/L: $52.13 over 73 closed lots. Total Proceeds: $97,848.14.
+Total Realized G/L: $53.13 over 73 closed lots. Total Proceeds: $28,838.14.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-03 09:36: Auto-sync allocation 7.52%, drift -0.48%
+2026-08-08 09:05: Auto-sync allocation 0.84%, drift -9.16%
 <!-- endregion:change_log -->

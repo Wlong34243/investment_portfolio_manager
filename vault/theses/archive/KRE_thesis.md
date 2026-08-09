@@ -5,7 +5,7 @@ framework_preference:
 entry_date:
 last_reviewed: '2026-08-03'
 cost_basis: 5244.31
-current_allocation: 0.60%
+current_allocation: 0.90%
 ---
 # KRE — Investment Thesis
 
@@ -43,16 +43,25 @@ priority: medium
 
 ## Review Log
 - 2026-07: Thesis file created. Policy-window thesis; watch regulatory calendar, not just price.
+- **2026-08-07:** Position appears fully exited. Last recorded sync (2026-08-03) showed
+  ~90 shares / 0.90%; bundle `6c531c97` (2026-08-07) shows KRE absent from positions
+  entirely. The exit itself (date, price, realized G/L) is **not recorded in this file's
+  transaction log**, which stops at 2026-07-31 — it happened between the two syncs and was
+  never captured here. Do not treat "No realized G/L history" above as accurate; it is
+  stale. Archiving via `manager.py clean theses --live` per Bill's direction
+  (`prompts/consolidate_and_thesis_repair_2026-08-07.md` Step 5.1) rather than deleting —
+  the actual exit terms should be pulled from Schwab / `Realized_GL` before this is
+  treated as a closed record.
 
 <!-- region:position_state -->
-**Current Allocation:** 0.60%
+**Current Allocation:** 0.90%
 **Cost Basis:** $5,244.31
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** ETF
 **Size Ceiling:** 8.00%
-**Drift:** -7.40%
+**Drift:** -7.10%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -74,5 +83,5 @@ No realized G/L history.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-03 09:36: Auto-sync allocation 0.60%, drift -7.40%
+2026-08-03 12:57: Auto-sync allocation 0.90%, drift -7.10%
 <!-- endregion:change_log -->

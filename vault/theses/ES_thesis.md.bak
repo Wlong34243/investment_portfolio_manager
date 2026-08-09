@@ -4,8 +4,8 @@ style: FUND
 framework_preference:
 entry_date: '2026-07-31'
 last_reviewed: '2026-08-07'
-current_allocation: 0.00%
-cost_basis: 0.0
+current_allocation: 0.36%
+cost_basis: 2159.4
 time_horizon: TBD - see open items
 triggers:
   entry_price:
@@ -100,14 +100,6 @@ Sources: [Daily Political — FY26 guidance](https://www.dailypolitical.com/2026
   large-project exposure.** Not researched at entry; a known category of risk for this
   issuer type that should be checked before adding.
 
-- **ISO-NE natural gas input costs affect rate-case headroom (added 2026-08-07).**
-  ES's own revenue is regulated/fee-based rather than directly commodity-exposed, but
-  its New England service territory relies on natural gas to set the marginal price of
-  electricity. Higher regional gas costs (heating-season constraints, pipeline capacity
-  into New England) raise customer bills and narrow the political headroom regulators
-  have to approve rate increases — a second-order channel from gas prices to allowed-ROE
-  outcomes that the Key Risks above don't currently capture. Not yet researched in depth.
-
 ## Position Sizing Plan
 
 - **Current: seed position** — share count and cost basis pending Schwab sync.
@@ -200,17 +192,16 @@ defensive cash-return holding plus a separate AI expression.
   macro backdrop where the market is pricing two rate hikes by December — recorded
   explicitly because it is the main risk to a leveraged yield position and should not
   be forgotten if this trades poorly.
-- **2026-08-07:** Added an ISO-NE natural gas input cost risk to Key Risks (rate-case-headroom factor), per `prompts/consolidate_and_thesis_repair_2026-08-07.md` Step 5.3. `next_step` left unresolved as `[CONFIRM] hold the seed` per instruction. Edited directly rather than through the archive-before-overwrite convention; `ES_thesis.md.bak` backfilled retroactively from pre-edit content to close that gap.
 
 <!-- region:position_state -->
-**Current Allocation:** 0.00%
-**Cost Basis:** $0.00
+**Current Allocation:** 0.36%
+**Cost Basis:** $2,159.40
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** FUND
 **Size Ceiling:** 5.00%
-**Drift:** -5.00%
+**Drift:** -4.64%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -226,5 +217,5 @@ No realized G/L history.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-07 14:18: Auto-sync allocation 0.00%, drift -5.00%
+2026-08-07 10:31: Auto-sync allocation 0.36%, drift -4.64%
 <!-- endregion:change_log -->

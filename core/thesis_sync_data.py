@@ -15,6 +15,50 @@ import config
 from utils.sheet_readers import get_holdings_current, get_realized_gl, get_trade_log, get_transactions
 from utils.thesis_utils import ThesisManager
 
+
+def _newest_composite_positions() -> Dict[str, dict]:
+    """Map ticker -> position dict from the newest composite bundle.
+
+    Holdings_Current can temporarily show Quantity with Price/MV/Cost at 0
+    after a partial live update (observed 2026-08-07). Bundle weight_pct /
+    market_value remain authoritative for thesis sync when the sheet is blank.
+    """
+    bundles_dir = Path("bundles")
+    if not bundles_dir.exists():
+        return {}
+    candidates = sorted(bundles_dir.glob("composite_bundle_*.json"))
+    if not candidates:
+        return {}
+    try:
+        data = json.loads(candidates[-1].read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as e:
+        logging.warning("Could not read composite bundle for thesis sync: %s", e)
+        return {}
+    positions = (data.get("_market_data") or {}).get("positions") or []
+    out = {}
+    for p in positions:
+        t = p.get("ticker")
+        if t and t not in config.CASH_TICKERS:
+            out[str(t)] = p
+    return out
+
+
+def _bundle_weight_pct(pos: dict) -> Optional[float]:
+    if not pos:
+        return None
+    raw = pos.get("weight_pct")
+    if raw is None:
+        raw = pos.get("weight")
+    try:
+        w = float(raw)
+    except (TypeError, ValueError):
+        return None
+    # Bundle stores percent in weight_pct; some older shapes used fraction.
+    if 0.0 < w <= 1.5 and pos.get("weight_pct") is None:
+        w *= 100.0
+    return w
+
+
 class TickerSyncPayload(BaseModel):
     ticker: str
     style: Optional[str]
@@ -50,6 +94,7 @@ def gather_thesis_sync_data(
         
     realized_df = get_realized_gl()
     transactions_df = get_transactions()
+    bundle_by_ticker = _newest_composite_positions()
     
     # Load styles.json
     styles_path = Path("data/styles.json")
@@ -65,7 +110,18 @@ def gather_thesis_sync_data(
     
     # Calculate total market value from full portfolio for weight calculation
     full_portfolio_df = holdings_df[~holdings_df['Ticker'].isin(config.CASH_TICKERS)]
-    total_market_value = full_portfolio_df['Market Value'].sum()
+    total_market_value = float(pd.to_numeric(full_portfolio_df['Market Value'], errors='coerce').fillna(0).sum())
+    # If the sheet blanked prices (MV sum ~0) but the composite still has
+    # valued positions, use the bundle total instead.
+    if total_market_value <= 0 and bundle_by_ticker:
+        total_market_value = sum(
+            float(p.get("market_value") or 0.0) for p in bundle_by_ticker.values()
+        )
+        logging.warning(
+            "Holdings_Current Market Value sum is 0; using composite bundle "
+            "total_market_value=%.2f for thesis allocation sync.",
+            total_market_value,
+        )
 
     # Filter tickers if provided
     if tickers:
@@ -87,11 +143,14 @@ def gather_thesis_sync_data(
         if thesis_path.exists():
             mgr = ThesisManager(thesis_path)
             fm = mgr.get_frontmatter()
-            if fm and 'style' in fm:
-                style = fm['style']
-                # Sometimes style is "GARP / Defensive Compounder", we want the first word if it matches styles.json
-                if style and ' / ' in style:
-                    style = style.split(' / ')[0]
+        if fm and 'style' in fm:
+            style = fm['style']
+            # YAML list placeholders like [BILL] must not reach styles_config lookup.
+            if not isinstance(style, str):
+                style = None
+            # Sometimes style is "GARP / Defensive Compounder", we want the first word if it matches styles.json
+            elif style and ' / ' in style:
+                style = style.split(' / ')[0]
         
         # 2. Fallback to ticker_strategies.json
         if not style or style not in styles_config:
@@ -158,22 +217,45 @@ def gather_thesis_sync_data(
         # manager.py already worked around this with a `max <= 1.5` heuristic;
         # that heuristic is itself unsafe for a book whose largest position is
         # under 1.5%, so recompute deterministically here instead.
+        #
+        # BUGFIX 2026-08-07: when Holdings_Current has Quantity but Price/MV
+        # blanked to 0 (partial live update), prefer the newest composite
+        # bundle's weight_pct / market_value / cost_basis so frontmatter and
+        # region:position_state stop writing a fake 0.00%.
+        bpos = bundle_by_ticker.get(str(ticker)) or {}
         market_value = float(row.get('Market Value', 0.0) or 0.0)
-        if total_market_value > 0:
+        if market_value <= 0 and bpos:
+            try:
+                market_value = float(bpos.get("market_value") or 0.0)
+            except (TypeError, ValueError):
+                market_value = 0.0
+
+        if total_market_value > 0 and market_value > 0:
             weight = (market_value / total_market_value) * 100.0
         else:
-            # Degenerate case only (no priced positions). Fall back to the
-            # stored column, coercing a fractional value up to percent.
-            weight = float(row.get('Weight', 0.0) or 0.0)
-            if 0.0 < weight <= 1.5:
-                weight *= 100.0
+            bw = _bundle_weight_pct(bpos)
+            if bw is not None and bw > 0:
+                weight = bw
+            else:
+                # Degenerate case only (no priced positions). Fall back to the
+                # stored column, coercing a fractional value up to percent.
+                weight = float(row.get('Weight', 0.0) or 0.0)
+                if 0.0 < weight <= 1.5:
+                    weight *= 100.0
+
+        cost_basis = float(row.get('Cost Basis', 0.0) or 0.0)
+        if cost_basis <= 0 and bpos:
+            try:
+                cost_basis = float(bpos.get("cost_basis") or 0.0)
+            except (TypeError, ValueError):
+                pass
 
         payloads[ticker] = TickerSyncPayload(
             ticker=ticker,
             style=style,
             size_ceiling_pct=size_ceiling,
             current_allocation_pct=weight,
-            cost_basis=row.get('Cost Basis', 0.0),
+            cost_basis=cost_basis,
             last_reviewed=as_of_date,
             transactions=transactions,
             transactions_total_count=txn_total_count,

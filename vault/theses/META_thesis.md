@@ -3,9 +3,9 @@ ticker: META
 style: GARP
 framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: '2026-08-03'
-current_allocation: 0.89%
-cost_basis: 8852.82
+last_reviewed: '2026-08-08'
+current_allocation: 1.39%
+cost_basis: 8852.820000000003
 time_horizon: 3 to 5+ years
 triggers:
   fwd_pe_add_below: 18              # add if ads/engagement solid but market panics
@@ -114,14 +114,14 @@ pending. [CONFIRM]
   intended 4.0% ceiling is −1.79%, not −6.79%. Logged for the repo, not resolved here.
 
 <!-- region:position_state -->
-**Current Allocation:** 0.89%
+**Current Allocation:** 1.39%
 **Cost Basis:** $8,852.82
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** GARP
-**Size Ceiling:** 9.00%
-**Drift:** -8.11%
+**Size Ceiling:** 4.00%
+**Drift:** -2.61%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -144,5 +144,5 @@ No realized G/L history.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-03 09:36: Auto-sync allocation 0.89%, drift -8.11%
+2026-08-08 09:05: Auto-sync allocation 1.39%, drift -2.61%
 <!-- endregion:change_log -->

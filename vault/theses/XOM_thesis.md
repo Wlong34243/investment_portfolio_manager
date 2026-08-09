@@ -3,9 +3,9 @@ ticker: XOM
 style: THEME
 framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
 entry_date: (PXD-close stock consideration date)
-last_reviewed: '2026-08-03'
-current_allocation: 1.77%
-cost_basis: 11563.13
+last_reviewed: '2026-08-08'
+current_allocation: 3.16%
+cost_basis: 15042.629999999957
 time_horizon: 3 to 5 years
 triggers:
   fwd_pe_add_below: 9                 # add when market prices in "energy bust"
@@ -78,17 +78,19 @@ next_step: [INFERRED] add — ongoing dollar-cost averaging via small buys, most
 priority: [INFERRED] low — steady accumulation, no urgency signal in the trade pattern. Not a stated plan; inferred from trade history alone on 2026-07-31 and flagged as such — confirm or correct.
 
 <!-- region:position_state -->
-**Current Allocation:** 1.77%
-**Cost Basis:** $11,563.13
+**Current Allocation:** 3.16%
+**Cost Basis:** $15,042.63
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** THEME
-**Size Ceiling:** 3.00%
-**Drift:** -1.23%
+**Size Ceiling:** 5.00%
+**Drift:** -1.84%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
+- 2026-08-04: Buy 15.0 @ $153.65
+- 2026-08-04: Buy 10.0 @ $152.02
 - 2026-06-10: Buy 0.6053 @ $151.00
 - 2026-04-10: Buy 10.0 @ $152.64
 - 2026-03-10: Buy 0.5377 @ $149.79
@@ -100,9 +102,9 @@ priority: [INFERRED] low — steady accumulation, no urgency signal in the trade
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
-Total Realized G/L: $906.00 over 2 closed lots. Total Proceeds: $4,044.00.
+Total Realized G/L: $0.00 over 2 closed lots. Total Proceeds: $0.00.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-03 09:36: Auto-sync allocation 1.77%, drift -1.23%
+2026-08-08 09:05: Auto-sync allocation 3.16%, drift -1.84%
 <!-- endregion:change_log -->

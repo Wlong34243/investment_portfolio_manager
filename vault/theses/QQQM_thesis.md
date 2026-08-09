@@ -3,9 +3,9 @@ ticker: QQQM
 style: ETF
 framework_preference:
 entry_date:
-last_reviewed: '2026-08-03'
-cost_basis: 50764.61
-current_allocation: 5.81%
+last_reviewed: '2026-08-08'
+cost_basis: 60864.509999999966
+current_allocation: 10.64%
 ---
 # QQQM — Investment Thesis
 
@@ -44,44 +44,44 @@ priority: very low (core foundational holding)
 - 2026-04: Initiated. Thesis intact. Monitoring overall tech multiples, mega-cap earnings growth, and the 10-year Treasury yield.
 
 <!-- region:position_state -->
-**Current Allocation:** 5.81%
-**Cost Basis:** $50,764.61
+**Current Allocation:** 10.64%
+**Cost Basis:** $60,864.51
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** ETF
 **Size Ceiling:** 8.00%
-**Drift:** -2.19%
+**Drift:** +2.64%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
+- 2026-08-07: Sell -10.0 @ $297.42
+- 2026-08-05: Buy 25.0 @ $299.25
+- 2026-08-04: Buy 4.0 @ $295.57
+- 2026-08-04: Buy 10.0 @ $294.59
+- 2026-08-03: Buy 6.0 @ $286.80
 - 2026-07-20: Buy 20.0 @ $288.96
 - 2026-07-14: Sell -10.0 @ $295.13
 - 2026-07-09: Sell -10.0 @ $297.30
 - 2026-07-06: Buy 20.0 @ $298.09
 - 2026-06-26: Sell -10.0 @ $291.96
 - 2026-06-25: Sell -20.0 @ $293.21
-- 2026-06-18: Buy 10.0 @ $304.79
 - 2026-06-18: Buy 4.0 @ $304.90
+- 2026-06-18: Buy 10.0 @ $304.79
 - 2026-06-17: Buy 3.0 @ $302.11
-- 2026-06-08: Buy 5.0 @ $294.43
 - 2026-06-08: Buy 15.0 @ $294.43
+- 2026-06-08: Buy 5.0 @ $294.43
 - 2026-06-08: Buy 20.0 @ $294.26
 - 2026-06-05: Buy 5.0 @ $298.91
 - 2026-05-29: Buy 3.0 @ $305.26
 - 2026-05-26: Buy 10.0 @ $299.83
-- 2026-05-13: Sell -25.0 @ $290.26
-- 2026-05-12: Sell -10.0 @ $288.61
-- 2026-05-11: Buy 10.0 @ $294.10
-- 2026-05-08: Buy 10.0 @ $288.96
-- 2026-05-05: Sell -8.0 @ $279.23
-(showing 20 most recent of 43)
+(showing 20 most recent of 48)
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
-Total Realized G/L: $695.38 over 38 closed lots. Total Proceeds: $62,217.45.
+Total Realized G/L: $22.38 over 38 closed lots. Total Proceeds: $26,259.45.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-03 09:36: Auto-sync allocation 5.81%, drift -2.19%
+2026-08-08 09:05: Auto-sync allocation 10.64%, drift +2.64%
 <!-- endregion:change_log -->

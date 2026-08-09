@@ -3,9 +3,9 @@ ticker: UNH
 style: GARP
 framework_preference: lynch_garp_v1, psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: '2026-08-03'
-current_allocation: 2.11%
-cost_basis: 15643.57
+last_reviewed: '2026-08-08'
+current_allocation: 3.74%
+cost_basis: 19723.77
 time_horizon: 1 to 3 years
 triggers:
   fwd_pe_add_below: 14
@@ -83,17 +83,18 @@ At 2.22% the position is sub-scale. Two valid paths from here:
 
 ## Rotation Priority
 
-- Rotation priority: medium — eligible to close on further strength and redeploy to core ETFs.
+priority: medium
+<!-- Bill note (2026 prose): eligible to close on further strength and redeploy to core ETFs. -->
 
 <!-- region:position_state -->
-**Current Allocation:** 2.11%
-**Cost Basis:** $15,643.57
+**Current Allocation:** 3.74%
+**Cost Basis:** $19,723.77
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** GARP
-**Size Ceiling:** 9.00%
-**Drift:** -6.89%
+**Size Ceiling:** 5.00%
+**Drift:** -1.26%
 <!-- endregion:sizing -->
 
 <!-- region:wash_sale_watch -->
@@ -101,33 +102,33 @@ At 2.22% the position is sub-scale. Two valid paths from here:
 <!-- endregion:wash_sale_watch -->
 
 <!-- region:change_log -->
-2026-08-03 09:36: Auto-sync allocation 2.11%, drift -6.89%
+2026-08-08 09:05: Auto-sync allocation 3.74%, drift -1.26%
 <!-- endregion:change_log -->
 
 <!-- region:transaction_log -->
+- 2026-08-04: Buy 10.0 @ $408.02
 - 2026-07-20: Buy 10.0 @ $424.56
-- 2026-05-11: Sell -15.0 @ $380.99
 - 2026-05-11: Sell -20.0 @ $380.99
+- 2026-05-11: Sell -15.0 @ $380.99
 - 2026-04-24: Sell -10.0 @ $354.18
 - 2026-04-23: Sell -5.0 @ $354.30
-- 2026-04-16: Buy 10.0 @ $317.53
 - 2026-04-16: Buy 20.0 @ $317.00
-- 2026-04-10: Sell -25.0 @ $308.25
+- 2026-04-16: Buy 10.0 @ $317.53
 - 2026-04-10: Sell -1.0 @ $305.20
+- 2026-04-10: Sell -25.0 @ $308.25
 - 2026-04-09: Sell -5.0 @ $304.95
-- 2026-04-07: Sell -18.0 @ $304.11
 - 2026-04-07: Sell -8.0 @ $303.21
+- 2026-04-07: Sell -18.0 @ $304.11
 - 2026-03-25: Buy 1.0 @ $268.47
 - 2026-03-25: Buy 4.0 @ $268.47
 - 2026-01-28: Buy 10.0 @ $290.88
-- 2026-01-27: Buy 10.0 @ $288.10
 - 2026-01-27: Buy 5.0 @ $288.54
+- 2026-01-27: Buy 10.0 @ $288.10
 - 2026-01-26: Buy 5.0 @ $349.50
-- 2026-01-23: Buy 3.0 @ $355.04
 - 2026-01-23: Buy 10.0 @ $355.43
-(showing 20 most recent of 22)
+(showing 20 most recent of 23)
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
-Total Realized G/L: $11,836.62 over 64 closed lots. Total Proceeds: $85,706.22.
+Total Realized G/L: $5,294.62 over 64 closed lots. Total Proceeds: $42,519.22.
 <!-- endregion:realized_gl -->

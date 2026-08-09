@@ -3,9 +3,9 @@ ticker: GOOG
 style: GARP
 framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: '2026-08-03'
-current_allocation: 4.16%
-cost_basis: 26733.42
+last_reviewed: '2026-08-08'
+current_allocation: 5.95%
+cost_basis: 26733.419999996368
 time_horizon: 3 to 5 years
 triggers:
   fwd_pe_add_below: 20              # add on AI/reg fear-driven pullbacks
@@ -77,21 +77,21 @@ I will exit or sharply reduce only on **structural** breaks:
 
 ## Rotation Priority
 
-- Rotation priority: very low.
+priority: very low
 
 <!-- region:position_state -->
-**Current Allocation:** 4.16%
+**Current Allocation:** 5.95%
 **Cost Basis:** $26,733.42
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** GARP
 **Size Ceiling:** 9.00%
-**Drift:** -4.84%
+**Drift:** -3.05%
 <!-- endregion:sizing -->
 
 <!-- region:change_log -->
-2026-08-03 09:36: Auto-sync allocation 4.16%, drift -4.84%
+2026-08-08 09:05: Auto-sync allocation 5.95%, drift -3.05%
 <!-- endregion:change_log -->
 
 <!-- region:transaction_log -->
@@ -111,5 +111,5 @@ I will exit or sharply reduce only on **structural** breaks:
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
-Total Realized G/L: $13,846.64 over 10 closed lots. Total Proceeds: $27,202.04.
+Total Realized G/L: $9,263.64 over 10 closed lots. Total Proceeds: $17,533.04.
 <!-- endregion:realized_gl -->

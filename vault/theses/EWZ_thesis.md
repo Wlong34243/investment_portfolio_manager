@@ -3,9 +3,9 @@ ticker: EWZ
 style: ETF
 framework_preference:
 entry_date:
-last_reviewed: '2026-08-03'
-cost_basis: 15674.58
-current_allocation: 1.71%
+last_reviewed: '2026-08-08'
+cost_basis: 11967.409999999505
+current_allocation: 1.85%
 ---
 # EWZ — Investment Thesis
 
@@ -44,21 +44,23 @@ priority: medium (requires monitoring of global FX and commodity trends)
 - 2026-04: Initiated. Thesis intact. Monitoring Petrobras dividend announcements, iron ore prices, and USD/BRL exchange rates.
 
 <!-- region:position_state -->
-**Current Allocation:** 1.71%
-**Cost Basis:** $15,674.58
+**Current Allocation:** 1.85%
+**Cost Basis:** $11,967.41
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** ETF
 **Size Ceiling:** 8.00%
-**Drift:** -6.29%
+**Drift:** -6.15%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
+- 2026-08-04: Sell -50.0 @ $36.46
+- 2026-08-04: Sell -50.0 @ $36.46
 - 2026-05-27: Buy 50.0 @ $36.38
 - 2026-05-15: Buy 25.0 @ $36.03
-- 2026-05-11: Buy 20.0 @ $38.63
 - 2026-05-11: Buy 15.0 @ $38.59
+- 2026-05-11: Buy 20.0 @ $38.63
 - 2026-05-04: Buy 25.0 @ $39.20
 - 2026-04-24: Buy 10.0 @ $39.80
 - 2026-04-13: Buy 25.0 @ $41.15
@@ -66,20 +68,20 @@ priority: medium (requires monitoring of global FX and commodity trends)
 - 2026-03-19: Buy 10.0 @ $35.86
 - 2026-03-12: Buy 15.0 @ $36.51
 - 2026-03-03: Buy 15.0 @ $36.15
-- 2026-02-11: Buy 20.0 @ $38.87
 - 2026-02-11: Buy 25.0 @ $38.86
 - 2026-02-11: Buy 25.0 @ $38.85
+- 2026-02-11: Buy 20.0 @ $38.87
 - 2026-02-06: Buy 10.0 @ $37.49
 - 2026-02-05: Buy 100.0 @ $37.03
 - 2026-02-04: Buy 20.0 @ $36.79
 - 2026-02-03: Buy 50.0 @ $37.85
-- 2026-02-02: Buy 50.0 @ $37.38
+(showing 20 most recent of 21)
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
-Total Realized G/L: $356.44 over 6 closed lots. Total Proceeds: $10,010.62.
+Total Realized G/L: $178.44 over 6 closed lots. Total Proceeds: $5,005.62.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-03 09:36: Auto-sync allocation 1.71%, drift -6.29%
+2026-08-08 09:05: Auto-sync allocation 1.85%, drift -6.15%
 <!-- endregion:change_log -->

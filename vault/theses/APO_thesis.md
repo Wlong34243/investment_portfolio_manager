@@ -3,9 +3,9 @@ ticker: APO
 style: GARP
 framework_preference:
 entry_date:
-last_reviewed: '2026-08-03'
-cost_basis: 12606.9
-current_allocation: 1.49%
+last_reviewed: '2026-08-08'
+cost_basis: 7673.799999999
+current_allocation: 1.38%
 ---
 # APO — Investment Thesis
 
@@ -84,17 +84,18 @@ priority: medium
   No position action taken or implied.
 
 <!-- region:position_state -->
-**Current Allocation:** 1.49%
-**Cost Basis:** $12,606.90
+**Current Allocation:** 1.38%
+**Cost Basis:** $7,673.80
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** GARP
 **Size Ceiling:** 9.00%
-**Drift:** -7.51%
+**Drift:** -7.62%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
+- 2026-08-04: Sell -40.0 @ $129.40
 - 2026-06-30: Buy 40.0 @ $117.00
 - 2026-06-26: Buy 25.0 @ $118.19
 - 2026-06-25: Buy 5.0 @ $124.81
@@ -107,5 +108,5 @@ No realized G/L history.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-03 09:36: Auto-sync allocation 1.49%, drift -7.51%
+2026-08-08 09:05: Auto-sync allocation 1.38%, drift -7.62%
 <!-- endregion:change_log -->
