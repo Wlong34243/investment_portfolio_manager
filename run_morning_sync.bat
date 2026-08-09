@@ -2,7 +2,7 @@
 title Portfolio Manager - Morning Sync
 cd /d "%~dp0"
 echo ===================================================
-echo ☀️  RUNNING PORTFOLIO MORNING SYNC & SNAPSHOT
+echo   RUNNING PORTFOLIO MORNING SYNC AND SNAPSHOT
 echo ===================================================
 echo.
 
