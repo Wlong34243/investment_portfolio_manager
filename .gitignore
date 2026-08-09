@@ -31,6 +31,7 @@ token_market.json
 # OS files
 .DS_Store
 Thumbs.db
+desktop.ini
 
 # CLI bundle artifacts — immutable snapshots, regenerable, do not commit
 bundles/

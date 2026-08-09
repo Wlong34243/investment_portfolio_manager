@@ -300,6 +300,14 @@ def main(
     data = all_values[header_row_idx + 1:]
     df_holdings = pd.DataFrame(data, columns=headers)
 
+    # Capture Position MV before ensure_display_columns — that guard's own
+    # numeric cast still has a pandas-3 string-dtype gap and would zero "$" cells.
+    from utils.sheet_readers import coerce_sheet_numeric_series
+    mv_map = dict(zip(
+        df_holdings["Ticker"],
+        coerce_sheet_numeric_series(df_holdings["Market Value"]),
+    ))
+
     from utils.column_guard import ensure_display_columns
     df_holdings = ensure_display_columns(df_holdings)
 
@@ -343,11 +351,8 @@ def main(
     # Position MV: what Bill actually owns of this ticker, not the company's
     # own market cap -- joined from Holdings_Current so the card ranks by
     # portfolio weight, matching how Bill actually uses it (valuations +
-    # current holding market value).
-    mv_map = dict(zip(
-        df_holdings["Ticker"],
-        pd.to_numeric(df_holdings["Market Value"], errors="coerce").fillna(0.0),
-    ))
+    # current holding market value). Parsed via coerce_sheet_numeric_series
+    # (shared with read_gsheet_robust) before ensure_display_columns.
     df_val["Position MV"] = df_val["Ticker"].map(mv_map).fillna(0.0)
 
     # Every row gets exactly VALUATION_CARD_COLUMNS, in order -- guarantees no

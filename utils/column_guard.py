@@ -83,20 +83,10 @@ def ensure_display_columns(df: pd.DataFrame) -> pd.DataFrame:
 
         # Type Casting
         if col in _NUMERIC_COLS:
-            had_pct = pd.Series(False, index=df.index)
-            if df[col].dtype == object:
-                s = df[col].astype(str)
-                # A literal '%' means Sheets is displaying a fraction as a
-                # percentage (e.g. "6.77%" == 0.0677) — remember that before
-                # stripping the sign so the parsed number can be divided back
-                # down to a fraction, instead of silently becoming 100x too big.
-                had_pct = s.str.contains('%', regex=False)
-                df[col] = s.str.replace('$', '', regex=False)\
-                            .str.replace('%', '', regex=False)\
-                            .str.replace(',', '', regex=False)\
-                            .str.strip()
-            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0.0)
-            df.loc[had_pct, col] = df.loc[had_pct, col] / 100.0
+            # Shared strip/$/%/, path — do not duplicate locally (pandas 3.0
+            # string dtype is handled inside coerce_sheet_numeric_series).
+            from utils.sheet_readers import coerce_sheet_numeric_series
+            df[col] = coerce_sheet_numeric_series(df[col])
         elif col in ['Is Cash', 'Wash Sale']:
             if df[col].dtype == object:
                 df[col] = df[col].astype(str).str.upper().isin(['TRUE', 'YES', '1', 'T'])

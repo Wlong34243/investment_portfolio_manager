@@ -137,24 +137,39 @@ def read_gsheet_robust(ws: gspread.Worksheet) -> pd.DataFrame:
         if should_skip:
             continue
 
-        had_pct = pd.Series(False, index=df.index)
-        if df[col].dtype == object:
-            s = df[col].astype(str)
-            # A literal '%' in the cell means Sheets is displaying a fraction as a
-            # percentage (e.g. "6.77%" == 0.0677) — remember that before stripping
-            # the sign, so the parsed number can be divided back down to a fraction.
-            had_pct = s.str.contains('%', regex=False)
-            s = s.str.replace('$', '', regex=False).str.replace('%', '', regex=False).str.replace(',', '', regex=False).str.strip()
-            s = s.replace('', '0')
-            # Handle parenthesized negatives: (123.45) -> -123.45
-            mask = s.str.startswith('(') & s.str.endswith(')')
-            s.loc[mask] = '-' + s.loc[mask].str[1:-1]
-            df[col] = s
-
-        df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0.0)
-        df.loc[had_pct, col] = df.loc[had_pct, col] / 100.0
+        # Coercion lives in coerce_sheet_numeric_series() so other callers
+        # (valuation card Position MV) share the same strip path.
+        # pandas >=3.0 infers plain-string columns as a dedicated string dtype,
+        # not legacy `object` -- coerce_sheet_numeric_series handles both.
+        df[col] = coerce_sheet_numeric_series(df[col])
 
     return df
+
+
+def coerce_sheet_numeric_series(s: pd.Series) -> pd.Series:
+    """
+    Strip $, %, commas and parenthesized negatives, then to_numeric.
+    Shared by read_gsheet_robust() and callers that build a DataFrame without
+    going through that reader (e.g. valuation card Position MV).
+    """
+    had_pct = pd.Series(False, index=s.index)
+    out = s
+    if pd.api.types.is_object_dtype(s) or pd.api.types.is_string_dtype(s):
+        out = s.astype(str)
+        had_pct = out.str.contains("%", regex=False)
+        out = (
+            out.str.replace("$", "", regex=False)
+            .str.replace("%", "", regex=False)
+            .str.replace(",", "", regex=False)
+            .str.strip()
+        )
+        out = out.replace("", "0")
+        mask = out.str.startswith("(") & out.str.endswith(")")
+        out.loc[mask] = "-" + out.loc[mask].str[1:-1]
+    result = pd.to_numeric(out, errors="coerce").fillna(0.0)
+    result.loc[had_pct] = result.loc[had_pct] / 100.0
+    return result
+
 
 @lru_cache(maxsize=32)
 def get_transactions() -> pd.DataFrame:
