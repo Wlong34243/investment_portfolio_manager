@@ -9,7 +9,12 @@ import logging
 from typing import Dict, Any, List, Tuple
 
 import config
-from utils.sheet_readers import get_gspread_client, get_realized_gl, read_gsheet_robust
+from utils.sheet_readers import (
+    coerce_sheet_numeric_series,
+    get_gspread_client,
+    get_realized_gl,
+    read_gsheet_robust,
+)
 from utils.sheet_writers import safe_execute
 
 logger = logging.getLogger(__name__)
@@ -101,27 +106,19 @@ def get_realized_gl_robust() -> pd.DataFrame:
     # Drop entirely empty rows
     df = df.replace('', None).dropna(how='all').fillna('')
     
-    # Numeric cleaning similar to read_gsheet_robust
-    skip_cols = [
-        'ticker', 'symbol', 'description', 'sector', 'industry', 
-        'asset class', 'asset strategy', 'import date', 'closed date', 
+    # Numeric cleaning via shared sanitizer (object + pandas ≥3 string dtype).
+    skip_cols = {
+        'ticker', 'symbol', 'description', 'sector', 'industry',
+        'asset class', 'asset strategy', 'import date', 'closed date',
         'opened date', 'acquisition date', 'date', 'import timestamp', 'fingerprint',
-        'is cash', 'wash sale', 'is primary acct', 'account', 'term'
-    ]
+        'is cash', 'wash sale', 'is primary acct', 'account', 'term',
+    }
     for col in df.columns:
         col_lower = col.lower()
         if col_lower in skip_cols or col_lower.startswith('unnamed_'):
             continue
-            
-        if df[col].dtype == object:
-            df[col] = df[col].astype(str).str.replace('$', '', regex=False).str.replace('%', '', regex=False).str.replace(',', '', regex=False).str.strip()
-            df[col] = df[col].replace('', '0')
-            # Handle parentheses for negative numbers
-            mask = df[col].str.startswith('(') & df[col].str.endswith(')')
-            df.loc[mask, col] = '-' + df.loc[mask, col].str[1:-1]
-            
-        df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0.0)
-        
+        df[col] = coerce_sheet_numeric_series(df[col])
+
     return df
 
 def compute_tax_control_data() -> Dict[str, Any]:

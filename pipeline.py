@@ -21,6 +21,7 @@ import numpy as np
 import time
 from datetime import datetime
 import config
+from utils.sheet_readers import coerce_sheet_numeric_series
 
 
 # ---------------------------------------------------------------------------
@@ -322,12 +323,10 @@ def append_daily_snapshot(ws, df: pd.DataFrame, existing_fps: set = None) -> boo
     from utils.column_guard import ensure_display_columns
     df = ensure_display_columns(df)
 
-    # Nuclear Type Enforcement: Strip [$,] and ensure numeric before summation (Task 1)
+    # Nuclear Type Enforcement via shared sanitizer (object + string dtype)
     for col in ['Market Value', 'Cost Basis', 'Est Annual Income']:
         if col in df.columns:
-            if df[col].dtype == object:
-                df[col] = df[col].astype(str).str.replace('$', '', regex=False).str.replace(',', '', regex=False)
-            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0.0)
+            df[col] = coerce_sheet_numeric_series(df[col])
 
     import_date = str(df['Import Date'].iloc[0])
 
@@ -389,12 +388,10 @@ def calculate_income_metrics(df: pd.DataFrame) -> dict:
     from utils.column_guard import ensure_display_columns
     df = ensure_display_columns(df)
 
-    # Nuclear Type Enforcement (Task 1)
+    # Nuclear Type Enforcement via shared sanitizer (object + string dtype)
     for col in ['Market Value', 'Est Annual Income']:
         if col in df.columns:
-            if df[col].dtype == object:
-                df[col] = df[col].astype(str).str.replace('$', '', regex=False).str.replace(',', '', regex=False)
-            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0.0)
+            df[col] = coerce_sheet_numeric_series(df[col])
 
     for col in ['Market Value', 'Est Annual Income', 'Is Cash', 'Ticker']:
         if col not in df.columns:
@@ -570,11 +567,9 @@ def write_risk_metrics(res: dict, df: pd.DataFrame, dry_run: bool = False) -> bo
     """Persist deep risk results to the Risk_Metrics tab."""
     import_date = datetime.now().strftime("%Y-%m-%d")
     
-    # Nuclear Type Enforcement (Task 1)
+    # Nuclear Type Enforcement via shared sanitizer (object + string dtype)
     if 'Market Value' in df.columns:
-        if df['Market Value'].dtype == object:
-            df['Market Value'] = df['Market Value'].astype(str).str.replace('$', '', regex=False).str.replace(',', '', regex=False)
-        df['Market Value'] = pd.to_numeric(df['Market Value'], errors='coerce').fillna(0.0)
+        df['Market Value'] = coerce_sheet_numeric_series(df['Market Value'])
 
     # Python math — guardrail #1
     total_val       = float(df['Market Value'].sum())
