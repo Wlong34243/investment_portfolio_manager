@@ -2,6 +2,53 @@
 
 ## [Unreleased]
 
+## [2026-08-08] — Promote rotation backlog + harden Status
+
+Driven by `prompts/promote_backlog_and_harden_status_2026-08-08.md`. Bill signed off option 2 (3 clean rows + Aug 3 widest).
+
+### Changed
+- `Trade_Log` 1→5 rows (promoted EMXC→BBJP, NOW+IGV→APO/KRE/MELI/LLY, IGV/VEU/JEPI→IBM, Aug 3 basket). Staging statuses: 4 `promoted` (with `Promoted_At`), 9 `superseded`, 111 `needs_rationale`. Backup at `agent_outputs/trade_log_staging/backup_*.csv`.
+- `journal promote` accepts `approve`/`approved`; writes `Promoted_At` UTC; warns on `promoted` + blank timestamp without auto-correct.
+- `config.TRADE_LOG_STAGING_COLUMNS` adds `Promoted_At`.
+- Attribution track-record summary (median Residual / Vs_Index / Sell_Vs_Index; VTI↔QQQ sign-flip count) in `agent_outputs/rotation_attribution/`.
+- Position MV: `coerce_sheet_numeric_series` shared helper; `column_guard.ensure_display_columns` and valuation card use it (pandas 3.0 string-dtype gap was zeroing `$` cells).
+
+## [2026-08-08] — Basket-aware rotation attribution
+
+Driven by `prompts/build_basket_attribution_2026-08-08.md`.
+
+### Changed
+- `tasks/compute_rotation_attribution.py` — basket is the unit of analysis: dollar weights from `Transactions`, both-sides netting, weighted returns, SPY/VTI/QQQ benchmarks, beta decomposition vs SPY with `Residual_Pair_Nd` as headline, nested/superseded detection, local markdown under `agent_outputs/rotation_attribution/`, archive-before-overwrite on `--live`. New `--from-staging` read-only backfill path (never writes Sheets).
+- `config.ROTATION_REVIEW_COLUMNS` — appended Status, Both_Sides_Tickers, Coverage_Pct, betas, Residual/Beta_Explained/Vs_Index/Sell_Vs_Index, Bench_SPY/VTI/QQQ/Spread, Bench_QQQ_Note. Existing column order preserved.
+
+### Notes
+- JEPI/JPIE-funded baskets: equity beta understates risk-managed income given up — flagged in output; not "fixed" in the beta math.
+- Returns use yfinance `auto_adjust=True` (dividend-adjusted total return).
+
+## [2026-08-08] — Dashboard-zeroing pandas 3.0 dtype bug
+
+Bill reported `0_DASHBOARD` not populating: tickers, Fwd P/E and PEG rendered, but MV, Price, Wt%, Day% and UGL were all `$0`/`0.0%` for every position despite `Holdings_Current` holding correct, fresh data.
+
+### Fixed
+- **`utils/sheet_readers.py`'s `read_gsheet_robust()` — the shared Sheets-reading function used by `manager.py`, `build_command_center.py` and `build_tax_control.py` — silently stopped stripping `$`/`%`/`,` from numeric cells.** The gate `if df[col].dtype == object:` relied on pandas inferring plain-string columns as legacy `object` dtype; the `.venv`'s installed **pandas 3.0.5** infers a dedicated string dtype instead, so the check no longer matched, the strip block never ran, and every currency/percent cell fell straight into `pd.to_numeric(...).fillna(0.0)` — silently zeroing. Fixed by widening the check to `pd.api.types.is_object_dtype(df[col]) or pd.api.types.is_string_dtype(df[col])`, which is correct on both old and new pandas. Verified live against the Sheet before and after (Market Value column: all `0.0` → real values), then rebuilt `0_DASHBOARD` with `manager.py refresh dashboard --live` and confirmed the written tab shows real numbers (Total Value $591,549, per-position MV/Price/Trim/Add all correct).
+
+### Found, not fixed (flagged only)
+- **`build_valuation_card.py`'s "Position MV" column has its own, separate, likely long-standing bug** — it calls `pd.to_numeric()` directly on the raw `"$X,XXX.XX"`-formatted `Holdings_Current` string with no stripping at all (doesn't go through `read_gsheet_robust()`), so it has probably always read as 0 regardless of the pandas-version issue above. Low impact — it only affects that one preview table's sort order, not any Fwd P/E/PEG/valuation-signal data or anything downstream. Left alone; worth a follow-up fix.
+
+## [2026-08-07] — Repo consolidation + thesis repair pass
+
+Driven by `prompts/consolidate_and_thesis_repair_2026-08-07.md`. Full detail in `state.md` Recent Decisions Log.
+
+### Fixed
+- `data/spotify_digests/.ingested.json` `output_path` values repointed from the retired `C:\Users\WLong\Investment_Portfolio` tree to `C:\Dev\Investment_Portfolio` (sha256 keys/`ingested_at` preserved).
+- STEP 4b Spotify digest ingestion had missed 4 days (08-04 through 08-07) because `morning_auto.bat`'s `DailyWake` scheduled task has never successfully fired, not because of a filter bug — live-ingested all 4 after confirming the dry run was clean.
+- `VRT_thesis.md`, `ET_thesis.md`, `ES_thesis.md` — stale weights/sleeve-math corrected, domestic AI/data-center gas demand and ISO-NE input-cost risk notes added; `.bak` backfilled for all three.
+- `KRE_thesis.md` archived (position exited between the 2026-08-03 and 2026-08-07 syncs, not previously recorded).
+
+### Added
+- `vault/theses/PWR_thesis.md` rewritten as a sourced fact-assembly interview scaffold (no thesis prose) — entry tranches, valuation snapshot, style question, sleeve/overlap context, and a cited Research Inputs section on the electrician-shortage podcast segment.
+- `data/podcast_summaries/verification/allocation-2026-08-07_VERIFIED_2026-08-07.md` `source_sha256` filled in from the now-ingested digest, independently re-verified.
+
 ## [2026-08-03] — Schwab multi-account scope fix
 
 Driven by `prompts/schwab_account_scope_fix_2026-08-03.md`, following an item-1 investigation the same day into why the 2026-08-02 composite bundle reported `total_value: $897,748.49` (vs. the Sheet's known ~$591-596K) with JEPI/JPIE weights ~3.5x too high while `Trade_Log` showed net *selling* in both.
