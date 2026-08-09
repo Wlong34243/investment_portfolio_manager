@@ -278,8 +278,7 @@ Recorded so they are not rediscovered.
 - ~~Sanitizer residuals in `build_tax_control` / `pipeline.py`~~ — use `coerce_sheet_numeric_series()`.
 - ~~Tax_Control ignored Schwab account suffixes~~ — filters to primary suffixes; fails if Account missing/unparseable; still applies taxable-only via `Is Primary Acct`.
 - ~~Dead `create_dashboard` builders~~ — archived to `archive/create_dashboard_*_2026-08-09.py`.
-- ~~One-off `scripts/apply_staging_dispositions_2026-08-08.py` wrote without `--live`~~ — deleted. Same ungated shape still exists in `scripts/fix_63_5_and_confirm_ca3_2026-08-08.py` and `scripts/demo_handtyped_promoted_warning_2026-08-08.py` (listed, not fixed that pass).
-
+- ~~One-off `scripts/apply_staging_dispositions_2026-08-08.py` wrote without `--live`~~ — deleted. Sibling ungated scripts `fix_63_5_and_confirm_ca3` and `demo_handtyped_promoted_warning` archived 2026-08-09 day-end cleanup. Broken `scripts/re-enrich_all.py` deleted; unscoped `fetch_balances()` deleted.
 ---
 
 ## Open Questions (Bill's to decide, not to be resolved by an agent)

@@ -709,31 +709,6 @@ def fetch_tax_lots(client: "schwab.client.Client") -> list[dict]:
     return lots
 
 
-def fetch_balances(client: schwab.client.Client) -> dict:
-    """Fetch aggregated account balances across all accounts."""
-    try:
-        r = client.get_accounts(fields=client.Account.Fields.POSITIONS)
-        r.raise_for_status()
-        accounts = r.json()
-        
-        total_liq = 0.0
-        total_cash = 0.0
-        
-        for acc in accounts:
-            bal = acc.get('securitiesAccount', {}).get('currentBalances', {})
-            total_liq += float(bal.get('liquidationValue', 0) or 0)
-            total_cash += float(bal.get('cashBalance', 0) or 0)
-            
-        return {
-            "total_value": total_liq,
-            "cash_value": total_cash,
-            "buying_power": 0.0, # Aggregated BP is complex
-            "day_trading_buying_power": 0.0
-        }
-    except Exception as e:
-        logging.error(f"fetch_balances failed: {e}")
-        return {}
-
 def fetch_quotes(client: schwab.client.Client, tickers: list[str]) -> pd.DataFrame:
     """
     Fetch real-time quotes via the Market Data client.
