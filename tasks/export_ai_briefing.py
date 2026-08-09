@@ -1091,7 +1091,11 @@ def build_theses_md(styles_path, held_tickers=None, issues=None, detail="standar
 
         core_section = extract_section(body, "Core Thesis")
         if core_section is None:
-            issues.append("BLOCKING %s: no '## Core Thesis' section found." % ticker)
+            # Doc gap, not an abort — the briefing exists to surface these.
+            issues.append(
+                "SYSTEM %s: no '## Core Thesis' section -- update vault/theses/%s_thesis.md"
+                % (ticker, ticker)
+            )
             core_full = "(missing)"
         elif detail == "minimal":
             core_full = first_paragraph(core_section) or "(missing)"
@@ -1176,9 +1180,31 @@ def build_theses_md(styles_path, held_tickers=None, issues=None, detail="standar
 
     uncovered = sorted(held - covered - {"CASH_MANUAL"})
     if uncovered:
+        # SYSTEM (not BLOCKING): a missing thesis is exactly the kind of finding
+        # the morning briefing is supposed to report. Aborting the export hid the
+        # signal and left an empty exports/ folder (makedirs-then-exit).
         issues.append(
-            "BLOCKING: held positions with no thesis file: %s" % ", ".join(uncovered)
+            "SYSTEM: held positions with no thesis file: %s -- create "
+            "vault/theses/{TICKER}_thesis.md for each"
+            % ", ".join(uncovered)
         )
+        # Ship an explicit section so SUBMIT_ME / Cowork briefs see the gap
+        # without digging in manifest.json.
+        gap = [
+            "",
+            "## Documentation gaps (SYSTEM)",
+            "",
+            "Held positions with no thesis file. Treat as documentation tasks, "
+            "not portfolio incoherence:",
+            "",
+        ]
+        for t in uncovered:
+            gap.append("- **%s** -> create `vault/theses/%s_thesis.md`" % (t, t))
+        gap.append("")
+        # Insert after the style-ceilings block / disclosure placeholder area:
+        # disclosure is at disclosure_placeholder_index; put gaps just after it.
+        insert_at = disclosure_placeholder_index + 1
+        lines[insert_at:insert_at] = gap
     if markers_stripped_by_ticker and provenance is not None:
         provenance["stripped_markers"] = {t: n for t, n in sorted(markers_stripped_by_ticker.items())}
 
@@ -1295,6 +1321,12 @@ def main():
             "ABORTED: %d blocking issue(s) above. Fix them, or re-run with --force "
             "to export anyway." % len(blocking)
         )
+        # Do not leave an empty package dir behind (makedirs runs before write).
+        try:
+            if os.path.isdir(pkg_dir) and not os.listdir(pkg_dir):
+                os.rmdir(pkg_dir)
+        except OSError:
+            pass
         sys.exit(1)
 
     # Prepend staleness banner if degraded health sentinel is present

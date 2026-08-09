@@ -117,21 +117,43 @@ def journal_promote(
     live: bool = typer.Option(False, "--live", help="Write to live Sheets. Default: DRY RUN."),
     yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation prompt."),
 ):
-    """Promote approved staging rows from Trade_Log_Staging to Trade_Log."""
+    """Promote approved staging rows from Trade_Log_Staging to Trade_Log.
+
+    Input Status values accepted: ``approve`` (imperative) or ``approved`` (record).
+    On success, Status is set to ``promoted`` and ``Promoted_At`` is stamped UTC.
+    A row with Status=promoted and blank Promoted_At is treated as hand-typed —
+    this command warns naming those rows but does not auto-correct them.
+    """
     import uuid
+    from datetime import datetime, timezone
+
     import config
     from utils.sheet_readers import get_gspread_client
 
-    # Column indices in staging sheet (0-based within header row)
-    STAGING_COLS = config.TRADE_LOG_STAGING_COLUMNS  # ordered list
+    # Accept both the imperative input and the past-tense record form.
+    APPROVE_INPUTS = {"approve", "approved"}
 
-    def _col(row: list, name: str) -> str:
-        """Return value from a staging data row by column name."""
-        try:
-            idx = STAGING_COLS.index(name)
-            return row[idx] if idx < len(row) else ""
-        except ValueError:
-            return ""
+    # Column aliases: config names -> possible live sheet headers
+    HEADER_ALIASES = {
+        "Stage_ID": ["Stage_ID"],
+        "Date": ["Date"],
+        "Sell_Tickers": ["Sell_Tickers", "Sell_Ticker"],
+        "Sell_Proceeds": ["Sell_Proceeds"],
+        "Buy_Tickers": ["Buy_Tickers", "Buy_Ticker"],
+        "Buy_Amount": ["Buy_Amount"],
+        "Rotation_Type": ["Rotation_Type"],
+        "Implicit_Bet": ["Implicit_Bet"],
+        "Thesis_Brief": ["Thesis_Brief"],
+        "Status": ["Status"],
+        "Promoted_At": ["Promoted_At"],
+        "Fingerprint": ["Fingerprint"],
+        "Sell_RSI_At_Decision": ["Sell_RSI_At_Decision", "Sell RSI"],
+        "Sell_Trend_At_Decision": ["Sell_Trend_At_Decision", "Sell Trend"],
+        "Sell_Price_vs_MA200_At_Decision": ["Sell_Price_vs_MA200_At_Decision", "Sell vs MA200"],
+        "Buy_RSI_At_Decision": ["Buy_RSI_At_Decision", "Buy RSI"],
+        "Buy_Trend_At_Decision": ["Buy_Trend_At_Decision", "Buy Trend"],
+        "Buy_Price_vs_MA200_At_Decision": ["Buy_Price_vs_MA200_At_Decision", "Buy vs MA200"],
+    }
 
     with console.status("[cyan]Reading Trade_Log_Staging..."):
         try:
@@ -154,26 +176,75 @@ def journal_promote(
         console.print("[yellow]Trade_Log_Staging is empty — nothing to promote.[/]")
         raise typer.Exit()
 
-    header = all_rows[0]
+    header = list(all_rows[0])
     data_rows = all_rows[1:]  # 1-indexed row 2 onward in the sheet
 
-    # Find Status column index in actual sheet header (may differ from config if sheet drifted)
+    # Ensure Promoted_At column exists on the live sheet (append if missing)
+    if "Promoted_At" not in header:
+        console.print("[cyan]Adding Promoted_At column to Trade_Log_Staging header...[/]")
+        new_col = len(header) + 1
+        staging_ws.update_cell(1, new_col, "Promoted_At")
+        time.sleep(0.5)
+        all_rows = staging_ws.get_all_values()
+        header = list(all_rows[0])
+        data_rows = all_rows[1:]
+        if "Promoted_At" not in header:
+            console.print("[red]ERROR: failed to add Promoted_At column.[/]")
+            raise typer.Exit(code=1)
+
+    def _hdr_idx(name: str) -> int:
+        for alias in HEADER_ALIASES.get(name, [name]):
+            if alias in header:
+                return header.index(alias)
+        # Fall back to config column order if sheet matches config layout
+        try:
+            return config.TRADE_LOG_STAGING_COLUMNS.index(name)
+        except ValueError:
+            return -1
+
+    def _col(row: list, name: str) -> str:
+        idx = _hdr_idx(name)
+        if idx < 0:
+            return ""
+        padded = row + [""] * (len(header) - len(row))
+        return padded[idx] if idx < len(padded) else ""
+
     try:
         status_col_idx = header.index("Status")
     except ValueError:
         console.print("[red]ERROR: 'Status' column not found in Trade_Log_Staging header.[/]")
         raise typer.Exit(code=1)
 
-    # Build list of (sheet_row_number, data_row) for approved rows
+    promoted_at_idx = header.index("Promoted_At") if "Promoted_At" in header else -1
+
+    # Startup check: hand-typed terminal state (promoted with blank Promoted_At)
+    hand_typed = []
+    for i, row in enumerate(data_rows):
+        padded = row + [""] * (len(header) - len(row))
+        st = padded[status_col_idx].strip().lower()
+        pa = padded[promoted_at_idx].strip() if promoted_at_idx >= 0 and promoted_at_idx < len(padded) else ""
+        if st == "promoted" and not pa:
+            sid = _col(padded, "Stage_ID") or f"row {i + 2}"
+            hand_typed.append(sid)
+    if hand_typed:
+        console.print(
+            f"[yellow]! {len(hand_typed)} row(s) have Status=promoted with blank Promoted_At "
+            "(hand-typed / pre-hardening). Not auto-corrected.[/]"
+        )
+        for sid in hand_typed[:12]:
+            console.print(f"[yellow]    - {sid}[/]")
+        if len(hand_typed) > 12:
+            console.print(f"[yellow]    ... and {len(hand_typed) - 12} more[/]")
+
+    # Build list of (sheet_row_number, data_row) for approve/approved rows
     approved: list[tuple[int, list]] = []
     for i, row in enumerate(data_rows):
-        # Pad row to header length to avoid index errors
         padded = row + [""] * (len(header) - len(row))
-        if padded[status_col_idx].strip().lower() == "approved":
-            approved.append((i + 2, padded))  # sheet row = data index + 2 (1-based + header)
+        if padded[status_col_idx].strip().lower() in APPROVE_INPUTS:
+            approved.append((i + 2, padded))
 
     if not approved:
-        console.print("[yellow]No rows with Status='approved' found in Trade_Log_Staging.[/]")
+        console.print("[yellow]No rows with Status='approve'/'approved' found in Trade_Log_Staging.[/]")
         raise typer.Exit()
 
     # Preview table
@@ -260,13 +331,6 @@ def journal_promote(
             raise typer.Exit(code=1)
 
     # Post-write verification: re-read Trade_Log and confirm every fingerprint
-    # we just wrote actually landed before marking anything "promoted" in
-    # staging. gspread reporting append_rows() as successful is not proof the
-    # data survives -- a later full-range overwrite elsewhere (see
-    # scripts/backfill_trade_log_decision_context.py) can silently erase rows
-    # after the fact with no error on either side. Catches that class of
-    # failure at the only point that matters: before Trade_Log_Staging.Status
-    # claims something is true that isn't.
     with console.status("[cyan]Verifying write..."):
         try:
             written_fingerprints = set(trade_ws.col_values(
@@ -286,19 +350,26 @@ def journal_promote(
         console.print("[yellow]Staging rows NOT marked promoted. Investigate before retrying.[/]")
         raise typer.Exit(code=1)
 
-    # Mark promoted rows in staging
+    console.print(f"[green]Fingerprint verification OK — {len(trade_log_rows)} fingerprint(s) present in Trade_Log.[/]")
+
+    # Mark promoted + stamp Promoted_At (UTC) for this build's rows only
+    promoted_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     new_status_col = status_col_idx + 1
-    with console.status("[cyan]Marking staging rows as 'promoted'..."):
+    new_pa_col = (header.index("Promoted_At") + 1) if "Promoted_At" in header else None
+    with console.status("[cyan]Marking staging rows as 'promoted' + Promoted_At..."):
         try:
             for sheet_row_num, _ in approved:
                 staging_ws.update_cell(sheet_row_num, new_status_col, "promoted")
                 time.sleep(0.3)
+                if new_pa_col:
+                    staging_ws.update_cell(sheet_row_num, new_pa_col, promoted_at)
+                    time.sleep(0.3)
         except Exception as e:
             console.print(f"[yellow]! WARNING: Could not update staging status: {e}[/]")
             console.print("[yellow]  Trade_Log rows were written — update staging manually.[/]")
 
     console.print(f"\n[bold green]SUCCESS:[/] Promoted {len(trade_log_rows)} row(s) to {config.TAB_TRADE_LOG}.")
-    console.print(f"[dim]Staging rows marked 'promoted'. Run derive_rotations.py again to find new candidates.[/]")
+    console.print(f"[dim]Staging Status=promoted; Promoted_At={promoted_at}.[/]")
 
 
 @journal_app.command("rotation")
@@ -1658,7 +1729,7 @@ def morning(
             # works around but the user should still see.
             if "--- Preflight ---" in out:
                 for line in out.splitlines():
-                    if line.strip().startswith(("SKIPPED", "BLOCKING")) or "thesis files have no" in line:
+                    if line.strip().startswith(("SKIPPED", "BLOCKING", "SYSTEM")) or "thesis files have no" in line:
                         console.print(f"  [yellow]{line.strip()}[/]")
 
             pkg_line = next(
