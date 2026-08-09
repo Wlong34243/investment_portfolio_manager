@@ -1,7 +1,12 @@
 """
 tasks/sync_transactions.py — Sync Schwab transaction history to Google Sheets.
 Default: last 90 days.
-Pattern: archive-before-overwrite (refreshes the full tab with merged history).
+
+Live path: **append** fingerprint-new rows only (does not clear/rewrite the tab).
+Real hazards to keep in mind:
+  - `clean_junk_tickers` still does a clear+rewrite of Transactions.
+  - Empty `SCHWAB_PRIMARY_ACCOUNT_SUFFIXES` makes Schwab fetches unscoped
+    (sums all linked accounts) — do not leave it empty in production.
 """
 
 import sys
@@ -146,8 +151,8 @@ def reconcile_transactions(days: int = 90) -> bool:
 
 def sync_transactions(days: int = 90, live: bool = False, reconcile: bool = False):
     """
-    Fetches Schwab transactions, merges with existing history,
-    and performs an archive-before-overwrite write to the Sheet.
+    Fetches Schwab transactions and **appends** fingerprint-new rows to the
+    Transactions tab. Does not archive-before-overwrite the full tab.
 
     With reconcile=True: read-only diff mode — no writes.
     """
