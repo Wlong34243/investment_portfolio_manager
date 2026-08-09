@@ -14,6 +14,17 @@ import typer
 from typing import List, Optional, Any
 from functools import wraps
 
+# Every format_*() progress print below uses non-ASCII glyphs (checkmark/warning).
+# Windows' default console codepage (cp1252) can't encode them, so a print()
+# reporting a SUCCESSFUL Sheets write throws UnicodeEncodeError and takes the
+# whole run down with it -- e.g. format_rotation_review() crashed here after
+# its data write and save_rules() call had already succeeded, so conditional
+# formatting silently never got confirmed. Reconfigure stdout/stderr to UTF-8
+# instead of stripping the glyphs, so the warning text stays intact.
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+
 # Add project root to path
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _ROOT = os.path.dirname(_HERE)

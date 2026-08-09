@@ -61,6 +61,15 @@ BENCH_QQQ_NOTE = "Held equivalent is QQQM (same index, lower fee); QQQ used for 
 OUTPUT_DIR = _ROOT / "agent_outputs" / "rotation_attribution"
 JEPI_INCOME_TICKERS = {"JEPI", "JPIE"}
 
+# --historical-ledger (2026-08-09): the 2026-08-03 account-scope fix means the
+# live Transactions tab only ever held the 3-account-scoped view, even for
+# dates before the fix landed. Transactions_Historical_AllAccounts is a
+# parallel, all-6-account fetch for 2025-01-01 -> 2026-08-03 written by
+# scripts/fetch_transactions_historical_all_accounts_2026-08-09.py. Reading it
+# is opt-in and never touches the Transactions tab or its live-scoped rows.
+HISTORICAL_LEDGER_TAB = "Transactions_Historical_AllAccounts"
+SCOPE_FIX_DATE = date(2026, 8, 3)
+
 # Cache for yfinance downloads to avoid redundant hits in one run
 _YF_CACHE: Dict[str, pd.DataFrame] = {}
 _BETA_CACHE: Dict[str, Optional[float]] = {}
@@ -1059,19 +1068,16 @@ def _as_float(v: Any) -> Optional[float]:
         return None
 
 
-def build_track_record_summary(rows: List[Dict[str, Any]]) -> List[str]:
+def partition_rotation_rows(
+    rows: List[Dict[str, Any]]
+) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
     """
-    Aggregate medians/means for the question this build exists for.
-    Excludes Coverage_Pct < 0.90 and Status not starting with OK.
+    Split Rotation_Review rows into (included, excluded) for aggregate medians.
+    Excludes SUPERSEDED_BY*/WEIGHTS_UNRECONCILED, Coverage_Pct < COVERAGE_FLAG_PCT,
+    and any Status not starting with OK. Shared by build_track_record_summary()
+    and any other surface (e.g. 0_DASHBOARD) reporting the same aggregate so the
+    classification can't drift between call sites.
     """
-    lines = [
-        "## Track-record summary (evidence, not a scorecard)",
-        "",
-        "One market regime; benchmark choice can flip the sign on tech-heavy buys. "
-        "Read medians as a range, not a verdict.",
-        "",
-    ]
-
     excluded = []
     included = []
     for r in rows:
@@ -1087,20 +1093,17 @@ def build_track_record_summary(rows: List[Dict[str, Any]]) -> List[str]:
             excluded.append(r)
             continue
         included.append(r)
+    return included, excluded
 
-    lines.append(f"Included in medians: **{len(included)}** rows. Excluded: **{len(excluded)}**.")
-    if excluded:
-        lines.append("")
-        lines.append("Excluded (Coverage < 90% or Status not OK*):")
-        for r in excluded:
-            lines.append(
-                f"- `{r.get('Trade_Log_ID', '')}` {r.get('Date', '')} "
-                f"status=`{r.get('Status', '')}` coverage=`{r.get('Coverage_Pct', '')}`"
-            )
-    lines.append("")
 
+def compute_vti_qqq_signflips(included: List[Dict[str, Any]]) -> Tuple[int, List[str]]:
+    """
+    Count included rows where the buy's return vs VTI and vs QQQ disagree in
+    sign on at least one horizon (counted once per row, first horizon found).
+    Shared by build_track_record_summary() and 0_DASHBOARD's rotation block.
+    """
     flip_count = 0
-    flip_rows = []
+    flip_rows: List[str] = []
     for r in included:
         for h in HORIZONS:
             vti_vs = _as_float(r.get(f"Vs_Index_{h}d"))
@@ -1117,6 +1120,36 @@ def build_track_record_summary(rows: List[Dict[str, Any]]) -> List[str]:
                     f"Vs_VTI={vti_vs:+.2%} Vs_QQQ={vs_qqq:+.2%}"
                 )
                 break
+    return flip_count, flip_rows
+
+
+def build_track_record_summary(rows: List[Dict[str, Any]]) -> List[str]:
+    """
+    Aggregate medians/means for the question this build exists for.
+    Excludes Coverage_Pct < 0.90 and Status not starting with OK.
+    """
+    lines = [
+        "## Track-record summary (evidence, not a scorecard)",
+        "",
+        "One market regime; benchmark choice can flip the sign on tech-heavy buys. "
+        "Read medians as a range, not a verdict.",
+        "",
+    ]
+
+    included, excluded = partition_rotation_rows(rows)
+
+    lines.append(f"Included in medians: **{len(included)}** rows. Excluded: **{len(excluded)}**.")
+    if excluded:
+        lines.append("")
+        lines.append("Excluded (Coverage < 90% or Status not OK*):")
+        for r in excluded:
+            lines.append(
+                f"- `{r.get('Trade_Log_ID', '')}` {r.get('Date', '')} "
+                f"status=`{r.get('Status', '')}` coverage=`{r.get('Coverage_Pct', '')}`"
+            )
+    lines.append("")
+
+    flip_count, flip_rows = compute_vti_qqq_signflips(included)
 
     lines.append(f"**VTI-vs-QQQ sign-flip rows:** {flip_count} of {len(included)}")
     for fr in flip_rows:
@@ -1301,6 +1334,105 @@ def write_markdown_summary(
     return path
 
 
+def _read_historical_transactions(ss, since: date, until: date) -> pd.DataFrame:
+    """
+    Read Transactions_Historical_AllAccounts (all 6 accounts, 2025-01-01 ->
+    2026-08-03) in the same shape _read_transactions() returns. Rows on/after
+    SCOPE_FIX_DATE are dropped -- the live Transactions tab is already
+    correctly 3-account-scoped from that date forward, so only the pre-fix
+    window is this tab's reason to exist. Never touches the Transactions tab.
+    """
+    try:
+        existing_tabs = {ws.title for ws in ss.worksheets()}
+        if HISTORICAL_LEDGER_TAB not in existing_tabs:
+            logger.warning("Historical ledger tab '%s' not found.", HISTORICAL_LEDGER_TAB)
+            return pd.DataFrame()
+        ws = ss.worksheet(HISTORICAL_LEDGER_TAB)
+        rows = ws.get_all_values()
+    except Exception as e:
+        logger.warning("Could not read %s: %s", HISTORICAL_LEDGER_TAB, e)
+        return pd.DataFrame()
+
+    if len(rows) < 2:
+        return pd.DataFrame()
+
+    headers = [h.strip() for h in rows[0]]
+    df = pd.DataFrame(rows[1:], columns=headers)
+    df.columns = [c.lower().replace(" ", "_") for c in df.columns]
+
+    date_col = next((c for c in df.columns if c in ("trade_date", "date")), None)
+    ticker_col = next((c for c in df.columns if c in ("ticker", "symbol")), None)
+    action_col = next((c for c in df.columns if c in ("action",)), None)
+    amount_col = next((c for c in ("net_amount", "amount") if c in df.columns), None)
+    if not all([date_col, ticker_col, action_col]):
+        return pd.DataFrame()
+
+    def _pdate(val: str) -> Optional[date]:
+        val = str(val).strip()
+        for fmt in ("%m/%d/%Y", "%Y-%m-%d", "%m/%d/%y"):
+            try:
+                return datetime.strptime(val, fmt).date()
+            except Exception:
+                continue
+        return None
+
+    def _pamount(v) -> float:
+        if not v:
+            return 0.0
+        s = str(v).strip().replace("$", "").replace(",", "")
+        if s.startswith("(") and s.endswith(")"):
+            s = "-" + s[1:-1]
+        try:
+            return float(s)
+        except Exception:
+            return 0.0
+
+    df["trade_date"] = df[date_col].apply(_pdate)
+    df = df[df["trade_date"].notna()].copy()
+    df = df[
+        (df["trade_date"] >= since)
+        & (df["trade_date"] <= until)
+        & (df["trade_date"] < SCOPE_FIX_DATE)
+    ]
+    df["net_amount"] = df[amount_col].apply(_pamount) if amount_col else 0.0
+    df["ticker"] = df[ticker_col].str.strip().str.upper()
+    df["action_lc"] = df[action_col].str.strip().str.lower()
+
+    return df[["trade_date", "ticker", "action_lc", "net_amount"]].reset_index(drop=True)
+
+
+def _read_transactions_combined(
+    ss, since: date, until: date, use_historical_ledger: bool
+) -> pd.DataFrame:
+    """
+    Default (flag absent): identical to _read_transactions(since, until) --
+    current-scope behavior unchanged. With --historical-ledger: unions in
+    Transactions_Historical_AllAccounts's pre-2026-08-03 rows (all 6 accounts)
+    for that window, de-duped against the primary tab's already-scoped rows on
+    (trade_date, ticker, action_lc, net_amount) so the 3 in-scope accounts
+    aren't double-counted.
+    """
+    primary = _read_transactions(since, until)
+    if not use_historical_ledger:
+        return primary
+
+    hist = _read_historical_transactions(ss, since, until)
+    if hist.empty:
+        return primary
+
+    combined = pd.concat([primary, hist], ignore_index=True)
+    before = len(combined)
+    combined = combined.drop_duplicates(
+        subset=["trade_date", "ticker", "action_lc", "net_amount"], keep="first"
+    )
+    logger.info(
+        "historical-ledger: primary=%d + historical=%d -> %d combined "
+        "(%d exact duplicates dropped)",
+        len(primary), len(hist), len(combined), before - len(combined),
+    )
+    return combined
+
+
 def archive_rotation_review(ss, run_ts: str) -> None:
     """Archive prior Rotation_Review rows locally before clear-and-rebuild."""
     try:
@@ -1329,11 +1461,17 @@ def run_attribution(
     live: bool = False,
     from_staging: bool = False,
     staging_dates: Optional[Sequence[str]] = None,
+    use_historical_ledger: bool = False,
 ) -> List[Dict[str, Any]]:
     """
     Main execution. Default dry-run prints table and writes local markdown only.
     --live archives then rebuilds Rotation_Review.
     --from-staging is read-only backfill against Trade_Log_Staging (never writes Sheets).
+    --historical-ledger (default off): for rotations dated before 2026-08-03,
+    reconstruct weights from the union of Transactions and
+    Transactions_Historical_AllAccounts (all 6 accounts) instead of the
+    3-account-scoped Transactions tab alone. Default-off behavior is
+    unchanged from before this flag existed.
     """
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
@@ -1379,7 +1517,7 @@ def run_attribution(
     else:
         since, until = today_dt - timedelta(days=180), today_dt
 
-    txns = _read_transactions(since, until)
+    txns = _read_transactions_combined(ss, since, until, use_historical_ledger)
     logger.info(f"Loaded {len(txns)} transactions from {since} → {until}")
 
     existing_review = {} if from_staging else load_existing_review(ss)
@@ -1489,6 +1627,21 @@ if __name__ == "__main__":
         default="",
         help="Comma-separated YYYY-MM-DD filter when using --from-staging",
     )
+    parser.add_argument(
+        "--historical-ledger",
+        action="store_true",
+        help=(
+            "For rotations before 2026-08-03, reconstruct weights from the union of "
+            "Transactions and Transactions_Historical_AllAccounts (all 6 Schwab "
+            "accounts) instead of the 3-account-scoped Transactions tab alone. "
+            "Default off; behavior with the flag absent is unchanged."
+        ),
+    )
     args = parser.parse_args()
     dates = [d.strip() for d in args.staging_dates.split(",") if d.strip()] or None
-    run_attribution(live=args.live, from_staging=args.from_staging, staging_dates=dates)
+    run_attribution(
+        live=args.live,
+        from_staging=args.from_staging,
+        staging_dates=dates,
+        use_historical_ledger=args.historical_ledger,
+    )

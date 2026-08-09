@@ -11,6 +11,7 @@ originate here — Trim/Add/Signal are all read from existing sandboxed surfaces
 
 import json
 import logging
+import statistics
 import time
 import os
 import sys
@@ -34,6 +35,12 @@ from utils.sheet_readers import get_gspread_client, read_gsheet_robust
 from utils.sheet_writers import safe_execute
 from utils.agent_signals import get_latest_agent_outputs, ACTION_SEVERITIES
 from utils.level_coverage import compute_level_coverage, format_footer_line
+from tasks.compute_rotation_attribution import (
+    HORIZONS as ROTATION_HORIZONS,
+    _as_float as _rotation_as_float,
+    compute_vti_qqq_signflips,
+    partition_rotation_rows,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +69,55 @@ def _read_records(ss, tab: str) -> list[dict]:
     except Exception as e:
         logger.warning("Could not read tab %s: %s", tab, e)
         return []
+
+
+def _rotation_performance(rotation_rows: list[dict]) -> dict:
+    """
+    Surface the aggregate the attribution module already computed -- reuses
+    partition_rotation_rows()/compute_vti_qqq_signflips() from
+    compute_rotation_attribution.py so this can't drift from the module of
+    record. No new classification or return math happens here.
+    """
+    included, excluded = partition_rotation_rows(rotation_rows)
+    flip_count, _ = compute_vti_qqq_signflips(included)
+
+    horizons = {}
+    for h in ROTATION_HORIZONS:
+        residuals, vs_idx, sell_vs, dates = [], [], [], []
+        for r in included:
+            res = _rotation_as_float(r.get(f"Residual_Pair_{h}d"))
+            if res is None:
+                continue
+            residuals.append(res)
+            v = _rotation_as_float(r.get(f"Vs_Index_{h}d"))
+            s = _rotation_as_float(r.get(f"Sell_Vs_Index_{h}d"))
+            if v is not None:
+                vs_idx.append(v)
+            if s is not None:
+                sell_vs.append(s)
+            d = str(r.get("Date") or "")
+            if d:
+                dates.append(d)
+
+        n = len(residuals)
+        horizons[h] = {
+            "n": n,
+            "window": f"{min(dates)} -> {max(dates)}" if dates else "-",
+            "residual_median": statistics.median(residuals) if residuals else None,
+            "hit_rate": (sum(1 for x in residuals if x > 0) / n) if n else None,
+            "vs_index_median": statistics.median(vs_idx) if vs_idx else None,
+            "sell_vs_index_median": statistics.median(sell_vs) if sell_vs else None,
+        }
+
+    total = len(included) + len(excluded)
+    return {
+        "included_n": len(included),
+        "excluded_n": len(excluded),
+        "excluded_pct": (len(excluded) / total) if total else None,
+        "signflip_count": flip_count,
+        "signflip_total": len(included),
+        "horizons": horizons,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -423,6 +479,50 @@ def _build_position_table(
 # Grid builder
 # ---------------------------------------------------------------------------
 
+def _rp_pct(v) -> str:
+    """Signed percent, for returns/residuals (direction matters)."""
+    return f"{v:+.1%}" if v is not None else "-"
+
+
+def _rp_pct_u(v) -> str:
+    """Unsigned percent, for shares (hit rate, excluded %)."""
+    return f"{v:.1%}" if v is not None else "-"
+
+
+def _rotation_block_rows(rp: dict) -> list[list]:
+    """
+    Rotation-performance block, appended after the KPI/position table.
+    Surfaces exactly what compute_rotation_attribution.py already computed
+    (via _rotation_performance()/partition_rotation_rows()/
+    compute_vti_qqq_signflips()) -- no new classification or return math.
+    Deliberately labeled as evidence, not a scorecard: no rank/grade/trend arrow.
+    """
+    rows: list[list] = []
+    rows.append(_pad([
+        "ROTATION ATTRIBUTION -- EVIDENCE, ONE REGIME, OVERLAPPING WINDOWS"
+    ]))
+    rows.append(_pad([
+        "Included", rp["included_n"],
+        "Excluded", f"{rp['excluded_n']} ({_rp_pct_u(rp['excluded_pct'])})",
+        "VTI/QQQ sign-flips", f"{rp['signflip_count']} of {rp['signflip_total']}",
+    ]))
+    rows.append(_pad([]))
+    rows.append(_pad([
+        "Horizon", "N Matured", "Window", "Residual Median (headline)",
+        "Hit Rate", "Vs_Index (VTI) Median", "Sell_Vs_Index Median",
+    ]))
+    for h in ROTATION_HORIZONS:
+        hz = rp["horizons"].get(h, {})
+        rows.append(_pad([
+            f"{h}d", hz.get("n", 0), hz.get("window", "-"),
+            _rp_pct(hz.get("residual_median")),
+            _rp_pct_u(hz.get("hit_rate")),
+            _rp_pct(hz.get("vs_index_median")),
+            _rp_pct(hz.get("sell_vs_index_median")),
+        ]))
+    return rows
+
+
 def _build_grid(
     headline: dict,
     beta: Optional[float],
@@ -430,6 +530,7 @@ def _build_grid(
     health: dict,
     spy_ytd_raw: Optional[float],
     level_coverage: Optional[dict] = None,
+    rotation_perf: Optional[dict] = None,
 ) -> list[list]:
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
 
@@ -483,6 +584,10 @@ def _build_grid(
         footer_row += ["Levels", format_footer_line(level_coverage)]
     grid.append(_pad(footer_row))
 
+    if rotation_perf is not None:
+        grid.append(_pad([]))
+        grid.extend(_rotation_block_rows(rotation_perf))
+
     # None -> "" so gspread never has to serialize a bare null into a cell
     return [["" if c is None else c for c in row] for row in grid]
 
@@ -517,6 +622,7 @@ def _print_dry_run(
     headline: dict, beta: Optional[float], positions: list[dict],
     health: dict, spy_ytd_raw: Optional[float], n_rules: int, n_notes: int,
     level_coverage: Optional[dict] = None,
+    rotation_perf: Optional[dict] = None,
 ) -> None:
     from rich.console import Console
     from rich.table import Table
@@ -570,6 +676,26 @@ def _print_dry_run(
         footer += f"  |  {format_footer_line(level_coverage)}"
     console.print(footer)
     console.print(f"[dim]Would write {n_rules} conditional-format rules and {n_notes} cell notes.[/]")
+
+    if rotation_perf is not None:
+        console.print("\n[bold]ROTATION ATTRIBUTION — EVIDENCE, ONE REGIME, OVERLAPPING WINDOWS[/]")
+        console.print(
+            f"Included {rotation_perf['included_n']}  |  "
+            f"Excluded {rotation_perf['excluded_n']} ({_rp_pct_u(rotation_perf['excluded_pct'])})  |  "
+            f"VTI/QQQ sign-flips {rotation_perf['signflip_count']} of {rotation_perf['signflip_total']}"
+        )
+        rp_table = Table(show_header=True, header_style="bold")
+        for col in ["Horizon", "N Matured", "Window", "Residual Median", "Hit Rate", "Vs_Index (VTI)", "Sell_Vs_Index"]:
+            rp_table.add_column(col)
+        for h in ROTATION_HORIZONS:
+            hz = rotation_perf["horizons"].get(h, {})
+            rp_table.add_row(
+                f"{h}d", str(hz.get("n", 0)), hz.get("window", "-"),
+                _rp_pct(hz.get("residual_median")), _rp_pct_u(hz.get("hit_rate")),
+                _rp_pct(hz.get("vs_index_median")), _rp_pct(hz.get("sell_vs_index_median")),
+            )
+        console.print(rp_table)
+
     console.print("[dim]DRY RUN — no Sheet writes. Re-run with --live to apply.[/]")
 
 
@@ -759,6 +885,8 @@ def main(live: bool = False) -> None:
     daily_rows = _read_records(ss, config.TAB_DAILY_SNAPSHOTS)
     risk_rows = _read_records(ss, config.TAB_RISK_METRICS)
     valuation_rows = _read_records(ss, "Valuation_Card")
+    rotation_rows = _read_records(ss, config.TAB_ROTATION_REVIEW)
+    rotation_perf = _rotation_performance(rotation_rows) if rotation_rows else None
 
     try:
         ws_agent = ss.worksheet(config.TAB_AGENT_OUTPUTS)
@@ -777,10 +905,10 @@ def main(live: bool = False) -> None:
     n_notes = sum(1 for p in positions if p.get("Rationale"))
 
     if not live:
-        _print_dry_run(headline, beta, positions, health, spy_ytd_raw, _N_CONDITIONAL_RULES, n_notes, level_coverage)
+        _print_dry_run(headline, beta, positions, health, spy_ytd_raw, _N_CONDITIONAL_RULES, n_notes, level_coverage, rotation_perf)
         return
 
-    grid = _build_grid(headline, beta, positions, health, spy_ytd_raw, level_coverage)
+    grid = _build_grid(headline, beta, positions, health, spy_ytd_raw, level_coverage, rotation_perf)
 
     existing_tabs = {ws.title for ws in ss.worksheets()}
     if config.TAB_DASHBOARD not in existing_tabs:
