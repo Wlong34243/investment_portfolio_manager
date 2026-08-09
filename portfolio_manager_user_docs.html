@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Portfolio Manager — User Guide</title>
+<style>
+:root{
+  --bg:#0e1116; --panel:#151a21; --panel2:#1b222b; --line:#252d38;
+  --tx:#dfe5ec; --tx-dim:#94a3b4; --tx-faint:#66717f;
+  --accent:#6ea8fe; --accent-dim:#3f6fb5;
+  --warn:#e0a458; --warn-bg:#2a2118;
+  --danger:#e07a6b; --danger-bg:#2a1a18;
+  --ok:#68b487; --ok-bg:#182420;
+  --mono:'SF Mono',ui-monospace,'Cascadia Mono',Consolas,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; background:var(--bg); color:var(--tx);
+  font:15px/1.65 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* ---------- layout ---------- */
+.wrap{display:flex;min-height:100vh}
+nav{
+  width:262px; flex:0 0 262px; background:var(--panel);
+  border-right:1px solid var(--line); position:sticky; top:0;
+  height:100vh; overflow-y:auto; padding:26px 0 40px;
+}
+main{flex:1; min-width:0; padding:48px 56px 120px; max-width:960px}
+
+/* ---------- nav ---------- */
+.brand{padding:0 22px 20px; border-bottom:1px solid var(--line); margin-bottom:16px}
+.brand h1{font-size:15px;margin:0 0 3px;letter-spacing:-.01em}
+.brand span{font-size:11.5px;color:var(--tx-faint);letter-spacing:.04em;text-transform:uppercase}
+nav .grp{font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--tx-faint);
+  padding:16px 22px 6px;font-weight:600}
+nav a{display:block;padding:6px 22px;color:var(--tx-dim);font-size:13.5px;border-left:2px solid transparent}
+nav a:hover{color:var(--tx);background:var(--panel2);text-decoration:none}
+nav a.on{color:var(--accent);border-left-color:var(--accent);background:var(--panel2)}
+
+/* ---------- type ---------- */
+h2{font-size:24px;margin:0 0 4px;letter-spacing:-.02em;scroll-margin-top:24px}
+h2 .num{color:var(--accent-dim);font-variant-numeric:tabular-nums;margin-right:10px;font-weight:600}
+h3{font-size:16px;margin:32px 0 10px;letter-spacing:-.01em}
+.sub{color:var(--tx-dim);font-size:14px;margin:0 0 26px}
+section{margin-bottom:64px;padding-bottom:8px}
+section+section{border-top:1px solid var(--line);padding-top:44px}
+p{margin:0 0 14px}
+code{font-family:var(--mono);font-size:12.8px;background:var(--panel2);
+  padding:1.5px 5px;border-radius:3px;color:#c9d6e8;border:1px solid var(--line)}
+pre{background:var(--panel);border:1px solid var(--line);border-radius:7px;
+  padding:14px 16px;overflow-x:auto;margin:0 0 16px}
+pre code{background:none;border:none;padding:0;font-size:12.8px;line-height:1.7;color:#c9d6e8}
+.cmt{color:var(--tx-faint)}
+
+/* ---------- tables ---------- */
+table{width:100%;border-collapse:collapse;margin:0 0 18px;font-size:13.5px}
+th{text-align:left;padding:9px 12px;background:var(--panel2);color:var(--tx-dim);
+  font-size:11px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--line)}
+td{padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:none}
+td code{font-size:12px}
+
+/* ---------- callouts ---------- */
+.note{border-left:3px solid;border-radius:0 6px 6px 0;padding:13px 16px;margin:0 0 18px;font-size:14px}
+.note p:last-child{margin:0}
+.note b{font-weight:600}
+.warn{border-color:var(--warn);background:var(--warn-bg)}
+.danger{border-color:var(--danger);background:var(--danger-bg)}
+.ok{border-color:var(--ok);background:var(--ok-bg)}
+.info{border-color:var(--accent-dim);background:var(--panel)}
+
+/* ---------- pipeline ---------- */
+.steps{list-style:none;margin:0;padding:0;counter-reset:s}
+.steps li{position:relative;padding:9px 0 9px 46px;border-bottom:1px solid var(--line);font-size:14px}
+.steps li:last-child{border-bottom:none}
+.steps li::before{
+  content:attr(data-n);position:absolute;left:0;top:9px;width:32px;text-align:center;
+  font-family:var(--mono);font-size:11px;color:var(--accent);background:var(--panel2);
+  border:1px solid var(--line);border-radius:4px;padding:2px 0;
+}
+.steps b{font-weight:600}
+.steps .d{color:var(--tx-dim);font-size:13px}
+
+/* ---------- pills ---------- */
+.pill{display:inline-block;font-size:10.5px;font-weight:600;letter-spacing:.05em;
+  text-transform:uppercase;padding:2px 7px;border-radius:3px;vertical-align:middle}
+.p-live{background:var(--danger-bg);color:var(--danger);border:1px solid #4a2b26}
+.p-dry{background:var(--ok-bg);color:var(--ok);border:1px solid #24402f}
+.p-open{background:var(--warn-bg);color:var(--warn);border:1px solid #4a3a22}
+
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:18px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:14px 16px}
+.card h4{margin:0 0 5px;font-size:13px;letter-spacing:-.01em}
+.card p{margin:0;font-size:12.8px;color:var(--tx-dim);line-height:1.55}
+
+footer{color:var(--tx-faint);font-size:12.5px;border-top:1px solid var(--line);padding-top:20px}
+@media(max-width:900px){
+  .wrap{flex-direction:column} nav{width:100%;height:auto;position:static;flex:none}
+  main{padding:32px 22px 80px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<nav>
+  <div class="brand">
+    <h1>Portfolio Manager</h1>
+    <span>User Guide</span>
+  </div>
+
+  <div class="grp">Start</div>
+  <a href="#overview">Overview</a>
+  <a href="#daily">Daily Workflow</a>
+  <a href="#morning">The Morning Pipeline</a>
+
+  <div class="grp">Reference</div>
+  <a href="#cli">CLI Commands</a>
+  <a href="#sheet">The Google Sheet</a>
+  <a href="#theses">Thesis Files</a>
+  <a href="#triggers">Trim / Add Triggers</a>
+
+  <div class="grp">Workflows</div>
+  <a href="#rotations">Rotations &amp; Attribution</a>
+  <a href="#podcasts">Podcast Ingestion</a>
+
+  <div class="grp">Care &amp; Feeding</div>
+  <a href="#rules">Conventions</a>
+  <a href="#gotchas">Known Issues</a>
+  <a href="#files">File Map</a>
+</nav>
+
+<main>
+
+<section id="overview">
+  <h2><span class="num">01</span>Overview</h2>
+  <p class="sub">A headless Python CLI portfolio operating system for Schwab accounts. Google Sheets is the user-facing surface and system of record.</p>
+
+  <div class="cards">
+    <div class="card"><h4>CLI owns execution</h4><p>Python gathers and calculates everything deterministically. Nothing is inferred at read time.</p></div>
+    <div class="card"><h4>Sheets owns persistence</h4><p>The spreadsheet is authoritative for anything you look at or edit by hand.</p></div>
+    <div class="card"><h4>Bundles are immutable</h4><p>Context is SHA-256 hashed at creation. Agents reason over a frozen snapshot, never live data.</p></div>
+    <div class="card"><h4>Promotion is manual</h4><p>AI output lands on sandbox surfaces. Nothing becomes authoritative without you.</p></div>
+  </div>
+
+  <div class="note info">
+    <p><b>Scope.</b> The system tracks three of six Schwab accounts — suffixes <code>6499</code>, <code>8767</code>, <code>5119</code>. Totals it reports are <em>not</em> your full invested assets. Positions exist in the excluded accounts too.</p>
+  </div>
+</section>
+
+<section id="daily">
+  <h2><span class="num">02</span>Daily Workflow</h2>
+  <p class="sub">What a normal day looks like end to end.</p>
+
+  <pre><code><span class="cmt"># 1 — refresh everything (Sheets + bundle + briefing)</span>
+python manager.py morning --live
+
+<span class="cmt"># 2 — if Schwab auth expired</span>
+python manager.py login
+
+<span class="cmt"># 3 — check what broke without running the whole pipeline</span>
+python manager.py health --verbose</code></pre>
+
+  <p>Then read the <b>0_DASHBOARD</b> tab in the Sheet, and the briefing bundle under <code>exports/ai_briefing_&lt;timestamp&gt;/</code>.</p>
+
+  <div class="note warn">
+    <p><b>Every write needs <code>--live</code>.</b> Commands default to dry run and print what they would do. <span class="pill p-dry">dry</span> is the default; <span class="pill p-live">--live</span> writes.</p>
+    <p style="margin-top:8px">Two known exceptions where that is currently not true — see <a href="#gotchas">Known Issues</a>.</p>
+  </div>
+</section>
+
+<section id="morning">
+  <h2><span class="num">03</span>The Morning Pipeline</h2>
+  <p class="sub"><code>python manager.py morning --live</code> runs these in order. Any step can fail without killing the run except the health gate.</p>
+
+  <ol class="steps">
+    <li data-n="0"><b>Health check</b> <span class="d">— Schwab tokens, Sheet connectivity, bundle age, FMP cache, transactions freshness. A critical failure stops the run.</span></li>
+    <li data-n="1"><b>Sync Schwab</b> <span class="d">— transactions and positions, scoped to the three primary accounts.</span></li>
+    <li data-n="2"><b>Update portfolio state</b> <span class="d">— Holdings_Current, Daily_Snapshots.</span></li>
+    <li data-n="3"><b>Freeze market bundle</b> <span class="d">— positions, prices, cash, realized G/L. Hashed.</span></li>
+    <li data-n="4"><b>Batch podcast sync</b> <span class="d">— RSS → transcript → Gemini summary.</span></li>
+    <li data-n="4b"><b>Spotify digests</b> <span class="d">— ingests <code>allocation-YYYY-MM-DD.txt</code> from the Studio folder, dedup by sha256.</span></li>
+    <li data-n="4c"><b>Extract moments</b> <span class="d">— high-signal fragments from new transcripts.</span></li>
+    <li data-n="5"><b>Refresh dashboard</b> <span class="d">— rebuilds <code>0_DASHBOARD</code> (the Command Center) in one batch write.</span></li>
+    <li data-n="6"><b>Sheets → thesis files</b> <span class="d">— writes current allocation, cost basis and transaction logs into <code>vault/theses/</code>.</span></li>
+    <li data-n="7"><b>Freeze vault bundle</b> <span class="d">— thesis files, research, styles.json. Hashed.</span></li>
+    <li data-n="8"><b>Build composite bundle</b> <span class="d">— market + vault + recent rotations. This hash stamps every agent response.</span></li>
+    <li data-n="9"><b>Export AI briefing</b> <span class="d">— writes <code>exports/ai_briefing_&lt;timestamp&gt;/</code>.</span></li>
+    <li data-n="10"><b>Derive rotations</b> <span class="d">— clusters sell/buy pairs into candidates on <code>Trade_Log_Staging</code>. Dry-run within morning.</span></li>
+    <li data-n="11"><b>Dislocation scan</b> <span class="d">— flags drawdowns and valuation gaps across held and watchlist names.</span></li>
+    <li data-n="12"><b>Publish analysis</b> <span class="d">— copies readable output to the Drive-synced folder.</span></li>
+  </ol>
+
+  <div class="note warn">
+    <p><b>A dry run still writes to disk.</b> Steps 3, 4c, 7–9 and 11 create local files regardless of <code>--live</code>. Only Sheet writes are gated. "Dry run" means <em>Sheets-dry</em>, not no-op.</p>
+  </div>
+</section>
+
+<section id="cli">
+  <h2><span class="num">04</span>CLI Commands</h2>
+  <p class="sub">Grouped as Typer sub-apps. <code>python manager.py --help</code> for the live list.</p>
+
+  <h3>Top level</h3>
+  <table>
+    <tr><th style="width:38%">Command</th><th>Does</th></tr>
+    <tr><td><code>morning</code></td><td>The full pipeline above.</td></tr>
+    <tr><td><code>health</code></td><td>Diagnostics only. <code>--verbose</code> expands each check.</td></tr>
+    <tr><td><code>login</code></td><td>Re-authenticate Schwab. Run when the dashboard shows <code>AUTH REQUIRED</code>.</td></tr>
+    <tr><td><code>snapshot</code></td><td>Portfolio snapshot from API or CSV.</td></tr>
+    <tr><td><code>backup</code></td><td>Back up Sheet tabs.</td></tr>
+    <tr><td><code>dislocation-scan</code></td><td>Standalone drawdown / valuation scan.</td></tr>
+    <tr><td><code>extract-moments</code></td><td>Mine transcripts for high-signal fragments. <code>--limit N</code>, <code>--force NAME</code>.</td></tr>
+  </table>
+
+  <h3>refresh — rebuild computed views</h3>
+  <table>
+    <tr><th style="width:38%">Command</th><th>Does</th></tr>
+    <tr><td><code>refresh dashboard</code></td><td>Rebuild <code>0_DASHBOARD</code>.</td></tr>
+    <tr><td><code>refresh rotations</code></td><td>Recompute <code>Rotation_Review</code> attribution.</td></tr>
+    <tr><td><code>refresh tax</code></td><td>Rebuild <code>Tax_Control</code>.</td></tr>
+  </table>
+
+  <h3>ingest — pull external data</h3>
+  <table>
+    <tr><th style="width:38%">Command</th><th>Does</th></tr>
+    <tr><td><code>ingest transactions</code></td><td>Schwab transactions. Appends fingerprint-new rows.</td></tr>
+    <tr><td><code>ingest realized-gl</code></td><td>Realized gain/loss from CSV.</td></tr>
+    <tr><td><code>ingest podcasts</code></td><td>Podcast transcripts.</td></tr>
+    <tr><td><code>ingest all</code></td><td>All three.</td></tr>
+  </table>
+
+  <h3>vault — thesis files</h3>
+  <table>
+    <tr><th style="width:38%">Command</th><th>Does</th></tr>
+    <tr><td><code>vault sync</code></td><td>Write live weights, cost basis and transaction logs into thesis files.</td></tr>
+    <tr><td><code>vault sync-status</code></td><td>What sync would change.</td></tr>
+    <tr><td><code>vault add-thesis</code></td><td>Scaffold a new thesis file.</td></tr>
+    <tr><td><code>vault snapshot</code></td><td>Freeze the vault bundle.</td></tr>
+    <tr><td><code>vault thesis-audit</code></td><td>Coverage check. <span class="pill p-open">note</span> checks file size, not trigger completeness.</td></tr>
+  </table>
+
+  <h3>journal — record decisions</h3>
+  <table>
+    <tr><th style="width:38%">Command</th><th>Does</th></tr>
+    <tr><td><code>journal rotation</code></td><td>Log a rotation by hand. Needs <code>--sold --bought --proceeds --type --bet</code>.</td></tr>
+    <tr><td><code>journal promote</code></td><td><code>Trade_Log_Staging</code> → <code>Trade_Log</code>. Acts only on <code>Status = approved</code>.</td></tr>
+  </table>
+
+  <h3>bundle · export · podcast · clean · agent</h3>
+  <table>
+    <tr><th style="width:38%">Command</th><th>Does</th></tr>
+    <tr><td><code>bundle composite</code></td><td>Build a composite bundle.</td></tr>
+    <tr><td><code>bundle verify</code></td><td>Verify a bundle's hash.</td></tr>
+    <tr><td><code>export list</code> / <code>run</code></td><td>Scenario exports. <span class="pill p-open">note</span> only <code>tax-rebalance</code> is implemented.</td></tr>
+    <tr><td><code>podcast fetch</code> / <code>batch</code></td><td>Pull transcripts, one or many.</td></tr>
+    <tr><td><code>podcast ingest-spotify</code></td><td>Ingest Studio digests manually.</td></tr>
+    <tr><td><code>clean theses</code> / <code>exports</code> / <code>podcasts</code> / <code>bundles</code> / <code>all</code></td><td>Filesystem hygiene.</td></tr>
+    <tr><td><code>agent ideas</code></td><td>Run the Idea Generator over the composite bundle.</td></tr>
+  </table>
+
+  <div class="note info">
+    <p><b>Deprecated aliases still work</b> — <code>trade review</code>, <code>sync transactions</code>, <code>tax refresh</code>, <code>dashboard refresh</code>. Hidden from help; prefer the <code>refresh</code> / <code>ingest</code> forms.</p>
+  </div>
+</section>
+
+<section id="sheet">
+  <h2><span class="num">05</span>The Google Sheet</h2>
+  <p class="sub">The system of record. Some tabs are hand-editable; some are rebuilt on every run and will lose your edits.</p>
+
+  <table>
+    <tr><th style="width:28%">Tab</th><th style="width:16%">Written by</th><th>Notes</th></tr>
+    <tr><td><code>0_DASHBOARD</code></td><td>Pipeline</td><td><b>Clear-and-rebuild.</b> Hand edits are erased on the next run. Also called the Command Center.</td></tr>
+    <tr><td><code>Holdings_Current</code></td><td>Pipeline</td><td>Live positions, scoped to the three primary accounts.</td></tr>
+    <tr><td><code>Daily_Snapshots</code></td><td>Pipeline</td><td>Time series behind the headline KPIs.</td></tr>
+    <tr><td><code>Transactions</code></td><td>Pipeline</td><td>Appended, fingerprint-deduped. Not overwritten.</td></tr>
+    <tr><td><code>Valuation_Card</code></td><td>Pipeline</td><td>Per-position valuation; source of the dashboard's Trim/Add columns.</td></tr>
+    <tr><td><code>Trade_Log_Staging</code></td><td>Pipeline + <b>you</b></td><td>Rotation candidates. You set <code>Status</code>.</td></tr>
+    <tr><td><code>Trade_Log</code></td><td><code>journal promote</code></td><td>Promoted rotations. Feeds the composite bundle.</td></tr>
+    <tr><td><code>Rotation_Review</code></td><td>Attribution</td><td>Benchmarked P&amp;L per rotation at 30/90/180 days.</td></tr>
+    <tr><td><code>Tax_Control</code></td><td>Pipeline</td><td>Realized G/L, wash sales, estimated tax.</td></tr>
+    <tr><td><code>Target_Allocation</code></td><td><b>You only</b></td><td>Manual. No agent writes here, ever.</td></tr>
+    <tr><td><code>Agent_Outputs</code></td><td>Agents</td><td>Sandbox. Non-authoritative by design.</td></tr>
+  </table>
+
+  <div class="note danger">
+    <p><b>Do not hand-edit <code>0_DASHBOARD</code>.</b> It is cleared and rebuilt in a single batch write on every dashboard refresh. Anything added by another path disappears.</p>
+  </div>
+</section>
+
+<section id="theses">
+  <h2><span class="num">06</span>Thesis Files</h2>
+  <p class="sub">One markdown file per position in <code>vault/theses/</code>. Your reasoning lives here; the pipeline writes the numbers.</p>
+
+  <pre><code>---
+ticker: RRC
+style: THEME              <span class="cmt"># GARP | THEME | FUND | ETF</span>
+entry_date: '2026-08-07'
+cost_basis: 3672.70
+current_allocation: 0.61%
+triggers:
+  trigger_type: price_to_book
+  price_add_below:
+  price_trim_above:
+  style_size_ceiling_pct: 3.0
+---</code></pre>
+
+  <h3>Who writes what</h3>
+  <table>
+    <tr><th style="width:34%">Part</th><th>Owner</th></tr>
+    <tr><td>Core Thesis, Bull Case, Key Risks, Exit Conditions</td><td><b>You.</b> Never machine-written.</td></tr>
+    <tr><td><code>next_step</code>, <code>priority</code></td><td><b>You.</b> Agents may flag, never resolve.</td></tr>
+    <tr><td><code>cost_basis</code>, <code>current_allocation</code>, transaction log, sizing regions</td><td>Sync, on every run.</td></tr>
+    <tr><td><code>triggers:</code> block</td><td>You, with computed proposals for sign-off.</td></tr>
+  </table>
+
+  <div class="note info">
+    <p><b><code>[BILL]</code> markers</b> flag a judgment only you can make. They are deliberate placeholders, not omissions — nothing resolves them automatically.</p>
+  </div>
+
+  <div class="note warn">
+    <p><b>The <code>&lt;!-- region:* --&gt;</code> blocks are sync-managed.</b> <code>position_state</code>, <code>sizing</code>, <code>transaction_log</code>, <code>realized_gl</code> and <code>change_log</code> get rewritten. Don't hand-edit them.</p>
+  </div>
+</section>
+
+<section id="triggers">
+  <h2><span class="num">07</span>Trim / Add Triggers</h2>
+  <p class="sub">When a position should come back onto your desk. Six types, because one metric across 39 positions is the wrong shape.</p>
+
+  <table>
+    <tr><th style="width:22%">Type</th><th style="width:30%">Band fields</th><th>Use for</th></tr>
+    <tr><td><code>price</code></td><td><code>price_trim_above</code> · <code>price_add_below</code></td><td>Deliberate nominal levels. Gold, income funds.</td></tr>
+    <tr><td><code>fwd_pe</code></td><td><code>fwd_pe_trim_above</code> · <code>fwd_pe_add_below</code></td><td>GARP names with forward-estimate history.</td></tr>
+    <tr><td><code>trailing_pe</code></td><td><code>trailing_pe_trim_above</code> · <code>_add_below</code></td><td>GARP names where only trailing history exists.</td></tr>
+    <tr><td><code>discount_from_high</code></td><td><code>trim_below_discount_pct</code> · <code>add_above_discount_pct</code></td><td>Boring Fundamentals — bought on fear-driven dislocation.</td></tr>
+    <tr><td><code>price_to_book</code></td><td><code>pb_trim_above</code> · <code>pb_add_below</code></td><td>Cyclicals, where earnings multiples invert at peak.</td></tr>
+    <tr><td><code>ceiling_only</code></td><td>—</td><td>ETFs, thematic bets, and anything without enough history.</td></tr>
+  </table>
+
+  <h3>Two rules worth internalising</h3>
+
+  <div class="note danger">
+    <p><b>Never peg a trim to a sell-side price target.</b> Consensus targets ratchet — analysts revise up <em>after</em> a stock rises, so the level climbs with the price and can never fire. VST carried <code>price_trim_above: consensus_price_target</code> and it was never once actionable.</p>
+  </div>
+
+  <div class="note danger">
+    <p><b>Band and trigger must use the same metric.</b> A band built from trailing P/E history and evaluated against a forward reading is broken by a different factor per company — APO trades 45.7 trailing against 12.0 forward, AVGO 71.1 against 21.9. The trim would never fire.</p>
+  </div>
+
+  <div class="note info">
+    <p><b><code>trigger_type</code> is primary, not exclusive.</b> A file can hold populated bands for more than one type. Only the declared type counts toward coverage and drives the dashboard's distance column; the rest stay in the bundle as secondary data.</p>
+  </div>
+
+  <p>Bands are computed from <b>each position's own history</b> — never a peer group, never an analyst estimate. Where history is too thin to be meaningful, the answer is <code>ceiling_only</code>, not a manufactured band.</p>
+</section>
+
+<section id="rotations">
+  <h2><span class="num">08</span>Rotations &amp; Attribution</h2>
+  <p class="sub">The rotation — a linked sell/buy basket with an implicit substitution thesis — is the unit of analysis.</p>
+
+  <h3>The path</h3>
+  <pre><code>Transactions
+   └─ derive_rotations  ─→  Trade_Log_Staging   <span class="cmt"># candidates, Status = pending</span>
+        └─ you set Status = approved
+             └─ journal promote --live  ─→  Trade_Log
+                  └─ refresh rotations --live  ─→  Rotation_Review</code></pre>
+
+  <div class="note danger">
+    <p><b>Set <code>Status</code> to <code>approved</code>, not <code>promoted</code>.</b> <code>promoted</code> is what the command <em>writes</em> on success. Typing it yourself makes the row invisible — this silently blocked 122 rows for months. A real promotion also stamps <code>Promoted_At</code>; a blank timestamp on a <code>promoted</code> row means it was hand-typed.</p>
+  </div>
+
+  <h3>Reading the attribution</h3>
+  <table>
+    <tr><th style="width:30%">Column</th><th>Answers</th></tr>
+    <tr><td><code>Residual_Pair_Nd</code></td><td><b>The headline.</b> Selection skill after stripping out the risk step-up. You sell low beta and buy high beta, so a raw pair return flatters you in a rising market.</td></tr>
+    <tr><td><code>Pair_Return_Nd</code></td><td>Did the buy beat what you sold to fund it?</td></tr>
+    <tr><td><code>Vs_Index_Nd</code></td><td>Did it beat simply putting the proceeds in VTI? The harsher question.</td></tr>
+    <tr><td><code>Sell_Vs_Index_Nd</code></td><td>Did the funding side go on to lag? Measures the <em>selling</em> instinct separately.</td></tr>
+    <tr><td><code>Bench_Spread_Nd</code></td><td>Gap between best and worst benchmark. Wide means the verdict depends on the yardstick.</td></tr>
+  </table>
+
+  <div class="note warn">
+    <p><b>Treat the aggregate as evidence, not a scorecard.</b> The sample is one market regime, windows overlap heavily so effective N is far below nominal N, and excluded rows are non-random — they skew old and wide. The medians describe well-reconciled rotations, not all of them.</p>
+  </div>
+</section>
+
+<section id="podcasts">
+  <h2><span class="num">09</span>Podcast Ingestion</h2>
+  <p class="sub">Two paths. They are kept separate on purpose.</p>
+
+  <div class="cards">
+    <div class="card"><h4>Path 1 — YouTube</h4><p>RSS → transcript → Gemini summary. Runs as STEP 4 of the morning pipeline.</p></div>
+    <div class="card"><h4>Path 2 — Spotify Studio</h4><p>Drop <code>allocation-YYYY-MM-DD.txt</code> in the Studio transcripts folder. STEP 4b picks it up, dedups by sha256.</p></div>
+  </div>
+
+  <div class="note danger">
+    <p><b>Everything in <code>podcasts.md</code> is model output.</b> It is the largest file in the bundle after the prompt payload, and nothing verifies it. The hash proves the bytes haven't changed — not that the content is true.</p>
+    <p style="margin-top:8px">Every summary carries an invented <code>## Sector Allocations</code> table, because the template has one. A qualitative interview about assessing management produced <em>"Broad Market, Target 100%, Range 95–105%."</em> That is a fabricated structure, not a reported figure.</p>
+  </div>
+
+  <div class="note warn">
+    <p><b>Never take a position weight from a digest.</b> One cited JPIE at 4.7% against an actual 0.83%. Read weights from the bundle.</p>
+    <p style="margin-top:8px"><b>Count a theme once per run.</b> Consecutive daily aggregates repeat each other, and aggregates discuss episodes that are separately ingested in the same window.</p>
+  </div>
+</section>
+
+<section id="rules">
+  <h2><span class="num">10</span>Conventions</h2>
+  <p class="sub">The rules the system is built around, and why.</p>
+
+  <table>
+    <tr><th style="width:32%">Rule</th><th>Reason</th></tr>
+    <tr><td><b>Read-only on brokerage</b></td><td>No order or trading endpoint is imported or called. Ever.</td></tr>
+    <tr><td><b>Agents never fetch</b></td><td>Not principle — reproducibility. A Python-gathered snapshot is hash-stamped and re-runnable, so when a number turns out wrong you can tell whether the data changed or the reasoning did.</td></tr>
+    <tr><td><b>Every write needs <code>--live</code></b></td><td>Each command enforces its own dry-run default.</td></tr>
+    <tr><td><b>No price targets or buy/sell calls</b></td><td>In any agent output. The system surfaces facts and flags; you decide.</td></tr>
+    <tr><td><b>AI output never becomes authoritative</b></td><td>It lands on sandbox surfaces. Promotion is manual. The rule is about promotion, not file location.</td></tr>
+    <tr><td><b>Single-batch Sheet writes</b></td><td>Never cell-by-cell. Rate limits cause partial writes mid-loop.</td></tr>
+    <tr><td><b>Archive before overwrite</b></td><td>A <code>.bak</code> taken <em>after</em> an edit is not a backup. Prove pre-edit content by grep.</td></tr>
+    <tr><td><b>The file is stale, not the behaviour</b></td><td>Where a thesis file and your trades disagree, the default inference is that the file is out of date. Report it as a documentation task, not a discipline failure.</td></tr>
+  </table>
+</section>
+
+<section id="gotchas">
+  <h2><span class="num">11</span>Known Issues</h2>
+  <p class="sub">Recorded so they aren't rediscovered. Current as of 2026-08-09.</p>
+
+  <h3>Write safety</h3>
+  <table>
+    <tr><th style="width:34%">Issue</th><th>Effect</th></tr>
+    <tr><td><code>derive_rotations</code> CLI <span class="pill p-open">open</span></td><td>Running it bare <b>writes</b> to <code>Trade_Log_Staging</code> — <code>--dry-run</code> defaults to off. The morning path is safe.</td></tr>
+    <tr><td><code>journal promote</code> <span class="pill p-open">open</span></td><td>Adds the <code>Promoted_At</code> column <em>before</em> checking <code>--live</code>, so a dry run can alter the live header.</td></tr>
+    <tr><td><code>create_dashboard.py</code> ×2 <span class="pill p-open">open</span></td><td>Dead modules that can clear-rebuild <code>0_DASHBOARD</code>. Not wired to anything — don't run them.</td></tr>
+  </table>
+
+  <h3>Data accuracy</h3>
+  <table>
+    <tr><th style="width:34%">Issue</th><th>Effect</th></tr>
+    <tr><td>Sanitizer residuals <span class="pill p-open">open</span></td><td><code>build_tax_control</code> and <code>pipeline.py</code> still gate currency stripping on the old dtype check. Under pandas ≥3 they return <b>zero</b> silently — YTD gains, wash sales and estimated tax can understate.</td></tr>
+    <tr><td>Tax_Control account scope <span class="pill p-open">open</span></td><td>Filters on an IRA/401k name test, not the three-account suffix list. Out-of-scope taxable lots can inflate it.</td></tr>
+    <tr><td>Nested supersets <span class="pill p-open">open</span></td><td>Re-running the deriver against an open window emits a new, larger row each time. Five rows existed for one basket. Attribution reads around it.</td></tr>
+    <tr><td>Cash KPIs <span class="pill p-open">open</span></td><td>Dashboard cash percentage is built on an incomplete cash model and can imply dry powder that isn't there.</td></tr>
+    <tr><td>Stale <code>Signal</code> column <span class="pill p-open">open</span></td><td>Populated from an agent run dated 2026-04-20 with no staleness stamp. Reads as current; lists names you don't hold.</td></tr>
+    <tr><td>Currency sanitizer <span class="pill p-dry">fixed</span></td><td>pandas ≥3 string-dtype inference zeroed every currency cell read centrally. Fixed 2026-08-08.</td></tr>
+  </table>
+
+  <h3>Operations</h3>
+  <table>
+    <tr><th style="width:34%">Issue</th><th>Effect</th></tr>
+    <tr><td><code>DailyWake</code> task <span class="pill p-open">open</span></td><td><b>Has never successfully fired.</b> The morning pipeline is effectively manual-only. Fix is a Windows Task Scheduler change.</td></tr>
+    <tr><td>Dual token signals <span class="pill p-open">open</span></td><td>Health check and dashboard use independent logic and can disagree on the same morning.</td></tr>
+    <tr><td><code>--enrich-atr</code> flags <span class="pill p-open">open</span></td><td>Default on, do nothing. <code>CLI_MANUAL.md</code> documents them as working.</td></tr>
+  </table>
+</section>
+
+<section id="files">
+  <h2><span class="num">12</span>File Map</h2>
+  <p class="sub">Where things live.</p>
+
+  <table>
+    <tr><th style="width:38%">Path</th><th>Holds</th></tr>
+    <tr><td><code>manager.py</code></td><td>CLI entry point for everything.</td></tr>
+    <tr><td><code>config.py</code></td><td>Sheet ID, account suffixes, tab names, model, paths.</td></tr>
+    <tr><td><code>CLAUDE.md</code></td><td>Project conventions. Read first when picking work back up.</td></tr>
+    <tr><td><code>state.md</code></td><td>Current build state, what's next, deferred backlog.</td></tr>
+    <tr><td><code>vault/theses/</code></td><td>One thesis file per position, plus <code>archive/</code>.</td></tr>
+    <tr><td><code>exports/ai_briefing_*/</code></td><td>Frozen briefing bundles. <code>portfolio.md</code>, <code>theses.md</code>, <code>podcasts.md</code>, <code>SUBMIT_ME.md</code>, <code>manifest.json</code>.</td></tr>
+    <tr><td><code>bundles/</code></td><td>Hashed composite bundles.</td></tr>
+    <tr><td><code>agent_outputs/</code></td><td>Sandbox output — ideas, dislocation scans, attribution, briefing analysis.</td></tr>
+    <tr><td><code>data/podcast_summaries/</code></td><td>Gemini summaries and Spotify digests, plus <code>verification/</code> sidecars.</td></tr>
+    <tr><td><code>prompts/</code></td><td>Sequenced build prompts for Claude Code / Gemini CLI.</td></tr>
+    <tr><td><code>docs/</code></td><td>Audits and architecture notes.</td></tr>
+    <tr><td><code>logs/</code></td><td>Pipeline logs and the health-failure flag.</td></tr>
+  </table>
+
+  <footer>
+    <p>Generated 2026-08-09 · Verified against live code the same day. Re-check before trusting specifics if read much later.<br>
+    Full code audit: <code>docs/CODE_AUDIT_2026-08-09.md</code> · Conventions: <code>CLAUDE.md</code> · Build state: <code>state.md</code></p>
+  </footer>
+</section>
+
+</main>
+</div>
+
+<script>
+(function(){
+  var links = [].slice.call(document.querySelectorAll('nav a'));
+  var secs  = links.map(function(a){ return document.querySelector(a.getAttribute('href')); });
+  function sync(){
+    var y = window.scrollY + 120, cur = 0;
+    secs.forEach(function(s,i){ if(s && s.offsetTop <= y) cur = i; });
+    links.forEach(function(a,i){ a.classList.toggle('on', i === cur); });
+  }
+  window.addEventListener('scroll', sync, {passive:true});
+  window.addEventListener('resize', sync);
+  sync();
+})();
+</script>
+</body>
+</html>
