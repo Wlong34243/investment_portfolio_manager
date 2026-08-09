@@ -12,8 +12,9 @@ Architecture:
   6. Write candidates to Trade_Log_Staging (append, dedup by fingerprint).
 
 Usage:
-    python tasks/derive_rotations.py                       # last 90 days
+    python tasks/derive_rotations.py                       # last 90 days, dry-run (no Sheet write)
     python tasks/derive_rotations.py --days 180
+    python tasks/derive_rotations.py --live                # append new candidates to Trade_Log_Staging
     python tasks/derive_rotations.py --dry-run-verify
 """
 
@@ -379,7 +380,16 @@ def main(argv=None) -> None:
     p.add_argument("--until", metavar="YYYY-MM-DD")
     p.add_argument("--days", type=int, default=DEFAULT_LOOKBACK_DAYS)
     p.add_argument("--window", type=int, default=CLUSTER_WINDOW_DAYS_DEFAULT)
-    p.add_argument("--dry-run", action="store_true")
+    p.add_argument(
+        "--live",
+        action="store_true",
+        help="Write new candidates to Trade_Log_Staging. Default: dry-run (no Sheet write).",
+    )
+    p.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="No-op alias kept for older scripts; dry-run is already the default.",
+    )
     p.add_argument("--dry-run-verify", action="store_true")
     args = p.parse_args(argv)
 
@@ -388,11 +398,15 @@ def main(argv=None) -> None:
     until = datetime.strptime(args.until, "%Y-%m-%d").date() if args.until else today
     since = datetime.strptime(args.since, "%Y-%m-%d").date() if args.since else today - timedelta(days=args.days)
 
+    # Default is dry-run. --live writes. --dry-run remains accepted as a no-op alias
+    # so older scripts that pass it do not break.
+    dry_run = not args.live
+
     df = _read_transactions(since=since, until=until)
     if df.empty: return
     clusters = derive_clusters(df, window_days=args.window)
     if not clusters: return
-    write_staging(clusters, dry_run=args.dry_run, dry_run_verify=args.dry_run_verify)
+    write_staging(clusters, dry_run=dry_run, dry_run_verify=args.dry_run_verify)
 
 if __name__ == "__main__":
     main()
