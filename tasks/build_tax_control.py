@@ -6,6 +6,7 @@ Deterministic Python math over Realized_GL and Config. No LLMs.
 import pandas as pd
 from datetime import datetime
 import logging
+import re
 from typing import Dict, Any, List, Tuple
 
 import config
@@ -18,6 +19,19 @@ from utils.sheet_readers import (
 from utils.sheet_writers import safe_execute
 
 logger = logging.getLogger(__name__)
+
+
+def _account_mask_digits(account: str) -> str | None:
+    """Extract trailing masked digits from a Schwab Account label like 'Individual ...119'."""
+    m = re.search(r"\.{2,}(\d+)\s*$", str(account).strip())
+    return m.group(1) if m else None
+
+
+def _account_in_primary_scope(account: str, suffixes: list[str]) -> bool:
+    digits = _account_mask_digits(account)
+    if not digits:
+        return False
+    return any(s.endswith(digits) for s in suffixes)
 
 def get_tax_rates() -> Tuple[float, float, float, int]:
     """
@@ -131,16 +145,96 @@ def compute_tax_control_data() -> Dict[str, Any]:
         logger.warning("Realized_GL is empty. No tax data to compute.")
         return {}
 
-    # Filter to taxable accounts only — 401(k) and IRA/contributory gains are
-    # tax-deferred; including them in a cap-gains estimate would be wrong.
-    if 'Is Primary Acct' in df_gl.columns:
-        before = len(df_gl)
-        df_gl = df_gl[df_gl['Is Primary Acct'].astype(str).str.upper() == 'TRUE']
-        excluded = before - len(df_gl)
-        if excluded:
-            logger.info("compute_tax_control: excluded %d lots from protected accounts (401k/IRA)", excluded)
-    else:
-        logger.warning("compute_tax_control: 'Is Primary Acct' column missing — all accounts included. Re-import G/L CSV to fix.")
+    # --- Account scope (Schwab primary suffixes) then taxable-only ---
+    # Suffix scope and IRA/401 name tests are different questions. Never fall
+    # back to "include all" when either signal is missing.
+    if "Account" not in df_gl.columns:
+        msg = (
+            "compute_tax_control: Realized_GL is missing the Account column — "
+            "cannot apply SCHWAB_PRIMARY_ACCOUNT_SUFFIXES. Re-import G/L CSV; "
+            "refusing to include all rows."
+        )
+        logger.error(msg)
+        raise ValueError(msg)
+
+    suffixes = [s for s in config.SCHWAB_PRIMARY_ACCOUNT_SUFFIXES if str(s).strip()]
+    if not suffixes:
+        msg = (
+            "compute_tax_control: SCHWAB_PRIMARY_ACCOUNT_SUFFIXES is empty — "
+            "refusing unscoped Tax_Control."
+        )
+        logger.error(msg)
+        raise ValueError(msg)
+
+    ticker_s = df_gl.get("Ticker", pd.Series("", index=df_gl.index)).astype(str).str.strip()
+    acct_s = df_gl["Account"].astype(str).str.strip()
+    junk_mask = (acct_s == "") & (
+        (ticker_s == "") | ticker_s.str.contains(r"WASH SALE|REALIZED", case=False, na=False)
+    )
+    if junk_mask.any():
+        logger.warning(
+            "compute_tax_control: dropping %d junk Realized_GL banner/summary row(s)",
+            int(junk_mask.sum()),
+        )
+        df_gl = df_gl.loc[~junk_mask].copy()
+        acct_s = df_gl["Account"].astype(str).str.strip()
+
+    unparseable = (acct_s == "") | ~acct_s.map(lambda a: _account_mask_digits(a) is not None)
+    if unparseable.any():
+        bad = df_gl.loc[unparseable, ["Ticker", "Account"]].head(10)
+        msg = (
+            f"compute_tax_control: {int(unparseable.sum())} Realized_GL row(s) lack a "
+            f"parseable Account mask (expected like '...119'). Cannot apply "
+            f"SCHWAB_PRIMARY_ACCOUNT_SUFFIXES without guessing. Sample:\n"
+            f"{bad.to_string(index=False)}"
+        )
+        logger.error(msg)
+        raise ValueError(msg)
+
+    before_n = len(df_gl)
+    gl_col = "Gain Loss $" if "Gain Loss $" in df_gl.columns else None
+    before_gl = float(df_gl[gl_col].sum()) if gl_col else 0.0
+
+    in_scope = acct_s.map(lambda a: _account_in_primary_scope(a, suffixes))
+    excluded_scope = df_gl.loc[~in_scope]
+    df_gl = df_gl.loc[in_scope].copy()
+    excluded_scope_gl = float(excluded_scope[gl_col].sum()) if gl_col and len(excluded_scope) else 0.0
+    logger.info(
+        "compute_tax_control: primary-suffix filter %s — kept %d/%d lots; "
+        "excluded %d lots (Gain Loss $ %.2f) from out-of-scope accounts",
+        suffixes, len(df_gl), before_n, len(excluded_scope), excluded_scope_gl,
+    )
+
+    # Taxable accounts only — 401(k)/IRA/HSA must not enter the cap-gains estimate.
+    if "Is Primary Acct" not in df_gl.columns:
+        msg = (
+            "compute_tax_control: 'Is Primary Acct' column missing after scope filter — "
+            "refusing to treat all in-scope lots as taxable. Re-import G/L CSV."
+        )
+        logger.error(msg)
+        raise ValueError(msg)
+
+    before_taxable = len(df_gl)
+    taxable_mask = df_gl["Is Primary Acct"].astype(str).str.upper() == "TRUE"
+    deferred = df_gl.loc[~taxable_mask]
+    df_gl = df_gl.loc[taxable_mask].copy()
+    deferred_gl = float(deferred[gl_col].sum()) if gl_col and len(deferred) else 0.0
+    if len(deferred):
+        logger.info(
+            "compute_tax_control: excluded %d tax-deferred lots (Gain Loss $ %.2f) via Is Primary Acct",
+            len(deferred), deferred_gl,
+        )
+
+    scope_impact = {
+        "before_rows": before_n,
+        "after_scope_rows": before_taxable,
+        "after_taxable_rows": len(df_gl),
+        "excluded_out_of_scope_rows": int(len(excluded_scope)),
+        "excluded_out_of_scope_gl": excluded_scope_gl,
+        "excluded_tax_deferred_rows": int(len(deferred)),
+        "excluded_tax_deferred_gl": deferred_gl,
+        "before_gl": before_gl,
+    }
 
     # 1. Filter to current calendar year based on 'Closed Date'
     current_year = datetime.now().year
@@ -235,7 +329,8 @@ def compute_tax_control_data() -> Dict[str, Any]:
             
     return {
         "metrics": metrics,
-        "lots_df": df_table[config.TAX_CONTROL_LOTS_COLUMNS]
+        "lots_df": df_table[config.TAX_CONTROL_LOTS_COLUMNS],
+        "scope_impact": scope_impact,
     }
 
 def refresh_tax_control_sheet(live: bool = False) -> Dict[str, Any]:
