@@ -179,18 +179,14 @@ def journal_promote(
     header = list(all_rows[0])
     data_rows = all_rows[1:]  # 1-indexed row 2 onward in the sheet
 
-    # Ensure Promoted_At column exists on the live sheet (append if missing)
-    if "Promoted_At" not in header:
-        console.print("[cyan]Adding Promoted_At column to Trade_Log_Staging header...[/]")
-        new_col = len(header) + 1
-        staging_ws.update_cell(1, new_col, "Promoted_At")
-        time.sleep(0.5)
-        all_rows = staging_ws.get_all_values()
-        header = list(all_rows[0])
-        data_rows = all_rows[1:]
-        if "Promoted_At" not in header:
-            console.print("[red]ERROR: failed to add Promoted_At column.[/]")
-            raise typer.Exit(code=1)
+    # Promoted_At may be missing on older staging tabs. Never mutate the sheet
+    # until --live: dry-run only reports what would happen.
+    missing_promoted_at = "Promoted_At" not in header
+    if missing_promoted_at:
+        console.print(
+            "[yellow]! Promoted_At column missing from Trade_Log_Staging header. "
+            "Will add it under --live; dry-run performs zero Sheet mutations.[/]"
+        )
 
     def _hdr_idx(name: str) -> int:
         for alias in HEADER_ALIASES.get(name, [name]):
@@ -278,7 +274,35 @@ def journal_promote(
             f"[bold black on yellow] DRY RUN — Would promote {len(approved)} row(s). Use --live to write. [/]",
             border_style="yellow",
         ))
+        if missing_promoted_at:
+            console.print("[dim]Would also add Promoted_At column to staging header.[/]")
         return
+
+    # --live only below this line: schema ensure, Trade_Log append, staging marks.
+
+    # Ensure Promoted_At column exists on the live sheet (append if missing)
+    if missing_promoted_at:
+        console.print("[cyan]Adding Promoted_At column to Trade_Log_Staging header...[/]")
+        new_col = len(header) + 1
+        staging_ws.update_cell(1, new_col, "Promoted_At")
+        time.sleep(0.5)
+        all_rows = staging_ws.get_all_values()
+        header = list(all_rows[0])
+        data_rows = all_rows[1:]
+        if "Promoted_At" not in header:
+            console.print("[red]ERROR: failed to add Promoted_At column.[/]")
+            raise typer.Exit(code=1)
+        # Rebuild approved rows against refreshed header (same sheet row numbers)
+        approved = []
+        try:
+            status_col_idx = header.index("Status")
+        except ValueError:
+            console.print("[red]ERROR: 'Status' column not found after header update.[/]")
+            raise typer.Exit(code=1)
+        for i, row in enumerate(data_rows):
+            padded = row + [""] * (len(header) - len(row))
+            if padded[status_col_idx].strip().lower() in APPROVE_INPUTS:
+                approved.append((i + 2, padded))
 
     # Confirm (skip with --yes)
     if not yes:
@@ -352,18 +376,30 @@ def journal_promote(
 
     console.print(f"[green]Fingerprint verification OK — {len(trade_log_rows)} fingerprint(s) present in Trade_Log.[/]")
 
-    # Mark promoted + stamp Promoted_At (UTC) for this build's rows only
+    # Mark promoted + stamp Promoted_At (UTC) — single batched update (no cell-by-cell).
+    from gspread.utils import rowcol_to_a1
+
     promoted_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     new_status_col = status_col_idx + 1
     new_pa_col = (header.index("Promoted_At") + 1) if "Promoted_At" in header else None
-    with console.status("[cyan]Marking staging rows as 'promoted' + Promoted_At..."):
+    batch = []
+    for sheet_row_num, _ in approved:
+        batch.append({
+            "range": rowcol_to_a1(sheet_row_num, new_status_col),
+            "values": [["promoted"]],
+        })
+        if new_pa_col:
+            batch.append({
+                "range": rowcol_to_a1(sheet_row_num, new_pa_col),
+                "values": [[promoted_at]],
+            })
+    with console.status("[cyan]Marking staging rows as 'promoted' + Promoted_At (batch)..."):
         try:
-            for sheet_row_num, _ in approved:
-                staging_ws.update_cell(sheet_row_num, new_status_col, "promoted")
-                time.sleep(0.3)
-                if new_pa_col:
-                    staging_ws.update_cell(sheet_row_num, new_pa_col, promoted_at)
-                    time.sleep(0.3)
+            chunk = 50
+            for start in range(0, len(batch), chunk):
+                staging_ws.batch_update(batch[start : start + chunk], value_input_option="USER_ENTERED")
+                if start + chunk < len(batch):
+                    time.sleep(1.0)
         except Exception as e:
             console.print(f"[yellow]! WARNING: Could not update staging status: {e}[/]")
             console.print("[yellow]  Trade_Log rows were written — update staging manually.[/]")
