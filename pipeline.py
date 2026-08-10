@@ -48,6 +48,23 @@ def write_pipeline_log(level: str, source: str, message: str, details: str = "",
         print(f"Failed to write to Logs tab: {e}")
 
 
+def ensure_worksheet(spreadsheet, title: str, headers: list[str]):
+    """
+    Return worksheet `title`, creating it with a header row if missing.
+    Root-cause fix for Holdings_History WorksheetNotFound aborting write_to_sheets
+    before Daily_Snapshots could append (observed 2026-08-05/06 in Logs).
+    """
+    try:
+        return spreadsheet.worksheet(title)
+    except gspread.exceptions.WorksheetNotFound:
+        print(f"Creating missing worksheet: {title}")
+        ws = spreadsheet.add_worksheet(title=title, rows=2000, cols=max(len(headers) + 2, 12))
+        time.sleep(1.0)
+        ws.update(range_name="A1", values=[headers], value_input_option="RAW")
+        time.sleep(0.5)
+        return ws
+
+
 # ---------------------------------------------------------------------------
 # Data transformation (pure Python — no external I/O)
 # ---------------------------------------------------------------------------
@@ -620,17 +637,72 @@ def write_to_sheets(df: pd.DataFrame, cash_amount: float, dry_run: bool = True) 
     """
     Orchestrate Holdings_Current → Holdings_History → Daily_Snapshots → Income_Tracking.
     Respects dry_run flag (guardrail #3).
-    """
-    results = {"holdings_written": 0, "history_appended": 0, "snapshot": False, "income_snapshot": False}
-    source  = "Positions_Ingestion"
 
-    data_list     = sanitize_dataframe_for_sheets(df, config.POSITION_COLUMNS, config.POSITION_COL_MAP, is_holdings=True)
+    Holdings_History is created if missing — a deleted/missing History tab used to
+    raise WorksheetNotFound after Holdings_Current was already written, aborting
+    before Daily_Snapshots (Logs 2026-08-05 / 2026-08-06). Each step is isolated
+    so a later failure cannot leave Current updated with no snapshot row.
+    """
+    results = {
+        "holdings_written": 0,
+        "history_appended": 0,
+        "snapshot": False,
+        "income_snapshot": False,
+        "history_created": False,
+    }
+    source = "Positions_Ingestion"
+
+    data_list = sanitize_dataframe_for_sheets(df, config.POSITION_COLUMNS, config.POSITION_COL_MAP, is_holdings=True)
     income_metrics = calculate_income_metrics(df)
 
     if dry_run:
-        write_pipeline_log("INFO", source, f"DRY RUN: Prepared {len(data_list)} positions.", dry_run=dry_run)
-        results.update({"holdings_written": len(data_list), "history_appended": len(data_list),
-                        "snapshot": True, "income_snapshot": True})
+        from utils.sheet_readers import get_gspread_client
+        try:
+            client = get_gspread_client()
+            spreadsheet = client.open_by_key(config.PORTFOLIO_SHEET_ID)
+            existing = {ws.title for ws in spreadsheet.worksheets()}
+            history_missing = config.TAB_HOLDINGS_HISTORY not in existing
+            if history_missing:
+                print(f"DRY RUN: would CREATE missing worksheet {config.TAB_HOLDINGS_HISTORY}")
+                results["history_created"] = True
+            else:
+                print(f"DRY RUN: {config.TAB_HOLDINGS_HISTORY} present")
+            print(f"DRY RUN: Prepared {len(data_list)} positions for Holdings_Current.")
+            print(f"DRY RUN: Would append Holdings_History for {len(data_list)} row(s) (fingerprint-deduped).")
+            # Simulate snapshot fingerprint against live tab (read-only)
+            from utils.column_guard import ensure_display_columns
+            preview = ensure_display_columns(df.copy())
+            for col in ["Market Value", "Cost Basis", "Est Annual Income"]:
+                if col in preview.columns:
+                    preview[col] = coerce_sheet_numeric_series(preview[col])
+            import_date = str(preview["Import Date"].iloc[0]) if "Import Date" in preview.columns and len(preview) else "?"
+            total_value = float(preview["Market Value"].sum()) if "Market Value" in preview.columns else 0.0
+            position_count = int(len(preview))
+            fp = f"{import_date}|{position_count}|{round(total_value, 2)}"
+            existing_fps = set()
+            try:
+                ws_snap = spreadsheet.worksheet(config.TAB_DAILY_SNAPSHOTS)
+                fp_col_idx = len(config.SNAPSHOT_COLUMNS)
+                existing_fps = set(ws_snap.col_values(fp_col_idx)[1:])
+            except Exception:
+                existing_fps = set()
+            if fp in existing_fps:
+                print(f"DRY RUN: Daily_Snapshots fingerprint already present ({fp}) — would SKIP.")
+                results["snapshot"] = False
+            else:
+                print(f"DRY RUN: Would APPEND Daily_Snapshots row: date={import_date} "
+                      f"total=${total_value:,.2f} positions={position_count} fp={fp}")
+                results["snapshot"] = True
+            results.update({
+                "holdings_written": len(data_list),
+                "history_appended": len(data_list),
+                "income_snapshot": True,
+            })
+            write_pipeline_log("INFO", source, f"DRY RUN: Prepared {len(data_list)} positions.", dry_run=True)
+        except Exception as e:
+            write_pipeline_log("ERROR", source, f"DRY RUN preview failed: {e}", dry_run=True)
+            results.update({"holdings_written": len(data_list), "history_appended": len(data_list),
+                            "snapshot": True, "income_snapshot": True})
         return results
 
     from utils.sheet_readers import get_gspread_client
@@ -638,36 +710,68 @@ def write_to_sheets(df: pd.DataFrame, cash_amount: float, dry_run: bool = True) 
     max_attempts = 5
     for attempt in range(max_attempts):
         try:
-            client      = get_gspread_client()
+            client = get_gspread_client()
             spreadsheet = client.open_by_key(config.PORTFOLIO_SHEET_ID)
 
-            ws_current  = spreadsheet.worksheet(config.TAB_HOLDINGS_CURRENT)
+            ws_current = spreadsheet.worksheet(config.TAB_HOLDINGS_CURRENT)
             write_holdings_current(ws_current, data_list)
             results["holdings_written"] = len(data_list)
 
-            ws_history  = spreadsheet.worksheet(config.TAB_HOLDINGS_HISTORY)
-            results["history_appended"] = append_holdings_history(ws_history, data_list)
+            # Create Holdings_History if deleted/missing — do not abort the pipeline.
+            try:
+                existing = {ws.title for ws in spreadsheet.worksheets()}
+                if config.TAB_HOLDINGS_HISTORY not in existing:
+                    results["history_created"] = True
+                ws_history = ensure_worksheet(
+                    spreadsheet, config.TAB_HOLDINGS_HISTORY, list(config.POSITION_COLUMNS)
+                )
+                results["history_appended"] = append_holdings_history(ws_history, data_list)
+            except Exception as e:
+                write_pipeline_log(
+                    "ERROR", source,
+                    f"Holdings_History step failed (continuing to Daily_Snapshots): {e}",
+                    dry_run=False,
+                )
+                print(f"Holdings_History failed (non-fatal): {e}")
 
-            ws_snapshots = spreadsheet.worksheet(config.TAB_DAILY_SNAPSHOTS)
-            results["snapshot"] = append_daily_snapshot(ws_snapshots, df)
+            try:
+                ws_snapshots = spreadsheet.worksheet(config.TAB_DAILY_SNAPSHOTS)
+                results["snapshot"] = append_daily_snapshot(ws_snapshots, df)
+            except Exception as e:
+                write_pipeline_log("ERROR", source, f"Daily_Snapshots step failed: {e}", dry_run=False)
+                print(f"Daily_Snapshots failed: {e}")
 
-            ws_income   = spreadsheet.worksheet(config.TAB_INCOME_TRACKING)
-            results["income_snapshot"] = append_income_snapshot(ws_income, income_metrics)
+            try:
+                ws_income = spreadsheet.worksheet(config.TAB_INCOME_TRACKING)
+                results["income_snapshot"] = append_income_snapshot(ws_income, income_metrics)
+            except Exception as e:
+                write_pipeline_log("ERROR", source, f"Income_Tracking step failed: {e}", dry_run=False)
+                print(f"Income_Tracking failed: {e}")
 
-            write_pipeline_log("SUCCESS", source,
-                               f"Updated Holdings_Current ({len(data_list)} rows) "
-                               f"and History ({results['history_appended']} new).",
-                               dry_run=dry_run)
+            write_pipeline_log(
+                "SUCCESS", source,
+                f"Updated Holdings_Current ({len(data_list)} rows), "
+                f"History ({results['history_appended']} new), "
+                f"snapshot={results['snapshot']}.",
+                dry_run=False,
+            )
             break
 
         except gspread.exceptions.APIError as e:
             if attempt < max_attempts - 1:
-                # Exponential backoff: 60s, 120s, 180s, 240s
                 wait = 60 * (attempt + 1)
-                write_pipeline_log("WARNING", source, f"API Error, retrying in {wait}s... {e}", dry_run=dry_run)
+                write_pipeline_log("WARNING", source, f"API Error, retrying in {wait}s... {e}", dry_run=False)
                 time.sleep(wait)
             else:
-                write_pipeline_log("ERROR", source, f"Ingestion failed after {max_attempts} attempts: {e}", dry_run=dry_run)
+                write_pipeline_log("ERROR", source, f"Ingestion failed after {max_attempts} attempts: {e}", dry_run=False)
                 raise
+        except gspread.exceptions.WorksheetNotFound as e:
+            # Should be rare after ensure_worksheet; log explicitly (matches 2026-08-05/06 pattern).
+            write_pipeline_log(
+                "ERROR", source,
+                f"Unhandled WorksheetNotFound in write_to_sheets: {type(e).__name__}: {e}",
+                dry_run=False,
+            )
+            raise
 
     return results

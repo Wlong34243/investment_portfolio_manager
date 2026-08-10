@@ -8,6 +8,7 @@ current_allocation: 1.62%
 cost_basis: 8930.300000001
 time_horizon: TBD - see open items
 triggers:
+  trigger_type: ceiling_only
   entry_price:
   price_add_below:
   price_trim_above:
@@ -389,6 +390,7 @@ later if the reasoning is not written down now.
   Bill supplies the read and the judgment; I do the reconstruction, verification, and
   quantification.** Asking him to hand back a number he had already implied was work
   transferred in the wrong direction.
+- 2026-08-09: trigger_type set explicit: ceiling_only (THEME default; growth/thematic bet). See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
 **Current Allocation:** 1.62%

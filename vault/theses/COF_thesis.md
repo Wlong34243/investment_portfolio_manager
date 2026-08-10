@@ -5,7 +5,8 @@ framework_preference:
 entry_date:
 last_reviewed: '2026-08-08'
 triggers:
-  price_trim_above: 175.00
+  trigger_type: ceiling_only
+  # price_trim_above: 175.00  # superseded 2026-08-09, non-primary/stale -- see Review Log
 cost_basis: 17055.6169999975
 current_allocation: 2.89%
 ---
@@ -45,6 +46,7 @@ priority: low
 
 ## Review Log
 - 2026-04: Initiated. Thesis intact. Monitoring Discover integration timeline, consumer charge-off rates, and early progress on the Brex acquisition.
+- 2026-08-09: trigger_type: ceiling_only. Cyclical override to price_to_book considered (credit-cycle-exposed financial) but rejected: FY2024->FY2025 balance sheet shows the Discover Financial merger completing (equity $60.8B->$113.6B, shares 381M->625M) -- post-merger COF is a materially different company, so pre-2025 book value isn't a comparable basis for a P/B trigger, not just a data-continuity break. Commented out stale price_trim_above: 175.00 (predates the merger). Revisit once enough post-merger history accumulates. See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
 **Current Allocation:** 2.89%

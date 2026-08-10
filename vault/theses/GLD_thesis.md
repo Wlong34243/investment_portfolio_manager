@@ -8,6 +8,7 @@ current_allocation: 1.06%
 cost_basis: 6537.43
 time_horizon: 3 to 5 years
 triggers:
+  trigger_type: price
   fwd_pe_add_below:                 # gold has no earnings; PE triggers not applicable
   fwd_pe_trim_above:
   fwd_pe_historical_median:
@@ -57,6 +58,9 @@ next_step: starter size; build toward 3-5% over time as a portfolio stabilizer
 
 ## Rotation Priority
 priority: low -- add opportunistically on pullbacks, not on momentum
+
+## Review Log
+- 2026-08-09: trigger_type set explicit: price (argued exception, same logic as JPIE -- gold has no earnings, so fwd_pe/price_to_book are impossible; existing 220/400 band is a deliberate nominal range, the only option available. See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
 **Current Allocation:** 1.06%

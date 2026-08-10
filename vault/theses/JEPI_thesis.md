@@ -6,6 +6,8 @@ entry_date:
 last_reviewed: '2026-08-08'
 cost_basis: 25923.000000000007
 current_allocation: 4.40%
+triggers:
+  trigger_type: ceiling_only
 ---
 # JEPI — Investment Thesis
 
@@ -40,6 +42,7 @@ priority: low
 
 ## Review Log
 - 2026-07: Thesis file created. Role is ballast + income; largest position by design, not conviction.
+- 2026-08-09: trigger_type set explicit: ceiling_only (income/ballast; no clean valuation anchor for a covered-call overlay fund). See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
 **Current Allocation:** 4.40%

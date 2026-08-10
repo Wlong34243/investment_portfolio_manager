@@ -6,6 +6,8 @@ entry_date:
 last_reviewed: '2026-08-08'
 cost_basis: 17073.460000000297
 current_allocation: 3.00%
+triggers:
+  trigger_type: ceiling_only
 ---
 # MELI — Investment Thesis
 
@@ -42,6 +44,7 @@ priority: medium
 
 ## Review Log
 - 2026-07: Thesis file created. At ceiling (~3.1% vs 3.0% THEME ceiling); adds come from the theme budget, not opportunism.
+- 2026-08-09: trigger_type set explicit: ceiling_only (THEME default; position-size bet on the platform, not a valuation bet). See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
 **Current Allocation:** 3.00%

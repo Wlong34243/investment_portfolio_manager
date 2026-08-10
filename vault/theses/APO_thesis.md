@@ -6,6 +6,8 @@ entry_date:
 last_reviewed: '2026-08-08'
 cost_basis: 7673.799999999
 current_allocation: 1.38%
+triggers:
+  trigger_type: ceiling_only
 ---
 # APO — Investment Thesis
 
@@ -82,6 +84,7 @@ priority: medium
   reporting the position as not held. Caught in the verification pass; see
   `data/podcast_summaries/2026-08-02_Spotify_Podcast_Aggregate_The_Treasury_Bubble_Counter_Case_To_AI_Consensus.md`.
   No position action taken or implied.
+- 2026-08-09: trigger_type: ceiling_only, not trailing_pe. Same step-function lag bug as LLY/AMZN, mirrored: APO's EPS *declined* FY2023-2025 (8.49->7.33->5.54), so the step-function holds the prior, higher EPS too long, understating the historical band (min/p25/median/p75/max = 10.4/13.0/17.2/19.1/25.9) -- live current trailing P/E (45.5) sits entirely above it. Caught via the same inside-range sanity check that flagged LLY/AMZN. Revisit with true rolling-TTM data. See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
 **Current Allocation:** 1.38%

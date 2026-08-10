@@ -4,7 +4,7 @@ This file tells Claude (and Claude Code, and Gemini CLI) how to work in this rep
 
 For current build state, read `state.md` (lowercase — the file is `state.md`, not `STATE.md`).
 
-**Last verified against the code: 2026-08-09.** Facts marked *(verified)* were checked against source on that date. If you are reading this much later, re-verify before trusting the numbers.
+**Last verified against the code: 2026-08-10.** Facts marked *(verified)* were checked against source on that date. If you are reading this much later, re-verify before trusting the numbers.
 
 ---
 
@@ -155,7 +155,8 @@ Hash-stamping proves the bytes have not changed since creation. It does not make
 | Path | Purpose |
 |---|---|
 | `core/bundle.py` | Market bundle assembly + hashing |
-| `core/vault_bundle.py` | Vault bundle assembly; thesis frontmatter + triggers parsing |
+| `core/vault_bundle.py` | Vault bundle assembly; thesis frontmatter + triggers parsing; **style from FM via thesis_reader** |
+| `utils/thesis_reader.py` | **Canonical thesis reader** (style taxonomy, `#` strip, typed trigger bands) |
 | `core/composite_bundle.py` | Composite assembly; `get_ticker_triggers()` |
 | `core/thesis_sync_data.py` | Sheet → thesis frontmatter sync data |
 
@@ -167,11 +168,13 @@ Hash-stamping proves the bytes have not changed since creation. It does not make
 | `tasks/batch_podcast_sync.py` | STEP 4 — RSS → transcript → Gemini summary |
 | `tasks/ingest_spotify_digests.py` | **STEP 4b — Spotify Studio digest ingestion. BUILT and live** (shipped 2026-08-01, first live multi-file run 2026-08-07). Two collision guards; sha256 ledger at `data/spotify_digests/.ingested.json` |
 | `tasks/build_valuation_card.py` | Valuation_Card build; sources `Trim Target` / `Add Target` from thesis triggers |
-| `tasks/build_command_center.py` | **Builds the `0_DASHBOARD` tab.** "Command Center" is the content; `0_DASHBOARD` is the tab. Clear-and-rebuild in one `batch_update` |
+| `tasks/build_command_center.py` | **Builds the `0_DASHBOARD` tab.** "Command Center" is the content; `0_DASHBOARD` is the tab. Clear-and-rebuild in one `batch_update`. Embeds Crosshairs top 5. |
+| `tasks/build_crosshairs.py` | **Ranked Crosshairs producer** (NEAR_TRIM/NEAR_ADD, DISLOCATION, MISSING_LEVEL). One list → CC top 5 + Decision_View full. |
+| `tasks/build_decision_view.py` | **Decision_View** = full Crosshairs list (not Agent_Outputs). |
 | `tasks/write_thesis_updates.py` | Sheets → local thesis files |
 | `tasks/export_ai_briefing.py` | Assembles the briefing bundle. **Owns the analysis rules above.** |
 | `tasks/derive_rotations.py` | Clusters sell/buy pairs into candidate rotations → `Trade_Log_Staging` |
-| `tasks/dislocation_scan.py` | Dislocation scanner |
+| `tasks/dislocation_scan.py` | Dislocation scanner — **runs as STEP 4.5 before dashboard** so Crosshairs sees today’s payload |
 
 ### Rotation attribution
 | Path | Purpose |
@@ -214,7 +217,9 @@ A typed-trigger system is in flight — see `prompts/trigger_types_2026-08-09.md
 
 `trailing_pe` exists because forward-estimate history is not available on the current FMP plan, while trailing P/E has 4–5 years of annual depth for free. **Band and trigger must use the same metric** — a band built on trailing history and evaluated against a forward reading is broken by a different factor per company (APO trailing 45.7 vs forward 12.0; AVGO 71.1 vs 21.9), and would never fire.
 
-**Trigger chain** *(verified 2026-08-09)*: thesis `triggers:` block → `vault_bundle._parse_thesis_fields()` → `composite_bundle.get_ticker_triggers()` → `build_valuation_card()` writes `Trim Target`/`Add Target` → `build_command_center._build_position_table()` reads them → `_build_grid()` writes `0_DASHBOARD`.
+**Trigger chain** *(verified 2026-08-10)*: thesis `triggers:` block → `vault_bundle._parse_thesis_fields()` → `composite_bundle.get_ticker_triggers()` (declared type + price `valuation_trim`/`valuation_add`) → `build_valuation_card()` writes `Trim Target`/`Add Target` → `build_command_center._build_position_table()` / Crosshairs. Style for ceilings: `utils/thesis_reader.style_map_from_vault()` (not `## Style` prose).
+
+**Crosshairs feed** *(shipped 2026-08-10)*: `build_crosshairs.produce_crosshairs()` ranks NEAR_TRIM/NEAR_ADD (Valuation_Card distances within 20% or through level), DISLOCATION (same-day scan), MISSING_LEVEL (`level_coverage`). `0_DASHBOARD` shows top 5; `Decision_View` shows all. Position-table **Signal is blank** — Agent_Outputs is no longer joined (April 2026 `cbc10a99` archived). Morning order: STEP 4.5 dislocation → STEP 5 val → crosshairs → CC → Decision_View. `pm refresh dashboard` runs the scan if no same-calendar-day artifact.
 
 ---
 

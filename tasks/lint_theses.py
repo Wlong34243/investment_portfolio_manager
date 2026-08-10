@@ -51,15 +51,8 @@ _COMBINED_HEADER_RE = re.compile(
 
 
 def _frontmatter(text):
-    m = re.match(r"^---\s*\n(.*?)\n---\s*\n", text, re.DOTALL)
-    if not m:
-        return {}, text
-    fm = {}
-    for line in m.group(1).splitlines():
-        km = re.match(r"^([A-Za-z_][A-Za-z0-9_]*):\s*(.*)$", line)
-        if km:
-            fm[km.group(1)] = km.group(2).strip().strip("'\"")
-    return fm, text[m.end():]
+    from utils.thesis_reader import extract_frontmatter_flat
+    return extract_frontmatter_flat(text)
 
 
 def _region_weight_pct(text):

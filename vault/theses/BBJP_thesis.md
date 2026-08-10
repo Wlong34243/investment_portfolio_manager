@@ -6,6 +6,8 @@ entry_date:
 last_reviewed: '2026-08-08'
 cost_basis: 14319.3699999935
 current_allocation: 2.52%
+triggers:
+  trigger_type: ceiling_only
 ---
 # BBJP — Investment Thesis
 
@@ -42,6 +44,7 @@ priority: low
 
 ## Review Log
 - 2026-04: Initiated. Thesis intact. Monitoring BOJ interest rate policy, Japanese wage negotiation data (Shunto), and corporate buyback announcements.
+- 2026-08-09: trigger_type set explicit: ceiling_only (country basket). See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
 **Current Allocation:** 2.52%

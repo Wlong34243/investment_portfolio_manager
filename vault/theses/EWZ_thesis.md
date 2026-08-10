@@ -6,6 +6,8 @@ entry_date:
 last_reviewed: '2026-08-08'
 cost_basis: 11967.409999999505
 current_allocation: 1.85%
+triggers:
+  trigger_type: ceiling_only
 ---
 # EWZ — Investment Thesis
 
@@ -42,6 +44,7 @@ priority: medium (requires monitoring of global FX and commodity trends)
 
 ## Review Log
 - 2026-04: Initiated. Thesis intact. Monitoring Petrobras dividend announcements, iron ore prices, and USD/BRL exchange rates.
+- 2026-08-09: trigger_type set explicit: ceiling_only. Cyclicality tension noted, not resolved: EWZ carries real commodity/EM-cyclical exposure, but price_to_book doesn't cleanly apply to a 50+-name basket the way it does a single name; argued alternative is discount_from_high, not adopted this pass. See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
 **Current Allocation:** 1.85%

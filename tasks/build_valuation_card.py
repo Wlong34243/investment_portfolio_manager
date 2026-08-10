@@ -155,8 +155,9 @@ def fetch_ticker_valuation(
         low  = info.get("fiftyTwoWeekLow")
         price = info.get("currentPrice") or info.get("regularMarketPrice")
 
-        # Get triggers from composite bundle
-        triggers = {"price_trim_above": None, "price_add_below": None}
+        # Get triggers from composite bundle (price-denominated for Trim/Add cols)
+        triggers = {"valuation_trim": None, "valuation_add": None,
+                    "price_trim_above": None, "price_add_below": None}
         if composite_bundle:
             triggers = composite_bundle.get_ticker_triggers(ticker_symbol)
 
@@ -229,8 +230,8 @@ def fetch_ticker_valuation(
             "Sector":               info.get("sector", ""),
             "Market Cap":           market_cap,
             "Price":                price,
-            "Trim Target":          triggers.get("price_trim_above"),
-            "Add Target":           triggers.get("price_add_below"),
+            "Trim Target":          triggers.get("valuation_trim", triggers.get("price_trim_above")),
+            "Add Target":           triggers.get("valuation_add", triggers.get("price_add_below")),
             "Trailing P/E":         trailing_pe,
             "Forward P/E (yf)":     info.get("forwardPE"),
             "P/B":                  info.get("priceToBook"),

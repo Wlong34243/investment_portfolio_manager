@@ -8,6 +8,7 @@ current_allocation: 4.93%
 cost_basis: 24968.1699999954
 time_horizon: 3 to 5 years
 triggers:
+  trigger_type: ceiling_only
   fwd_pe_add_below:
   fwd_pe_trim_above:
   fwd_pe_historical_median:
@@ -45,6 +46,7 @@ GARP-by-intuition core holding — sized and scaled like the rest of the GARP bu
 
 ## Review Log
 - 2026-07-20: Thesis rewritten. Prior file content was a mislabeled duplicate of the COF thesis (frontmatter ticker had been corrected in June, but body was never fixed). Rebuilt from scratch using Bill's actual AMZN reasoning: AWS stability, data-center networking/AI build-out, daily-user conviction.
+- 2026-08-09: trigger_type: ceiling_only, not trailing_pe. Same annual step-function lag bias as LLY (fast EPS growth 2.90->5.53->7.17, FY2023-2025): live current trailing P/E (22.1) sits below the entire computed historical range (30.3-80.3). Revisit with true rolling-TTM data. See prompts/trigger_types_2026-08-09.md.
 
 ## Scaling State
 next_step: [BILL]

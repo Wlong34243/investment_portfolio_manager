@@ -1,15 +1,16 @@
 """
-tasks/build_decision_view.py — Builds the Decision_View tab: agent-signal rows only.
+tasks/build_decision_view.py — Builds the Decision_View tab from Crosshairs.
 
-Decision_View no longer duplicates 0_DASHBOARD's full position table. It shows
-only tickers with an active signal (ADD/TRIM/etc.) from the latest Agent_Outputs
-run, with full untruncated rationale -- reusing the exact same Holdings_Current x
-Valuation_Card x Agent signal join build_command_center.py uses for 0_DASHBOARD,
-so the two views can never disagree on the underlying numbers.
+Full ranked Crosshairs list (same producer as 0_DASHBOARD top 5). Facts only:
+NEAR_TRIM / NEAR_ADD distances, DISLOCATION metrics, MISSING_LEVEL coverage gaps.
+No Agent_Outputs. No buy/sell language.
 """
+
+from __future__ import annotations
 
 import os
 import sys
+from typing import Optional
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _ROOT = os.path.dirname(_HERE)
@@ -21,14 +22,14 @@ import typer
 import config
 from utils.sheet_readers import get_gspread_client
 from utils.sheet_writers import safe_execute
-from utils.agent_signals import get_latest_agent_outputs
-from tasks.build_command_center import _read_records, _build_position_table
+from tasks.build_command_center import _read_records
+from tasks.build_crosshairs import CrosshairsResult, produce_crosshairs
 
-app = typer.Typer()
+app = typer.Typer(add_completion=False)
 
 _DEC_COLS = [
-    "Ticker", "Signal", "Market Value", "Wt%", "Price", "Trim", "Add",
-    "->Trim %", "->Add %", "Fwd P/E", "52w %", "Rationale",
+    "Ticker", "Reason", "Market Value", "Wt%", "Price", "Trim", "Add",
+    "->Trim %", "->Add %", "Rationale",
 ]
 _DATA_START_ROW = 3
 
@@ -37,15 +38,7 @@ def _pad(row: list, n: int = len(_DEC_COLS)) -> list:
     return (row + [""] * n)[:n]
 
 
-def _run_header(df_agent) -> str:
-    if df_agent.empty:
-        return "AGENT SIGNALS — no agent run found"
-    run_id = df_agent["run_id"].iloc[0] if "run_id" in df_agent.columns else "n/a"
-    run_ts = df_agent["run_ts"].iloc[0] if "run_ts" in df_agent.columns else "n/a"
-    return f"AGENT SIGNALS — run {run_id}  {run_ts}"
-
-
-def _print_dry_run(header: str, signal_rows: list[dict]) -> None:
+def _print_dry_run(header: str, items: list) -> None:
     from rich.console import Console
     from rich.table import Table
 
@@ -55,26 +48,24 @@ def _print_dry_run(header: str, signal_rows: list[dict]) -> None:
     table = Table(show_header=True, header_style="bold")
     for col in _DEC_COLS:
         table.add_column(col, overflow="fold")
-    for p in signal_rows:
+    for item in items:
         table.add_row(
-            p["Ticker"], p["Signal"],
-            f'${p["MV"]:,.0f}' if p["MV"] is not None else "—",
-            f'{p["Wt%"]*100:.1f}%' if p["Wt%"] is not None else "—",
-            f'${p["Price"]:,.2f}' if p["Price"] is not None else "—",
-            f'${p["Trim"]:,.2f}' if p["Trim"] else "—",
-            f'${p["Add"]:,.2f}' if p["Add"] else "—",
-            f'{p["->Trim %"]*100:+.1f}%' if p["->Trim %"] is not None else "—",
-            f'{p["->Add %"]*100:+.1f}%' if p["->Add %"] is not None else "—",
-            f'{p["Fwd P/E"]:.1f}' if p["Fwd P/E"] else "—",
-            f'{p["52w %"]*100:.0f}%' if p["52w %"] is not None else "—",
-            p["Rationale"],
+            item.ticker, item.reason_code,
+            f"${item.mv:,.0f}" if item.mv is not None else "—",
+            f"{item.wt * 100:.1f}%" if item.wt is not None else "—",
+            f"${item.price:,.2f}" if item.price is not None else "—",
+            f"${item.trim:,.2f}" if item.trim else "—",
+            f"${item.add:,.2f}" if item.add else "—",
+            f"{item.dist_trim * 100:+.1f}%" if item.dist_trim is not None else "—",
+            f"{item.dist_add * 100:+.1f}%" if item.dist_add is not None else "—",
+            item.rationale,
         )
     console.print(table)
-    console.print(f"[dim]{len(signal_rows)} signal rows.[/]")
+    console.print(f"[dim]{len(items)} Crosshairs rows.[/]")
     console.print("[dim]DRY RUN — no Sheet writes. Re-run with --live to apply.[/]")
 
 
-def _apply_formatting(ws, header: str, n_rows: int) -> None:
+def _apply_formatting(ws, n_rows: int) -> None:
     try:
         from gspread_formatting import (
             CellFormat, Color, TextFormat, NumberFormat,
@@ -88,14 +79,13 @@ def _apply_formatting(ws, header: str, n_rows: int) -> None:
     WHITE = Color(1, 1, 1)
     GREY_BG = Color(0.95, 0.95, 0.95)
 
-    last_col = "L"
+    last_col = "J"
     data_end = _DATA_START_ROW - 1 + max(n_rows, 1)
 
     dollar_fmt = NumberFormat(type='CURRENCY', pattern='$#,##0.00')
     dollar0_fmt = NumberFormat(type='CURRENCY', pattern='$#,##0')
     pct_fmt = NumberFormat(type='PERCENT', pattern='0.0%')
     pct_signed_fmt = NumberFormat(type='PERCENT', pattern='+0.0%;-0.0%')
-    float1_fmt = NumberFormat(type='NUMBER', pattern='0.0')
 
     ranges = [
         (f"A1:{last_col}1", CellFormat(backgroundColor=NAVY, textFormat=TextFormat(bold=True, fontSize=11, foregroundColor=WHITE))),
@@ -108,9 +98,7 @@ def _apply_formatting(ws, header: str, n_rows: int) -> None:
         (f"G{_DATA_START_ROW}:G{data_end}", CellFormat(numberFormat=dollar_fmt)),
         (f"H{_DATA_START_ROW}:H{data_end}", CellFormat(numberFormat=pct_signed_fmt)),
         (f"I{_DATA_START_ROW}:I{data_end}", CellFormat(numberFormat=pct_signed_fmt)),
-        (f"J{_DATA_START_ROW}:J{data_end}", CellFormat(numberFormat=float1_fmt)),
-        (f"K{_DATA_START_ROW}:K{data_end}", CellFormat(numberFormat=pct_fmt)),
-        (f"L{_DATA_START_ROW}:L{data_end}", CellFormat(wrapStrategy="WRAP", verticalAlignment="TOP")),
+        (f"J{_DATA_START_ROW}:J{data_end}", CellFormat(wrapStrategy="WRAP", verticalAlignment="TOP")),
     ]
     try:
         format_cell_ranges(ws, ranges)
@@ -124,46 +112,43 @@ def _apply_formatting(ws, header: str, n_rows: int) -> None:
 
     try:
         set_column_widths(ws, [
-            ("A", 70), ("B", 70), ("C", 100), ("D", 70), ("E", 90),
-            ("F", 90), ("G", 90), ("H", 90), ("I", 90), ("J", 70),
-            ("K", 70), ("L", 500),
+            ("A", 70), ("B", 110), ("C", 100), ("D", 70), ("E", 90),
+            ("F", 90), ("G", 90), ("H", 90), ("I", 90), ("J", 500),
         ])
     except Exception as e:
         print(f"  ! Column widths failed: {e}")
 
 
-@app.command()
-def main(live: bool = typer.Option(False, "--live", help="Write to Google Sheets")):
+def main(live: bool = False, crosshairs: Optional[CrosshairsResult] = None) -> Optional[CrosshairsResult]:
+    """Rebuild Decision_View from Crosshairs. Callable from manager.py and CLI."""
     print(f"Building Decision View (Live={live})...")
+
+    if crosshairs is None:
+        client = get_gspread_client()
+        ss = client.open_by_key(config.PORTFOLIO_SHEET_ID)
+        holdings_rows = _read_records(ss, config.TAB_HOLDINGS_CURRENT)
+        valuation_rows = _read_records(ss, "Valuation_Card")
+        crosshairs = produce_crosshairs(
+            holdings_rows=holdings_rows,
+            valuation_rows=valuation_rows,
+            read_sheets_if_needed=False,
+        )
+
+    header = crosshairs.header_line
+    items = crosshairs.items
+
+    if not live:
+        _print_dry_run(header, items)
+        return crosshairs
 
     client = get_gspread_client()
     ss = client.open_by_key(config.PORTFOLIO_SHEET_ID)
 
-    holdings_rows = _read_records(ss, config.TAB_HOLDINGS_CURRENT)
-    valuation_rows = _read_records(ss, "Valuation_Card")
-
-    try:
-        ws_agent = ss.worksheet(config.TAB_AGENT_OUTPUTS)
-        df_agent = get_latest_agent_outputs(ws_agent)
-    except Exception as e:
-        print(f"Warning: Could not read {config.TAB_AGENT_OUTPUTS}: {e}")
-        import pandas as pd
-        df_agent = pd.DataFrame()
-
-    header = _run_header(df_agent)
-    positions = _build_position_table(holdings_rows, valuation_rows, df_agent)
-    signal_rows = [p for p in positions if p.get("Signal")]
-
-    if not live:
-        _print_dry_run(header, signal_rows)
-        return
-
     grid = [_pad([header]), _pad(_DEC_COLS)]
-    for p in signal_rows:
+    for item in items:
         grid.append(_pad([
-            p["Ticker"], p["Signal"], p["MV"], p["Wt%"], p["Price"],
-            p["Trim"], p["Add"], p["->Trim %"], p["->Add %"],
-            p["Fwd P/E"], p["52w %"], p["Rationale"],
+            item.ticker, item.reason_code, item.mv, item.wt, item.price,
+            item.trim, item.add, item.dist_trim, item.dist_add, item.rationale,
         ]))
     grid = [["" if c is None else c for c in row] for row in grid]
 
@@ -175,10 +160,20 @@ def main(live: bool = typer.Option(False, "--live", help="Write to Google Sheets
 
     safe_execute(ws_dec.clear)
     safe_execute(ws_dec.update, range_name="A1", values=grid, value_input_option="RAW")
-    _apply_formatting(ws_dec, header, len(signal_rows))
+    _apply_formatting(ws_dec, len(items))
 
-    print(f"\nWrote {len(signal_rows)} signal rows to {tab_name}")
+    print(f"Decision_View refreshed. {len(items)} Crosshairs rows.")
+    return crosshairs
+
+
+@app.command()
+def cli(live: bool = typer.Option(False, "--live", help="Write to Google Sheets")):
+    main(live=live)
 
 
 if __name__ == "__main__":
-    app()
+    # Preserve `python tasks/build_decision_view.py --live`
+    if len(sys.argv) > 1 and sys.argv[1] not in ("cli", "--help", "-h"):
+        main(live="--live" in sys.argv)
+    else:
+        app()

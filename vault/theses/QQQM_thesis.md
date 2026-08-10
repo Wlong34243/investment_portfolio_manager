@@ -6,6 +6,8 @@ entry_date:
 last_reviewed: '2026-08-08'
 cost_basis: 60864.509999999966
 current_allocation: 10.64%
+triggers:
+  trigger_type: ceiling_only
 ---
 # QQQM — Investment Thesis
 
@@ -42,6 +44,7 @@ priority: very low (core foundational holding)
 
 ## Review Log
 - 2026-04: Initiated. Thesis intact. Monitoring overall tech multiples, mega-cap earnings growth, and the 10-year Treasury yield.
+- 2026-08-09: trigger_type set explicit: ceiling_only (broad index ETF; no single-metric band is meaningful). See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
 **Current Allocation:** 10.64%

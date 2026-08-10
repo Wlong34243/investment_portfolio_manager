@@ -7,6 +7,8 @@ last_reviewed: '2026-08-08'
 triggers: {}
 cost_basis: 2735.4
 current_allocation: 0.62%
+triggers:
+  trigger_type: ceiling_only
 ---
 # NOW — Investment Thesis
 
@@ -58,6 +60,7 @@ Funding source of choice for higher-conviction ideas. The 2026-06-25 sell alread
 - 2026-06-02: Bought 10 shares @ $128.90. Last add under the original thesis.
 - 2026-06-25: **Conviction break.** Sold 100 shares @ $90.61, below both remaining lot costs and at a realized loss, as part of a same-day redeployment (NOW + IGV proceeds ≈ $15.1K → APO, KRE, MELI, LLY ≈ $15.5K). Rationale: no longer willing to underwrite a seat-priced workflow vendor through the AI transition. Rotation not yet in Trade_Log — run `derive_rotations` and promote.
 - 2026-07-26: Thesis rewritten to match the decision. Scaling state hold → reduce; priority very low → high. Removed stale `price_trim_above: 250.00` trigger (stock ~$98.78; the trigger was unreachable and would never have fired). Prior bull case retained for reference but marked non-operative.
+- 2026-08-09: trigger_type: ceiling_only, not trailing_pe. Band computed from FY2022-2025 annual EPS (n=4, range 76.4-171.1) but live current trailing P/E sits 2% off the historical min -- an add-below-p25 trigger (92.8) would fire immediately and stay fired. Reference only. Computed 2026-08-09: trailing P/E min/p25/median/p75/max = 76.4/92.8/119.4/135.9/171.1, live current 78.1 @ $124.88. See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
 **Current Allocation:** 0.62%

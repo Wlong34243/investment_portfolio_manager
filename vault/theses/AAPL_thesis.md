@@ -6,6 +6,10 @@ entry_date:
 last_reviewed: '2026-08-08'
 cost_basis: 14204.320000002
 current_allocation: 2.28%
+triggers:
+  trigger_type: trailing_pe
+  trailing_pe_trim_above: 36.06
+  trailing_pe_add_below: 27.76
 ---
 # AAPL — Investment Thesis
 
@@ -43,6 +47,7 @@ priority: low
 
 ## Review Log
 - 2026-07: Thesis file created. Product-conviction GARP entry; Bill's stated expectation is a path to $400.
+- 2026-08-09: trigger_type: trailing_pe, not fwd_pe -- forward P/E has no backfillable historical series (analyst-estimate snapshot only); band on trailing, trigger on trailing, never cross the two. FY2022-2025 annual trailing P/E (n=4 annual observations, 2.1x range 20.1-42.3): trailing_pe_add_below=27.76 (~p25), trailing_pe_trim_above=36.06 (~p75). Live current trailing P/E 35.97 falls inside the range. See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
 **Current Allocation:** 2.28%

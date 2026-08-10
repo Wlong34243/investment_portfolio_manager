@@ -8,6 +8,7 @@ current_allocation: 3.16%
 cost_basis: 15042.629999999957
 time_horizon: 3 to 5 years
 triggers:
+  trigger_type: price
   fwd_pe_add_below: 9                 # add when market prices in "energy bust"
   fwd_pe_trim_above: 14               # trim if rerated to rich super-major multiple
   fwd_pe_historical_median:
@@ -76,6 +77,9 @@ next_step: [INFERRED] add — ongoing dollar-cost averaging via small buys, most
 
 ## Rotation Priority
 priority: [INFERRED] low — steady accumulation, no urgency signal in the trade pattern. Not a stated plan; inferred from trade history alone on 2026-07-31 and flagged as such — confirm or correct.
+
+## Review Log
+- 2026-08-09: trigger_type set explicit: price (kept over a cyclical price_to_book override -- the cyclicals objection is specifically that earnings *multiples* invert at peak; XOM's existing 100/140 band is a raw price level, not earnings-based, so that failure mode doesn't apply. fwd_pe band (9/14) retained as secondary, non-primary data. See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
 **Current Allocation:** 3.16%

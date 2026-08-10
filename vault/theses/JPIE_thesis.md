@@ -8,6 +8,7 @@ current_allocation: 0.84%
 cost_basis: 5099.850000003
 time_horizon: 0 to 3 years (tactical cash & ballast)
 triggers:
+  trigger_type: price
   fwd_pe_add_below:
   fwd_pe_trim_above:
   fwd_pe_historical_median:
@@ -70,6 +71,9 @@ next_step: [INFERRED] reduce — steady selling since 2026-06-01 (32 sell transa
 
 ## Rotation Priority
 priority: [INFERRED] medium — activity is active and ongoing as of the most recent sell (2026-07-23), not urgent but not idle either. Not a stated plan; inferred from trade history alone on 2026-07-31 and flagged as such — confirm or correct.
+
+## Review Log
+- 2026-08-09: trigger_type set explicit: price (named exception in the build -- existing 45.0/47.5 band is tied to a historical NAV range). See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
 **Current Allocation:** 0.84%

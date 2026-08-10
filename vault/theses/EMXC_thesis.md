@@ -6,6 +6,8 @@ entry_date:
 last_reviewed: '2026-08-08'
 cost_basis: 14153.9400000045
 current_allocation: 2.27%
+triggers:
+  trigger_type: ceiling_only
 ---
 # EMXC — Investment Thesis
 
@@ -58,6 +60,7 @@ priority: medium
 - 2026-07-15: Bought 5 shares @ $95.91. (Creates the wash-sale overlap noted in Scaling State.)
 - 2026-07-20: **Reduced on Taiwan concentration risk.** Sold 100 shares @ $92.50 (≈$9,250) and same-day bought 125 BBJP @ $73.39–73.48 (≈$9,181). Substitution thesis: move international risk budget out of single-strait semiconductor concentration and into Japanese corporate governance reform, which is a domestic structural story rather than a geopolitical one. Rotation not yet in Trade_Log — run `derive_rotations` and promote.
 - 2026-07-26: Thesis rewritten to match the decision. Scaling state hold → reduce. Concentration risk promoted to primary risk. Replaced the placeholder "~$82.50 (Assumed)" cost basis with actual basis from the bundle.
+- 2026-08-09: trigger_type set explicit: ceiling_only (EM basket). See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
 **Current Allocation:** 2.27%

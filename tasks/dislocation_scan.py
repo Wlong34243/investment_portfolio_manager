@@ -82,19 +82,13 @@ def _latest_bundle_positions() -> list:
 
 
 def _thesis_style(ticker: str):
-    """Ground-truth style for a HELD ticker, read from its thesis
-    frontmatter. Never inferred for unheld names -- there is no reliable
-    per-ticker style map outside the vault, and guessing one would
-    fabricate a classification nobody made."""
-    path = os.path.join(THESES_DIR, f"{ticker}_thesis.md")
-    if not os.path.exists(path):
+    """Ground-truth style for a HELD ticker via shared thesis_reader."""
+    from utils.thesis_reader import get_style, thesis_path_for_ticker
+
+    path = thesis_path_for_ticker(ticker)
+    if not path.exists():
         return None
-    try:
-        text = Path(path).read_text(encoding="utf-8")
-    except OSError:
-        return None
-    m = re.search(r"^\s*style:\s*['\"]?([A-Za-z_]+)['\"]?\s*$", text, re.MULTILINE)
-    return m.group(1) if m else None
+    return get_style(path=path)
 
 
 def _price_history_returns(ticker: str) -> dict:

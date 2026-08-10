@@ -5,9 +5,10 @@ framework_preference: Thesis-first, scale-in, consensus-target trim discipline
 entry_date: 2026-05-03
 last_reviewed: '2026-08-08'
 triggers:
+  trigger_type: ceiling_only
   entry_price: 159.00
   seed_position_weight: 0.64%
-  price_trim_above: consensus_price_target
+  # price_trim_above: consensus_price_target  # superseded 2026-08-09, non-primary/stale -- see Review Log
 cost_basis: 23564.63000000001
 current_allocation: 3.63%
 ---
@@ -61,6 +62,7 @@ priority: medium
 - 2026-08-07: Weight language corrected to bundle 6c531c97 (3.55%, ceiling breach 0.55pp). Long-end rate sensitivity added under Key Risks. next_step flagged for Bill confirmation; trim discipline unchanged (consensus price target).
 - 2026-05: Initiated at $159.00 as a 0.64% seed position. Trim discipline tied to consensus price targets. Monitoring AI-driven load growth, regional power-market tightness, merchant generation capture, and capital-allocation execution.
 - 2026-07-28: Scaling State updated. File had continued to describe a 0.64% seed after five further buys; position is 2.63%, 0.37% under the THEME ceiling. No thesis change.
+- 2026-08-09: trigger_type: ceiling_only, replacing the unusable consensus_price_target trim -- consensus targets ratchet upward with price and structurally can never fire (see prompts/trigger_types_2026-08-09.md "why not analyst price targets"). price_to_book considered (cyclical override) but live current P/B 15.23 is only 15% above the FY2022-2025 historical max of 13.24 -- inside noise for a 4-point series spanning 1.62-13.24, not a real signal. Reference only. Computed 2026-08-09: P/B min/p25/median/p75/max = 1.62/2.52/5.54/9.82/13.24, live current 15.23 @ $140.59.
 
 <!-- region:position_state -->
 **Current Allocation:** 3.63%

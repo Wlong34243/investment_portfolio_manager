@@ -6,6 +6,10 @@ entry_date:
 last_reviewed: '2026-08-08'
 cost_basis: 15037.729999999898
 current_allocation: 2.66%
+triggers:
+  trigger_type: discount_from_high
+  trim_below_discount_pct: 5.6
+  add_above_discount_pct: 28.3
 ---
 # WSM — Investment Thesis
 
@@ -42,6 +46,7 @@ priority: medium
 
 ## Review Log
 - 2026-07: Thesis file created. Underwater entry is by design (dip-buying quality); watch margins, not the stock price.
+- 2026-08-09: trigger_type: discount_from_high (FUND default). 2021-2026 daily discount-from-52w-high (n=1196 trading days): trim_below_discount_pct=5.6 (~p25), add_above_discount_pct=28.3 (~p75). Live current discount 0.0% -- at its 52-week high, inside trim territory. See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
 **Current Allocation:** 2.66%

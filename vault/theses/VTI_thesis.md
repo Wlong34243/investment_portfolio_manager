@@ -6,6 +6,8 @@ entry_date:
 last_reviewed: '2026-08-08'
 cost_basis: 21199.2199999994
 current_allocation: 3.67%
+triggers:
+  trigger_type: ceiling_only
 ---
 # VTI — Investment Thesis
 
@@ -41,6 +43,7 @@ priority: lowest
 
 ## Review Log
 - 2026-04: Initiated. Maintaining position to capture baseline market growth and prevent cash drag.
+- 2026-08-09: trigger_type set explicit: ceiling_only (ballast). See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
 **Current Allocation:** 3.67%

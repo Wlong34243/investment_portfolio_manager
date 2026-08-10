@@ -1,8 +1,9 @@
 """
 utils/agent_signals.py — Shared Agent_Outputs reader.
 
-Extracted from tasks/build_decision_view.py so both build_decision_view.py and
-tasks/build_command_center.py can depend on it without importing each other.
+Retained for archive tooling and any residual Agent_Outputs inspection.
+As of 2026-08-10, build_command_center / build_decision_view no longer call
+this — Crosshairs (tasks/build_crosshairs.py) is the Decision_View feed.
 """
 
 import pandas as pd

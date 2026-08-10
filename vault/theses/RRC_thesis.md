@@ -7,6 +7,9 @@ last_reviewed: '2026-08-08'
 cost_basis: 5602.275
 current_allocation: 0.93%
 triggers:
+  trigger_type: price_to_book
+  pb_trim_above: 2.36
+  pb_add_below: 2.05
   entry_price: 38.66
   seed_position_weight: 0.61%
   price_add_below:                  # [BILL] — not set at entry
@@ -210,6 +213,7 @@ Assembled 2026-08-07. **Research, not thesis** — recorded so the reasoning is 
   the 75 MMcf/d agreement. Corrected two figures in the process — NGL premium (Q2 actual vs
   full-year guidance) and the Midwest agreement's unconfirmed end user. `next_step`,
   `priority`, exit conditions and source authorship remain `[BILL]`.
+- 2026-08-09: trigger_type: price_to_book (cyclical override -- gas E&P commodity, GARP-style multiple-based triggers fail on cyclicals). Band from FY2022-2025 annual book value (price ÷ book equity/share at each fiscal year-end, n=4 annual observations, tight 1.7x range 1.74-3.02): pb_add_below=2.05 (~p25), pb_trim_above=2.36 (~p75). Live current P/B 1.90 sits near the add zone. See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
 **Current Allocation:** 0.93%

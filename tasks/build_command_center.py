@@ -1,12 +1,13 @@
 """
 tasks/build_command_center.py — Build the 0_DASHBOARD Command Center tab.
 
-Reads from: Holdings_Current, Daily_Snapshots, Risk_Metrics, Valuation_Card, Agent_Outputs.
+Reads from: Holdings_Current, Daily_Snapshots, Risk_Metrics, Valuation_Card,
+plus Crosshairs producer (Trim/Add distance, dislocation, missing levels).
 Writes to:  0_DASHBOARD (clear-and-rebuild, single batch_update call).
 One position row per holding (sorted by Market Value descending), joined against
-Valuation_Card and the latest Agent_Outputs run, plus one bulk yfinance call for
-52-week range (not baked into any tab yet). No price targets or recommendations
-originate here — Trim/Add/Signal are all read from existing sandboxed surfaces.
+Valuation_Card, plus one bulk yfinance call for 52-week range. Crosshairs top 5
+sits above the health footer. Signal column is blank (Agent_Outputs dropped
+2026-08-10). No price targets or buy/sell language originate here.
 """
 
 import json
@@ -31,10 +32,10 @@ else:
 import pandas as pd
 
 import config
-from utils.sheet_readers import get_gspread_client, read_gsheet_robust
+from utils.sheet_readers import get_gspread_client, read_gsheet_robust, coerce_sheet_numeric_series
 from utils.sheet_writers import safe_execute
-from utils.agent_signals import get_latest_agent_outputs, ACTION_SEVERITIES
 from utils.level_coverage import compute_level_coverage, format_footer_line
+from tasks.build_crosshairs import CrosshairsResult, TOP_N_DASHBOARD, produce_crosshairs
 from tasks.compute_rotation_attribution import (
     HORIZONS as ROTATION_HORIZONS,
     _as_float as _rotation_as_float,
@@ -234,6 +235,7 @@ def _compute_headline_kpis(daily_rows: list[dict], holdings_rows: list[dict]) ->
         "total_value": None, "cash_pct": None, "strategic_cash": None,
         "day_change_dollar": None, "day_change_pct": None,
         "mtd_pct": None, "ytd_pct": None, "snapshot_date": None,
+        "stale": False, "stale_as_of": None, "holdings_import_date": None,
     }
     if not daily_rows:
         return out
@@ -247,9 +249,10 @@ def _compute_headline_kpis(daily_rows: list[dict], holdings_rows: list[dict]) ->
     if df.empty:
         return out
 
+    # Route through shared sanitizer (pandas-3 string-dtype bug class).
     for col in ["Total Value", "Cash Value"]:
         if col in df.columns:
-            df[col] = pd.to_numeric(df[col], errors="coerce")
+            df[col] = coerce_sheet_numeric_series(df[col])
 
     latest = df.iloc[-1]
     total_value = latest.get("Total Value")
@@ -261,15 +264,38 @@ def _compute_headline_kpis(daily_rows: list[dict], holdings_rows: list[dict]) ->
         out["cash_pct"] = float(cash_value) / float(total_value)
 
     # Strategic cash: Market Value sum for CASH_TICKERS
+    holdings_import_date = None
     if holdings_rows:
         df_h = pd.DataFrame(holdings_rows)
-        df_h["Market Value"] = pd.to_numeric(df_h.get("Market Value", pd.Series(dtype=float)), errors="coerce").fillna(0)
+        if "Market Value" in df_h.columns:
+            df_h["Market Value"] = coerce_sheet_numeric_series(df_h["Market Value"])
+        else:
+            df_h["Market Value"] = 0.0
         strat_cash = df_h.loc[df_h["Ticker"].astype(str).isin(config.CASH_TICKERS), "Market Value"].sum()
         out["strategic_cash"] = float(strat_cash)
+        if "Import Date" in df_h.columns:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", UserWarning)
+                idates = pd.to_datetime(df_h["Import Date"], errors="coerce").dropna()
+            if not idates.empty:
+                holdings_import_date = idates.max()
+                out["holdings_import_date"] = holdings_import_date
+
+    # STALE when Daily_Snapshots lags Holdings_Current import date (calendar day).
+    snap_day = latest["Date"].normalize() if hasattr(latest["Date"], "normalize") else pd.Timestamp(latest["Date"]).normalize()
+    if holdings_import_date is not None:
+        hold_day = (
+            holdings_import_date.normalize()
+            if hasattr(holdings_import_date, "normalize")
+            else pd.Timestamp(holdings_import_date).normalize()
+        )
+        if snap_day < hold_day:
+            out["stale"] = True
+            out["stale_as_of"] = snap_day.strftime("%Y-%m-%d")
 
     # Day change
     if len(df) >= 2 and total_value:
-        prev_val = pd.to_numeric(df.iloc[-2].get("Total Value"), errors="coerce")
+        prev_val = float(df.iloc[-2].get("Total Value") or 0) or None
         if prev_val:
             out["day_change_dollar"] = float(total_value - prev_val)
             out["day_change_pct"] = float((total_value - prev_val) / prev_val)
@@ -279,14 +305,14 @@ def _compute_headline_kpis(daily_rows: list[dict], holdings_rows: list[dict]) ->
     # MTD
     month_rows = df[df["Date"].dt.month == now.month]
     if not month_rows.empty and total_value:
-        start_val = pd.to_numeric(month_rows.iloc[0].get("Total Value"), errors="coerce")
+        start_val = float(month_rows.iloc[0].get("Total Value") or 0) or None
         if start_val:
             out["mtd_pct"] = float(total_value / start_val - 1)
 
     # YTD
     year_rows = df[df["Date"].dt.year == now.year]
     if not year_rows.empty and total_value:
-        start_val = pd.to_numeric(year_rows.iloc[0].get("Total Value"), errors="coerce")
+        start_val = float(year_rows.iloc[0].get("Total Value") or 0) or None
         if start_val:
             out["ytd_pct"] = float(total_value / start_val - 1)
 
@@ -329,39 +355,7 @@ def _fetch_52w_ranges(tickers: list[str]) -> dict[str, tuple[float, float]]:
 
 
 # ---------------------------------------------------------------------------
-# Agent signal — reuses get_latest_agent_outputs(); picks the highest-priority
-# active signal for a ticker the same way build_decision_view.py does, so the
-# two views agree on what "ADD"/"TRIM" means for a given ticker. No price
-# targets or new recommendations are generated here, only surfaced.
-# ---------------------------------------------------------------------------
-
-_SIGNAL_PRIORITY = ("valuation", "macro", "thesis")
-
-
-def _ticker_signal(df_agent: pd.DataFrame, ticker: str) -> tuple[str, str]:
-    """Return (signal_chip, rationale) for a ticker, or ("", "") if no active signal."""
-    if df_agent.empty:
-        return "", ""
-    ticker_agents = df_agent[df_agent["ticker"] == ticker]
-    if ticker_agents.empty:
-        return "", ""
-    for agent_name in _SIGNAL_PRIORITY:
-        agent_rows = ticker_agents[ticker_agents["agent"] == agent_name]
-        if agent_rows.empty:
-            continue
-        row = agent_rows.iloc[0]
-        sev = str(row.get("severity", "")).lower()
-        if sev not in ACTION_SEVERITIES:
-            continue
-        signal = str(row.get("signal_type", "") or row.get("action", ""))
-        if signal:
-            rationale = str(row.get("rationale", "") or row.get("action", ""))
-            return signal.upper(), rationale
-    return "", ""
-
-
-# ---------------------------------------------------------------------------
-# Position table assembly — Holdings_Current x Valuation_Card x Agent signals
+# Position table assembly — Holdings_Current x Valuation_Card
 # ---------------------------------------------------------------------------
 
 def _safe_float(val):
@@ -386,7 +380,6 @@ def _safe_float_nonzero(val):
 def _build_position_table(
     holdings_rows: list[dict],
     valuation_rows: list[dict],
-    df_agent: pd.DataFrame,
 ) -> list[dict]:
     if not holdings_rows:
         return []
@@ -432,7 +425,6 @@ def _build_position_table(
             if hi > lo:
                 pos_52w = (price - lo) / (hi - lo)
 
-        signal, rationale = _ticker_signal(df_agent, ticker)
         no_valuation = fwd_pe is None and peg is None and trim is None and add is None
 
         # Compute Earnings proximity flag (+/- 3 days)
@@ -467,8 +459,8 @@ def _build_position_table(
             "Add": add,
             "->Trim %": dist_trim,
             "->Add %": dist_add,
-            "Signal": signal,
-            "Rationale": rationale,
+            "Signal": "",
+            "Rationale": "",
             "no_valuation": no_valuation,
             "Earnings": earnings_val,
         })
@@ -523,6 +515,28 @@ def _rotation_block_rows(rp: dict) -> list[list]:
     return rows
 
 
+_CROSS_COLS = [
+    "Reason", "Ticker", "MV", "Wt%", "Price", "Trim", "Add", "->Trim %", "->Add %", "Rationale",
+]
+
+
+def _crosshairs_block_rows(crosshairs: Optional[CrosshairsResult], top_n: int = TOP_N_DASHBOARD) -> list[list]:
+    if crosshairs is None:
+        return [
+            _pad(["CROSSHAIRS — (not built)"]),
+            _pad(_CROSS_COLS),
+        ]
+    rows = [_pad([crosshairs.header_line]), _pad(_CROSS_COLS)]
+    for item in crosshairs.top(top_n):
+        rows.append(_pad([
+            item.reason_code, item.ticker, item.mv, item.wt, item.price,
+            item.trim, item.add, item.dist_trim, item.dist_add, item.rationale,
+        ]))
+    if not crosshairs.items:
+        rows.append(_pad(["(none)", "", "", "", "", "", "", "", "", ""]))
+    return rows
+
+
 def _build_grid(
     headline: dict,
     beta: Optional[float],
@@ -531,6 +545,7 @@ def _build_grid(
     spy_ytd_raw: Optional[float],
     level_coverage: Optional[dict] = None,
     rotation_perf: Optional[dict] = None,
+    crosshairs: Optional[CrosshairsResult] = None,
 ) -> list[list]:
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
 
@@ -540,8 +555,11 @@ def _build_grid(
 
     grid: list[list] = []
 
-    # R1: Title
-    grid.append(_pad([f"PORTFOLIO COMMAND CENTER  —  As of {now_str}"]))
+    # R1: Title (surface STALE when Daily_Snapshots lags Holdings_Current)
+    title = f"PORTFOLIO COMMAND CENTER  —  As of {now_str}"
+    if headline.get("stale") and headline.get("stale_as_of"):
+        title += f"  —  STALE (as of {headline['stale_as_of']})"
+    grid.append(_pad([title]))
 
     # R2: KPI strip (9 label/value pairs)
     grid.append(_pad([
@@ -569,6 +587,10 @@ def _build_grid(
             pos["UGL $"], pos["UGL %"], pos["Fwd P/E"], pos["PEG"], pos["52w %"],
             pos["Trim"], pos["Add"], pos["->Trim %"], pos["->Add %"], pos["Signal"], pos["Earnings"],
         ]))
+
+    # blank + Crosshairs top-N (before health footer)
+    grid.append(_pad([]))
+    grid.extend(_crosshairs_block_rows(crosshairs))
 
     # blank
     grid.append(_pad([]))
@@ -620,9 +642,10 @@ def _fmt_preview(val, kind: str) -> str:
 
 def _print_dry_run(
     headline: dict, beta: Optional[float], positions: list[dict],
-    health: dict, spy_ytd_raw: Optional[float], n_rules: int, n_notes: int,
+    health: dict, spy_ytd_raw: Optional[float], n_rules: int,
     level_coverage: Optional[dict] = None,
     rotation_perf: Optional[dict] = None,
+    crosshairs: Optional[CrosshairsResult] = None,
 ) -> None:
     from rich.console import Console
     from rich.table import Table
@@ -644,6 +667,11 @@ def _print_dry_run(
         f"Strategic Cash {_fmt_preview(headline.get('strategic_cash'), '$0')}  |  "
         f"Beta {_fmt_preview(beta, 'f2')}"
     )
+    if headline.get("stale") and headline.get("stale_as_of"):
+        console.print(
+            f"[bold red]STALE (as of {headline['stale_as_of']})[/] — "
+            f"Daily_Snapshots lags Holdings_Current import date"
+        )
 
     table = Table(show_header=True, header_style="bold")
     for col in _POS_COLS:
@@ -668,6 +696,26 @@ def _print_dry_run(
             pos["Earnings"] or "",
         )
     console.print(table)
+
+    if crosshairs is not None:
+        console.print(f"\n[bold]{crosshairs.header_line}[/] (top {TOP_N_DASHBOARD})")
+        xt = Table(show_header=True, header_style="bold")
+        for col in _CROSS_COLS:
+            xt.add_column(col, overflow="fold")
+        for item in crosshairs.top(TOP_N_DASHBOARD):
+            xt.add_row(
+                item.reason_code, item.ticker,
+                _fmt_preview(item.mv, "$0"),
+                _fmt_preview(item.wt, "%u"),
+                _fmt_preview(item.price, "$"),
+                _fmt_preview(item.trim, "$"),
+                _fmt_preview(item.add, "$"),
+                _fmt_preview(item.dist_trim, "%"),
+                _fmt_preview(item.dist_add, "%"),
+                item.rationale or "",
+            )
+        console.print(xt)
+
     footer = (
         f"Last Refresh {health['last_refresh']}  |  Bundle {health['bundle_hash']}  |  "
         f"Schwab {health['schwab_token']}  |  FMP Cache {health['fmp_cache_age']}"
@@ -675,7 +723,7 @@ def _print_dry_run(
     if level_coverage:
         footer += f"  |  {format_footer_line(level_coverage)}"
     console.print(footer)
-    console.print(f"[dim]Would write {n_rules} conditional-format rules and {n_notes} cell notes.[/]")
+    console.print(f"[dim]Would write {n_rules} conditional-format rules.[/]")
 
     if rotation_perf is not None:
         console.print("\n[bold]ROTATION ATTRIBUTION — EVIDENCE, ONE REGIME, OVERLAPPING WINDOWS[/]")
@@ -839,17 +887,6 @@ def _apply_formatting(ws, headline: dict, positions: list[dict]) -> None:
     except Exception as e:
         logger.warning("0_DASHBOARD conditional formatting failed: %s", e)
 
-    # --- Cell notes: full agent rationale on the Signal cell ---
-    notes = {}
-    for i, pos in enumerate(positions):
-        if pos.get("Rationale"):
-            notes[f"O{_DATA_START_ROW + i}"] = pos["Rationale"]
-    if notes:
-        try:
-            ws.update_notes(notes)
-        except Exception as e:
-            logger.warning("0_DASHBOARD notes write failed: %s", e)
-
     try:
         set_frozen(ws, rows=4, cols=1)
     except Exception as e:
@@ -869,14 +906,16 @@ def _apply_formatting(ws, headline: dict, positions: list[dict]) -> None:
 # Main
 # ---------------------------------------------------------------------------
 
-def main(live: bool = False) -> None:
+def main(live: bool = False, crosshairs: Optional[CrosshairsResult] = None) -> Optional[CrosshairsResult]:
     """
     Rebuild the 0_DASHBOARD Command Center tab: a KPI strip plus one row per
-    position (sorted by Market Value descending), joined against Valuation_Card
-    and the latest Agent_Outputs run.
+    position (sorted by Market Value descending), joined against Valuation_Card,
+    plus a Crosshairs top-5 block.
 
     Args:
         live: If False (default), prints the rendered table to stdout without writing.
+        crosshairs: Optional precomputed CrosshairsResult (morning pipeline shares
+            one producer list with Decision_View). If None, produces locally.
     """
     client = get_gspread_client()
     ss = client.open_by_key(config.PORTFOLIO_SHEET_ID)
@@ -888,27 +927,32 @@ def main(live: bool = False) -> None:
     rotation_rows = _read_records(ss, config.TAB_ROTATION_REVIEW)
     rotation_perf = _rotation_performance(rotation_rows) if rotation_rows else None
 
-    try:
-        ws_agent = ss.worksheet(config.TAB_AGENT_OUTPUTS)
-        df_agent = get_latest_agent_outputs(ws_agent)
-    except Exception as e:
-        logger.warning("Could not read %s: %s", config.TAB_AGENT_OUTPUTS, e)
-        df_agent = pd.DataFrame()
-
     headline = _compute_headline_kpis(daily_rows, holdings_rows)
     beta = _compute_beta(risk_rows)
-    positions = _build_position_table(holdings_rows, valuation_rows, df_agent)
+    positions = _build_position_table(holdings_rows, valuation_rows)
     health = _check_system_health()
     spy_ytd_raw = _spy_ytd_pct()
     level_coverage = compute_level_coverage([p["Ticker"] for p in positions])
 
-    n_notes = sum(1 for p in positions if p.get("Rationale"))
+    if crosshairs is None:
+        crosshairs = produce_crosshairs(
+            holdings_rows=holdings_rows,
+            valuation_rows=valuation_rows,
+            level_coverage=level_coverage,
+            read_sheets_if_needed=False,
+        )
 
     if not live:
-        _print_dry_run(headline, beta, positions, health, spy_ytd_raw, _N_CONDITIONAL_RULES, n_notes, level_coverage, rotation_perf)
-        return
+        _print_dry_run(
+            headline, beta, positions, health, spy_ytd_raw, _N_CONDITIONAL_RULES,
+            level_coverage, rotation_perf, crosshairs,
+        )
+        return crosshairs
 
-    grid = _build_grid(headline, beta, positions, health, spy_ytd_raw, level_coverage, rotation_perf)
+    grid = _build_grid(
+        headline, beta, positions, health, spy_ytd_raw,
+        level_coverage, rotation_perf, crosshairs,
+    )
 
     existing_tabs = {ws.title for ws in ss.worksheets()}
     if config.TAB_DASHBOARD not in existing_tabs:
@@ -926,6 +970,7 @@ def main(live: bool = False) -> None:
     _apply_formatting(ws, headline, positions)
 
     logger.info("Command Center refreshed. %d rows written.", len(grid))
+    return crosshairs
 
 
 if __name__ == "__main__":

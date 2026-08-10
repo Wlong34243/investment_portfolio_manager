@@ -795,19 +795,9 @@ def build_podcasts_md(days, positions=None, composite_hash="unknown"):
 
 
 def extract_frontmatter(text):
-    m = re.match(r"^---\s*\n(.*?)\n---\s*\n", text, re.DOTALL)
-    if not m:
-        return {}, text
-    fm_text = m.group(1)
-    body = text[m.end():]
-    fm = {}
-    for line in fm_text.splitlines():
-        km = re.match(r"^([A-Za-z_][A-Za-z0-9_]*):\s*(.*)$", line)
-        if km:
-            key = km.group(1)
-            val = km.group(2).strip().strip("'\"")
-            fm[key] = val
-    return fm, body
+    """Top-level frontmatter keys only. Delegates to thesis_reader (strips # comments)."""
+    from utils.thesis_reader import extract_frontmatter_flat
+    return extract_frontmatter_flat(text)
 
 
 def strip_regions(text):
@@ -848,20 +838,9 @@ def strip_citation_markers(text):
 
 
 def build_style_map():
-    """ticker -> style, read from thesis frontmatter in the vault."""
-    style_map = {}
-    for path in sorted(glob.glob(os.path.join("vault", "theses", "*_thesis.md"))):
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                raw = f.read()
-        except OSError:
-            continue
-        fm, _ = extract_frontmatter(raw)
-        ticker = fm.get("ticker") or os.path.basename(path).replace("_thesis.md", "")
-        style = fm.get("style")
-        if style:
-            style_map[ticker] = style
-    return style_map
+    """ticker -> style taxonomy key from thesis frontmatter (shared reader)."""
+    from utils.thesis_reader import style_map_from_vault
+    return style_map_from_vault()
 
 
 CEILING_OVERRIDE_RE = re.compile(r"style_size_ceiling_pct:\s*([0-9.]+)")

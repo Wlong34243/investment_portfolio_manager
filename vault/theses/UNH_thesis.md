@@ -8,6 +8,7 @@ current_allocation: 3.74%
 cost_basis: 19723.77
 time_horizon: 1 to 3 years
 triggers:
+  trigger_type: fwd_pe
   fwd_pe_add_below: 14
   fwd_pe_trim_above: 18             # lowered from 20 — taking off risk earlier into strength
   fwd_pe_historical_median:
@@ -85,6 +86,9 @@ At 2.22% the position is sub-scale. Two valid paths from here:
 
 priority: medium
 <!-- Bill note (2026 prose): eligible to close on further strength and redeploy to core ETFs. -->
+
+## Review Log
+- 2026-08-09: trigger_type set explicit: fwd_pe (GARP default; existing 14/18 band retained as primary). See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
 **Current Allocation:** 3.74%

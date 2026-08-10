@@ -48,12 +48,12 @@ class VaultDocument:
     content_hash: str           # SHA256 of UTF-8 text bytes
     content: str | None         # full text; None if over MAX_FILE_BYTES
     thesis_present: bool        # False if ticker had no file
-    style: str | None           # parsed from ## Style section
+    style: str | None           # taxonomy key from frontmatter style: (GARP/THEME/FUND/ETF)
     scaling_state: str | None   # parsed from ## Scaling State
     rotation_priority: str | None  # parsed from ## Rotation Priority
     size_bytes: int
     skipped: bool               # True if over MAX_FILE_BYTES
-    triggers: dict = field(default_factory=lambda: {"price_trim_above": None, "price_add_below": None})
+    triggers: dict = field(default_factory=dict)  # arbitrary trigger_type-shaped keys; see _parse_thesis_fields
 
 @dataclass
 class VaultBundle:
@@ -100,32 +100,50 @@ def _safe_float(v) -> float | None:
         return None
 
 
+# trigger_type is the one key under `triggers:` that names a category
+# (e.g. "fwd_pe"), not a band value -- every other key is coerced through
+# _safe_float, same as price_trim_above/price_add_below always were.
+_CATEGORICAL_TRIGGER_KEYS = {"trigger_type"}
+
+
+def _coerce_trigger_value(key, value):
+    if key in _CATEGORICAL_TRIGGER_KEYS:
+        if value is None:
+            return None
+        v = str(value).strip()
+        return v or None
+    return _safe_float(value)
+
+
+def _coerce_triggers_dict(raw: dict) -> dict:
+    """Carries whatever keys the file's `triggers:` block declares, instead
+    of hardcoding extraction of just price_trim_above/price_add_below.
+    Values are float-coerced except for the categorical `trigger_type` key,
+    matching the coercion price_trim_above/price_add_below always got."""
+    return {k: _coerce_trigger_value(k, v) for k, v in (raw or {}).items()}
+
+
 def _parse_thesis_fields(content: str) -> dict:
     """
     Parse the _thesis.md template fields.
-    Looks for Style, Scaling State, Rotation Priority sections,
-    and the ```yaml triggers: block for price_trim_above / price_add_below.
-
-    On malformed YAML, triggers defaults to nulls and a "__parse_error__"
-    sentinel key is set so build_vault_bundle can log it to vault_skip_log.
+    Style taxonomy comes from frontmatter `style:` (shared thesis_reader),
+    not from the free-prose ## Style section.
+    Scaling State / Rotation Priority still come from body sections.
+    Triggers from fenced ```yaml or nested frontmatter YAML.
     """
+    from utils.thesis_reader import get_style, load_frontmatter
+
     lines = content.splitlines()
     result = {
-        "style": None,
+        "style": get_style(content),
         "scaling_state": None,
         "rotation_priority": None,
-        "triggers": {"price_trim_above": None, "price_add_below": None},
+        "triggers": {},
     }
 
     for i, line in enumerate(lines):
         line = line.strip()
-        if line == "## Style":
-            for j in range(i + 1, len(lines)):
-                val = lines[j].strip()
-                if val and not val.startswith("<!--"):
-                    result["style"] = val
-                    break
-        elif line == "## Scaling State":
+        if line == "## Scaling State":
             for j in range(i + 1, len(lines)):
                 val = lines[j].strip()
                 if val.startswith("next_step:"):
@@ -151,27 +169,16 @@ def _parse_thesis_fields(content: str) -> dict:
         try:
             trig_data = _yaml.safe_load("triggers:\n" + trig_match.group(1)) or {}
             raw = trig_data.get("triggers", {}) or {}
-            result["triggers"] = {
-                "price_trim_above": _safe_float(raw.get("price_trim_above")),
-                "price_add_below":  _safe_float(raw.get("price_add_below")),
-            }
+            result["triggers"] = _coerce_triggers_dict(raw)
         except Exception as exc:
             result["triggers"]["__parse_error__"] = str(exc)
         return result
 
-    # Strategy 2: triggers nested inside frontmatter YAML (older thesis format)
-    fm_match = re.match(r"^---\n(.*?)\n---", content, re.DOTALL)
-    if fm_match:
-        try:
-            fm_data = _yaml.safe_load(fm_match.group(1)) or {}
-            raw = fm_data.get("triggers", {}) or {}
-            if raw:
-                result["triggers"] = {
-                    "price_trim_above": _safe_float(raw.get("price_trim_above")),
-                    "price_add_below":  _safe_float(raw.get("price_add_below")),
-                }
-        except Exception as exc:
-            result["triggers"]["__parse_error__"] = str(exc)
+    # Strategy 2: triggers nested inside frontmatter YAML (all 39 live files)
+    fm_data = load_frontmatter(content)
+    raw = fm_data.get("triggers", {}) or {}
+    if raw and isinstance(raw, dict):
+        result["triggers"] = _coerce_triggers_dict(raw)
 
     return result
 
@@ -204,7 +211,7 @@ def _load_vault_document(
         parsed = _parse_thesis_fields(text)
     else:
         parsed = {"style": None, "scaling_state": None, "rotation_priority": None,
-                  "triggers": {"price_trim_above": None, "price_add_below": None}}
+                  "triggers": {}}
 
     return VaultDocument(
         ticker=ticker,

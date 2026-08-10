@@ -8,6 +8,7 @@ current_allocation: 5.95%
 cost_basis: 26733.419999996368
 time_horizon: 3 to 5 years
 triggers:
+  trigger_type: fwd_pe
   fwd_pe_add_below: 20              # add on AI/reg fear-driven pullbacks
   fwd_pe_trim_above: 32             # trim only if multiple gets to peak-AI-mania territory
   fwd_pe_historical_median:
@@ -78,6 +79,9 @@ I will exit or sharply reduce only on **structural** breaks:
 ## Rotation Priority
 
 priority: very low
+
+## Review Log
+- 2026-08-09: trigger_type set explicit: fwd_pe (GARP default; existing 20/32 band retained as primary). See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
 **Current Allocation:** 5.95%

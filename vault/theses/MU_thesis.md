@@ -1,12 +1,13 @@
 ---
 ticker: MU
-style: GARP                         # set by Bill 2026-08-07
+style: GARP
 framework_preference:
 entry_date: '2026-08-07'
 last_reviewed: '2026-08-08'
 cost_basis: 7845.409999999998
 current_allocation: 1.30%
 triggers:
+  trigger_type: ceiling_only
   entry_price: 875.65               # 5 sh, average cost
   seed_position_weight: 0.72%
   price_add_below:                  # [BILL] — not set at entry
@@ -223,6 +224,7 @@ priority: **[BILL]** — not stated at entry.
   Combined direct memory exposure with SKHY is 1.59%.
 - Outstanding `[BILL]`: the combined-memory ceiling decision, price triggers, priority, exit
   conditions, source authorship, and the SKHY cross-reference on the contracted-HBM condition.
+- 2026-08-09: trigger_type: ceiling_only, not price_to_book. Cyclical override considered (this thesis itself calls forward P/E "a peak-cycle artifact of scarcity, not a structural moat") but the P/B band computed from FY2022-2025 annual book value (n=4, range 1.05-3.79) isn't usable either: live current P/B 9.84 is 2.6x the historical max, and MU's book value is itself inflated by the same boom earnings that inflate the multiple (quarterly operating income flowing straight into retained equity) -- P/B hasn't escaped cycle contamination, just moved it somewhere less dangerous than P/E. Reference only, not a live trigger; revisit once more history accumulates. Computed 2026-08-09: FY2022-2025 P/B min/p25/median/p75/max = 1.05/1.38/2.10/2.54/3.79, live current 9.84 @ $877.57. See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
 **Current Allocation:** 1.30%

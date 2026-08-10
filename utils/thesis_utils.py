@@ -95,52 +95,49 @@ class ThesisManager:
 
     def update_triggers(self, updates: Dict) -> str:
         """
-        Updates the triggers block while preserving comments and order.
+        Updates trigger keys. Prefers a fenced ```yaml triggers: block when
+        present; otherwise merges into nested frontmatter `triggers:` (the
+        format all 39 live thesis files use as of 2026-08).
         """
+        import logging
+
         match = self.TRIGGERS_BLOCK_PATTERN.search(self.raw_content)
-        if not match:
+        if match:
+            raw_triggers_content = match.group("content")
+            yaml = YAML()
+            yaml.preserve_quotes = True
+            yaml.indent(mapping=2, sequence=4, offset=2)
+
+            def represent_none(self, data):
+                return self.represent_scalar(u'tag:yaml.org,2002:null', u'null')
+            yaml.representer.add_representer(type(None), represent_none)
+
+            try:
+                data = yaml.load("triggers:\n" + raw_triggers_content)
+                if not data or "triggers" not in data:
+                    return self.raw_content
+                for k, v in updates.items():
+                    data["triggers"][k] = v
+                stream = io.StringIO()
+                yaml.dump(data["triggers"], stream)
+                new_content_lines = stream.getvalue().splitlines()
+                indented_content = "\n".join(["  " + line for line in new_content_lines]) + "\n"
+                new_block = f"```yaml\ntriggers:\n{indented_content}```"
+                self.raw_content = self.TRIGGERS_BLOCK_PATTERN.sub(new_block, self.raw_content)
+            except Exception as e:
+                logging.error(f"Failed to update fenced triggers YAML: {e}")
             return self.raw_content
 
-        # Load the content as triggers. We prepend 'triggers:\n' to keep the structure.
-        # But we need to make sure we don't lose the indentation of the original content.
-        raw_triggers_content = match.group("content")
-        
-        # Use a temporary YAML object for this specific block to control its formatting
-        yaml = YAML()
-        yaml.preserve_quotes = True
-        yaml.indent(mapping=2, sequence=4, offset=2)
-        # Preserve 'null' as 'null' instead of empty
-        def represent_none(self, data):
-            return self.represent_scalar(u'tag:yaml.org,2002:null', u'null')
-        yaml.representer.add_representer(type(None), represent_none)
-
-        try:
-            # We load the whole block including 'triggers:' if we can, 
-            # but the pattern only captured the content.
-            # Let's try to load it with a dummy top level.
-            data = yaml.load("triggers:\n" + raw_triggers_content)
-            if not data or "triggers" not in data:
-                return self.raw_content
-                
-            for k, v in updates.items():
-                data["triggers"][k] = v
-            
-            stream = io.StringIO()
-            yaml.dump(data["triggers"], stream)
-            
-            # The dumped content might have a trailing newline, and we want to 
-            # re-indent it if it was indented in the original.
-            # But wait, the original was indented by 2 spaces.
-            new_content_lines = stream.getvalue().splitlines()
-            # Most theses have 2 spaces indentation for trigger values
-            indented_content = "\n".join(["  " + line for line in new_content_lines]) + "\n"
-            
-            new_block = f"```yaml\ntriggers:\n{indented_content}```"
-            self.raw_content = self.TRIGGERS_BLOCK_PATTERN.sub(new_block, self.raw_content)
-        except Exception as e:
-            logging.error(f"Failed to update triggers YAML: {e}")
-            
-        return self.raw_content
+        # Nested frontmatter path (live files)
+        fm = self.get_frontmatter()
+        if fm is None:
+            return self.raw_content
+        nested = fm.get("triggers")
+        if not isinstance(nested, dict):
+            nested = {}
+        nested.update(updates)
+        fm["triggers"] = nested
+        return self.update_frontmatter({"triggers": nested})
 
     def save(self, backup: bool = False):
         if backup:

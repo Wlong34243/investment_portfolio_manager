@@ -6,6 +6,8 @@ entry_date:
 last_reviewed: '2026-08-08'
 cost_basis: 17426.2900000005
 current_allocation: 2.93%
+triggers:
+  trigger_type: ceiling_only
 ---
 # LLY — Investment Thesis
 
@@ -43,6 +45,7 @@ priority: medium
 
 ## Review Log
 - 2026-07: Thesis file created. Designated add-target for proceeds from AI-creator trims (LRCX/CRWV/ZETA candidate rotation).
+- 2026-08-09: trigger_type: ceiling_only, not trailing_pe. The annual step-function method (hold each FY's EPS constant until the next annual report) breaks down for fast EPS growth (5.80->11.71->22.95, FY2023-2025): for most of each year the denominator holds the prior, lower EPS, systematically inflating the historical band, so live current trailing P/E (39.8) sits below the entire computed historical range (46.2-163.5) -- band and live reading aren't measuring comparable things. Revisit with true rolling-TTM data. See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
 **Current Allocation:** 2.93%

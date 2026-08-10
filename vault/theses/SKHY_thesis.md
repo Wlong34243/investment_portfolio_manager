@@ -8,6 +8,7 @@ current_allocation: 0.86%
 cost_basis: 5284.4800000007
 time_horizon: TBD - see open items
 triggers:
+  trigger_type: ceiling_only
   entry_price: 138.00
   seed_position_weight: 0.47%
   price_add_below:
@@ -176,6 +177,7 @@ priority: low — seed position, recently opened, no action contemplated.
   the direct Nasdaq listing removed the need for a proxy. Entry made with explicit
   acknowledgement that memory is at cycle-peak economics — this is a bet on contracted
   HBM having changed the cycle, not a bet that memory is cheap.
+- 2026-08-09: trigger_type: ceiling_only. Cyclicality re-examined and corrected: SKHY is SK hynix -- a memory maker, the same cycle as MU -- so the cyclical override class applies regardless of this file's own prose (checking for the word "cyclical" in the thesis text, rather than what the business is, was the wrong test). price_to_book not computed: yfinance's fundamentals for this ticker mix KRW-denominated equity with USD price/shares, producing nonsensical book-value-per-share figures (hundreds of thousands per share) -- a currency-handling bug, not a thin-history problem, and not worth fixing since the 3.0% THEME ceiling binds at 0.86% weight long before a valuation trigger would matter. See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
 **Current Allocation:** 0.86%

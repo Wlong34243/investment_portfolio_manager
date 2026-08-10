@@ -5,9 +5,10 @@ framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
 entry_date: 2026-04-20
 last_reviewed: '2026-08-08'
 current_allocation: 1.64%
-cost_basis: 7589.549999999 # post-split
+cost_basis: 7589.549999999
 time_horizon: 3 to 5 years
 triggers:
+  trigger_type: ceiling_only
   fwd_pe_add_below:
   fwd_pe_trim_above:
   fwd_pe_historical_median:
@@ -41,6 +42,7 @@ Thematic Specialist bucket — market-position bet on AI infrastructure buildout
 
 ## Review Log
 - 2026-07-20: Thesis rewritten. Prior file content was a mislabeled duplicate of the NVDA thesis (frontmatter ticker had been corrected in June, but body was never fixed). Rebuilt using Bill's actual ETN reasoning: thematic AI-buildout power-infrastructure support play.
+- 2026-08-09: trigger_type set explicit: ceiling_only (THEME default; position-size bet, no existing valuation anchor). See prompts/trigger_types_2026-08-09.md.
 
 ## Scaling State
 next_step: [BILL]

@@ -6,6 +6,8 @@ entry_date:
 last_reviewed: '2026-08-08'
 cost_basis: 16757.490000000602
 current_allocation: 3.66%
+triggers:
+  trigger_type: ceiling_only
 ---
 # XBI — Investment Thesis
 
@@ -42,6 +44,7 @@ priority: medium (due to high volatility, requires occasional rebalancing)
 
 ## Review Log
 - 2026-04: Initiated. Thesis intact. Monitoring the M&A environment, FDA approval trends, and the trajectory of the 10-year Treasury yield.
+- 2026-08-09: trigger_type set explicit: ceiling_only (~100-holding sector basket; no clean single-name-style valuation anchor). See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
 **Current Allocation:** 3.66%

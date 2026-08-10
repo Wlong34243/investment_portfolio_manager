@@ -5,6 +5,7 @@ framework_preference:
 entry_date:
 last_reviewed: '2026-08-08'
 triggers:
+  trigger_type: price
   price_trim_above: 22.00
 cost_basis: 6465.590000010541
 current_allocation: 1.29%
@@ -47,6 +48,7 @@ priority: low
 ## Review Log
 - 2026-04: Initiated. Thesis intact. Monitoring distribution coverage ratios, debt reduction targets, and NGL export volumes.
 - **2026-08-07:** Added a Bull Case bullet on domestic AI/data-center gas demand as a G&P volume driver, sourced to the 2026-07-26 ILTB episode, per `prompts/consolidate_and_thesis_repair_2026-08-07.md` Step 5.2. Edited directly rather than through the archive-before-overwrite convention; `ET_thesis.md.bak` backfilled retroactively from pre-edit content to close that gap.
+- 2026-08-09: trigger_type set explicit: price (kept -- existing 22.00 trim is a genuine, deliberately-set anchor; the THEME default of ceiling_only would have discarded it. See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
 **Current Allocation:** 1.29%

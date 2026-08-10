@@ -8,6 +8,7 @@ current_allocation: 3.11%
 cost_basis: 19854.969999999965
 time_horizon: 2 to 4 years
 triggers:
+  trigger_type: fwd_pe
   fwd_pe_add_below: 28              # add on cyclical / multiple-compression pullbacks
   fwd_pe_trim_above: 50             # trim if multiple gets into peak-AI-infrastructure-mania territory
   fwd_pe_historical_median:
@@ -18,8 +19,8 @@ triggers:
   operating_margin_floor_pct:
   style_size_ceiling_pct: 3.0       # thematic single names cap lower than GARP core
 drawdown_tolerance_pct: 0.35
-panic_buy_trigger_drawdown_pct: 0.25   # SUSPENDED 2026-07-29 — see Scaling State
-add_triggers_suspended: true           # drawdown-based adds gated on Q3 backlog conversion
+panic_buy_trigger_drawdown_pct: 0.25
+add_triggers_suspended: true
 ---
 # VRT (Vertiv) — Investment Thesis (New 2026-05-18)
 
@@ -119,6 +120,7 @@ Tax posture if rotated: unrealized loss is roughly -$2,400 at $243. All lots in 
   - **Not changed:** the core picks-and-shovels thesis. Nothing in this print contradicts the claim that AI datacenter buildout continues and needs integrated power and thermal infrastructure. What changed is my confidence that this particular operator captures it at this particular multiple.
 - **Open items:** (1) compute implied Q4 from the Q1 actual; (2) listen to the 11:00 ET call for orders growth, backlog conversion and cancellation-rate commentary — if backlog grew against the $15B base and orders held, the miss is logistics; if backlog flattened, the Americas gap is demand and this file needs rewriting rather than defending; (3) populate Trim and Add price cells for VRT in the portfolio Sheet, which are currently blank, so the morning brief reports proximity for this position.
 - **2026-08-07:** `next_step` and the Rotation Priority sleeve-math paragraph corrected in-session (68 shares / 3.14%, ceiling breach flagged `[BILL]`; sleeve total updated to 10.23%) ahead of `prompts/consolidate_and_thesis_repair_2026-08-07.md` Step 4, which specified the same edits. Edited directly rather than through the archive-before-overwrite convention; `VRT_thesis.md.bak` backfilled retroactively from pre-edit content to close that gap.
+- 2026-08-09: trigger_type set explicit: fwd_pe (argued exception to the THEME default of ceiling_only -- existing 28/50 band is a genuine, fully-populated anchor). See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
 **Current Allocation:** 3.11%

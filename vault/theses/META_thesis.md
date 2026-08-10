@@ -8,11 +8,12 @@ current_allocation: 1.39%
 cost_basis: 8852.820000000003
 time_horizon: 3 to 5+ years
 triggers:
+  trigger_type: fwd_pe
   fwd_pe_add_below: 18              # add if ads/engagement solid but market panics
   fwd_pe_trim_above: 28             # trim if multiple rich AND RL spend re-accelerates
   fwd_pe_historical_median:
   price_add_below:                  # valuation + KPIs drive actions, not price levels alone
-  price_trim_above: 841.00
+  # price_trim_above: 841.00  # superseded 2026-08-09, non-primary/stale -- see Review Log
   discount_from_52w_high_add:
   revenue_growth_floor_pct: 8       # want at least high single-digit top line
   operating_margin_floor_pct:       # focus on FCF margin and Reality Labs losses
@@ -112,6 +113,7 @@ pending. [CONFIRM]
   reports a 9.00% ceiling and a −6.79% drift, i.e. the GARP class default. The custom
   per-position ceiling is being ignored by whatever computes drift. Drift against the
   intended 4.0% ceiling is −1.79%, not −6.79%. Logged for the repo, not resolved here.
+- 2026-08-09: trigger_type set explicit: fwd_pe (GARP default; existing 18/28 band retained as primary). Commented out price_trim_above: 841.00 -- non-primary once fwd_pe was confirmed primary, and left live it would have kept parsing as a dead trigger. See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
 **Current Allocation:** 1.39%

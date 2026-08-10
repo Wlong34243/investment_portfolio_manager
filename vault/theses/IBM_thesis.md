@@ -6,6 +6,10 @@ entry_date: '2026-07-27'
 last_reviewed: '2026-08-08'
 cost_basis: 11391.830000000511
 current_allocation: 2.00%
+triggers:
+  trigger_type: discount_from_high
+  trim_below_discount_pct: 2.0
+  add_above_discount_pct: 11.9
 ---
 # IBM — Investment Thesis
 
@@ -45,6 +49,7 @@ priority: medium
 
 ## Review Log
 - 2026-07-27: Thesis file created. Entry sourced from Stephanie Link commentary (overdone selloff, ~19 P/E value case, Open Secure AI Alliance participation, CEO's AI-software positioning, and the post-miss analyst price-target cuts). Funded by trimming IGV, VEU, and JEPI.
+- 2026-08-09: trigger_type: discount_from_high (FUND default -- thesis is about price dislocation, trigger should be too). 2021-2026 daily discount-from-52w-high (n=1196 trading days): trim_below_discount_pct=2.0 (~p25, near highs), add_above_discount_pct=11.9 (~p75, a meaningful pullback). Live current discount 27.9% is well past the add threshold -- a real reading, not thin-sample noise (n=1196). See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
 **Current Allocation:** 2.00%

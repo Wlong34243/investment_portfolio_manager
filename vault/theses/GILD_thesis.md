@@ -8,6 +8,7 @@ current_allocation: 1.42%
 cost_basis: 8445.974999998107
 time_horizon: 3 to 5 years
 triggers:
+  trigger_type: price
   fwd_pe_add_below: 12              # add when HIV durability fears or pipeline disappointment drives discount
   fwd_pe_trim_above: 20             # trim if market re-rates on oncology catalyst hype
   fwd_pe_historical_median: 14
@@ -61,6 +62,9 @@ next_step: hold; add on weakness below $90 if HIV franchise metrics are intact
 
 ## Rotation Priority
 priority: low -- this is a slow-moving income-plus-optionality position
+
+## Review Log
+- 2026-08-09: trigger_type set explicit: price (kept over the FUND default of discount_from_high -- existing 90/140 band is real and working; discarding it for a theoretical improvement would have been a net loss, not a fix. fwd_pe band (12/20) retained as secondary, non-primary data. See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
 **Current Allocation:** 1.42%

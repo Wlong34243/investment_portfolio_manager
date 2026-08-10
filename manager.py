@@ -960,17 +960,25 @@ def dashboard_refresh(
     update: bool = typer.Option(False, "--update"),
     tx_days: int = typer.Option(90, "--tx-days"),
 ):
-    """Refreshes Dashboard views."""
+    """Refreshes Dashboard views (runs same-day dislocation if missing)."""
     from tasks.build_valuation_card import main as build_val
     from tasks.build_decision_view import main as build_dec
     from tasks.build_command_center import main as build_cc
+    from tasks.build_crosshairs import ensure_dislocation_payload, produce_crosshairs
     from tasks.format_sheets_dashboard_v2 import main as format_v2
     import scripts.live_update as live_up
 
-    if update: live_up.update_portfolio(tx_days=tx_days)
+    if update:
+        live_up.update_portfolio(tx_days=tx_days)
+
+    payload, path = ensure_dislocation_payload(run_if_missing=True, live=live)
+    if path:
+        console.print(f"[dim]Dislocation scan:[/] {path}")
+
     build_val(live=live)
-    build_dec(live=live)
-    build_cc(live=live)
+    crosshairs = produce_crosshairs(dislocation_payload=payload, dislocation_path=path)
+    build_cc(live=live, crosshairs=crosshairs)
+    build_dec(live=live, crosshairs=crosshairs)
     format_v2(live=live)
     console.print("[green]Dashboard refresh complete (Valuation_Card, Decision_View, 0_DASHBOARD).[/]")
 
@@ -1455,13 +1463,16 @@ def morning(
     skip_dislocation: bool = typer.Option(False, "--skip-dislocation", help="Skip the dislocation scan."),
 ):
     """
-    Run the full market-open pipeline: health -> Schwab sync -> snapshot -> podcast sync -> dashboard refresh -> vault sync -> composite bundle -> AI briefing export -> derive rotations -> dislocation scan.
+    Run the full market-open pipeline: health -> Schwab sync -> snapshot -> podcast sync ->
+    dislocation scan -> dashboard refresh (Crosshairs) -> vault sync -> composite bundle ->
+    AI briefing export -> derive rotations -> publish.
     """
     _acquire_pipeline_lock()
     from tasks.health import run_all_checks, exit_code as health_exit_code, CRITICAL, FAIL, WARN, PASS
     from tasks.build_valuation_card import main as build_val
     from tasks.build_decision_view import main as build_dec
     from tasks.build_command_center import main as build_cc
+    from tasks.build_crosshairs import produce_crosshairs
     from tasks.format_sheets_dashboard_v2 import main as format_v2
     from tasks.build_tax_control import refresh_tax_control_sheet
     import scripts.live_update as live_up
@@ -1645,15 +1656,41 @@ def morning(
     else:
         step_results.append(("Moments", "skip"))
 
-    # 6. Refresh Dashboard (Rebuild Views from Bundle)
+    # 4.5 Dislocation Scan — must run before STEP 5 so Crosshairs sees today's payload
+    # (0_DASHBOARD is clear-and-rebuild; a late scan cannot be patched in).
+    dislocation_payload = None
+    dislocation_path = None
+    if not skip_dislocation:
+        console.print("\n[bold cyan]STEP 4.5 - Dislocation Scan...[/]")
+        try:
+            from tasks.dislocation_scan import run_scan
+            scan_result = run_scan(live=live)
+            dislocation_payload = scan_result["payload"]
+            dislocation_path = scan_result["json_path"]
+            console.print(
+                f"[green]Dislocation scan:[/] {dislocation_payload['universe_size']} tickers, "
+                f"{dislocation_payload['flagged_count']} flagged. {scan_result['md_path']}"
+            )
+            step_results.append(("Dislocation Scan", "pass"))
+        except Exception as e:
+            console.print(f"[red]Dislocation scan failed: {e}[/]")
+            step_results.append(("Dislocation Scan", "fail"))
+    else:
+        step_results.append(("Dislocation Scan", "skip"))
+
+    # 5. Refresh Dashboard (Valuation_Card → Crosshairs → CC / Decision_View)
     console.print("\n[bold cyan]STEP 5 - Refreshing Dashboard...[/]")
     try:
         build_val(live=live, include_all=True)
-        build_dec(live=live)
+        crosshairs = produce_crosshairs(
+            dislocation_payload=dislocation_payload,
+            dislocation_path=dislocation_path,
+        )
+        build_cc(live=live, crosshairs=crosshairs)
+        build_dec(live=live, crosshairs=crosshairs)
         if not skip_tax:
             refresh_tax_control_sheet(live=live)
             tax_refreshed = True
-        build_cc(live=live)
         format_v2(live=live)
         step_results.append(("Dashboard", "pass"))
     except Exception as e:
@@ -1817,27 +1854,11 @@ def morning(
         console.print(f"[red]Derive rotations failed: {e}[/]")
         step_results.append(("Derive Rotations", "fail"))
 
-    # 12. Dislocation Scan (facts-only screen; no Sheet writes in v1)
-    if not skip_dislocation:
-        console.print("\n[bold cyan]STEP 11 - Dislocation Scan...[/]")
-        try:
-            from tasks.dislocation_scan import run_scan
-            scan_result = run_scan(live=live)
-            payload = scan_result["payload"]
-            console.print(
-                f"[green]Dislocation scan:[/] {payload['universe_size']} tickers, "
-                f"{payload['flagged_count']} flagged. {scan_result['md_path']}"
-            )
-            step_results.append(("Dislocation Scan", "pass"))
-        except Exception as e:
-            console.print(f"[red]Dislocation scan failed: {e}[/]")
-            step_results.append(("Dislocation Scan", "fail"))
-    else:
-        step_results.append(("Dislocation Scan", "skip"))
+    # Dislocation already ran at STEP 4.5 (before dashboard/Crosshairs). Do not re-scan.
 
-    # 13. Publish analysis outputs to Drive (non-fatal; Drive letter may not
+    # 12. Publish analysis outputs to Drive (non-fatal; Drive letter may not
     # exist on some future machine -- degrades to warn, never aborts).
-    console.print("\n[bold cyan]STEP 12 - Publishing Analysis to Drive...[/]")
+    console.print("\n[bold cyan]STEP 11 - Publishing Analysis to Drive...[/]")
     try:
         from scripts.backup_to_drive import publish_analysis
         publish_result = publish_analysis(live=live)

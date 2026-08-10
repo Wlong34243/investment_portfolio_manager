@@ -7,6 +7,7 @@ last_reviewed: '2026-08-08'
 cost_basis: 8975.27
 current_allocation: 1.45%
 triggers:
+  trigger_type: ceiling_only
   entry_price:
   seed_position_weight: 1.47%
   price_add_below:
@@ -45,6 +46,7 @@ priority: Medium-High
 - 2026-08-07: Populated scaffold with Stephanie Link's core investment thesis framework focusing on power grid infrastructure, AI data center enablement, earnings quality, and CapEx sensitivity.
 - 2026-08-07: Scaffold file created. Weight snapshot from bundle 6c531c97: 1.47% / $8,861.58.
 - **2026-08-07 — calibration note (added, not Bill's original text):** the $500B tech-capex threshold in Key Risks checks out as a genuine level, with a caveat on what it implies. Big Four 2026 planned capex is roughly $630B (some counts $690-725B), against $388B actual in 2025. $500B sits 20-30% below plan but still ~29% above 2025 actual — so the trigger fires on a sharp deceleration in growth, not on an absolute decline. Sources: [Data Center Richness](https://datacenterrichness.substack.com/p/hyperscalers-plan-630-billion-in), [CNBC](https://www.cnbc.com/2026/02/06/google-microsoft-meta-amazon-ai-cash.html), [Futurum](https://futurumgroup.com/insights/ai-capex-2026-the-690b-infrastructure-sprint/). Threshold itself not changed.
+- 2026-08-09: trigger_type set explicit: ceiling_only (THEME default; blank triggers scaffold, no anchor argued). See prompts/trigger_types_2026-08-09.md.
 <!-- region:position_state -->
 **Current Allocation:** 1.45%
 **Cost Basis:** $8,975.27

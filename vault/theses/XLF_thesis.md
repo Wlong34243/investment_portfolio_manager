@@ -6,6 +6,8 @@ entry_date:
 last_reviewed: '2026-08-08'
 cost_basis: 8192.789999999999
 current_allocation: 1.39%
+triggers:
+  trigger_type: ceiling_only
 ---
 # XLF — Investment Thesis
 
@@ -42,6 +44,7 @@ priority: low
 
 ## Review Log
 - 2026-04: Initiated. Thesis intact. Monitoring the 2-year/10-year Treasury yield curve, consumer credit card delinquency rates, and M&A volume.
+- 2026-08-09: trigger_type set explicit: ceiling_only (sector basket). See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
 **Current Allocation:** 1.39%

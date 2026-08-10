@@ -6,6 +6,8 @@ entry_date:
 last_reviewed: '2026-08-08'
 cost_basis: 10568.379999999976
 current_allocation: 1.92%
+triggers:
+  trigger_type: ceiling_only
 ---
 # IFRA — Investment Thesis
 
@@ -42,6 +44,7 @@ priority: low
 
 ## Review Log
 - 2026-04: Initiated. Thesis intact. Monitoring the pace of federal fund disbursement, industrial capacity utilization, and skilled labor availability.
+- 2026-08-09: trigger_type set explicit: ceiling_only (thematic basket). See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
 **Current Allocation:** 1.92%

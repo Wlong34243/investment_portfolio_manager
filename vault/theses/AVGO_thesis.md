@@ -5,7 +5,8 @@ framework_preference:
 entry_date:
 last_reviewed: '2026-08-08'
 triggers:
-  price_trim_above: 195.00
+  trigger_type: ceiling_only
+  # price_trim_above: 195.00  # superseded 2026-08-09, non-primary/stale -- see Review Log
 cost_basis: 12002.9100000005
 current_allocation: 2.47%
 ---
@@ -44,6 +45,7 @@ priority: medium
 
 ## Review Log
 - 2026-04: Initiated. Thesis intact. Monitoring VMware subscription transition progress, Custom ASIC revenue growth, and debt paydown pace.
+- 2026-08-09: trigger_type: ceiling_only, not trailing_pe. Commented out stale price_trim_above: 195.00 -- fires permanently against a $427.76 spot price and would have kept parsing as a dead trigger. trailing_pe band rejected: FY2024 diluted EPS of $1.23 (VMware acquisition amortization/costs) blows the computed historical max to 198.83, a GAAP artifact, not a real valuation reading. Revisit once that period rolls out of the trailing window. See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
 **Current Allocation:** 2.47%
