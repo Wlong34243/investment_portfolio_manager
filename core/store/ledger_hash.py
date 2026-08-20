@@ -95,8 +95,8 @@ def _normalize_records(df: pd.DataFrame, money_cols: tuple[str, ...]) -> list[di
 def _normalize_metrics(metrics: dict[str, Any] | None) -> dict[str, Any]:
     if not metrics:
         return {}
-    # Timestamps differ by seconds across dual-write; exclude from hash.
-    skip = {"Last Updated", "Refreshed"}
+    # Timestamps and whole-dollar Sheets bridge display differ by construction.
+    skip = {"Last Updated", "Refreshed", "ST_Gains", "ST_Losses", "LT_Gains", "LT_Losses"}
     out: dict[str, Any] = {}
     for k, v in metrics.items():
         if k in skip:

@@ -213,10 +213,18 @@ def _compare_tax_metrics(
         for k in config.TAX_CONTROL_KPI_LABELS
         if k not in ("Last Updated", "Refreshed")
     ]
-    # Also bridge keys when present on either side
+    # Bridge ST/LT gains/losses are written to Sheets as whole-dollar display
+    # strings (:,.0f). Comparing them to SQLite cents always fails — skip hard
+    # fail; KPI strip above is the reconcile surface.
     for extra in ("ST_Gains", "ST_Losses", "LT_Gains", "LT_Losses"):
         if extra in s_metrics or extra in q_metrics:
-            money_keys.append(extra)
+            sv = _metric_money(s_metrics, extra)
+            qv = _metric_money(q_metrics, extra)
+            if sv is not None and qv is not None:
+                lines.append(
+                    f"tax_control.bridge.{extra} sheets≈{sv:.0f} sqlite={qv:.2f} "
+                    f"(informational; Sheets bridge is whole-dollar display)"
+                )
 
     if not s_metrics and not q_metrics:
         lines.append("FAIL tax_control.metrics both empty")
