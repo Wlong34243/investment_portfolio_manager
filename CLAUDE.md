@@ -4,7 +4,7 @@ This file tells Claude (and Claude Code, and Gemini CLI) how to work in this rep
 
 For current build state, read `state.md` (lowercase — the file is `state.md`, not `STATE.md`).
 
-**Last verified against the code: 2026-08-10.** Facts marked *(verified)* were checked against source on that date. If you are reading this much later, re-verify before trusting the numbers.
+**Last verified against the code: 2026-08-20.** Facts marked *(verified)* were checked against source on that date. If you are reading this much later, re-verify before trusting the numbers.
 
 ---
 
@@ -146,7 +146,8 @@ Hash-stamping proves the bytes have not changed since creation. It does not make
 | Path | Purpose |
 |---|---|
 | `manager.py` | CLI spine (Typer). Entry point for everything. |
-| `config.py` | Constants: `PORTFOLIO_SHEET_ID`, `GEMINI_MODEL`, tax rates, `GCP_PROJECT_ID`, `TAB_*` names, `SCHWAB_PRIMARY_ACCOUNT_SUFFIXES`, `SPOTIFY_STUDIO_TRANSCRIPTS_DIR` |
+| `config.py` | Constants: `PORTFOLIO_SHEET_ID`, `GEMINI_MODEL`, tax rates, `GCP_PROJECT_ID`, `TAB_*` names, `SCHWAB_PRIMARY_ACCOUNT_SUFFIXES`, `SPOTIFY_STUDIO_TRANSCRIPTS_DIR`, `STORE_BACKEND` / `SQLITE_DB_PATH` |
+| `core/store/` | PortfolioStore shadow (tax/txn/realized); value-level verify + ledger_hash parity + run streak; `STORE_PRIMARY` default sheets; backup prune; `publish-cockpit`; `pm ui serve` debug-only |
 | `state.md` | Current build state — **read first** |
 | `PORTFOLIO_SHEET_SCHEMA.md` | Sheet tab definitions — **materially incomplete, see Known Doc Gaps** |
 | `CHANGELOG.md` | Dated change history |
@@ -209,7 +210,7 @@ Hash-stamping proves the bytes have not changed since creation. It does not make
 
 **Coverage is poor and the raw numbers were wrong until 2026-08-09.** `_frontmatter_field()`'s regex used `\s*` around the value, which matches newlines — so a blank field captured the *next line's key* as a truthy value, silently counting AMZN, ES, ETN, PWR, SKHY and SNOW as covered. Fixed to same-line matching.
 
-**Corrected coverage (verified 2026-08-09):** 12/39 have a trim level, 6/39 have an add level, **27/39 have neither.**
+**Corrected coverage (verified 2026-08-20):** 39/39 have a trim level, 38/39 have an add level, **0/39 have neither.** ET is the sole holdout on the add level — documented in `ET_thesis.md` as a deliberate hold/reinvest choice, not a coverage gap.
 
 **Do not build any trigger that reads a sell-side price target.** Consensus targets ratchet — analysts revise up after price rises, so a trim pegged to consensus rises with the stock and structurally cannot fire. `VST_thesis.md`'s `price_trim_above: consensus_price_target` is the live proof; it has never been actionable.
 
@@ -238,6 +239,8 @@ Two distinct paths. Do not merge them.
 - **Consecutive daily aggregates repeat each other.** The electrician-shortage segment appeared in both the 08-06 and 08-07 digests. Count a theme once across the run, not once per file.
 
 **Digest-supplied position weights are not computed from the bundle and have been badly wrong** — the 08-02 edition cited JPIE at 4.7% against an actual 0.83%. Never take a weight from a digest; read it from the bundle.
+
+**Verification sidecars are one chain per `source_sha256`.** A digest whose sha already has a sidecar in `data/podcast_summaries/verification/` is not re-verified from scratch. A same-day or later re-check writes a **delta** sidecar (`<digest_basename>_VERIFIED_<YYYY-MM-DD>.md`) that names the prior file explicitly and records only new or corrected claims — the pattern the 2026-08-12 base + 2026-08-13 delta pair already follows. Do not emit a second full pass against an unchanged sha (the 2026-08-10 / 2026-08-11 pair did this; the 08-11 file is archived). Never edit the digest's own `VERIFICATION: PENDING (manual)` footer — that exact string is the Spotify ingestion collision guard (`state.md`, 2026-08-01).
 
 ---
 
@@ -275,7 +278,7 @@ Recorded so they are not rediscovered.
 - **`derive_rotations` emits nested supersets** when re-run against an open cluster window — five rows existed for the single 2026-08-03 basket, each fingerprinting differently so dedup could not catch them. Attribution reads around it; the deriver is unfixed.
 - **`Trade_Log_Staging.Status` vocabulary is collision-prone.** `journal promote` acts on `approve`/`approved` and *writes* `promoted` + `Promoted_At`. Hand-typing `promoted` with a blank `Promoted_At` still makes a row invisible to promote. Schema-ensure and staging marks are gated behind `--live` as of 2026-08-09 (batched update).
 - **Two Schwab-token health signals can disagree** — `tasks/health.py` and `build_command_center._schwab_token_status()` are independent and were observed reporting different states in the same session.
-- **`SCHWAB_PRIMARY_ACCOUNT_SUFFIXES` empty means unscoped aggregation** — `schwab_client` warns once and sums every linked account. A guard refusing sync unless `--force-unscoped` is passed is worth building later; not built 2026-08-09. Tax_Control now fails loudly if suffixes are empty or Account masks are unparseable (no more include-all fallback).
+- **`SCHWAB_PRIMARY_ACCOUNT_SUFFIXES` empty fails closed** unless `SCHWAB_FORCE_UNSCOPED=1` (built 2026-08-20). Tax_Control fails loudly if suffixes empty or Account masks unparseable. Chase/RE funding accounts are out of scope.
 
 ### Fixed 2026-08-09 (write-safety pass) — do not re-open
 - ~~`derive_rotations` CLI wrote Sheets with no flags~~ — now requires `--live`; bare CLI is dry-run (`--dry-run` kept as no-op alias). Morning path unchanged.

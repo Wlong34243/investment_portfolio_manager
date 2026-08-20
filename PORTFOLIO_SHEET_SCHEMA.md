@@ -22,11 +22,24 @@ This matrix defines which system component is authorized to write to each tab.
 | **Trade_Log** | Manual/CLI | Append with dedup | Enriched and approved rotations |
 | **Decision_Log** | Manual/CLI | Append | Qualitative decision journal |
 | **AI_Suggested_Alloc**| AI Sandbox | Clear-and-rebuild | Suggestions from external analysis |
+| **Agent_Outputs** | AI Sandbox | Archive-and-overwrite | Deprecated agent signals (Crosshairs no longer joins) |
+| **Agent_Outputs_Archive** | AI Sandbox | Append | Archived Agent_Outputs runs |
 | **Realized_GL** | Manual Import| Append with dedup | Historical tax lot detail |
 | **Target_Allocation**| Manual Only | Manual | Strategic model weights |
 | **Config** | Manual Only | Manual | System rates and thresholds |
 | **Logs** | Pipeline | Append | System audit trail |
 | **Disagreements** | Manual Only | Manual | Log of LLM vs Human drift |
+
+### Tab roles (PortfolioStore migration, 2026-08-20)
+
+| Role | Tabs | Notes |
+| :--- | :--- | :--- |
+| **Authoritative** | Holdings_Current, Transactions, Trade_Log, Realized_GL | Broker/manual truth; dual-written to SQLite on `--live` |
+| **Manual** | Target_Allocation, Config, Disagreements, Decision_Log | Humans only; agents never write Target_Allocation |
+| **Computed** | 0_DASHBOARD, Valuation_Card, Decision_View, Tax_Control, Rotation_Review, Trade_Log_Staging, Risk/Income/History/Snapshots | Rebuildable; SQLite shadows Tax/Decision/Rotation/Holdings |
+| **Sandbox** | Agent_Outputs*, AI_Suggested_Allocation | Non-authoritative |
+
+Local ledger: `data/portfolio_store.db` via `core/store`. **Phase 1 spine** = transactions + realized_gl + tax_control (holdings is cache-only). Backup: `pm store backup`. Monitoring: static HTML → Drive (`pm store publish-cockpit`), not localhost. Sheets remains phone cockpit for Tax/CC until publish is trusted.
 
 ---
 

@@ -1,6 +1,87 @@
 # CHANGELOG — Investment Portfolio Manager
 
+## [2026-08-20] — Audit-aligned repairs (Schwab fail-closed, podcast atomic write, valuation drift, store parity)
+
+Driven by `agent_outputs/audit/repo_audit_2026-08-20.md` + re-authored prompts v1.1.0.
+
+### Decisions
+- **Chase / RE funding account out of scope** — dropped uncommitted `TAX_CONTROL_EXTRA_ACCOUNT_SUFFIXES` / `8895` widening; Tax_Control = primary Schwab suffixes only.
+- **JPIE realized swing immaterial** vs overall gains — not a SQLite seed blocker.
+
+### Fixed
+- **Schwab:** empty `SCHWAB_PRIMARY_ACCOUNT_SUFFIXES` fails closed unless `SCHWAB_FORCE_UNSCOPED=1`; docstrings match allowlist behavior.
+- **Podcast:** `weekly_podcast_sync` archives then single `update` — no `batch_clear` before write (prevents empty-tab data loss).
+- **Publish/UI:** Decision header via `get_store().get_decision_header()` (no STORE_PRIMARY bypass).
+
+### Added
+- **Valuation drift agent** (`pm agent valuation-drift`): Option A baselines; FMP fields in market bundle `fundamentals` (schema **1.1.0** — intentional `bundle_hash` lineage break).
+- **`pm store bundle-parity`**: Sheets vs SQLite ledger fingerprint using bundle canonical SHA; streak requires ≥1 parity ok.
+
+## [2026-08-20] — PortfolioStore v2.2 (tax reconcile + ledger hash + run streak)
+
+Closes three gaps left in v2.1. Prompt: `prompts/store_migration_sqlite_2026-08-20.md` **v2.2.0** (v2.1.0 archived).
+
+### Corrected / added
+- **`tax_control` in verify** — Sheets multi-zone parse; KPI money metrics + lots sums to the cent (not txn/realized only).
+- **Ledger hash parity** — `core/store/ledger_hash.py`; `pm store verify` requires Sheets vs SQLite canonical fingerprint match (bundle SHA discipline; money normalized to cents). Phase 1 acceptance during dual-write.
+- **Streak = consecutive verify runs** (default N=5), not calendar days; weekends with no run neither advance nor break; non-vacuous via `realized_row_count > 0` in window.
+- Phase 2 prep note: inventory hand-edited tabs before `STORE_PRIMARY` flip.
+
+## [2026-08-20] — PortfolioStore v2.1 (gate hardening)
+
+Hardens soft gates left in v2.0. Prompt: `prompts/store_migration_sqlite_2026-08-20.md` **v2.1.0**. Archives: `prompts/archive/store_migration_sqlite_2026-08-20_v1.0.0.md`, `…_v2.0.0.md`.
+
+### Corrected
+- **Step 0** is executor-run with paste-stdout boxes (not author `[x]`).
+- **Value-level verify** to the cent (proceeds, cost, G/L, ST/LT, disallowed) — count-only is insufficient.
+- **`STORE_PRIMARY`** explicit hand flip (default `sheets`); no auto-flip on SQLite row presence. Revert: `set STORE_PRIMARY=sheets`.
+- **Streak gate restored:** `STORE_VERIFY_STREAK_N` (default 5) consecutive calendar days + ≥1 Realized_GL Closed Date in window; `pm store verify --require-streak`.
+- **Backup retention:** keep-N-daily / keep-N-weekly prune after live VACUUM (local + Drive).
+
+## [2026-08-20] — PortfolioStore v2 (tax ledger first + Drive monitoring)
+
+Course correction on the same-day v1 pass. Prompt archived as v2.0.0 under `prompts/archive/`.
+
+### Corrected
+- **Phase 1 spine** is `transactions` + `realized_gl` + `tax_control` (not `positions_current` — that is a morning cache).
+- **Backup in Phase 1:** `pm store backup --live` → `VACUUM INTO` + `.sha256` + copy to `G:\My Drive\Portfolio_Analysis\db_backups\`.
+- **No Alembic in Phase 1** (removed from requirements); rebuild from Sheets/Schwab is free during dual-write.
+- **Phase 3 = monitoring:** `pm store publish-cockpit --live [--publish]` writes static HTML to `agent_outputs/command_center/` and mirrors via existing Drive publish globs. Local `pm ui serve` is debug-only (phone access is the requirement).
+- **Thesis numeric dual-truth** stays in Phase 2 (vault sync via PortfolioStore) — not optional Phase 4.
+
+### Added (retained from v1)
+- `core/store/` Protocol + Sheets/SQLite/Dual; `pm store status|verify|sync-from-sheets|backup|publish-cockpit`
+- Live shadow on tax refresh, txn sync, realized-gl ingest, decision view, rotation review
+- `config.TAB_VALUATION_CARD` / `TAB_DECISION_VIEW`
+
 ## [Unreleased]
+
+- **Thesis housekeeping 2026-08-14 (Bill-confirmed, no inferred theses):** AAPL Scaling State `accumulate` → `trim` (08-10 −14sh is the first trim leg). VST Scaling State `[BILL — confirm]` → `hold` (over-ceiling size accepted; Aug 3 adds stand). GLD: named governing rule as size-and-role (build toward 3–5%; do not trim on price up alone) over the 400 print. ES thesis archived to `vault/theses/archive/` (exited; KRE precedent).
+
+## [2026-08-13] — Idea generator source clustering + Spotify aggregates
+
+Driven by `prompts/idea_generator_source_clustering_2026-08-13.md` v1.1.0. The 2026-08-13 ideas report emitted five near-identical candidates (BLK/BN/BX/GS/KKR) from one On The Tape episode's $500B Nvidia financing consortium, never read Spotify aggregate digests, and listed non-held tickers (XLE) as `Overlaps with`.
+
+### Changed
+- `utils/agents/idea_generator.py` — `Candidate.related_tickers`; `load_spotify_aggregates()` via non-recursive `glob()` and `export_ai_briefing.parse_summary_date()` (filename-date window, sidecar chain by digest basename, SHA match); Python-side episode/aggregate overlap; labeled `SPOTIFY AGGREGATE` / `VERIFICATION SIDECAR` / `EPISODE/AGGREGATE OVERLAP` blocks. After the LLM returns, `sanitize_candidate_overlaps()` unions held `related_tickers` into `current_holdings_overlap` (keeps clustered names in `_sort_key()` group 2) and drops any overlap ticker that is not a current position (INFO log). CLI flags unchanged (`--since-days`, `--bundle-path`, `--dry-run`, `--skip-ingest`).
+- `prompts/idea_generator.md` — clustering rule (one candidate per shared thesis; primary = source emphasis, **not** un-held preference); sidecar CONTRADICTED/OVERSTATED handling via `notable_concerns`; transcript-primary when a cited episode is also in the batch; `current_holdings_overlap` is held tickers only, never a sector proxy.
+- `write_idea_report()` renders `related_tickers` under Overlaps with.
+- `CLAUDE.md` — delta-sidecar rule under Podcast ingestion (one chain per `source_sha256`; do not re-verify an unchanged digest from scratch).
+- Archived `…_VERIFIED_2026-08-11.md` (08-10 digest addendum) to `data/podcast_summaries/verification/archive/`; kept the C1–C15 ledger as canonical `_VERIFIED_2026-08-10.md`. Digest `VERIFICATION: PENDING (manual)` footers untouched.
+
+## [2026-08-11] — Vault sync YAML hardening
+
+Driven by `prompts/vault_sync_yaml_hardening_2026-08-11.md`. Morning STEP 6 aborted when `NOW_thesis.md` had duplicate frontmatter `triggers:` keys (empty `{}` plus `ceiling_only`); strict ruamel raised and `gather_thesis_sync_data` had no per-ticker catch, so **zero** theses synced that run.
+
+### Fixed
+- **`ThesisManager.get_frontmatter_safe()`** (`utils/thesis_utils.py`) — returns `(data, error)` so callers can distinguish absent vs broken YAML. `get_frontmatter()` wraps it and returns `None` on either miss or parse failure.
+- **`gather_thesis_sync_data`** (`core/thesis_sync_data.py`) — returns `ThesisSyncGatherResult(payloads, parse_errors)`. Unparseable frontmatter omits that ticker from payloads (skip write) and continues; does not abort the whole vault.
+- **Morning STEP 6 / `vault sync` / `vault sync-status`** — print parse errors; STEP 6 marks `warn` when any parse or write errors remain; later morning steps still run. Does **not** raise `logs/HEALTH_FAILURE.flag` (that sentinel stays Schwab/auth-centric).
+- **`lint_theses.py` check 6** — frontmatter must parse under the same ruamel path as vault sync (`UNPARSEABLE FRONTMATTER`). Report-only, exit 0.
+
+### Notes
+- Reader (`thesis_reader` / PyYAML + flat fallback) vs writer (`ThesisManager` / strict ruamel) still disagree on malformed frontmatter; this pass hardens the write path only. Unification deferred.
+- NOW frontmatter repaired same day (single `triggers: { trigger_type: ceiling_only }`) before this hardening landed.
 
 ## [2026-08-08] — Promote rotation backlog + harden Status
 
