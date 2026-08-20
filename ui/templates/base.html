@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}Portfolio Command Center{% endblock %}</title>
+  <style>
+    :root {
+      --bg: #f4f6f8;
+      --ink: #1a2332;
+      --muted: #5c6b7a;
+      --line: #d5dde5;
+      --accent: #1f4e79;
+      --card: #ffffff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.45;
+    }
+    header {
+      background: var(--accent);
+      color: #fff;
+      padding: 1rem 1.5rem;
+    }
+    header h1 { margin: 0; font-size: 1.25rem; font-weight: 600; }
+    header p { margin: 0.25rem 0 0; opacity: 0.85; font-size: 0.9rem; }
+    nav {
+      display: flex;
+      gap: 0.75rem;
+      padding: 0.75rem 1.5rem;
+      background: var(--card);
+      border-bottom: 1px solid var(--line);
+    }
+    nav a {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+    nav a.active { text-decoration: underline; }
+    main { padding: 1.25rem 1.5rem 2.5rem; max-width: 1100px; margin: 0 auto; }
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 0.75rem;
+      margin-bottom: 1.25rem;
+    }
+    .kpi {
+      background: var(--card);
+      border: 1px solid var(--line);
+      padding: 0.85rem 1rem;
+    }
+    .kpi .label { color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; }
+    .kpi .value { font-size: 1.25rem; font-weight: 650; margin-top: 0.2rem; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--card);
+      border: 1px solid var(--line);
+      font-size: 0.92rem;
+    }
+    th, td { padding: 0.55rem 0.7rem; border-bottom: 1px solid var(--line); text-align: left; }
+    th { background: #eef2f6; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); }
+    .note { color: var(--muted); font-size: 0.85rem; margin-top: 1rem; }
+    h2 { margin: 0 0 0.75rem; font-size: 1.1rem; }
+  </style>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+</head>
+<body>
+  <header>
+    <h1>Investment Portfolio — Monitoring Cockpit</h1>
+    <p>Static / Drive-published · phone-readable · CLI owns writes</p>
+  </header>
+  <nav>
+    <a href="/" class="{% if page == 'home' %}active{% endif %}">Home</a>
+    <a href="/decision" class="{% if page == 'decision' %}active{% endif %}">Decision</a>
+    <a href="/tax" class="{% if page == 'tax' %}active{% endif %}">Tax</a>
+    <a href="/rotations" class="{% if page == 'rotations' %}active{% endif %}">Rotations</a>
+  </nav>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

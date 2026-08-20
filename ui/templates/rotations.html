@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Rotation Review{% endblock %}
+{% block content %}
+<h2>Rotation Review ({{ count }} rows)</h2>
+{% if rows %}
+<table>
+  <thead>
+    <tr>
+      {% for col in rows[0].keys() %}
+      <th>{{ col }}</th>
+      {% endfor %}
+    </tr>
+  </thead>
+  <tbody>
+  {% for row in rows %}
+    <tr>
+      {% for v in row.values() %}
+      <td>{{ v }}</td>
+      {% endfor %}
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="note">No rotation review rows. Run <code>pm refresh rotations --live</code>.</p>
+{% endif %}
+{% endblock %}

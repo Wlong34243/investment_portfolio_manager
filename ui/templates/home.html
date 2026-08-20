@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Command Center{% endblock %}
+{% block content %}
+<div class="kpis" hx-get="/api/status" hx-trigger="every 60s" hx-swap="none">
+  <div class="kpi"><div class="label">Backend</div><div class="value">{{ snap.backend }}</div></div>
+  <div class="kpi"><div class="label">Positions</div><div class="value">{{ snap.position_count }}</div></div>
+  <div class="kpi"><div class="label">Market Value</div><div class="value">${{ "{:,.0f}".format(snap.total_market_value) }}</div></div>
+  <div class="kpi"><div class="label">Updated</div><div class="value" style="font-size:0.95rem">{{ snap.updated_at[:19] }}</div></div>
+</div>
+
+<h2>Top holdings</h2>
+{% if top %}
+<table>
+  <thead><tr><th>Ticker</th><th>Market Value</th><th>Weight</th></tr></thead>
+  <tbody>
+  {% for r in top %}
+    <tr>
+      <td>{{ r.ticker }}</td>
+      <td>${{ "{:,.0f}".format(r.mv) }}</td>
+      <td>{% if r.wt is not none %}{{ "{:.2f}".format(r.wt) }}{% if r.wt < 1.5 %}{% endif %}{% else %}—{% endif %}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="note">No holdings in the store yet. Run <code>pm store sync-from-sheets --live</code> or a morning <code>--live</code> pass.</p>
+{% endif %}
+
+{% if snap.notes %}
+<p class="note">{{ snap.notes | join(" · ") }}</p>
+{% endif %}
+{% endblock %}

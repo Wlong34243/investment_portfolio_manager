@@ -135,6 +135,7 @@ ANALYSIS_PUBLISH_GLOBS = [
     "agent_outputs/ai_briefing_analysis/*.md",
     "agent_outputs/ideas/*.md",
     "agent_outputs/dislocation_scan/*.md",
+    "agent_outputs/command_center/*.html",
 ]
 DEFAULT_ANALYSIS_DEST = r"G:\My Drive\Portfolio_Analysis"
 

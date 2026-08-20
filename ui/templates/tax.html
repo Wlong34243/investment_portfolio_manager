@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Tax Control{% endblock %}
+{% block content %}
+<h2>Tax Control</h2>
+{% if metrics %}
+<div class="kpis">
+  {% for k, v in metrics.items() %}
+  <div class="kpi"><div class="label">{{ k }}</div><div class="value" style="font-size:1rem">{{ v }}</div></div>
+  {% endfor %}
+</div>
+{% else %}
+<p class="note">No tax metrics in SQLite yet. Run <code>pm refresh tax --live</code>.</p>
+{% endif %}
+
+<h2>Lots (first 50 of {{ lot_count }})</h2>
+{% if lots %}
+<table>
+  <thead>
+    <tr>
+      {% for col in lots[0].keys() %}
+      <th>{{ col }}</th>
+      {% endfor %}
+    </tr>
+  </thead>
+  <tbody>
+  {% for row in lots %}
+    <tr>
+      {% for v in row.values() %}
+      <td>{{ v }}</td>
+      {% endfor %}
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}

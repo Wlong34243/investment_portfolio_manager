@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Decision View{% endblock %}
+{% block content %}
+<h2>Decision / Crosshairs</h2>
+{% if header %}<p class="note">{{ header }}</p>{% endif %}
+{% if items %}
+<table>
+  <thead>
+    <tr>
+      <th>Ticker</th><th>Reason</th><th>MV</th><th>Wt</th><th>Price</th>
+      <th>Trim</th><th>Add</th><th>Rationale</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for i in items %}
+    <tr>
+      <td>{{ i.get('ticker', i.get('Ticker', '')) }}</td>
+      <td>{{ i.get('reason_code', i.get('Reason', '')) }}</td>
+      <td>{{ i.get('mv', i.get('MV', '')) }}</td>
+      <td>{{ i.get('wt', i.get('Weight', '')) }}</td>
+      <td>{{ i.get('price', i.get('Price', '')) }}</td>
+      <td>{{ i.get('trim', '') }}</td>
+      <td>{{ i.get('add', '') }}</td>
+      <td>{{ i.get('rationale', i.get('Rationale', '')) }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="note">No Decision_View rows in store. Refresh dashboard with <code>--live</code>.</p>
+{% endif %}
+{% endblock %}

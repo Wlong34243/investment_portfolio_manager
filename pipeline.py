@@ -755,6 +755,16 @@ def write_to_sheets(df: pd.DataFrame, cash_amount: float, dry_run: bool = True) 
                 f"snapshot={results['snapshot']}.",
                 dry_run=False,
             )
+            try:
+                from core.store import get_store
+
+                get_store().replace_holdings_current(df, live=True)
+                get_store().record_pipeline_run(
+                    "write_holdings_current", live=True, ok=True,
+                    detail=f"{len(df)} positions",
+                )
+            except Exception as e:
+                print(f"PortfolioStore holdings shadow failed (non-fatal): {e}")
             break
 
         except gspread.exceptions.APIError as e:

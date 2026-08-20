@@ -240,6 +240,23 @@ def sync_transactions(days: int = 90, live: bool = False, reconcile: bool = Fals
     ])
 
     print(f"✅ SUCCESS: {len(data_to_append)} transactions appended.")
+
+    # PortfolioStore shadow — tax/txn vertical (Phase 1 spine)
+    try:
+        from core.store import get_store
+        from utils.sheet_readers import get_transactions
+
+        get_transactions.cache_clear()
+        get_store().replace_transactions(get_transactions(), live=True)
+        get_store().record_pipeline_run(
+            "sync_transactions",
+            live=True,
+            ok=True,
+            detail=f"appended {len(data_to_append)}",
+        )
+    except Exception as e:
+        print(f"  ! PortfolioStore transactions shadow failed: {e}")
+
     return True
 
 

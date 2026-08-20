@@ -101,6 +101,13 @@ app.add_typer(publish_app, name="publish")
 agent_app = typer.Typer(help="AI agents that consume the composite bundle and produce local output.")
 app.add_typer(agent_app, name="agent")
 
+# --- STORE / UI (SQLite ledger + local Command Center) ---
+store_app = typer.Typer(help="PortfolioStore: SQLite shadow ledger status, verify, sync.")
+app.add_typer(store_app, name="store")
+
+ui_app = typer.Typer(help="Local read-mostly Command Center UI.")
+app.add_typer(ui_app, name="ui")
+
 # --- TOP LEVEL COMMANDS ---
 
 @refresh_app.command("rotations")
@@ -702,10 +709,20 @@ def vault_sync(
 
     with console.status("[cyan]Gathering sync data..."):
         tickers = [ticker.upper()] if ticker else None
-        payloads = gather_thesis_sync_data(tickers=tickers, txn_limit=txn_limit)
+        result = gather_thesis_sync_data(tickers=tickers, txn_limit=txn_limit)
 
+    if result.parse_errors:
+        for err in result.parse_errors:
+            console.print(
+                f"[yellow]Thesis frontmatter unparseable: {err.get('ticker')}: {err.get('error')}[/]"
+            )
+
+    payloads = result.payloads
     if not payloads:
-        console.print("[yellow]No data found.[/]")
+        if result.parse_errors:
+            console.print("[yellow]No syncable theses (frontmatter parse errors only).[/]")
+        else:
+            console.print("[yellow]No data found.[/]")
         return
 
     with console.status("[cyan]Updating thesis files..."):
@@ -716,6 +733,7 @@ def vault_sync(
     table.add_column("Count", style="white")
     table.add_row("Updated", str(report['updated']))
     table.add_row("Errors", str(report['errors']))
+    table.add_row("Parse errors", str(len(result.parse_errors)))
     console.print(table)
 
 
@@ -727,7 +745,15 @@ def vault_sync_status():
     yaml = ruamel.yaml.YAML()
 
     with console.status("[cyan]Gathering data..."):
-        payloads = gather_thesis_sync_data()
+        result = gather_thesis_sync_data()
+
+    if result.parse_errors:
+        for err in result.parse_errors:
+            console.print(
+                f"[yellow]Thesis frontmatter unparseable: {err.get('ticker')}: {err.get('error')}[/]"
+            )
+
+    payloads = result.payloads
 
     table = Table(title="Thesis Sync Status")
     table.add_column("Ticker", style="cyan")
@@ -884,26 +910,184 @@ def sync_transactions_cmd(
 def sync_realized_gl_cmd(
     csv_path: Path = typer.Argument(..., exists=True),
     live: bool = typer.Option(False, "--live"),
+    replace: bool = typer.Option(
+        False,
+        "--replace",
+        help="Clear Realized_GL and write this CSV (rebuild). Default appends.",
+    ),
+    merge: bool = typer.Option(
+        False,
+        "--merge",
+        help="Union this file with existing Realized_GL rows (dedupe by Fingerprint), then replace-write.",
+    ),
     purge: bool = typer.Option(False, "--purge"),
 ):
-    """Import Realized G/L CSV."""
-    from utils.gl_parser import parse_realized_gl
+    """Import Realized G/L CSV (Schwab Lot Details or Chase HTML-.xls)."""
+    from utils.gl_parser import parse_realized_gl_auto, detect_realized_gl_parser
     from utils.sheet_readers import get_gspread_client
     import pipeline
 
-    df = parse_realized_gl(csv_path)
-    if df.empty: return
+    if replace and merge:
+        console.print("[red]Use only one of --replace or --merge.[/]")
+        raise typer.Exit(1)
+
+    kind = detect_realized_gl_parser(csv_path)
+    df = parse_realized_gl_auto(csv_path)
+    if df.empty:
+        console.print("[red]Parser returned 0 lots — check CSV format / account sections.[/]")
+        return
     df['import_date'] = str(date.today())
-    data_list = pipeline.sanitize_dataframe_for_sheets(df, config.GL_COLUMNS, config.GL_COL_MAP)
+    console.print(f"[cyan]Detected {kind} export[/]")
+
+    st = df['term'].astype(str).str.lower().str.contains('short')
+    lt = df['term'].astype(str).str.lower().str.contains('long')
+    st_net = float(df.loc[st, 'st_gain_loss'].sum())
+    lt_net = float(df.loc[lt, 'lt_gain_loss'].sum())
+    console.print(
+        f"[cyan]Parsed {len(df)} lots[/] | accounts={sorted(df['account'].astype(str).unique().tolist())} "
+        f"| ST net ${st_net:,.2f} | LT net ${lt_net:,.2f} | "
+        f"disallowed ${float(df['disallowed_loss'].sum()):,.2f}"
+    )
 
     if live:
         gc = get_gspread_client()
         ss = gc.open_by_key(config.PORTFOLIO_SHEET_ID)
         ws = ss.worksheet(config.TAB_REALIZED_GL)
-        ws.append_rows(data_list, value_input_option="USER_ENTERED")
-        console.print("[green]Imported lots.[/]")
+
+        if merge:
+            # Read existing sheet lots and union with the incoming parse.
+            existing_vals = ws.get_all_values()
+            if existing_vals and len(existing_vals) > 1:
+                import pandas as _pd
+                existing = _pd.DataFrame(existing_vals[1:], columns=existing_vals[0])
+                # Normalize to parser column names via reverse GL_COL_MAP
+                rev = {v: k for k, v in config.GL_COL_MAP.items()}
+                existing = existing.rename(columns={c: rev.get(c, c) for c in existing.columns})
+                # Coerce types used in fingerprints / tax math
+                for col in [
+                    "quantity", "proceeds_per_share", "cost_per_share", "proceeds",
+                    "cost_basis", "unadjusted_cost", "gain_loss_dollars", "gain_loss_pct",
+                    "lt_gain_loss", "st_gain_loss", "disallowed_loss", "holding_days",
+                ]:
+                    if col in existing.columns:
+                        existing[col] = _pd.to_numeric(
+                            existing[col].astype(str).str.replace(",", "", regex=False),
+                            errors="coerce",
+                        ).fillna(0.0)
+                if "wash_sale" in existing.columns:
+                    existing["wash_sale"] = existing["wash_sale"].astype(str).str.upper().isin(
+                        ["TRUE", "YES", "Y"]
+                    )
+                if "is_primary_acct" in existing.columns:
+                    existing["is_primary_acct"] = existing["is_primary_acct"].astype(str).str.upper().isin(
+                        ["TRUE", "YES", "Y"]
+                    )
+                # Drop rows from the same account mask(s) being re-imported, then concat.
+                new_accts = set(df["account"].astype(str))
+                before = len(existing)
+                existing = existing[~existing["account"].astype(str).isin(new_accts)].copy()
+                console.print(
+                    f"[dim]Merge: dropped {before - len(existing)} existing rows for "
+                    f"re-imported account(s) {sorted(new_accts)}[/]"
+                )
+                df = _pd.concat([existing, df], ignore_index=True, sort=False)
+            # Fall through to replace-write of the combined frame
+            replace = True
+
+        data_list = pipeline.sanitize_dataframe_for_sheets(df, config.GL_COLUMNS, config.GL_COL_MAP)
+
+        def _cell(v):
+            # RAW write: Sheets must not reinterpret booleans / dates.
+            if isinstance(v, bool):
+                return "TRUE" if v else "FALSE"
+            if v is None:
+                return ""
+            return v
+
+        data_list = [[_cell(c) for c in row] for row in data_list]
+
+        if replace:
+            # Archive-before-overwrite: keep prior values in a local stamp file, then clear+write.
+            from pathlib import Path as _P
+            archive_dir = _P("data") / "realized_gl_archive"
+            archive_dir.mkdir(parents=True, exist_ok=True)
+            stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            prior = ws.get_all_values()
+            arch_path = archive_dir / f"Realized_GL_before_replace_{stamp}.csv"
+            import csv as _csv
+            with arch_path.open("w", newline="", encoding="utf-8") as f:
+                _csv.writer(f).writerows(prior)
+            console.print(f"[dim]Archived prior Realized_GL → {arch_path} ({len(prior)} rows)[/]")
+
+            # clear() does not remove merges. Old Realized_GL formatting left merged
+            # banner cells on rows 2-4; writing into them collapses the first lots.
+            ws.clear()
+            meta = ss.fetch_sheet_metadata()
+            sheet_id = None
+            merges = []
+            frozen = 1
+            for s in meta.get("sheets", []):
+                props = s.get("properties", {})
+                if props.get("title") != config.TAB_REALIZED_GL:
+                    continue
+                sheet_id = props.get("sheetId")
+                merges = s.get("merges") or []
+                frozen = props.get("gridProperties", {}).get("frozenRowCount", 1)
+                break
+            reqs = []
+            if merges and sheet_id is not None:
+                reqs.append({
+                    "unmergeCells": {
+                        "range": {
+                            "sheetId": sheet_id,
+                            "startRowIndex": 0,
+                            "endRowIndex": max(m.get("endRowIndex", 0) for m in merges),
+                            "startColumnIndex": 0,
+                            "endColumnIndex": len(config.GL_COLUMNS),
+                        }
+                    }
+                })
+            if sheet_id is not None and frozen != 1:
+                reqs.append({
+                    "updateSheetProperties": {
+                        "properties": {
+                            "sheetId": sheet_id,
+                            "gridProperties": {"frozenRowCount": 1},
+                        },
+                        "fields": "gridProperties.frozenRowCount",
+                    }
+                })
+            if reqs:
+                ss.batch_update({"requests": reqs})
+                console.print(f"[dim]Cleared {len(merges)} merge region(s); frozen rows -> 1[/]")
+
+            header = [config.GL_COLUMNS]
+            # RAW avoids USER_ENTERED mangling of bools / numeric strings into sparse rows.
+            ws.update(range_name="A1", values=header + data_list, value_input_option="RAW")
+            console.print(f"[green]Replaced Realized_GL with {len(data_list)} lots.[/]")
+        else:
+            ws.append_rows(data_list, value_input_option="RAW")
+            console.print(f"[green]Appended {len(data_list)} lots.[/]")
+
+        try:
+            from core.store import get_store
+            from utils.sheet_readers import get_realized_gl
+
+            get_realized_gl.cache_clear()
+            get_store().replace_realized_gl(get_realized_gl(), live=True)
+            get_store().record_pipeline_run(
+                "ingest_realized_gl", live=True, ok=True,
+                detail=f"{'replace' if replace else 'append'} {len(data_list)}",
+            )
+        except Exception as e:
+            console.print(f"[yellow]PortfolioStore realized_gl shadow failed: {e}[/]")
     else:
-        console.print(f"[yellow]DRY RUN: Would import {len(data_list)} lots.[/]")
+        mode = (
+            "MERGE (union + replace-write)" if merge
+            else ("REPLACE (clear + write)" if replace else "APPEND")
+        )
+        data_list = pipeline.sanitize_dataframe_for_sheets(df, config.GL_COLUMNS, config.GL_COL_MAP)
+        console.print(f"[yellow]DRY RUN ({mode}): Would import {len(data_list)} lots. Use --live to write.[/]")
 
     if purge:
         from utils.hygiene import purge_obsolete_data, print_purge_report
@@ -981,6 +1165,145 @@ def dashboard_refresh(
     build_dec(live=live, crosshairs=crosshairs)
     format_v2(live=live)
     console.print("[green]Dashboard refresh complete (Valuation_Card, Decision_View, 0_DASHBOARD).[/]")
+
+
+@store_app.command("status")
+def store_status():
+    """Show PortfolioStore backend and key aggregates."""
+    from core.store import get_store
+    import config as cfg
+
+    store = get_store()
+    snap = store.status()
+    console.print(
+        f"[bold]backend:[/] {snap.backend} "
+        f"(STORE_BACKEND={cfg.STORE_BACKEND} STORE_PRIMARY={cfg.STORE_PRIMARY})"
+    )
+    console.print(f"  positions={snap.position_count}  MV=${snap.total_market_value:,.2f}")
+    console.print(
+        f"  txns={snap.transaction_count}  trade_log={snap.trade_log_count}  "
+        f"realized={snap.realized_gl_count}  tax_lots={snap.tax_control_lot_count}  "
+        f"rotation_review={snap.rotation_review_count}"
+    )
+    console.print(f"  sqlite path: {cfg.SQLITE_DB_PATH}")
+    console.print(
+        f"  streak gate: N={cfg.STORE_VERIFY_STREAK_N} consecutive verify runs; "
+        f"backup keep daily={cfg.STORE_BACKUP_KEEP_DAILY} weekly={cfg.STORE_BACKUP_KEEP_WEEKLY}"
+    )
+    for n in snap.notes:
+        console.print(f"  [dim]{n}[/]")
+
+
+@store_app.command("verify")
+def store_verify(
+    rel_tol: float = typer.Option(0.01, "--rel-tol", help="Unused; kept for CLI compat."),
+    require_streak: bool = typer.Option(
+        False,
+        "--require-streak",
+        help="Exit 1 unless N consecutive green verify runs + ≥1 realized lot in window.",
+    ),
+):
+    """Value-level Sheets vs SQLite reconcile (proceeds/cost/G/L/ST/LT/disallowed)."""
+    from core.store import verify_stores
+
+    result = verify_stores(rel_tol=rel_tol)
+    for line in result.lines:
+        console.print(line)
+    if not result.ok:
+        raise typer.Exit(code=1)
+    if require_streak and not result.streak_ok:
+        console.print("[red]Streak gate failed (--require-streak).[/]")
+        raise typer.Exit(code=1)
+
+
+@store_app.command("bundle-parity")
+def store_bundle_parity():
+    """Diff Sheets vs SQLite ledger fingerprints (bundle-canonical SHA)."""
+    from core.store.bundle_parity import run_bundle_parity
+
+    result = run_bundle_parity()
+    for line in result.lines:
+        console.print(line)
+    if not result.ok:
+        raise typer.Exit(code=1)
+
+
+@store_app.command("sync-from-sheets")
+def store_sync_from_sheets(
+    live: bool = typer.Option(False, "--live", help="Write SQLite. Default: DRY RUN."),
+    include_holdings: bool = typer.Option(
+        False,
+        "--include-holdings",
+        help="Also copy Holdings_Current (cache only; not Phase-1 ledger).",
+    ),
+):
+    """Copy transactions / realized_gl / trade_log into SQLite (tax via refresh tax --live)."""
+    from core.store.sync_from_sheets import sync_sqlite_from_sheets
+
+    summary = sync_sqlite_from_sheets(live=live, include_holdings_cache=include_holdings)
+    mode = "LIVE" if live else "DRY RUN"
+    console.print(f"[bold]{mode}[/] sync-from-sheets: {summary}")
+
+
+@store_app.command("backup")
+def store_backup(
+    live: bool = typer.Option(False, "--live", help="VACUUM INTO + hash + Drive copy."),
+):
+    """Phase-1 acceptance backup: VACUUM INTO, SHA-256 sidecar, copy to Drive db_backups/."""
+    from core.store.backup import backup_sqlite
+
+    result = backup_sqlite(live=live)
+    console.print(result)
+    if not result.get("ok"):
+        raise typer.Exit(code=1)
+
+
+@store_app.command("publish-cockpit")
+def store_publish_cockpit(
+    live: bool = typer.Option(False, "--live", help="Write static HTML under agent_outputs/command_center/."),
+    publish: bool = typer.Option(
+        False,
+        "--publish",
+        help="Also copy to Drive Portfolio_Analysis (same mirror as pm publish analysis).",
+    ),
+):
+    """Render static Command Center HTML for phone/Drive monitoring (not localhost)."""
+    from core.store.publish_static import render_static_cockpit
+
+    result = render_static_cockpit(live=live)
+    console.print(result)
+    if live and publish:
+        from scripts.backup_to_drive import publish_analysis
+
+        pub = publish_analysis(live=True)
+        console.print(f"Drive publish: {pub}")
+
+
+@export_app.command("sheets")
+def export_sheets(
+    live: bool = typer.Option(False, "--live", help="Write Tax_Control grid from SQLite to Sheets."),
+):
+    """Re-export computed Tax_Control from SQLite to Sheets (cockpit continuity)."""
+    from core.store.export_sheets import export_sheets_from_store
+
+    result = export_sheets_from_store(live=live)
+    console.print(result)
+
+
+@ui_app.command("serve")
+def ui_serve(
+    host: str = typer.Option("127.0.0.1", "--host"),
+    port: int = typer.Option(8765, "--port"),
+):
+    """Optional local debug server. Product monitoring surface is `pm store publish-cockpit --live --publish`."""
+    import uvicorn
+
+    console.print(
+        "[yellow]Debug only[/] — phone access uses Drive-published static HTML "
+        "(`pm store publish-cockpit --live --publish`), not this localhost server."
+    )
+    console.print(f"[cyan]Serving UI at http://{host}:{port}[/]  (Ctrl+C to stop)")
+    uvicorn.run("ui.app:app", host=host, port=port, reload=False)
 
 
 # --- EXPORT GROUP ---
@@ -1704,18 +2027,34 @@ def morning(
             from core.thesis_sync_data import gather_thesis_sync_data
             from tasks.write_thesis_updates import write_thesis_updates
             
-            payloads = gather_thesis_sync_data()
+            result = gather_thesis_sync_data()
+            parse_errors = result.parse_errors or []
+            payloads = result.payloads
+            if parse_errors:
+                for err in parse_errors:
+                    console.print(
+                        f"[yellow]Thesis frontmatter unparseable: "
+                        f"{err.get('ticker')}: {err.get('error')}[/]"
+                    )
             if payloads:
                 report = write_thesis_updates(payloads=payloads, dry_run=not live, force_recreate_regions=False, show_diff=False)
-                if report.get('errors', 0) > 0:
-                    console.print(f"[yellow]Vault sync completed with {report['errors']} errors.[/]")
+                if parse_errors or report.get('errors', 0) > 0:
+                    console.print(
+                        f"[yellow]Vault sync completed with warnings "
+                        f"(parse_errors={len(parse_errors)}, write_errors={report.get('errors', 0)}). "
+                        f"Updated {report['updated']} file(s).[/]"
+                    )
                     step_results.append(("Vault Sync", "warn"))
                 else:
                     console.print(f"[green]Vault sync completed successfully. Updated {report['updated']} file(s).[/]")
                     step_results.append(("Vault Sync", "pass"))
             else:
-                console.print("[yellow]No vault sync data found.[/]")
-                step_results.append(("Vault Sync", "pass"))
+                if parse_errors:
+                    console.print("[yellow]No vault sync payloads — frontmatter parse errors only.[/]")
+                    step_results.append(("Vault Sync", "warn"))
+                else:
+                    console.print("[yellow]No vault sync data found.[/]")
+                    step_results.append(("Vault Sync", "pass"))
         except Exception as e:
             console.print(f"[red]Vault sync failed: {e}[/]")
             step_results.append(("Vault Sync", "fail"))
@@ -1813,7 +2152,14 @@ def morning(
                 console.print("[dim]Upload SUBMIT_ME.md from that folder.[/]")
                 step_results.append(("AI Briefing", "pass"))
             elif result.returncode != 0:
-                console.print("[yellow]Export halted on blocking issues (see above).[/]")
+                # Surface the real failure — otherwise ModuleNotFoundError etc.
+                # look identical to a preflight ABORT (warn, no traceback).
+                err_tail = "\n".join(
+                    (l for l in out.splitlines() if l.strip())[-12:]
+                )
+                if err_tail:
+                    console.print(f"[yellow]{err_tail}[/]")
+                console.print("[yellow]Export halted (non-zero exit).[/]")
                 console.print("[dim]Override: python tasks\\export_ai_briefing.py --lookthrough refresh --force[/]")
                 step_results.append(("AI Briefing", "warn"))
             else:
@@ -1990,8 +2336,15 @@ def agent_ideas(
     Consumes the composite bundle + data/podcast_transcripts/ and writes a markdown
     report to agent_outputs/ideas/. Use --dry-run to print to stdout.
     """
+    import logging as _logging
     import time as _time
     from utils.agents.idea_generator import run_idea_generator, write_idea_report
+
+    if not _logging.getLogger().handlers:
+        _logging.basicConfig(
+            level=_logging.INFO,
+            format="%(levelname)s %(name)s: %(message)s",
+        )
 
     if not skip_ingest:
         console.print("[bold cyan]Step 1/2 — Ingesting new podcast transcripts...[/]")
@@ -2032,6 +2385,36 @@ def agent_ideas(
     )
     if output.notes:
         console.print(f"[dim]Notes: {output.notes[:120]}{'...' if len(output.notes) > 120 else ''}[/]")
+
+
+@agent_app.command("valuation-drift")
+def agent_valuation_drift(
+    ticker: Optional[str] = typer.Option(None, "--ticker", help="Limit to one ticker."),
+    bundle_path: Optional[Path] = typer.Option(
+        None, "--bundle-path", help="Composite bundle path. Latest if omitted."
+    ),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Print report; do not write."),
+):
+    """Fundamentals drift vs Option A baseline. Local markdown only; no Sheets writes."""
+    from utils.agents.valuation_drift import run_valuation_drift, write_drift_report
+
+    with console.status("[cyan]Running valuation drift..."):
+        try:
+            output = run_valuation_drift(
+                composite_bundle_path=str(bundle_path) if bundle_path else None,
+                ticker=ticker,
+                dry_run=dry_run,
+            )
+        except FileNotFoundError as e:
+            console.print(f"[red]ERROR: {e}[/]")
+            raise typer.Exit(code=1)
+
+    if dry_run:
+        console.print(write_drift_report(output, dry_run=True))
+        return
+    path = write_drift_report(output)
+    console.print(f"[bold green]Report written:[/] {path}")
+    console.print(f"positions={len(output.positions)} bundle_hash={output.bundle_hash[:12]}…")
 
 
 if __name__ == "__main__":

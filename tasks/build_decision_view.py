@@ -127,7 +127,7 @@ def main(live: bool = False, crosshairs: Optional[CrosshairsResult] = None) -> O
         client = get_gspread_client()
         ss = client.open_by_key(config.PORTFOLIO_SHEET_ID)
         holdings_rows = _read_records(ss, config.TAB_HOLDINGS_CURRENT)
-        valuation_rows = _read_records(ss, "Valuation_Card")
+        valuation_rows = _read_records(ss, config.TAB_VALUATION_CARD)
         crosshairs = produce_crosshairs(
             holdings_rows=holdings_rows,
             valuation_rows=valuation_rows,
@@ -152,7 +152,7 @@ def main(live: bool = False, crosshairs: Optional[CrosshairsResult] = None) -> O
         ]))
     grid = [["" if c is None else c for c in row] for row in grid]
 
-    tab_name = "Decision_View"
+    tab_name = config.TAB_DECISION_VIEW
     try:
         ws_dec = ss.worksheet(tab_name)
     except Exception:
@@ -161,6 +161,28 @@ def main(live: bool = False, crosshairs: Optional[CrosshairsResult] = None) -> O
     safe_execute(ws_dec.clear)
     safe_execute(ws_dec.update, range_name="A1", values=grid, value_input_option="RAW")
     _apply_formatting(ws_dec, len(items))
+
+    try:
+        from core.store import get_store
+
+        rows = [
+            {
+                "ticker": item.ticker,
+                "reason_code": item.reason_code,
+                "mv": item.mv,
+                "wt": item.wt,
+                "price": item.price,
+                "trim": item.trim,
+                "add": item.add,
+                "dist_trim": item.dist_trim,
+                "dist_add": item.dist_add,
+                "rationale": item.rationale,
+            }
+            for item in items
+        ]
+        get_store().replace_decision_view(header, rows, live=True)
+    except Exception as e:
+        print(f"  ! PortfolioStore decision_view shadow failed: {e}")
 
     print(f"Decision_View refreshed. {len(items)} Crosshairs rows.")
     return crosshairs

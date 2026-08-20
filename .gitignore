@@ -39,6 +39,12 @@ bundles/
 # FMP local cache — regenerable, do not commit
 data/fmp_cache/
 
+# Local PortfolioStore SQLite ledger — regenerable via pm store sync-from-sheets
+data/portfolio_store.db
+data/portfolio_store.db-*
+data/portfolio_store_backups/
+
+
 # ETF look-through holdings cache (yfinance) — regenerable, do not commit
 data/etf_holdings_cache/
 
@@ -53,6 +59,11 @@ data/podcast_bundles/
 # Archive-before-overwrite backups — regenerable, produced anywhere a pipeline
 # script overwrites a file in place (root docs, core/, tasks/, vault/theses/)
 *.bak.*
+# Thesis plain .bak (unsanctioned; was leaking into git)
+*.bak
+
+# Valuation drift Option A baselines (regenerable)
+data/valuation_drift_baselines.json
 
 # Excel files
 *.xlsx
