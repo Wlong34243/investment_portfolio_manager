@@ -1,5 +1,15 @@
 # CHANGELOG — Investment Portfolio Manager
 
+## [2026-08-20] — Audit follow-up: Chase term, merge guard, Tax_Control cache
+
+Fixes from scoped code review of PortfolioStore / Realized_GL / store CLI batch.
+
+### Fixed
+- **Chase `term`:** `parse_chase_realized_gl` derives Short/Long Term from `holding_days` (`>365` → LT), not from which ST/LT dollar column is larger near breakeven.
+- **`--merge` completeness:** refuses when the import file has fewer lots for an account than the sheet unless `--force-partial-merge`.
+- **Tax_Control fetch:** `SheetsPortfolioStore` caches one parse per instance for lots + metrics (verify / bundle-parity).
+- Removed inert `pm store verify --rel-tol` and dead `if acct_type: pass` in Chase parser.
+
 ## [2026-08-20] — Audit-aligned repairs (Schwab fail-closed, podcast atomic write, valuation drift, store parity)
 
 Driven by `agent_outputs/audit/repo_audit_2026-08-20.md` + re-authored prompts v1.1.0.

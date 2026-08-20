@@ -201,8 +201,10 @@ Hash-stamping proves the bytes have not changed since creation. It does not make
 | `utils/gemini_client.py` | `ask_gemini()`, `ask_gemini_composite()`, `SAFETY_PREAMBLE` (auto-prepended — never duplicate it) |
 | `utils/agents/idea_generator.py` | Idea Generator agent |
 | `utils/agents/podcast_analyst.py` | Gemini allocation extractor |
+| `utils/agents/valuation_drift.py` | Valuation Drift Monitor — fundamentals drift vs. Option A (first-run snapshot-forward) baseline. Python measures from the bundle `fundamentals` block; LLM narrates only, never recommends. `pm agent valuation-drift`; local markdown to `agent_outputs/valuation_drift/`, no Sheets writes. |
+| `ui/app.py` | Local read-mostly FastAPI Command Center (`pm ui serve`, debug-only). Reads via `PortfolioStore`; CLI still owns all mutations. Product monitoring surface is `pm store publish-cockpit --live --publish` (static HTML to Drive), not this localhost server. |
 | `prompts/` | Sequenced build prompts |
-| `agent_outputs/` | `ideas/`, `dislocation_scan/`, `ai_briefing_analysis/`, `rotation_attribution/`, `trade_log_staging/` |
+| `agent_outputs/` | `ideas/`, `dislocation_scan/`, `ai_briefing_analysis/`, `rotation_attribution/`, `trade_log_staging/`, `valuation_drift/` |
 
 ---
 
@@ -279,6 +281,9 @@ Recorded so they are not rediscovered.
 - **`Trade_Log_Staging.Status` vocabulary is collision-prone.** `journal promote` acts on `approve`/`approved` and *writes* `promoted` + `Promoted_At`. Hand-typing `promoted` with a blank `Promoted_At` still makes a row invisible to promote. Schema-ensure and staging marks are gated behind `--live` as of 2026-08-09 (batched update).
 - **Two Schwab-token health signals can disagree** — `tasks/health.py` and `build_command_center._schwab_token_status()` are independent and were observed reporting different states in the same session.
 - **`SCHWAB_PRIMARY_ACCOUNT_SUFFIXES` empty fails closed** unless `SCHWAB_FORCE_UNSCOPED=1` (built 2026-08-20). Tax_Control fails loudly if suffixes empty or Account masks unparseable. Chase/RE funding accounts are out of scope.
+- ~~**Chase Realized_GL import guesses ST/LT `term` from G/L magnitude**~~ **FIXED 2026-08-20** — `parse_chase_realized_gl()` now derives `term` from `holding_days` (`>365` → Long Term); falls back to Chase ST/LT columns only when dates are unusable.
+- ~~**`sync-realized-gl --merge` can silently delete real lots**~~ **FIXED 2026-08-20** — merge refuses when the file has fewer lots for an account than the sheet unless `--force-partial-merge` is passed.
+- ~~**`pm store verify` / `bundle-parity` fetch Tax_Control twice**~~ **FIXED 2026-08-20** — `SheetsPortfolioStore` caches one `_parse_tax_control()` result per instance for lots + metrics.
 
 ### Fixed 2026-08-09 (write-safety pass) — do not re-open
 - ~~`derive_rotations` CLI wrote Sheets with no flags~~ — now requires `--live`; bare CLI is dry-run (`--dry-run` kept as no-op alias). Morning path unchanged.

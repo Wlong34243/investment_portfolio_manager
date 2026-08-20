@@ -17,6 +17,10 @@ logger = logging.getLogger(__name__)
 class SheetsPortfolioStore:
     name = "sheets"
 
+    def __init__(self) -> None:
+        # One Tax_Control fetch shared by get_tax_control_lots/metrics per instance.
+        self._tax_control_cache: Optional[tuple[dict[str, Any], pd.DataFrame]] = None
+
     def status(self) -> StoreSnapshot:
         notes: list[str] = []
         try:
@@ -68,12 +72,19 @@ class SheetsPortfolioStore:
         return self._read_tab(config.TAB_ROTATION_REVIEW)
 
     def get_tax_control_lots(self) -> pd.DataFrame:
-        _metrics, lots = self._parse_tax_control()
+        _metrics, lots = self._tax_control_pair()
         return lots
 
     def get_tax_control_metrics(self) -> dict[str, Any]:
-        metrics, _lots = self._parse_tax_control()
+        metrics, _lots = self._tax_control_pair()
         return metrics
+
+    def _tax_control_pair(self) -> tuple[dict[str, Any], pd.DataFrame]:
+        if self._tax_control_cache is not None:
+            return self._tax_control_cache
+        pair = self._parse_tax_control()
+        self._tax_control_cache = pair
+        return pair
 
     def _parse_tax_control(self) -> tuple[dict[str, Any], pd.DataFrame]:
         """Parse multi-zone Tax_Control tab into metrics dict + lots DataFrame."""

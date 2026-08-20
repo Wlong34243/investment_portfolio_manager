@@ -918,7 +918,14 @@ def sync_realized_gl_cmd(
     merge: bool = typer.Option(
         False,
         "--merge",
-        help="Union this file with existing Realized_GL rows (dedupe by Fingerprint), then replace-write.",
+        help="Union this file with existing Realized_GL rows (dedupe by Fingerprint), then replace-write. "
+        "Assumes the file is a COMPLETE re-export for every account it contains.",
+    ),
+    force_partial_merge: bool = typer.Option(
+        False,
+        "--force-partial-merge",
+        help="Allow --merge when the file has fewer lots for an account than the sheet "
+        "(dangerous: can erase real lots outside the file's date window).",
     ),
     purge: bool = typer.Option(False, "--purge"),
 ):
@@ -929,6 +936,9 @@ def sync_realized_gl_cmd(
 
     if replace and merge:
         console.print("[red]Use only one of --replace or --merge.[/]")
+        raise typer.Exit(1)
+    if force_partial_merge and not merge:
+        console.print("[red]--force-partial-merge requires --merge.[/]")
         raise typer.Exit(1)
 
     kind = detect_realized_gl_parser(csv_path)
@@ -983,7 +993,21 @@ def sync_realized_gl_cmd(
                         ["TRUE", "YES", "Y"]
                     )
                 # Drop rows from the same account mask(s) being re-imported, then concat.
+                # Completeness guard: refuse if the file has fewer lots for an account
+                # than the sheet (partial re-import would erase real lots).
                 new_accts = set(df["account"].astype(str))
+                for acct in sorted(new_accts):
+                    n_exist = int((existing["account"].astype(str) == acct).sum())
+                    n_new = int((df["account"].astype(str) == acct).sum())
+                    if n_exist > n_new and not force_partial_merge:
+                        console.print(
+                            f"[red]Merge refused for account {acct!r}: sheet has "
+                            f"{n_exist} lots, file has {n_new}. A partial re-import "
+                            f"would delete {n_exist - n_new} existing lot(s). "
+                            f"Re-export the full account history, or pass "
+                            f"--force-partial-merge if you intend to shrink.[/]"
+                        )
+                        raise typer.Exit(1)
                 before = len(existing)
                 existing = existing[~existing["account"].astype(str).isin(new_accts)].copy()
                 console.print(
@@ -1196,7 +1220,6 @@ def store_status():
 
 @store_app.command("verify")
 def store_verify(
-    rel_tol: float = typer.Option(0.01, "--rel-tol", help="Unused; kept for CLI compat."),
     require_streak: bool = typer.Option(
         False,
         "--require-streak",
@@ -1206,7 +1229,7 @@ def store_verify(
     """Value-level Sheets vs SQLite reconcile (proceeds/cost/G/L/ST/LT/disallowed)."""
     from core.store import verify_stores
 
-    result = verify_stores(rel_tol=rel_tol)
+    result = verify_stores()
     for line in result.lines:
         console.print(line)
     if not result.ok:

@@ -255,7 +255,6 @@ def _compare_tax_metrics(
 
 
 def verify_stores(
-    rel_tol: float = 0.01,
     record_streak: bool = True,
     check_ledger_hash: bool = True,
 ) -> VerifyResult:
@@ -263,7 +262,6 @@ def verify_stores(
     Value-level reconcile to the cent for transactions, realized_gl, and
     tax_control (metrics + lots). Plus canonical ledger fingerprint parity.
     """
-    del rel_tol  # CLI compat; value checks are absolute to the cent
     sheets = SheetsPortfolioStore()
     sqlite = SqlitePortfolioStore()
     lines: list[str] = []

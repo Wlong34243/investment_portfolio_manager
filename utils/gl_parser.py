@@ -4,6 +4,7 @@ Parses Schwab "Realized Gain/Loss – Lot Details" export CSV.
 """
 
 import pandas as pd
+import re
 from datetime import datetime
 from utils.csv_parser import clean_numeric
 
@@ -169,23 +170,62 @@ def parse_transaction_history(file_or_path) -> pd.DataFrame:
     
     return df
 
+def _single_account_section_from_title(df_raw: pd.DataFrame) -> list[dict]:
+    """
+    Single-account Schwab exports have no per-account section banner.
+    Title row looks like: 'Realized Gain/Loss - Lot Details for ...119 as of ...'
+    followed by a Symbol header row. Synthesize one section so the lot loop works.
+    """
+    title_acct = None
+    header_row = -1
+    for i in range(min(len(df_raw), 10)):
+        first = str(df_raw.iloc[i, 0]).strip().strip('"')
+        lower = first.lower()
+        if title_acct is None and "lot details for" in lower:
+            m = re.search(r"lot details for\s+(\.{2,}\d+)", lower)
+            if m:
+                # Match existing Realized_GL labels: 'Individual ...119'
+                title_acct = f"Individual {m.group(1)}"
+            else:
+                title_acct = first
+        if lower == "symbol":
+            header_row = i
+            break
+
+    if header_row < 0:
+        return []
+
+    account = title_acct or "Individual ...unknown"
+    return [{
+        "account": account,
+        "header_row": header_row,
+        "data_start": header_row + 1,
+        "data_end": len(df_raw) - 1,
+    }]
+
+
 def parse_realized_gl(file_or_path) -> pd.DataFrame:
     """
     Parse Schwab Realized G/L Lot Details CSV.
     Returns clean DataFrame with one row per closed lot.
+
+    Supports multi-account exports (account section banners) and single-account
+    exports titled 'Lot Details for ...NNNN'.
     """
     # 1. Read raw with no assumed header
     df_raw = pd.read_csv(
         file_or_path,
         header=None,
-        names=range(25),
+        names=range(30),
         encoding="utf-8-sig",
         dtype=str,
         skip_blank_lines=False,
     )
 
-    # 2. Find account sections
+    # 2. Find account sections (multi-account), else single-account title fallback
     sections = _find_account_sections_gl(df_raw)
+    if not sections:
+        sections = _single_account_section_from_title(df_raw)
 
     # 3. For each section, extract data rows
     all_rows = []
@@ -242,3 +282,183 @@ def parse_realized_gl(file_or_path) -> pd.DataFrame:
             all_rows.append(lot)
 
     return pd.DataFrame(all_rows)
+
+
+_PROTECTED_ACCOUNT_KEYWORDS = {
+    "401", "ira", "roth", "sep", "simple", "hsa",
+    "rollover", "beneficiary", "custodial", "contributory",
+}
+
+
+def _is_taxable_account_label(account: str) -> bool:
+    return not any(kw in account.lower() for kw in _PROTECTED_ACCOUNT_KEYWORDS)
+
+
+def parse_chase_realized_gl(file_or_path) -> pd.DataFrame:
+    """
+    Parse Chase 'realizedGainOrLoss.xls' exports.
+
+    Chase downloads these as UTF-8 HTML tables with a .xls extension (not real Excel).
+    Returns the same lot schema as parse_realized_gl().
+    """
+    from html.parser import HTMLParser
+    from pathlib import Path
+
+    path = Path(file_or_path)
+    raw = path.read_bytes()
+    # Strip BOM if present
+    if raw.startswith(b"\xef\xbb\xbf"):
+        text = raw.decode("utf-8-sig")
+    else:
+        text = raw.decode("utf-8", errors="replace")
+
+    if "<table" not in text.lower():
+        raise ValueError(
+            f"Chase G/L file does not look like an HTML table export: {path}"
+        )
+
+    class _TableParser(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.rows: list[list[str]] = []
+            self._row: list[str] = []
+            self._cell: list[str] | None = None
+            self._in_cell = False
+
+        def handle_starttag(self, tag, attrs):
+            if tag == "tr":
+                self._row = []
+            elif tag in ("td", "th"):
+                self._in_cell = True
+                self._cell = []
+
+        def handle_endtag(self, tag):
+            if tag in ("td", "th") and self._in_cell:
+                self._row.append("".join(self._cell).strip())
+                self._in_cell = False
+                self._cell = None
+            elif tag == "tr" and self._row:
+                self.rows.append(self._row)
+
+        def handle_data(self, data):
+            if self._in_cell and self._cell is not None:
+                self._cell.append(data)
+
+    parser = _TableParser()
+    parser.feed(text)
+    if not parser.rows:
+        return pd.DataFrame()
+
+    header = parser.rows[0]
+    idx = {h: i for i, h in enumerate(header)}
+    required = [
+        "Ticker", "Description", "Quantity", "Acquired Date", "Sale Date",
+        "Market Cost/Proceeds USD", "Cost Basis USD",
+        "Short Term Realized Gain Loss USD", "Long Term Realized Gain Loss USD",
+        "Total Realized Gain Loss USD", "Disallowed Loss",
+        "Account Name", "Account Number", "Account Type",
+    ]
+    missing = [c for c in required if c not in idx]
+    if missing:
+        raise ValueError(f"Chase G/L missing columns: {missing}")
+
+    def _cell(row: list[str], col: str) -> str:
+        i = idx[col]
+        return row[i] if i < len(row) else ""
+
+    all_rows = []
+    for row in parser.rows[1:]:
+        ticker = _cell(row, "Ticker").strip()
+        if not ticker or ticker.lower() == "ticker":
+            continue
+
+        st_gl = _clean_dollar(_cell(row, "Short Term Realized Gain Loss USD"))
+        lt_gl = _clean_dollar(_cell(row, "Long Term Realized Gain Loss USD"))
+        total_gl = _clean_dollar(_cell(row, "Total Realized Gain Loss USD"))
+        proceeds = _clean_dollar(_cell(row, "Market Cost/Proceeds USD"))
+        cost_basis = _clean_dollar(_cell(row, "Cost Basis USD"))
+        qty = _clean_dollar(_cell(row, "Quantity"))
+        disallowed = _clean_dollar(_cell(row, "Disallowed Loss"))
+        unit_sale = _clean_dollar(_cell(row, "Unit Sale Price")) if "Unit Sale Price" in idx else 0.0
+        unit_cost = _clean_dollar(_cell(row, "Unit Cost Basis")) if "Unit Cost Basis" in idx else 0.0
+        disclaimer = _cell(row, "Disclaimers-Cost") if "Disclaimers-Cost" in idx else ""
+
+        acct_name = _cell(row, "Account Name").strip() or "Chase"
+        acct_num = _cell(row, "Account Number").strip()
+        acct_type = _cell(row, "Account Type").strip()
+        # Normalize to mask form Tax_Control can parse: 'Chase Self-Directed ...8895'
+        if acct_num and not acct_num.startswith("."):
+            acct_num = f"...{acct_num.lstrip('.')}"
+        account = f"Chase {acct_name} {acct_num}".strip()
+
+        opened = _parse_date(_cell(row, "Acquired Date"))
+        closed = _parse_date(_cell(row, "Sale Date"))
+        holding_days = _holding_days(opened, closed)
+        # Term from holding period (IRS: >365 days = long-term), not from which
+        # Chase ST/LT dollar column happens to be larger near breakeven.
+        if holding_days < 0:
+            # Dates unusable — fall back to Chase's own ST/LT column split.
+            if abs(lt_gl) > abs(st_gl):
+                term = "Long Term"
+            else:
+                term = "Short Term"
+        elif holding_days > 365:
+            term = "Long Term"
+        else:
+            term = "Short Term"
+
+        lot = {
+            "ticker": ticker,
+            "description": _cell(row, "Description").strip(),
+            "closed_date": closed,
+            "opened_date": opened,
+            "quantity": qty,
+            "proceeds_per_share": unit_sale,
+            "cost_per_share": unit_cost,
+            "proceeds": proceeds,
+            "cost_basis": cost_basis,
+            "gain_loss_dollars": total_gl if total_gl != 0 else (st_gl + lt_gl),
+            "gain_loss_pct": _clean_pct(_cell(row, "Total Realized Gain Loss %"))
+                if "Total Realized Gain Loss %" in idx else 0.0,
+            "lt_gain_loss": lt_gl,
+            "st_gain_loss": st_gl,
+            "term": term,
+            "unadjusted_cost": _clean_dollar(_cell(row, "Original Cost"))
+                if "Original Cost" in idx else cost_basis,
+            "wash_sale": disallowed > 0 or "W" in disclaimer.upper(),
+            "disallowed_loss": disallowed,
+            "account": account,
+            "holding_days": holding_days,
+        }
+        if not lot["closed_date"]:
+            continue
+
+        # Brokerage Self-Directed is taxable; IRA/401 keywords in name/type flip it off.
+        taxable_probe = f"{account} {acct_type}"
+        lot["is_primary_acct"] = _is_taxable_account_label(taxable_probe)
+        lot["fingerprint"] = "chase|" + _make_fingerprint(lot)
+        lot["winner"] = lot["gain_loss_dollars"] > 0
+        all_rows.append(lot)
+
+    return pd.DataFrame(all_rows)
+
+
+def detect_realized_gl_parser(file_or_path):
+    """Return 'chase' | 'schwab' based on file content."""
+    from pathlib import Path
+    path = Path(file_or_path)
+    raw = path.read_bytes()[:500].lstrip()
+    if raw.startswith(b"\xef\xbb\xbf"):
+        raw = raw[3:]
+    head = raw[:200].lower()
+    if head.startswith(b"<table") or b"account name" in head:
+        return "chase"
+    return "schwab"
+
+
+def parse_realized_gl_auto(file_or_path) -> pd.DataFrame:
+    """Dispatch to Chase or Schwab parser."""
+    kind = detect_realized_gl_parser(file_or_path)
+    if kind == "chase":
+        return parse_chase_realized_gl(file_or_path)
+    return parse_realized_gl(file_or_path)
