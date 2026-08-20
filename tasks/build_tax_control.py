@@ -145,22 +145,23 @@ def compute_tax_control_data() -> Dict[str, Any]:
         logger.warning("Realized_GL is empty. No tax data to compute.")
         return {}
 
-    # --- Account scope (Schwab primary suffixes) then taxable-only ---
+    # --- Account scope (Schwab primary only) then taxable-only ---
+    # Chase / RE funding accounts are out of scope (Bill 2026-08-20).
     # Suffix scope and IRA/401 name tests are different questions. Never fall
     # back to "include all" when either signal is missing.
     if "Account" not in df_gl.columns:
         msg = (
             "compute_tax_control: Realized_GL is missing the Account column — "
-            "cannot apply SCHWAB_PRIMARY_ACCOUNT_SUFFIXES. Re-import G/L CSV; "
+            "cannot apply account-suffix scope. Re-import G/L CSV; "
             "refusing to include all rows."
         )
         logger.error(msg)
         raise ValueError(msg)
 
-    suffixes = [s for s in config.SCHWAB_PRIMARY_ACCOUNT_SUFFIXES if str(s).strip()]
+    suffixes = [s for s in list(config.SCHWAB_PRIMARY_ACCOUNT_SUFFIXES) if str(s).strip()]
     if not suffixes:
         msg = (
-            "compute_tax_control: SCHWAB_PRIMARY_ACCOUNT_SUFFIXES is empty — "
+            "compute_tax_control: SCHWAB_PRIMARY_ACCOUNT_SUFFIXES empty — "
             "refusing unscoped Tax_Control."
         )
         logger.error(msg)
@@ -427,6 +428,15 @@ def refresh_tax_control_sheet(live: bool = False) -> Dict[str, Any]:
     safe_execute(ws.clear)
     safe_execute(ws.update, range_name="A1", values=all_values, value_input_option="USER_ENTERED")
     _apply_kpi_number_formats(ws)
+
+    # Shadow ledger (PortfolioStore) — SQLite dual-write on --live
+    try:
+        from core.store import get_store
+
+        get_store().replace_tax_control(metrics, lots_df, live=True)
+        get_store().record_pipeline_run("tax_control", live=True, ok=True)
+    except Exception as e:
+        logger.warning("PortfolioStore tax_control shadow failed: %s", e)
 
     logger.info(f"LIVE — refreshed {config.TAB_TAX_CONTROL} with {len(table_data)} lots.")
     return data

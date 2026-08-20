@@ -167,6 +167,41 @@ TAB_TRADE_LOG = "Trade_Log"
 TAB_TRADE_LOG_STAGING = "Trade_Log_Staging"
 TAB_ROTATION_REVIEW   = "Rotation_Review"
 TAB_TAX_CONTROL = "Tax_Control"
+TAB_VALUATION_CARD = "Valuation_Card"   # computed; was string literal in builders
+TAB_DECISION_VIEW = "Decision_View"     # computed; was string literal in builders
+
+# ---------------------------------------------------------------------------
+# PortfolioStore (SQLite shadow ledger + read primary)
+# ---------------------------------------------------------------------------
+# sheets = Sheets only (legacy)
+# dual   = write Sheets + SQLite on --live; read ONLY from STORE_PRIMARY
+# sqlite = SQLite primary reads/writes; Sheets optional via export
+#
+# STORE_PRIMARY is an EXPLICIT hand-flipped flag (default sheets).
+# Do NOT auto-flip on "SQLite has rows" — a partial shadow must not change reads.
+# Flip to sqlite only after pm store verify streak is green; revert with one line:
+#   set STORE_PRIMARY=sheets
+STORE_BACKEND = os.getenv("STORE_BACKEND", "dual").strip().lower()
+STORE_PRIMARY = os.getenv("STORE_PRIMARY", os.getenv("STORE_READ_PRIMARY", "sheets")).strip().lower()
+# Alias kept for older shells; STORE_PRIMARY wins.
+STORE_READ_PRIMARY = STORE_PRIMARY
+SQLITE_DB_PATH = Path(
+    os.getenv("SQLITE_DB_PATH", str(Path(__file__).resolve().parent / "data" / "portfolio_store.db"))
+)
+# Phase-1 verify streak: N consecutive *verify runs* of VERIFY PASS (not
+# calendar days — weekends with no morning neither advance nor break).
+# Window must include ≥1 realized lot (non-vacuous realized_gl reconcile).
+STORE_VERIFY_STREAK_N = int(os.getenv("STORE_VERIFY_STREAK_N", "5"))
+STORE_VERIFY_STREAK_PATH = Path(
+    os.getenv(
+        "STORE_VERIFY_STREAK_PATH",
+        str(Path(__file__).resolve().parent / "logs" / "store_verify_streak.jsonl"),
+    )
+)
+# Backup retention (local + Drive db_backups/)
+STORE_BACKUP_KEEP_DAILY = int(os.getenv("STORE_BACKUP_KEEP_DAILY", "14"))
+STORE_BACKUP_KEEP_WEEKLY = int(os.getenv("STORE_BACKUP_KEEP_WEEKLY", "8"))
+
 
 # Tax_Control has two zones: KPI strip (top) and tax-relevant lots table (bottom).
 # We model it as a single tab with section headers, not two tabs.
