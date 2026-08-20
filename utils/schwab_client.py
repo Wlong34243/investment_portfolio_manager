@@ -79,18 +79,37 @@ def get_market_client() -> schwab.client.Client | None:
 _warned_no_account_scope = False
 
 
-def _warn_if_unscoped() -> None:
-    """One-time warning (per process) that account filtering is off. Called
-    at the top of each fetch_* function rather than per-account so it can't
-    spam the log."""
-    global _warned_no_account_scope
-    if not config.SCHWAB_PRIMARY_ACCOUNT_SUFFIXES and not _warned_no_account_scope:
-        logging.warning(
-            "schwab_client: SCHWAB_PRIMARY_ACCOUNT_SUFFIXES is unset -- aggregating "
-            "ALL linked Schwab accounts (pre-fix behavior). Set it to scope to "
-            "the confirmed accounts. See prompts/schwab_account_scope_fix_2026-08-03.md."
-        )
-        _warned_no_account_scope = True
+def _force_unscoped_allowed() -> bool:
+    """Explicit escape hatch for empty SCHWAB_PRIMARY_ACCOUNT_SUFFIXES."""
+    return os.getenv("SCHWAB_FORCE_UNSCOPED", "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+
+
+def _require_account_scope() -> None:
+    """
+    Fail closed when SCHWAB_PRIMARY_ACCOUNT_SUFFIXES is empty unless
+    SCHWAB_FORCE_UNSCOPED=1. Empty list used to mean "aggregate all accounts"
+    (pre-2026-08-03) — that silent under/over-count path is no longer allowed.
+    """
+    if config.SCHWAB_PRIMARY_ACCOUNT_SUFFIXES:
+        return
+    if _force_unscoped_allowed():
+        global _warned_no_account_scope
+        if not _warned_no_account_scope:
+            logging.warning(
+                "schwab_client: SCHWAB_PRIMARY_ACCOUNT_SUFFIXES is unset but "
+                "SCHWAB_FORCE_UNSCOPED=1 — aggregating ALL linked Schwab accounts."
+            )
+            _warned_no_account_scope = True
+        return
+    raise RuntimeError(
+        "SCHWAB_PRIMARY_ACCOUNT_SUFFIXES is empty — refusing unscoped Schwab "
+        "aggregation. Set suffixes (default 6499,8767,5119) or export "
+        "SCHWAB_FORCE_UNSCOPED=1 to override deliberately."
+    )
 
 
 def _is_primary_account(raw_acct_num) -> bool:
@@ -98,8 +117,8 @@ def _is_primary_account(raw_acct_num) -> bool:
     trailing digits of the account number against
     config.SCHWAB_PRIMARY_ACCOUNT_SUFFIXES (a list -- the primary portfolio
     is confirmed to be the SUM of three accounts, not one; see the config
-    comment for how that was determined). Empty config = include everything
-    (old behavior) -- see _warn_if_unscoped()."""
+    comment for how that was determined). Empty config is not reachable
+    here unless SCHWAB_FORCE_UNSCOPED=1 (see _require_account_scope)."""
     suffixes = config.SCHWAB_PRIMARY_ACCOUNT_SUFFIXES
     if not suffixes:
         return True
@@ -127,20 +146,22 @@ def _classify_tax_treatment(acct_type_raw: str) -> str:
 
 def fetch_positions(client: schwab.client.Client) -> pd.DataFrame:
     """
-    Fetch and aggregate positions from ALL linked Schwab accounts.
-    Uses get_accounts() — no single account hash required.
+    Fetch and aggregate positions from Schwab accounts listed in
+    config.SCHWAB_PRIMARY_ACCOUNT_SUFFIXES (deny-by-default allowlist).
 
     Multi-account aggregation:
-    - Positions with the same ticker are summed (e.g. VTI in brokerage + IRA = one row).
+    - Only allowlisted accounts are included; others are skipped (INFO log).
+    - Positions with the same ticker are summed across allowlisted accounts.
     - Net quantity = longQuantity - shortQuantity (handles margin short positions).
     - Positions where net qty == 0 are skipped (fully netted out across accounts).
     - Tax treatment: if the same ticker exists in accounts with different tax treatment
       (e.g. VTI in taxable + IRA), it is flagged as 'mixed' for TLH safety.
     - Per-account breakdown is logged at DEBUG level with masked account numbers.
+    - Empty SCHWAB_PRIMARY_ACCOUNT_SUFFIXES fails closed unless SCHWAB_FORCE_UNSCOPED=1.
 
     Returns empty DataFrame on error or if no invested positions found.
     """
-    _warn_if_unscoped()
+    _require_account_scope()
     try:
         r = client.get_accounts(fields=client.Account.Fields.POSITIONS)
         r.raise_for_status()
@@ -470,11 +491,13 @@ def _fetch_account_transactions(
 
 def fetch_transactions(client: "schwab.client.Client", start_date=None, end_date=None) -> pd.DataFrame:
     """
-    Fetch transaction history for ALL linked Schwab accounts.
+    Fetch transaction history for allowlisted Schwab accounts
+    (config.SCHWAB_PRIMARY_ACCOUNT_SUFFIXES). Empty allowlist fails closed
+    unless SCHWAB_FORCE_UNSCOPED=1.
     Uses get_account_numbers() to retrieve the hashValue required for the
     transactions endpoint.
     """
-    _warn_if_unscoped()
+    _require_account_scope()
     if not start_date:
         start_date = datetime.now() - timedelta(days=30)
     if not end_date:
@@ -627,10 +650,11 @@ def fetch_tax_lots(client: "schwab.client.Client") -> list[dict]:
     call utils.tax.reconstruct_lots_fifo() against the Transactions history.
 
     Returns empty list on API failure; never raises.
+    Empty SCHWAB_PRIMARY_ACCOUNT_SUFFIXES fails closed unless SCHWAB_FORCE_UNSCOPED=1.
     """
     from utils.tax import classify_holding_period, days_until_long_term
 
-    _warn_if_unscoped()
+    _require_account_scope()
     try:
         r = client.get_accounts(fields=client.Account.Fields.POSITIONS)
         r.raise_for_status()
