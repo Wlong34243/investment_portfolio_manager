@@ -160,10 +160,48 @@ def main():
             notes, str(exec_summary), fingerprint,
         ])
 
-    # Write header + all rows (other sources preserved + this source updated)
-    all_rows = [header] + other_rows + new_rows
-    ws.batch_clear(["A1:K1000"])
-    time.sleep(0.5)
+    # Write header + all rows (other sources preserved + this source updated).
+    # Archive prior body first; then overwrite with a single update — never
+    # batch_clear first (a failed update after clear permanently empties the tab).
+    all_rows = [header] + other_rows + new_rows if header else (
+        [["Date", "Source", "Asset Class", "Strategy", "Target %", "Min %",
+          "Max %", "Confidence", "Notes", "Summary", "Fingerprint"]]
+        + other_rows + new_rows
+    )
+    if not header:
+        header = all_rows[0]
+
+    run_ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    try:
+        existing_tabs = {w.title for w in spreadsheet.worksheets()}
+        if existing and len(existing) > 1:
+            arc_name = config.TAB_AGENT_OUTPUTS_ARCHIVE
+            if arc_name not in existing_tabs:
+                ws_arc = spreadsheet.add_worksheet(
+                    title=arc_name, rows=10000, cols=max(len(header) + 2, 12)
+                )
+                time.sleep(0.5)
+                ws_arc.update(
+                    range_name="A1",
+                    values=[["archived_at", "tab"] + list(header)],
+                    value_input_option="USER_ENTERED",
+                )
+                time.sleep(0.5)
+            else:
+                ws_arc = spreadsheet.worksheet(arc_name)
+            archive_rows = [
+                [run_ts, config.TAB_AI_SUGGESTED_ALLOCATION] + list(row)
+                for row in existing[1:]
+            ]
+            if archive_rows:
+                ws_arc.append_rows(archive_rows, value_input_option="USER_ENTERED")
+                time.sleep(0.5)
+                print(f"Archived {len(archive_rows)} prior row(s) to {arc_name}.")
+    except Exception as e:
+        print(f"WARNING: archive before overwrite failed: {e}")
+        raise
+
+    # Single-shot overwrite — no preceding clear. On failure the prior grid remains.
     ws.update(range_name="A1", values=all_rows, value_input_option="USER_ENTERED")
     time.sleep(1.0)
 
