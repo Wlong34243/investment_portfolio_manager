@@ -25,7 +25,7 @@ import config
 from utils.csv_parser import parse_schwab_csv, clean_numeric, parse_account_summaries
 
 BUNDLE_DIR = Path("bundles")
-BUNDLE_SCHEMA_VERSION = "1.0.0"
+BUNDLE_SCHEMA_VERSION = "1.1.0"  # 1.1.0: per-ticker fundamentals block for valuation drift
 
 # Data source modes for build_bundle()
 SOURCE_SCHWAB = "schwab"
@@ -51,6 +51,7 @@ class ContextBundle:
     environment: dict           # python, pandas, yfinance versions, os
     enrichment_errors: list[str]
     tax_lots: list[dict] = field(default_factory=list)  # Phase 1.3: one synthetic lot per position per account
+    fundamentals: dict = field(default_factory=dict)  # ticker -> FMP/yfinance metrics (nullable)
 
 def _sha256_file(path: Path) -> str:
     """Stream-read the file in 64KB chunks and return hex digest."""
@@ -479,8 +480,25 @@ def build_bundle(
 
     timestamp_utc = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-    # source_csv_path and source_csv_sha256 are kept for backward compatibility.
-    # Semantics broaden: identity and fingerprint regardless of source.
+    # Per-ticker fundamentals for valuation-drift (bundle schema 1.1.0).
+    # Python gathers; agents never fetch. Nulls stay null — never interpolated.
+    fundamentals: dict[str, dict] = {}
+    try:
+        from utils.fmp_client import get_fmp_fundamentals_bundle
+
+        for p in positions:
+            t = str(p.get("ticker") or p.get("Ticker") or "").strip().upper()
+            if not t or t in fundamentals or t in ("CASH_MANUAL", "CASH"):
+                continue
+            ac = str(p.get("asset_class") or p.get("Asset Class") or "")
+            try:
+                fundamentals[t] = get_fmp_fundamentals_bundle(t, asset_class=ac)
+            except Exception as e:
+                fundamentals[t] = {"error": str(e), "fetched_at": timestamp_utc}
+                enrichment_errors.append(f"fundamentals {t}: {e}")
+    except Exception as e:
+        enrichment_errors.append(f"fundamentals block failed: {e}")
+
     payload = {
         "schema_version": BUNDLE_SCHEMA_VERSION,
         "timestamp_utc": timestamp_utc,
@@ -495,7 +513,8 @@ def build_bundle(
         "position_count": int(position_count),
         "environment": _capture_environment(),
         "enrichment_errors": enrichment_errors,
-        "tax_lots": tax_lots,   # Phase 1.3: included in hash
+        "tax_lots": tax_lots,
+        "fundamentals": fundamentals,
     }
 
     bundle_hash = _sha256_canonical(_hashable_payload(payload))

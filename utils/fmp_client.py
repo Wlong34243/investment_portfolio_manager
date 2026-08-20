@@ -784,6 +784,11 @@ def get_fmp_fundamentals_bundle(ticker: str, asset_class: str = "", forward_pe_o
         "dividend_yield":     None,
         "payout_ratio":       None,
         "market_cap":         None,
+        "ev_ebitda":          None,
+        "price_to_sales":     None,
+        "net_debt_ebitda":    None,
+        "gross_margin_trend": None,  # list of up to 4 quarterly gross margins or None
+        "fcf_trend":          None,  # list of up to 4 annual FCF figures or None
     }
 
     if not is_equity_like:
@@ -855,6 +860,16 @@ def get_fmp_fundamentals_bundle(ticker: str, asset_class: str = "", forward_pe_o
                 result["gross_margin"] = _safe_float(m.get("grossProfitMarginTTM"))
                 result["net_margin"]   = _safe_float(m.get("netProfitMarginTTM"))
                 result["payout_ratio"] = _safe_float(m.get("payoutRatioTTM"))
+                result["ev_ebitda"] = _safe_float(
+                    m.get("enterpriseValueMultipleTTM")
+                    or m.get("enterpriseValueOverEBITDATTM")
+                )
+                result["price_to_sales"] = _safe_float(
+                    m.get("priceToSalesRatioTTM") or m.get("priceSalesRatioTTM")
+                )
+                result["net_debt_ebitda"] = _safe_float(
+                    m.get("netDebtToEBITDATTM") or m.get("netDebtToEBITDA")
+                )
                 if result["pe_ratio"] is None:
                     result["pe_ratio"] = _safe_float(m.get("priceEarningsRatioTTM"))
         else:
@@ -879,8 +894,39 @@ def get_fmp_fundamentals_bundle(ticker: str, asset_class: str = "", forward_pe_o
                     result["revenue_growth_yoy"] = round(
                         (rev_new - rev_old) / abs(rev_old), 4
                     )
+            # Gross-margin trend: last up to 4 annual periods (quarterly if present)
+            stmts4 = get_income_statements_cached(ticker, limit=4)
+            gm_trend = []
+            for s in stmts4:
+                gp = _safe_float(s.get("grossProfit"))
+                rev = _safe_float(s.get("revenue")) or _safe_float(s.get("totalRevenue"))
+                if gp is not None and rev and rev != 0:
+                    gm_trend.append(round(gp / rev, 4))
+            if gm_trend:
+                result["gross_margin_trend"] = gm_trend
         except Exception as e:
             fetch_errors.append(f"income-statement: {e}")
+
+        # FCF trend from cash-flow statements (best-effort; null if unavailable)
+        try:
+            _fmp_rate_limit()
+            r = requests.get(
+                f"{BASE_URL}/cash-flow-statement?symbol={ticker}&limit=4&apikey={api_key}",
+                timeout=10,
+            )
+            if r.ok:
+                rows = r.json() if isinstance(r.json(), list) else []
+                fcf_trend = []
+                for row in rows:
+                    fcf = _safe_float(row.get("freeCashFlow"))
+                    if fcf is not None:
+                        fcf_trend.append(fcf)
+                if fcf_trend:
+                    result["fcf_trend"] = fcf_trend
+            elif r.status_code not in (402, 429):
+                fetch_errors.append(f"cash-flow-statement: HTTP {r.status_code}")
+        except Exception as e:
+            fetch_errors.append(f"cash-flow-statement: {e}")
 
     if fetch_errors:
         result["fetch_warnings"] = fetch_errors
