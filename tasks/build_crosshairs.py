@@ -25,7 +25,7 @@ if _ROOT not in sys.path:
     sys.path.insert(0, _ROOT)
 
 import config
-from utils.level_coverage import compute_level_coverage
+from utils.level_coverage import compute_level_coverage, TRIGGER_TYPE_FIELDS, DEFAULT_TRIGGER_TYPE
 
 NEAR_BAND_PCT = 0.20  # include NEAR_* when |dist| <= 20% or already through level
 TOP_N_DASHBOARD = 5
@@ -35,11 +35,41 @@ REASON_NEAR_ADD = "NEAR_ADD"
 REASON_DISLOCATION = "DISLOCATION"
 REASON_MISSING_LEVEL = "MISSING_LEVEL"
 
+# trigger_type -> (Valuation_Card column holding the live "current" reading,
+# short label for rationale strings, trim direction, add direction).
+# Trim/add *field names* (fwd_pe_trim_above, pb_add_below, ...) live in
+# utils.level_coverage.TRIGGER_TYPE_FIELDS -- not duplicated here; this map
+# is purely about which live metric a NEAR_* evaluation compares against.
+#
+# direction "rises_through": the band fires once current >= level.
+# direction "falls_through": the band fires once current <= level.
+# discount_from_high is inverted vs every other type: a *small* discount
+# means the price is near its 52w high (-> trim), a *large* discount is the
+# buying opportunity (-> add). See prompts/typed_trigger_crosshairs_2026-08-24.md.
+METRIC_MAP = {
+    "price":             ("Price", "price", "rises_through", "falls_through"),
+    "fwd_pe":            ("Forward P/E (yf)", "fwd P/E", "rises_through", "falls_through"),
+    "trailing_pe":       ("Trailing P/E", "trailing P/E", "rises_through", "falls_through"),
+    "price_to_book":     ("P/B", "P/B", "rises_through", "falls_through"),
+    "discount_from_high": ("Discount from 52w High %", "discount", "falls_through", "rises_through"),
+}
+
+# "Discount from 52w High %" is written by build_valuation_card.py as a raw
+# fraction (e.g. 0.279) and round-trips through the Sheet with a PERCENT
+# format; read_gsheet_robust()/coerce_sheet_numeric_series() divides any
+# "%"-suffixed cell by 100 again on the way back in, so this reads back as
+# 0.279, not 27.9. The thesis-stored trim_below_discount_pct /
+# add_above_discount_pct are plain percentage points (IBM: 2.0 / 11.9) --
+# without this *100 correction, discount_from_high could never compare
+# correctly against its own declared levels.
+_METRIC_SCALE = {"discount_from_high": 100.0}
+
 # Sort buckets (lower rank_score = higher on the list)
 _BUCKET_NEAR = 0
 _BUCKET_DISLOC_HELD = 100
 _BUCKET_DISLOC_OTHER = 200
 _BUCKET_MISSING = 300
+_BUCKET_DOCTRINE_HOLD = 400  # doctrine / add-suspended — visible, ranked out of CC top 5
 
 
 @dataclass
@@ -55,6 +85,9 @@ class CrosshairItem:
     dist_trim: Optional[float] = None
     dist_add: Optional[float] = None
     rationale: str = ""
+    trigger_type: str = "price"
+    doctrine_tag: Optional[str] = None
+    doctrine_reason: str = ""
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -91,6 +124,90 @@ def _safe_float(val) -> Optional[float]:
 def _safe_float_nonzero(val) -> Optional[float]:
     f = _safe_float(val)
     return f if f else None
+
+
+def resolve_trigger_type(
+    ticker: str,
+    vdata: dict,
+    level_coverage: Optional[dict] = None,
+) -> str:
+    """Declared trigger_type for one ticker: Val_Card 'Trigger Type' column
+    first, else level_coverage's trigger_type_by_ticker map, else price
+    (backwards-compat default -- matches DEFAULT_TRIGGER_TYPE)."""
+    vt = str(vdata.get("Trigger Type") or "").strip()
+    if vt in TRIGGER_TYPE_FIELDS:
+        return vt
+    tbt = (level_coverage or {}).get("trigger_type_by_ticker") or {}
+    tt = tbt.get(ticker)
+    if tt in TRIGGER_TYPE_FIELDS:
+        return tt
+    return DEFAULT_TRIGGER_TYPE
+
+
+def _typed_dist(current: float, level: float, direction: str) -> float:
+    """Signed distance, same sign convention the original price formulas
+    used: <=0 means already through the level, positive means still
+    approaching. 'rises_through' fires once current >= level; 'falls_through'
+    fires once current <= level."""
+    if direction == "rises_through":
+        return (level - current) / current
+    return (current - level) / level
+
+
+def _fmt_metric(trigger_type: str, value: float) -> str:
+    if trigger_type == "price":
+        return f"${value:.2f}"
+    if trigger_type == "discount_from_high":
+        return f"{value:.1f}%"
+    return f"{value:.2f}"
+
+
+def format_level(trigger_type: str, value: Optional[float]) -> str:
+    """Render a Trim/Add level for display without assuming dollars for a
+    non-price trigger_type. Used by Command Center / Decision_View renderers."""
+    if value is None:
+        return "—"
+    return _fmt_metric(trigger_type, value)
+
+
+def resolve_typed_metric(trigger_type: str, hrow: dict, vdata: dict) -> dict:
+    """
+    Current reading, trim/add levels (already declared-type per
+    build_valuation_card.py), and signed distances for one ticker's declared
+    trigger_type. ceiling_only or an unknown type returns all-None fields --
+    no fallback substitution across types, ever (a missing/non-numeric live
+    metric skips NEAR_*, it never borrows another type's reading).
+    """
+    price = _safe_float(hrow.get("Price")) or None
+    out = {
+        "trigger_type": trigger_type, "price": price, "current": None,
+        "trim": None, "add": None, "dist_trim": None, "dist_add": None,
+    }
+    spec = METRIC_MAP.get(trigger_type)
+    if spec is None:  # ceiling_only, or a type this map doesn't (yet) cover
+        return out
+
+    metric_col, _label, trim_dir, add_dir = spec
+    if trigger_type == "price":
+        current = price
+    else:
+        current = _safe_float(vdata.get(metric_col))
+        scale = _METRIC_SCALE.get(trigger_type)
+        if current is not None and scale:
+            current *= scale
+    out["current"] = current
+    if current is None:
+        return out
+
+    trim = _safe_float_nonzero(vdata.get("Trim Target"))
+    add = _safe_float_nonzero(vdata.get("Add Target"))
+    out["trim"] = trim
+    out["add"] = add
+    if trim:
+        out["dist_trim"] = _typed_dist(current, trim, trim_dir)
+    if add:
+        out["dist_add"] = _typed_dist(current, add, add_dir)
+    return out
 
 
 def _today_utc_date() -> str:
@@ -169,49 +286,92 @@ def _valuation_map(valuation_rows: list[dict]) -> dict[str, dict]:
     return out
 
 
-def _near_candidates(held: dict[str, dict], val_map: dict[str, dict], near_band: float) -> list[CrosshairItem]:
+def _near_candidates(
+    held: dict[str, dict],
+    val_map: dict[str, dict],
+    near_band: float,
+    level_coverage: Optional[dict] = None,
+) -> list[CrosshairItem]:
     items: list[CrosshairItem] = []
     for ticker, hrow in held.items():
         vdata = val_map.get(ticker, {})
-        price = _safe_float(hrow.get("Price")) or 0.0
-        trim = _safe_float_nonzero(vdata.get("Trim Target"))
-        add = _safe_float_nonzero(vdata.get("Add Target"))
-        dist_trim = (trim - price) / price if trim and price else None
-        dist_add = (price - add) / add if add and price else None
+        trigger_type = resolve_trigger_type(ticker, vdata, level_coverage)
+        if trigger_type == "ceiling_only":
+            continue  # no valuation band -- the style ceiling governs, not this
+
+        m = resolve_typed_metric(trigger_type, hrow, vdata)
+        if m["current"] is None:
+            continue  # live metric missing/non-numeric -- skip, never fall back to a different metric
+
+        label = METRIC_MAP.get(trigger_type, (None, trigger_type))[1]
         mv = _safe_float(hrow.get("Market Value"))
         wt = _safe_float(hrow.get("Weight"))
 
         candidates: list[tuple[str, float, str]] = []
-        if dist_trim is not None:
-            # Through trim (price >= trim) => dist_trim <= 0; else within band
-            if dist_trim <= 0 or abs(dist_trim) <= near_band:
-                facts = f"price ${price:.2f}; trim ${trim:.2f}; ->Trim {dist_trim:+.1%}"
-                candidates.append((REASON_NEAR_TRIM, _BUCKET_NEAR + abs(dist_trim), facts))
-        if dist_add is not None:
-            if dist_add <= 0 or abs(dist_add) <= near_band:
-                facts = f"price ${price:.2f}; add ${add:.2f}; ->Add {dist_add:+.1%}"
-                candidates.append((REASON_NEAR_ADD, _BUCKET_NEAR + abs(dist_add), facts))
+        dist_trim, dist_add = m["dist_trim"], m["dist_add"]
+        # Through trim (current has crossed the level) => dist <= 0; else within band
+        if dist_trim is not None and (dist_trim <= 0 or abs(dist_trim) <= near_band):
+            facts = (
+                f"{label} {_fmt_metric(trigger_type, m['current'])}; "
+                f"trim {_fmt_metric(trigger_type, m['trim'])}; ->Trim {dist_trim:+.1%}"
+            )
+            candidates.append((REASON_NEAR_TRIM, _BUCKET_NEAR + abs(dist_trim), facts))
+        if dist_add is not None and (dist_add <= 0 or abs(dist_add) <= near_band):
+            facts = (
+                f"{label} {_fmt_metric(trigger_type, m['current'])}; "
+                f"add {_fmt_metric(trigger_type, m['add'])}; ->Add {dist_add:+.1%}"
+            )
+            candidates.append((REASON_NEAR_ADD, _BUCKET_NEAR + abs(dist_add), facts))
 
         if not candidates:
             continue
-        # Prefer the closer band edge; keep both facts in rationale when both fire
+        # Prefer the closer band edge; keep both facts in rationale when both fire.
+        # One valuation NEAR_* row per ticker -- the declared type's band only,
+        # never a second row from a secondary/unused band on the same thesis.
         candidates.sort(key=lambda c: c[1])
         reason, score, primary = candidates[0]
         rationale = primary
         if len(candidates) > 1:
             rationale = primary + " | also " + candidates[1][2]
+
+        doctrine_tag: Optional[str] = None
+        doctrine_reason = ""
+        if reason == REASON_NEAR_TRIM:
+            try:
+                from utils.doctrine_reader import downgrade_rule, load_doctrine
+                rule = downgrade_rule(load_doctrine(), ticker, REASON_NEAR_TRIM)
+            except Exception:
+                rule = None
+            if rule is not None:
+                dist_for_rank = abs(dist_trim) if dist_trim is not None else 0.0
+                score = _BUCKET_DOCTRINE_HOLD + dist_for_rank
+                doctrine_tag = "HOLD_TAX" if rule.id == "tax_hold_runners" else rule.id.upper()
+                doctrine_reason = rule.summary
+                rationale = rationale + " | doctrine: " + rule.summary
+        elif reason == REASON_NEAR_ADD and _add_triggers_suspended(ticker):
+            # Policy (b): keep on Decision_View, re-rank out of CC top 5 — same
+            # bucket as doctrine HOLD_TAX. Do not drop the row (a).
+            dist_for_rank = abs(dist_add) if dist_add is not None else 0.0
+            score = _BUCKET_DOCTRINE_HOLD + dist_for_rank
+            doctrine_tag = "ADD_SUSPENDED"
+            doctrine_reason = "add_triggers_suspended in thesis frontmatter"
+            rationale = rationale + " | add_triggers_suspended: true"
+
         items.append(CrosshairItem(
             ticker=ticker,
             reason_code=reason,
             rank_score=score,
             mv=mv,
             wt=wt,
-            price=price or None,
-            trim=trim,
-            add=add,
+            price=m["price"],
+            trim=m["trim"],
+            add=m["add"],
             dist_trim=dist_trim,
             dist_add=dist_add,
             rationale=rationale,
+            trigger_type=trigger_type,
+            doctrine_tag=doctrine_tag,
+            doctrine_reason=doctrine_reason,
         ))
     return items
 
@@ -220,6 +380,7 @@ def _dislocation_candidates(
     payload: Optional[dict],
     held: dict[str, dict],
     val_map: dict[str, dict],
+    level_coverage: Optional[dict] = None,
 ) -> list[CrosshairItem]:
     if not payload:
         return []
@@ -242,10 +403,18 @@ def _dislocation_candidates(
         hrow = held.get(ticker, {})
         vdata = val_map.get(ticker, {})
         price = _safe_float(hrow.get("Price")) or _safe_float(r.get("price"))
-        trim = _safe_float_nonzero(vdata.get("Trim Target"))
-        add = _safe_float_nonzero(vdata.get("Add Target"))
-        dist_trim = (trim - price) / price if trim and price else None
-        dist_add = (price - add) / add if add and price else None
+        # Unheld names have no thesis -- default "price" is harmless since
+        # trim/add will be empty for them anyway (no Val_Card row). Held
+        # names use their declared type so trim/add aren't read as dollars
+        # when the band is actually a P/E, P/B or discount %.
+        trigger_type = resolve_trigger_type(ticker, vdata, level_coverage) if is_held else "price"
+        if trigger_type == "ceiling_only":
+            trim = add = dist_trim = dist_add = None
+        else:
+            synth_hrow = dict(hrow)
+            synth_hrow["Price"] = price
+            m = resolve_typed_metric(trigger_type, synth_hrow, vdata)
+            trim, add, dist_trim, dist_add = m["trim"], m["add"], m["dist_trim"], m["dist_add"]
         dd = _safe_float(r.get("drawdown_52w"))
         d5 = _safe_float(r.get("return_5d"))
         pe = _safe_float(r.get("forward_pe"))
@@ -268,6 +437,7 @@ def _dislocation_candidates(
             dist_trim=dist_trim,
             dist_add=dist_add,
             rationale="; ".join(parts),
+            trigger_type=trigger_type,
         ))
     return items
 
@@ -317,6 +487,115 @@ def _missing_level_candidates(
             rationale="SYSTEM: " + "; ".join(gaps),
         ))
     return items
+
+
+def _add_triggers_suspended(ticker: str) -> bool:
+    """True when thesis frontmatter sets add_triggers_suspended: true."""
+    from utils.thesis_reader import THESES_DIR, load_frontmatter
+
+    path = THESES_DIR / f"{ticker}_thesis.md"
+    if not path.is_file():
+        return False
+    try:
+        fm = load_frontmatter(path.read_text(encoding="utf-8"))
+    except Exception:
+        return False
+    val = fm.get("add_triggers_suspended")
+    if isinstance(val, bool):
+        return val
+    if isinstance(val, str):
+        return val.strip().lower() in ("true", "yes", "1")
+    return False
+
+
+def _apply_doctrine_downgrades(items: list[CrosshairItem]) -> list[CrosshairItem]:
+    """
+    After merge: if a ticker has NEAR_TRIM in play (primary or merged extra) and
+    doctrine says downgrade_informational, force reason_code=NEAR_TRIM, rank into
+    the HOLD bucket, and stamp doctrine_tag. DISLOCATION / other facts stay in
+    rationale. NEAR_ADD is never downgraded here.
+    """
+    try:
+        from utils.doctrine_reader import downgrade_rule, load_doctrine
+        doctrine = load_doctrine()
+    except Exception:
+        return items
+
+    out: list[CrosshairItem] = []
+    for item in items:
+        near_in_play = (
+            item.reason_code == REASON_NEAR_TRIM
+            or "NEAR_TRIM:" in (item.rationale or "")
+        )
+        if not near_in_play:
+            out.append(item)
+            continue
+        rule = downgrade_rule(doctrine, item.ticker, REASON_NEAR_TRIM)
+        if rule is None:
+            out.append(item)
+            continue
+        dist_for_rank = abs(item.dist_trim) if item.dist_trim is not None else 0.0
+        tag = "HOLD_TAX" if rule.id == "tax_hold_runners" else rule.id.upper()
+        rationale = item.rationale or ""
+        if "doctrine:" not in rationale:
+            rationale = rationale + " | doctrine: " + rule.summary
+        # If DISLOCATION (or other) was primary, keep that fact visible.
+        if item.reason_code != REASON_NEAR_TRIM:
+            rationale = (
+                f"{REASON_NEAR_TRIM} (doctrine-hold) | was {item.reason_code}: "
+                + rationale
+            )
+        out.append(CrosshairItem(**{
+            **item.to_dict(),
+            "reason_code": REASON_NEAR_TRIM,
+            "rank_score": _BUCKET_DOCTRINE_HOLD + dist_for_rank,
+            "doctrine_tag": tag,
+            "doctrine_reason": rule.summary,
+            "rationale": rationale,
+        }))
+    out.sort(key=lambda x: (x.rank_score, x.ticker))
+    return out
+
+
+def _apply_add_suspensions(items: list[CrosshairItem]) -> list[CrosshairItem]:
+    """
+    Policy (b): thesis frontmatter add_triggers_suspended: true keeps NEAR_ADD
+    on Decision_View but re-ranks into the doctrine HOLD bucket (>=400) so it
+    drops out of the Command Center top 5 — same pattern as HOLD_TAX.
+    Policy (a) drop-entirely rejected for consistency with that path.
+    """
+    out: list[CrosshairItem] = []
+    for item in items:
+        near_add_in_play = (
+            item.reason_code == REASON_NEAR_ADD
+            or "NEAR_ADD:" in (item.rationale or "")
+            or "->Add " in (item.rationale or "")
+        )
+        if not near_add_in_play or not _add_triggers_suspended(item.ticker):
+            out.append(item)
+            continue
+        if item.doctrine_tag == "ADD_SUSPENDED" and item.rank_score >= _BUCKET_DOCTRINE_HOLD:
+            out.append(item)
+            continue
+        # If primary is something else (e.g. DISLOCATION) but NEAR_ADD is in
+        # rationale only, leave primary ranking alone — suspension binds the
+        # add-band signal, not every fact on the ticker.
+        if item.reason_code != REASON_NEAR_ADD:
+            out.append(item)
+            continue
+        dist_for_rank = abs(item.dist_add) if item.dist_add is not None else 0.0
+        rationale = item.rationale or ""
+        if "add_triggers_suspended" not in rationale:
+            rationale = rationale + " | add_triggers_suspended: true"
+        out.append(CrosshairItem(**{
+            **item.to_dict(),
+            "rank_score": _BUCKET_DOCTRINE_HOLD + dist_for_rank,
+            "doctrine_tag": "ADD_SUSPENDED",
+            "doctrine_reason": "add_triggers_suspended in thesis frontmatter",
+            "rationale": rationale,
+        }))
+    out.sort(key=lambda x: (x.rank_score, x.ticker))
+    return out
 
 
 def _merge_by_ticker(groups: list[list[CrosshairItem]]) -> list[CrosshairItem]:
@@ -370,7 +649,7 @@ def produce_crosshairs(
             if holdings_rows is None:
                 holdings_rows = _read_records(ss, config.TAB_HOLDINGS_CURRENT)
             if valuation_rows is None:
-                valuation_rows = _read_records(ss, "Valuation_Card")
+                valuation_rows = _read_records(ss, config.TAB_VALUATION_CARD)
                 if not valuation_rows:
                     warnings.append("Valuation_Card unreadable or empty")
         except Exception as e:
@@ -404,10 +683,12 @@ def produce_crosshairs(
         if dislocation_payload is None:
             warnings.append("no same-day dislocation scan on disk")
 
-    near = _near_candidates(held, val_map, near_band_pct)
-    disloc = _dislocation_candidates(dislocation_payload, held, val_map)
+    near = _near_candidates(held, val_map, near_band_pct, level_coverage=level_coverage)
+    disloc = _dislocation_candidates(dislocation_payload, held, val_map, level_coverage=level_coverage)
     missing = _missing_level_candidates(level_coverage, held, val_map)
-    items = _merge_by_ticker([near, disloc, missing])
+    items = _apply_add_suspensions(
+        _apply_doctrine_downgrades(_merge_by_ticker([near, disloc, missing]))
+    )
 
     as_of = datetime.now().strftime("%Y-%m-%d %H:%M")
     return CrosshairsResult(
@@ -422,10 +703,14 @@ def print_dry_run(result: CrosshairsResult, top_n: int = TOP_N_DASHBOARD) -> Non
     print(result.header_line)
     if result.dislocation_path:
         print(f"  dislocation: {result.dislocation_path}")
-    print(f"{'Rank':<5} {'Ticker':<8} {'Reason':<16} {'Score':>8}  Rationale")
+    print(f"{'Rank':<5} {'Ticker':<8} {'Reason':<16} {'Score':>8} {'Doctrine':<10}  Rationale")
     for i, item in enumerate(result.items, 1):
         mark = "*" if i <= top_n else " "
-        print(f"{mark}{i:<4} {item.ticker:<8} {item.reason_code:<16} {item.rank_score:8.3f}  {item.rationale}")
+        tag = item.doctrine_tag or ""
+        print(
+            f"{mark}{i:<4} {item.ticker:<8} {item.reason_code:<16} "
+            f"{item.rank_score:8.3f} {tag:<10}  {item.rationale}"
+        )
     print(f"{len(result.items)} items; top {top_n} marked *. DRY RUN — no Sheet writes.")
 
 

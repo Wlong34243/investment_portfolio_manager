@@ -3,9 +3,9 @@ ticker: SKHY
 style: THEME
 framework_preference: thematic_specialist_v1
 entry_date: 2026-07-29
-last_reviewed: '2026-08-08'
-current_allocation: 0.86%
-cost_basis: 5284.4800000007
+last_reviewed: '2026-08-21'
+current_allocation: 1.06%
+cost_basis: 5284.48
 time_horizon: TBD - see open items
 triggers:
   trigger_type: ceiling_only
@@ -106,6 +106,11 @@ Recorded as facts at the time of entry, not as forecast:
 - **Currency and jurisdiction.** Korean issuer; KRW exposure and Korean market policy
   risk pass through regardless of the US listing.
 
+- **US domestic-facility policy pressure (added 2026-08-25):** US policy pressure on Korean
+  chipmakers to invest in domestic US facilities (2026-08-24). Same-day market reaction:
+  KOSPI −2.66%, SKHY ADR −4.92% — policy/jurisdiction risk that can move the ADR independent
+  of HBM fundamentals.
+
 ## Position Sizing Plan
 
 - **Current: 0.47%** (20 shares @ $138.00). Seed size.
@@ -171,6 +176,7 @@ priority: low — seed position, recently opened, no action contemplated.
 
 ## Review Log
 
+- 2026-08-25: Key Risks — US policy pressure on Korean chipmakers for domestic US facilities (2026-08-24; KOSPI −2.66%, SKHY ADR −4.92%). Source: scheduled morning brief, bundle `6bacf63dd536`.
 - **2026-07-29:** Position opened, 20 shares @ $138.00. Draft thesis created same day
   to unblock the briefing export, which treats a held position with no thesis file as
   a BLOCKING preflight issue. Idea path ran EMXC to MU to SKHY across one session;
@@ -180,14 +186,14 @@ priority: low — seed position, recently opened, no action contemplated.
 - 2026-08-09: trigger_type: ceiling_only. Cyclicality re-examined and corrected: SKHY is SK hynix -- a memory maker, the same cycle as MU -- so the cyclical override class applies regardless of this file's own prose (checking for the word "cyclical" in the thesis text, rather than what the business is, was the wrong test). price_to_book not computed: yfinance's fundamentals for this ticker mix KRW-denominated equity with USD price/shares, producing nonsensical book-value-per-share figures (hundreds of thousands per share) -- a currency-handling bug, not a thin-history problem, and not worth fixing since the 3.0% THEME ceiling binds at 0.86% weight long before a valuation trigger would matter. See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
-**Current Allocation:** 0.86%
+**Current Allocation:** 1.06%
 **Cost Basis:** $5,284.48
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** THEME
 **Size Ceiling:** 3.00%
-**Drift:** -2.14%
+**Drift:** -1.94%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -203,5 +209,5 @@ No realized G/L history.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-08 09:05: Auto-sync allocation 0.86%, drift -2.14%
+2026-08-21 08:45: Auto-sync allocation 1.06%, drift -1.94%
 <!-- endregion:change_log -->

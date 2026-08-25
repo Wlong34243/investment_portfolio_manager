@@ -3,9 +3,9 @@ ticker: ETN
 style: THEME
 framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: '2026-08-08'
-current_allocation: 1.64%
-cost_basis: 7589.549999999
+last_reviewed: '2026-08-21'
+current_allocation: 1.54%
+cost_basis: 7589.55
 time_horizon: 3 to 5 years
 triggers:
   trigger_type: ceiling_only
@@ -32,6 +32,7 @@ Thematic pick-and-shovel play on the AI data center build-out. Eaton is a solid 
 ## Key Risks
 - Highly linked to the pace of AI/data-center capex; a broad slowdown in that build-out hits this thesis directly.
 - As a thematic satellite (not core conviction), sized and trimmed opportunistically rather than held through deep drawdowns.
+- **Rate / discount-rate risk (added 2026-08-25):** Higher real yields compress the multiple on long-duration AI-infrastructure cash flows. Evidence 2026-08-19..25 on no company-specific news: ETN −10.3%, PWR −14.6%, VRT −12.8% over five sessions vs S&P −1.2% — a duration/rate move across the sleeve, not an operator-specific print.
 
 ## Position Sizing & Action Zones
 Thematic Specialist bucket — market-position bet on AI infrastructure buildout, not a GARP-style quality/valuation call.
@@ -41,6 +42,7 @@ Thematic Specialist bucket — market-position bet on AI infrastructure buildout
 - A more direct or better-valued power-infrastructure/AI-buildout vehicle emerges.
 
 ## Review Log
+- 2026-08-25: Key Risks — added rate/discount-rate bullet (higher real yields → multiple compression on long-duration AI-infra cash flows; 2026-08-19..25 sleeve drawdown vs S&P). Source: scheduled morning brief, bundle `6bacf63dd536`.
 - 2026-07-20: Thesis rewritten. Prior file content was a mislabeled duplicate of the NVDA thesis (frontmatter ticker had been corrected in June, but body was never fixed). Rebuilt using Bill's actual ETN reasoning: thematic AI-buildout power-infrastructure support play.
 - 2026-08-09: trigger_type set explicit: ceiling_only (THEME default; position-size bet, no existing valuation anchor). See prompts/trigger_types_2026-08-09.md.
 
@@ -52,14 +54,14 @@ next_step: [BILL]
 priority: [BILL]
 
 <!-- region:position_state -->
-**Current Allocation:** 1.64%
+**Current Allocation:** 1.54%
 **Cost Basis:** $7,589.55
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** THEME
 **Size Ceiling:** 3.00%
-**Drift:** -1.36%
+**Drift:** -1.46%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -70,9 +72,9 @@ priority: [BILL]
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
-Total Realized G/L: $1,156.72 over 2 closed lots. Total Proceeds: $4,036.72.
+Total Realized G/L: $1,156.72 over 1 closed lots. Total Proceeds: $4,036.72.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-08 09:05: Auto-sync allocation 1.64%, drift -1.36%
+2026-08-21 08:45: Auto-sync allocation 1.54%, drift -1.46%
 <!-- endregion:change_log -->

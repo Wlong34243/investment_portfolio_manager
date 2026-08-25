@@ -3,9 +3,9 @@ ticker: MU
 style: GARP
 framework_preference:
 entry_date: '2026-08-07'
-last_reviewed: '2026-08-08'
-cost_basis: 7845.409999999998
-current_allocation: 1.30%
+last_reviewed: '2026-08-21'
+cost_basis: 7845.41
+current_allocation: 1.48%
 triggers:
   trigger_type: ceiling_only
   entry_price: 875.65               # 5 sh, average cost
@@ -96,8 +96,8 @@ Read separately:
 **The COF sale is consistent with COF's own file.** `COF_thesis.md` sets
 `price_trim_above: 175.00` and COF traded **$218.46** — the sale was above Bill's own recorded
 trim level. Noted because a trade matching its thesis file is worth recording as such. COF
-carried an unrealized gain (+2.61% at bundle `6c531c97`), so the sale realizes gain —
-**[BILL] verify lot selection and holding period.**
+carried an unrealized gain (+2.61% at bundle `6c531c97`), so the sale realizes gain.
+**Lot verification resolved 2026-08-19:** FIFO consumed 8 sh from 04-10, 10 sh from 04-16, 5 sh from 04-16, 2 sh from 04-17 — all short-term (112–119 days held), net realized +$455.00. No wash-sale issue. See `COF_thesis.md` Review Log 2026-08-19.
 
 **Same-day cross-reference:** QQQM was also partially sold (to fund RRC). QQQM holds MU at
 0.63% per the bundle's look-through. Selling the index sleeve that contained MU while buying
@@ -141,6 +141,12 @@ substantially identical. Recorded so it is not later misread as a wash-sale prob
 - **Invalidation:** reduce conviction if DRAM/HBM pricing rolls over materially, data-center
   revenue decelerates sharply, HBM4 execution slips, or the fiscal-Q4 trajectory is
   meaningfully missed against the $50.0B ±$1.0B / ~86% guide.
+- **Netlist patent / ITC risk (added 2026-08-25):** Netlist ITC and federal-court patent
+  actions over DDR5 RDIMM/MRDIMM seeking US import/sale exclusion orders (2026-08-24). An
+  exclusion order would hit US supply of affected modules independent of HBM demand.
+- **Apple China-sourcing signal (added 2026-08-25):** Reported Apple sourcing of memory from
+  Chinese suppliers — a customer-allocation and competitive-share risk for US/Korea memory
+  makers if hyperscaler/phone OEM mix shifts.
 
 ## Position Sizing & Role
 
@@ -213,6 +219,7 @@ priority: **[BILL]** — not stated at entry.
 
 ## Review Log
 
+- 2026-08-25: Key Risks — Netlist ITC/federal patent actions on DDR5 RDIMM/MRDIMM (exclusion-order seek, 2026-08-24); reported Apple memory sourcing from Chinese suppliers. Source: scheduled morning brief, bundle `6bacf63dd536`.
 - 2026-08-07: Position opened, funded by partial COF sale (COF sold above its own recorded
   `price_trim_above: 175.00`). Thesis drafted from Bill-supplied text; all company figures
   independently verified, none overstated.
@@ -227,14 +234,14 @@ priority: **[BILL]** — not stated at entry.
 - 2026-08-09: trigger_type: ceiling_only, not price_to_book. Cyclical override considered (this thesis itself calls forward P/E "a peak-cycle artifact of scarcity, not a structural moat") but the P/B band computed from FY2022-2025 annual book value (n=4, range 1.05-3.79) isn't usable either: live current P/B 9.84 is 2.6x the historical max, and MU's book value is itself inflated by the same boom earnings that inflate the multiple (quarterly operating income flowing straight into retained equity) -- P/B hasn't escaped cycle contamination, just moved it somewhere less dangerous than P/E. Reference only, not a live trigger; revisit once more history accumulates. Computed 2026-08-09: FY2022-2025 P/B min/p25/median/p75/max = 1.05/1.38/2.10/2.54/3.79, live current 9.84 @ $877.57. See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
-**Current Allocation:** 1.30%
+**Current Allocation:** 1.48%
 **Cost Basis:** $7,845.41
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** GARP
 **Size Ceiling:** 9.00%
-**Drift:** -7.70%
+**Drift:** -7.52%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -247,5 +254,5 @@ No realized G/L history.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-08 09:05: Auto-sync allocation 1.30%, drift -7.70%
+2026-08-21 08:45: Auto-sync allocation 1.48%, drift -7.52%
 <!-- endregion:change_log -->

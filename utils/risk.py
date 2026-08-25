@@ -63,10 +63,13 @@ def calculate_beta(ticker, price_history, spy_returns) -> float:
 
 def calculate_portfolio_beta(df) -> float:
     """
-    Weighted Beta calculation across the TOTAL portfolio.
-    Cash positions must have beta=0.0 to properly dilute the total risk.
-    Formula: Sum(Position_Beta * Position_Weight)
-    Where Weight = Position_MV / Total_Portfolio_MV
+    Weighted beta across positions with measurable betas.
+
+    Policy (2026-08-25): uncomputable betas (NaN / missing) are EXCLUDED and the
+    denominator is renormalised over the remaining market value. Cash tickers
+    stay at beta 0.0 so they still dilute. Do NOT impute 1.0 — that silently
+    claimed coverage the tab header denied.
+    Formula: Sum(Position_Beta * Position_MV) / Sum(MV of included rows)
     """
     ticker_col = 'ticker' if 'ticker' in df.columns else 'Ticker'
     mv_col = 'market_value' if 'market_value' in df.columns else 'Market Value'
@@ -74,20 +77,25 @@ def calculate_portfolio_beta(df) -> float:
     
     df_calc = df.copy()
     
-    # 1. Ensure numeric types
+    # 1. Ensure numeric types — leave beta NaN as NaN (never fillna(1.0))
     df_calc[mv_col] = pd.to_numeric(df_calc[mv_col], errors='coerce').fillna(0.0)
-    df_calc[beta_col] = pd.to_numeric(df_calc[beta_col], errors='coerce').fillna(1.0)
+    df_calc[beta_col] = pd.to_numeric(df_calc[beta_col], errors='coerce')
     
     # 2. Force Beta=0 for cash tickers (dilution)
-    cash_mask = (df_calc[ticker_col].isin(config.BETA_EXCLUDE_TICKERS)) | (df_calc.get('Asset Class', '').astype(str).str.lower() == 'cash')
+    cash_mask = df_calc[ticker_col].isin(config.BETA_EXCLUDE_TICKERS)
+    if "Asset Class" in df_calc.columns:
+        cash_mask = cash_mask | (
+            df_calc["Asset Class"].astype(str).str.lower() == "cash"
+        )
     df_calc.loc[cash_mask, beta_col] = 0.0
-    
-    total_mv = df_calc[mv_col].sum()
+
+    # 3. Exclude uncomputable (non-cash NaN beta); renormalise over what's left
+    included = df_calc[df_calc[beta_col].notna()].copy()
+    total_mv = included[mv_col].sum()
     if total_mv <= 0:
         return 0.0
         
-    # 3. Calculate weighted beta
-    weighted_beta = (df_calc[mv_col] * df_calc[beta_col]).sum() / total_mv
+    weighted_beta = (included[mv_col] * included[beta_col]).sum() / total_mv
     
     return round(float(weighted_beta), 4)
 

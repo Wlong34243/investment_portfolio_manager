@@ -3,9 +3,9 @@ ticker: PWR
 style: THEME
 framework_preference: AI Power Infrastructure & Electrification
 entry_date: '2026-08-04'
-last_reviewed: '2026-08-08'
+last_reviewed: '2026-08-21'
 cost_basis: 8975.27
-current_allocation: 1.45%
+current_allocation: 1.44%
 triggers:
   trigger_type: ceiling_only
   entry_price:
@@ -35,6 +35,7 @@ Position established between 2026-08-04 and 2026-08-05 across three tranches (13
 ## Key Risks
 - **Tech CapEx Dependency:** Thesis relies heavily on sustained capital expenditure from major mega-cap tech spending; a broad contraction in tech infrastructure CapEx (e.g., dropping toward $500B annually) directly impairs core thesis drivers.
 - **Industrial & Project Execution Delay:** Vulnerable to broader macro slowdowns in utility spending, labor constraints, or project execution delays.
+- **Rate / discount-rate risk (added 2026-08-25):** Higher real yields compress the multiple on long-duration AI-infrastructure cash flows. Evidence 2026-08-19..25 on no company-specific news: ETN −10.3%, PWR −14.6%, VRT −12.8% over five sessions vs S&P −1.2% — sleeve-wide duration move, not a Quanta-specific catalyst.
 ## Scaling State
 next_step: Hold seed position at 1.47%; evaluate adding on pullbacks as long as mega-cap tech CapEx remains resilient.
 ## Rotation Priority
@@ -43,18 +44,19 @@ priority: Medium-High
 - Substantial drop or sustained retrenchment in mega-cap tech infrastructure CapEx spend.
 - Breakdown in quarterly operational execution or backlog deterioration.
 ## Review Log
+- 2026-08-25: Key Risks — added rate/discount-rate bullet (higher real yields → multiple compression; 2026-08-19..25 sleeve drawdown vs S&P). Source: scheduled morning brief, bundle `6bacf63dd536`.
 - 2026-08-07: Populated scaffold with Stephanie Link's core investment thesis framework focusing on power grid infrastructure, AI data center enablement, earnings quality, and CapEx sensitivity.
 - 2026-08-07: Scaffold file created. Weight snapshot from bundle 6c531c97: 1.47% / $8,861.58.
 - **2026-08-07 — calibration note (added, not Bill's original text):** the $500B tech-capex threshold in Key Risks checks out as a genuine level, with a caveat on what it implies. Big Four 2026 planned capex is roughly $630B (some counts $690-725B), against $388B actual in 2025. $500B sits 20-30% below plan but still ~29% above 2025 actual — so the trigger fires on a sharp deceleration in growth, not on an absolute decline. Sources: [Data Center Richness](https://datacenterrichness.substack.com/p/hyperscalers-plan-630-billion-in), [CNBC](https://www.cnbc.com/2026/02/06/google-microsoft-meta-amazon-ai-cash.html), [Futurum](https://futurumgroup.com/insights/ai-capex-2026-the-690b-infrastructure-sprint/). Threshold itself not changed.
 - 2026-08-09: trigger_type set explicit: ceiling_only (THEME default; blank triggers scaffold, no anchor argued). See prompts/trigger_types_2026-08-09.md.
 <!-- region:position_state -->
-**Current Allocation:** 1.45%
+**Current Allocation:** 1.44%
 **Cost Basis:** $8,975.27
 <!-- endregion:position_state -->
 <!-- region:sizing -->
 **Style:** THEME
 **Size Ceiling:** 3.00%
-**Drift:** -1.55%
+**Drift:** -1.56%
 <!-- endregion:sizing -->
 <!-- region:transaction_log -->
 - 2026-08-05: Buy 3.0 @ $691.89
@@ -65,5 +67,5 @@ priority: Medium-High
 No realized G/L history.
 <!-- endregion:realized_gl -->
 <!-- region:change_log -->
-2026-08-08 09:05: Auto-sync allocation 1.45%, drift -1.55%
+2026-08-21 08:45: Auto-sync allocation 1.44%, drift -1.56%
 <!-- endregion:change_log -->
