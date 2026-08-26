@@ -368,7 +368,7 @@ def extract_moment_from_window(
         prompt=prompt,
         system_instruction=SYSTEM_INSTRUCTION,
         response_schema=GeminiMomentResponse,
-        max_tokens=2000,
+        max_tokens=4000,
     )
     if result is None:
         logger.warning("moment_extractor: Gemini call failed for %s @ %d",

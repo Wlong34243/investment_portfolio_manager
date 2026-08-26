@@ -152,14 +152,15 @@ def _compute_for_ticker(ticker: str, ohlcv: pd.DataFrame) -> dict:
         result["data_gap"] = "no_data"
         return result
 
-    # Normalise column names — yfinance multi-index produces (Field, Ticker) tuples
+    # Normalise column names — price_history.get_bars uses lowercase; legacy Capitalised accepted
     if isinstance(ohlcv.columns, pd.MultiIndex):
         ohlcv = ohlcv.droplevel(1, axis=1)
+    ohlcv = ohlcv.rename(columns={c: str(c).lower() for c in ohlcv.columns})
 
     ohlcv = ohlcv.sort_index()
 
-    close  = ohlcv["Close"].dropna()
-    volume = ohlcv["Volume"].dropna() if "Volume" in ohlcv.columns else pd.Series(dtype=float)
+    close  = ohlcv["close"].dropna()
+    volume = ohlcv["volume"].dropna() if "volume" in ohlcv.columns else pd.Series(dtype=float)
 
     n = len(close)
     data_gap: Optional[str] = None
@@ -320,13 +321,12 @@ def _compute_for_ticker(ticker: str, ohlcv: pd.DataFrame) -> dict:
 
 def compute_technicals(positions: list[dict]) -> list[dict]:
     """
-    Bulk-download 1y daily OHLCV for all eligible tickers, then compute
-    Murphy TA indicators for each.
+    Fetch 1y daily OHLCV via price_history.get_bars for all eligible tickers,
+    then compute Murphy TA indicators for each.
 
-    Falls back to per-ticker downloads if the bulk call fails.
     Never raises — always appends a data_gap entry for failed tickers.
     """
-    import yfinance as yf
+    from utils.price_history import get_bars
 
     eligible = []
     for pos in positions:
@@ -343,52 +343,24 @@ def compute_technicals(positions: list[dict]) -> list[dict]:
 
     ticker_list = [t for t, _ in eligible]
     ohlcv_map: dict[str, pd.DataFrame] = {}
+    sources = []
 
-    # ── Attempt bulk download ────────────────────────────────────────────
-    bulk_ok = False
-    try:
-        raw = yf.download(
-            tickers=ticker_list,
-            period="1y",
-            interval="1d",
-            group_by="ticker",
-            auto_adjust=True,
-            progress=False,
-            threads=True,
-        )
-        if not raw.empty:
-            if len(ticker_list) == 1:
-                # Single-ticker: flat DataFrame — wrap in dict
-                ohlcv_map[ticker_list[0]] = raw
-            else:
-                # Multi-ticker: (Field, Ticker) MultiIndex columns
-                for t in ticker_list:
-                    try:
-                        ticker_df = raw[t] if t in raw.columns.get_level_values(1) else pd.DataFrame()
-                        ohlcv_map[t] = ticker_df
-                    except Exception:
-                        ohlcv_map[t] = pd.DataFrame()
-            bulk_ok = True
-            logger.info("enrich_technicals: bulk download OK for %d tickers", len(ticker_list))
-    except Exception as e:
-        logger.warning("enrich_technicals: bulk download failed — falling back to per-ticker: %s", e)
+    for t in ticker_list:
+        try:
+            df = get_bars(t, period_days=365, interval="daily", adjusted=True)
+            ohlcv_map[t] = df
+            if not df.empty:
+                sources.append(df.attrs.get("source"))
+        except Exception as e:
+            logger.warning("enrich_technicals: get_bars failed for %s: %s", t, e)
+            ohlcv_map[t] = pd.DataFrame()
+        time.sleep(0.05)
 
-    # ── Per-ticker fallback for any missing tickers ──────────────────────
-    missing = [t for t in ticker_list if t not in ohlcv_map or ohlcv_map[t].empty]
-    if missing:
-        if not bulk_ok:
-            print(f"⚠  Bulk download failed — fetching {len(missing)} tickers individually")
-        for t in missing:
-            try:
-                df = yf.download(t, period="1y", interval="1d",
-                                 auto_adjust=True, progress=False)
-                ohlcv_map[t] = df
-            except Exception as e:
-                logger.warning("enrich_technicals: per-ticker download failed for %s: %s", t, e)
-                ohlcv_map[t] = pd.DataFrame()
-            time.sleep(0.25)   # rate-limiting discipline
+    logger.info(
+        "enrich_technicals: fetched %d tickers via price_history (sources=%s)",
+        len(ticker_list), sorted({s for s in sources if s}),
+    )
 
-    # ── Compute indicators ───────────────────────────────────────────────
     results = []
     for ticker, _ in eligible:
         df = ohlcv_map.get(ticker, pd.DataFrame())

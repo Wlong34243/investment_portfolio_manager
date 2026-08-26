@@ -7,10 +7,7 @@ try:
 except ImportError:
     ta = None
 
-try:
-    import yfinance as yf
-except ImportError:
-    yf = None
+from utils.price_history import get_bars
 
 def calculate_rsi_manual(series, period=14):
     delta = series.diff()
@@ -25,20 +22,23 @@ def calculate_technical_indicators(ticker: str, price_history: pd.DataFrame = No
     Uses pandas_ta if available, otherwise falls back to manual pandas calculations.
     """
     if price_history is None:
-        if not yf:
-            return {"error": "yfinance not installed"}
         try:
-            stock = yf.Ticker(ticker)
-            price_history = stock.history(period="1y")
+            price_history = get_bars(ticker, period_days=365, interval="daily", adjusted=True)
+            logging.info(
+                "technicals bars source=%s ticker=%s",
+                price_history.attrs.get("source"), ticker,
+            )
         except Exception as e:
-            logging.warning(f"Failed to fetch yfinance data for {ticker}: {e}")
+            logging.warning(f"Failed to fetch price history for {ticker}: {e}")
             return {}
 
-    if price_history.empty or len(price_history) < 50:
+    if price_history is None or price_history.empty or len(price_history) < 50:
         logging.warning(f"Not enough price history for {ticker} to calculate MAs.")
         return {}
 
-    close = price_history['Close']
+    # Accept either legacy Capitalised or normalised lowercase columns
+    close_col = "close" if "close" in price_history.columns else "Close"
+    close = price_history[close_col]
     
     try:
         if ta:

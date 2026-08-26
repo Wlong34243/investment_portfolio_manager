@@ -25,7 +25,6 @@ from pathlib import Path
 from typing import Optional
 
 import pandas as pd
-import yfinance as yf
 
 # Project root on path
 _HERE = Path(__file__).parent.resolve()
@@ -35,6 +34,7 @@ if str(_ROOT) not in sys.path:
 
 import config
 from core.bundle import load_bundle, _sha256_canonical, _hashable_payload
+from utils.price_history import get_bars
 
 logger = logging.getLogger(__name__)
 
@@ -44,27 +44,24 @@ ATR_PERIOD = 14        # standard ATR period
 
 def calculate_atr(ticker: str, period: int = ATR_PERIOD) -> float:
     """
-    Calculate the n-day Average True Range using yfinance.
+    Calculate the n-day Average True Range via price_history.get_bars.
 
-    Downloads 1 month of daily OHLC data and computes:
+    Downloads ~1 month of daily OHLC data and computes:
         TR  = max(High-Low, |High-PrevClose|, |Low-PrevClose|)
         ATR = rolling mean(TR, period)
 
     Returns 0.0 if data is unavailable or ticker is a cash instrument.
     """
     try:
-        df = yf.download(ticker, period="1mo", interval="1d", progress=False, auto_adjust=True)
+        df = get_bars(ticker, period_days=30, interval="daily", adjusted=True)
         if df.empty or len(df) < period:
             logger.warning("Insufficient data for ATR on %s (%d rows, need %d)", ticker, len(df), period)
             return 0.0
+        logger.info("ATR bars source=%s ticker=%s rows=%d", df.attrs.get("source"), ticker, len(df))
 
-        # Handle MultiIndex columns from yfinance
-        if hasattr(df.columns, "levels"):
-            df = df.droplevel(1, axis=1)
-
-        high_low     = df["High"] - df["Low"]
-        high_close   = (df["High"] - df["Close"].shift(1)).abs()
-        low_close    = (df["Low"]  - df["Close"].shift(1)).abs()
+        high_low     = df["high"] - df["low"]
+        high_close   = (df["high"] - df["close"].shift(1)).abs()
+        low_close    = (df["low"]  - df["close"].shift(1)).abs()
         tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
         atr = float(tr.rolling(window=period).mean().iloc[-1])
         return round(atr, 4) if not pd.isna(atr) else 0.0

@@ -87,16 +87,39 @@ def _find_account_sections_gl(df_raw: pd.DataFrame) -> list[dict]:
         "individual", "roth", "custodial", "trust", "rollover", "beneficiary",
     ]
 
+    def _cell0(row) -> str:
+        v = row.iloc[0]
+        if v is None or (isinstance(v, float) and pd.isna(v)) or pd.isna(v):
+            return ""
+        s = str(v).strip().strip('"')
+        return "" if s.lower() in ("nan", "none", "") else s
+
+    def _trailing_empty(row) -> bool:
+        """True when columns 1..9 are blank/NaN (account banner rows)."""
+        for j in range(1, 10):
+            if j >= len(row):
+                continue
+            v = row.iloc[j]
+            if v is None or (isinstance(v, float) and pd.isna(v)) or pd.isna(v):
+                continue
+            s = str(v).strip().strip('"')
+            if s and s.lower() not in ("nan", "none"):
+                return False
+        return True
+
     for i in range(len(df_raw)):
-        row_values = df_raw.iloc[i].astype(str).str.strip()
-        first_cell = row_values.iloc[0]
+        row = df_raw.iloc[i]
+        first_cell = _cell0(row)
         first_cell_lower = first_cell.lower()
+
+        if not first_cell_lower:
+            continue
 
         if "realized gain/loss - lot details" in first_cell_lower:
             continue
 
         is_account_row = any(first_cell_lower.startswith(p) for p in ACCOUNT_PATTERNS)
-        empty_trailing = (row_values.iloc[1:10] == "").all() or (row_values.iloc[1:10] == "nan").all()
+        empty_trailing = _trailing_empty(row)
 
         if is_account_row and (empty_trailing or i < 5):
             if current_account is not None:
@@ -125,11 +148,13 @@ def _find_account_sections_gl(df_raw: pd.DataFrame) -> list[dict]:
     
     final_sections = []
     for section in sections:
+        if section["data_start"] < 0 or section["data_end"] < section["data_start"]:
+            continue
         if section["data_start"] <= section["data_end"]:
             has_valid_data = False
             for i in range(section["data_start"], section["data_end"] + 1):
-                row_val_0 = str(df_raw.iloc[i, 0]).strip().lower()
-                if not (row_val_0 == "there are no transactions available for your search criteria..." or row_val_0 == ""):
+                row_val_0 = _cell0(df_raw.iloc[i]).lower()
+                if row_val_0 and row_val_0 != "there are no transactions available for your search criteria...":
                     has_valid_data = True
                     break
             if has_valid_data:

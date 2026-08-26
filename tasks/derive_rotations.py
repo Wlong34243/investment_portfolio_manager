@@ -102,21 +102,31 @@ def _get_historical_technicals(ticker: str, decision_date: date) -> dict:
         df = _YF_CACHE[cache_key]
     else:
         try:
-            # We fetch a bit more than a year to ensure 200-day MA is stable
-            df = yf.download(ticker, start=start_dt.strftime("%Y-%m-%d"), 
-                             end=end_dt.strftime("%Y-%m-%d"), 
-                             progress=False, auto_adjust=True)
+            from utils.price_history import get_bars
+            period_days = max(365, (end_dt - start_dt).days + 5)
+            df = get_bars(ticker, period_days=period_days, interval="daily", adjusted=True)
             if df.empty:
                 return {"rsi": None, "trend": "unknown", "ma200_dist": None}
+            # Restrict to decision window (index is tz-aware UTC)
+            end_ts = pd.Timestamp(end_dt, tz="UTC")
+            start_ts = pd.Timestamp(start_dt, tz="UTC")
+            df = df.loc[(df.index >= start_ts) & (df.index < end_ts)]
+            if df.empty:
+                return {"rsi": None, "trend": "unknown", "ma200_dist": None}
+            logger.info(
+                "derive_rotations bars source=%s ticker=%s",
+                df.attrs.get("source"), ticker,
+            )
             _YF_CACHE[cache_key] = df
         except Exception as e:
-            logger.warning("yfinance fetch failed for %s on %s: %s", ticker, decision_date, e)
+            logger.warning("price history fetch failed for %s on %s: %s", ticker, decision_date, e)
             return {"rsi": None, "trend": "error", "ma200_dist": None}
 
     if isinstance(df.columns, pd.MultiIndex):
         df = df.droplevel(1, axis=1)
+    df = df.rename(columns={c: str(c).lower() for c in df.columns})
 
-    close = df["Close"].dropna()
+    close = df["close"].dropna()
     if len(close) < 15:
         return {"rsi": None, "trend": "insufficient_data", "ma200_dist": None}
 

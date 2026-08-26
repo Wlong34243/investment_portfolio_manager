@@ -16,6 +16,9 @@ Checks (per file):
   4. Unresolved [BILL] placeholders -- informational, not a failure. They
                              are deliberate: Bill's decisions, not ours.
   5. Stale review dates   -- last_reviewed older than 90 days.
+  6. Unparseable frontmatter under ruamel -- same loader as ThesisManager /
+                             vault sync. Catches duplicate YAML keys that the
+                             flat-line parser silently misses (NOW 2026-08-11).
 
 This is a report, not a gate: it always exits 0. Wiring any of this into
 export_ai_briefing.py's preflight is deliberately deferred to a later batch,
@@ -29,7 +32,13 @@ import argparse
 import glob
 import os
 import re
+import sys
 from datetime import datetime
+
+# Allow `python tasks/lint_theses.py` from repo root
+_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _ROOT not in sys.path:
+    sys.path.insert(0, _ROOT)
 
 STALENESS_DAYS = 90
 
@@ -169,6 +178,16 @@ def lint_file(path):
             "STALE REVIEW: last_reviewed is %d days old (> %d day threshold)"
             % (stale_review, STALENESS_DAYS)
         )
+
+    # 6. Frontmatter must parse under the same ruamel path as vault sync
+    try:
+        from pathlib import Path as _Path
+        from utils.thesis_utils import ThesisManager
+        _data, fm_err = ThesisManager(_Path(path)).get_frontmatter_safe()
+        if fm_err is not None:
+            findings.append("UNPARSEABLE FRONTMATTER: %s" % fm_err)
+    except Exception as e:
+        findings.append("UNPARSEABLE FRONTMATTER: %s" % e)
 
     return {
         "ticker": ticker,

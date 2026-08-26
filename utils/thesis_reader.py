@@ -29,6 +29,11 @@ from utils.level_coverage import DEFAULT_TRIGGER_TYPE, TRIGGER_TYPE_FIELDS
 
 THESES_DIR = Path("vault") / "theses"
 STYLE_TAXONOMY = frozenset({"GARP", "THEME", "FUND", "ETF"})
+PATTERN_VOCABULARY = frozenset({
+    "turnaround_reversion",
+    "debasement_hedge",
+    "accumulate_on_decline",
+})
 
 _FRONTMATTER_RE = re.compile(r"^---\s*\n(.*?)\n---\s*\n?", re.DOTALL)
 _SCALAR_COMMENT_RE = re.compile(r"\s+#.*$")
@@ -180,6 +185,44 @@ def resolve_band_levels(triggers: dict | None) -> dict:
             add_level if ttype == "price" else _safe_float(trigs.get("price_add_below"))
         ),
     }
+
+
+def get_pattern(
+    text: str | None = None, *, path: Path | str | None = None
+) -> Optional[dict]:
+    """
+    Optional descriptive `pattern:` block from thesis frontmatter.
+    Absent or malformed → None (soft-skip). Does not raise.
+    Carries whatever keys the file declares; `name` must be in PATTERN_VOCABULARY
+    when present, else the whole block is ignored.
+    """
+    if path is not None and text is None:
+        text = read_thesis_text(path)
+    if not text:
+        return None
+    fm = load_frontmatter(text)
+    raw = fm.get("pattern")
+    if raw is None:
+        return None
+    if not isinstance(raw, dict):
+        return None
+    name = str(raw.get("name") or "").strip()
+    if not name:
+        return None
+    if name not in PATTERN_VOCABULARY:
+        return None
+    # Widen like triggers: carry declared keys; coerce nothing aggressively.
+    out: dict[str, Any] = {"name": name}
+    for k, v in raw.items():
+        if k == "name":
+            continue
+        if v is None:
+            out[k] = None
+        elif isinstance(v, (str, int, float, bool)):
+            out[k] = v if not isinstance(v, str) else v.strip()
+        else:
+            out[k] = v
+    return out
 
 
 def style_map_from_vault(theses_dir: Path | str = THESES_DIR) -> dict[str, str]:

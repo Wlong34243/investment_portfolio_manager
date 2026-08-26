@@ -184,17 +184,24 @@ def format_valuation_card(spreadsheet) -> None:
     hardcoded, so adding/removing a column there can't silently misalign
     these ranges the way removing "Forward P/E (FMP)" would have otherwise."""
     from tasks.build_valuation_card import col_letter
-    tab_name = "Valuation_Card"
+    tab_name = config.TAB_VALUATION_CARD
     try:
         ws = spreadsheet.worksheet(tab_name)
 
         last_col = col_letter("Last Updated")
+        # Letter-hardcoded (unlike the CF ranges below, which derive from
+        # col_letter()) -- the "Trigger Type" insert
+        # (prompts/typed_trigger_crosshairs_2026-08-24.md) shifted every
+        # column from G onward by one letter, so this list is updated to
+        # match VALUATION_CARD_COLUMNS's current order. Cosmetic-only
+        # (column pixel width), but wrong on a stale list either way.
         widths = [
             ("A", 70),  ("B", 180), ("C", 100), ("D", 110), ("E", 90),
-            ("F", 80),  ("G", 90),  ("H", 90),  ("I", 80),  ("J", 90),
-            ("K", 70),  ("L", 70),  ("M", 90),  ("N", 90),  ("O", 70),
-            ("P", 90),  ("Q", 80),  ("R", 80),  ("S", 80),  ("T", 80),
-            ("U", 110), ("V", 110), ("W", 120), ("X", 80),  ("Y", 120),
+            ("F", 80),  ("G", 90),  ("H", 90),  ("I", 90),  ("J", 80),
+            ("K", 90),  ("L", 70),  ("M", 70),  ("N", 90),  ("O", 90),
+            ("P", 70),  ("Q", 90),  ("R", 80),  ("S", 80),  ("T", 80),
+            ("U", 80),  ("V", 110), ("W", 110), ("X", 120), ("Y", 80),
+            ("Z", 120),
         ]
         safe_api_call(set_column_widths, ws, widths)
         format_standard_table(ws, header_range=f"A1:{last_col}1", header_row=1, data_start=2, data_end=MAX_DATA_ROWS)
@@ -223,20 +230,28 @@ def format_valuation_card(spreadsheet) -> None:
         rules.append(build_boolean_rule(ws, f"{col_peg}2:{col_peg}{MAX_DATA_ROWS}", "NUMBER_GREATER", ["2"], bg_color=COLOR_RED_LIGHT))
         rules.append(build_boolean_rule(ws, f"{col_peg}2:{col_peg}{MAX_DATA_ROWS}", "NUMBER_LESS", ["1"], bg_color=COLOR_GREEN_LIGHT))
 
-        # Price trigger action zones
+        # Price trigger action zones -- Trim Target/Add Target now hold
+        # whatever unit the row's declared trigger_type uses (a P/E, a P/B,
+        # a discount %, or a dollar level; see
+        # prompts/typed_trigger_crosshairs_2026-08-24.md), so comparing raw
+        # Price against them is only meaningful for trigger_type == "price".
+        # Without the Trigger Type guard, a $700 stock with an 18 fwd-P/E
+        # trim level would misfire the trim zone on every row (Price >= 18
+        # is true for nearly every ticker).
         col_price = col_letter("Price")
         col_trim = col_letter("Trim Target")
         col_add = col_letter("Add Target")
+        col_type = col_letter("Trigger Type")
         # Trim zone: price has reached or exceeded Bill's trim target -> bold red
         rules.append(build_boolean_rule(
             ws, f"{col_price}2:{col_price}{MAX_DATA_ROWS}", "CUSTOM_FORMULA",
-            [f'=AND({col_price}2<>"",{col_trim}2<>"",{col_price}2>={col_trim}2)'],
+            [f'=AND({col_price}2<>"",{col_trim}2<>"",{col_type}2="price",{col_price}2>={col_trim}2)'],
             bg_color=COLOR_RED_LIGHT, text_color=COLOR_RED_DARK, bold=True,
         ))
         # Add zone: price has dropped to or below Bill's add target -> bold green
         rules.append(build_boolean_rule(
             ws, f"{col_price}2:{col_price}{MAX_DATA_ROWS}", "CUSTOM_FORMULA",
-            [f'=AND({col_price}2<>"",{col_add}2<>"",{col_price}2<={col_add}2)'],
+            [f'=AND({col_price}2<>"",{col_add}2<>"",{col_type}2="price",{col_price}2<={col_add}2)'],
             bg_color=COLOR_GREEN_LIGHT, text_color=COLOR_GREEN_DARK, bold=True,
         ))
 

@@ -12,8 +12,35 @@ import pandas as pd
 sys.path.insert(0, os.getcwd())
 
 import config
-from utils.sheet_readers import get_holdings_current, get_realized_gl, get_trade_log, get_transactions
 from utils.thesis_utils import ThesisManager
+
+
+def _store_frames():
+    """Load frames via PortfolioStore (`get_store()` honors STORE_PRIMARY); fall back to sheet_readers."""
+    try:
+        from core.store import get_store
+
+        store = get_store()
+        return (
+            store.get_holdings_current(),
+            store.get_realized_gl(),
+            store.get_transactions(),
+            store.get_trade_log(),
+        )
+    except Exception:
+        from utils.sheet_readers import (
+            get_holdings_current,
+            get_realized_gl,
+            get_trade_log,
+            get_transactions,
+        )
+
+        return (
+            get_holdings_current(),
+            get_realized_gl(),
+            get_transactions(),
+            get_trade_log(),
+        )
 
 
 def _newest_composite_positions() -> Dict[str, dict]:
@@ -71,13 +98,23 @@ class TickerSyncPayload(BaseModel):
     realized_gl: List[dict] = []
     drift_pct: float = 0.0
 
+
+class ThesisSyncGatherResult(BaseModel):
+    """Payloads plus per-ticker frontmatter parse failures (omit-from-payloads)."""
+    payloads: Dict[str, TickerSyncPayload] = {}
+    parse_errors: List[dict] = []  # [{"ticker": "...", "error": "..."}, ...]
+
+
 def gather_thesis_sync_data(
     as_of_date: Optional[str] = None,
     tickers: Optional[List[str]] = None,
     txn_limit: Optional[int] = None,
-) -> Dict[str, TickerSyncPayload]:
+) -> ThesisSyncGatherResult:
     """
     Gather data for syncing vault theses.
+
+    Tickers whose thesis frontmatter is unparseable under ruamel are omitted
+    from payloads and listed in parse_errors (skip write; do not abort gather).
     """
     if as_of_date is None:
         as_of_date = datetime.now().strftime("%Y-%m-%d")
@@ -86,14 +123,12 @@ def gather_thesis_sync_data(
         
     logging.info(f"Gathering thesis sync data as of {as_of_date}...")
     
-    # 1. Load Data
-    holdings_df = get_holdings_current()
+    # 1. Load Data (PortfolioStore — reads honor STORE_PRIMARY; default sheets)
+    holdings_df, realized_df, transactions_df, _trade_log_df = _store_frames()
     if holdings_df.empty:
         logging.warning("Holdings_Current is empty. Cannot sync.")
-        return {}
+        return ThesisSyncGatherResult()
         
-    realized_df = get_realized_gl()
-    transactions_df = get_transactions()
     bundle_by_ticker = _newest_composite_positions()
     
     # Load styles.json
@@ -128,6 +163,7 @@ def gather_thesis_sync_data(
         holdings_df = holdings_df[holdings_df['Ticker'].isin(tickers)]
         
     payloads = {}
+    parse_errors: List[dict] = []
     
     for _, row in holdings_df.iterrows():
         ticker = row['Ticker']
@@ -142,7 +178,17 @@ def gather_thesis_sync_data(
         mgr = None
         if thesis_path.exists():
             mgr = ThesisManager(thesis_path)
-            fm = mgr.get_frontmatter()
+            fm, fm_err = mgr.get_frontmatter_safe()
+            if fm_err is not None:
+                # Omit from payloads: writing would fail on update_frontmatter
+                # anyway; leaving the file untouched beats a partial region update.
+                parse_errors.append({"ticker": str(ticker), "error": fm_err})
+                logging.warning(
+                    "Thesis frontmatter unparseable for %s — omitting from sync: %s",
+                    ticker,
+                    fm_err,
+                )
+                continue
         if fm and 'style' in fm:
             style = fm['style']
             # YAML list placeholders like [BILL] must not reach styles_config lookup.
@@ -263,12 +309,14 @@ def gather_thesis_sync_data(
             drift_pct=weight - size_ceiling if size_ceiling > 0 else 0.0
         )
         
-    return payloads
+    return ThesisSyncGatherResult(payloads=payloads, parse_errors=parse_errors)
 
 if __name__ == "__main__":
     # Test run
     logging.basicConfig(level=logging.INFO)
-    data = gather_thesis_sync_data(datetime.now().strftime("%Y-%m-%d"), tickers=["UNH", "AMZN"])
-    for ticker, payload in data.items():
+    result = gather_thesis_sync_data(datetime.now().strftime("%Y-%m-%d"), tickers=["UNH", "AMZN"])
+    if result.parse_errors:
+        print("parse_errors:", result.parse_errors)
+    for ticker, payload in result.payloads.items():
         print(f"--- {ticker} ---")
         print(payload.model_dump_json(indent=2))

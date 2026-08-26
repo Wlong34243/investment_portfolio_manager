@@ -35,7 +35,10 @@ import config
 from utils.sheet_readers import get_gspread_client, read_gsheet_robust, coerce_sheet_numeric_series
 from utils.sheet_writers import safe_execute
 from utils.level_coverage import compute_level_coverage, format_footer_line
-from tasks.build_crosshairs import CrosshairsResult, TOP_N_DASHBOARD, produce_crosshairs
+from tasks.build_crosshairs import (
+    CrosshairsResult, TOP_N_DASHBOARD, produce_crosshairs,
+    resolve_trigger_type, resolve_typed_metric, format_level,
+)
 from tasks.compute_rotation_attribution import (
     HORIZONS as ROTATION_HORIZONS,
     _as_float as _rotation_as_float,
@@ -204,11 +207,14 @@ def _fmp_cache_age() -> str:
 def _spy_ytd_pct() -> Optional[float]:
     """Return SPY YTD return as a float percentage (e.g. 8.5 for 8.5%), or None on failure."""
     try:
-        import yfinance as yf
-        hist = yf.Ticker("SPY").history(period="ytd")
+        from utils.price_history import get_bars
+        from datetime import date as date_cls
+        days = (date_cls.today() - date_cls(date_cls.today().year, 1, 1)).days + 5
+        hist = get_bars("SPY", period_days=max(days, 30), interval="daily", adjusted=True)
         if hist.empty:
             return None
-        return (hist["Close"].iloc[-1] / hist["Close"].iloc[0] - 1) * 100
+        logger.info("SPY YTD bars source=%s", hist.attrs.get("source"))
+        return (hist["close"].iloc[-1] / hist["close"].iloc[0] - 1) * 100
     except Exception:
         return None
 
@@ -281,7 +287,8 @@ def _compute_headline_kpis(daily_rows: list[dict], holdings_rows: list[dict]) ->
                 holdings_import_date = idates.max()
                 out["holdings_import_date"] = holdings_import_date
 
-    # STALE when Daily_Snapshots lags Holdings_Current import date (calendar day).
+    # STALE when Daily_Snapshots lags Holdings_Current by more than one trading session.
+    # Calendar-day lag was manufacturing STALE over weekends/holidays (Phase 4).
     snap_day = latest["Date"].normalize() if hasattr(latest["Date"], "normalize") else pd.Timestamp(latest["Date"]).normalize()
     if holdings_import_date is not None:
         hold_day = (
@@ -290,8 +297,16 @@ def _compute_headline_kpis(daily_rows: list[dict], holdings_rows: list[dict]) ->
             else pd.Timestamp(holdings_import_date).normalize()
         )
         if snap_day < hold_day:
-            out["stale"] = True
-            out["stale_as_of"] = snap_day.strftime("%Y-%m-%d")
+            try:
+                from utils.market_calendar import trading_days_between
+                n = trading_days_between(snap_day.date(), hold_day.date())
+                # Unknown calendar → fall back to prior calendar-day behaviour (do not skip)
+                if n is None or n > 1:
+                    out["stale"] = True
+                    out["stale_as_of"] = snap_day.strftime("%Y-%m-%d")
+            except Exception:
+                out["stale"] = True
+                out["stale_as_of"] = snap_day.strftime("%Y-%m-%d")
 
     # Day change
     if len(df) >= 2 and total_value:
@@ -336,21 +351,19 @@ def _compute_beta(risk_rows: list[dict]) -> Optional[float]:
 def _fetch_52w_ranges(tickers: list[str]) -> dict[str, tuple[float, float]]:
     if not tickers:
         return {}
-    try:
-        import yfinance as yf
-        data = yf.download(tickers, period="1y", progress=False, group_by="ticker", threads=True)
-    except Exception as e:
-        logger.warning("52-week range bulk fetch failed: %s", e)
-        return {}
+    from utils.price_history import get_bars
 
     ranges: dict[str, tuple[float, float]] = {}
     for t in tickers:
         try:
-            closes = data[t]["Close"].dropna() if len(tickers) > 1 else data["Close"].dropna()
-            if not closes.empty:
-                ranges[t] = (float(closes.min()), float(closes.max()))
-        except Exception:
-            continue
+            data = get_bars(t, period_days=365, interval="daily", adjusted=True)
+            if data.empty:
+                continue
+            hi = float(data["high"].max())
+            lo = float(data["low"].min())
+            ranges[t] = (lo, hi)
+        except Exception as e:
+            logger.warning("52-week range fetch failed for %s: %s", t, e)
     return ranges
 
 
@@ -412,11 +425,17 @@ def _build_position_table(
 
         fwd_pe = _safe_float_nonzero(vdata.get("Forward P/E (yf)"))
         peg = _safe_float_nonzero(vdata.get("PEG"))
-        trim = _safe_float_nonzero(vdata.get("Trim Target"))
-        add = _safe_float_nonzero(vdata.get("Add Target"))
 
-        dist_trim = (trim - price) / price if trim and price else None
-        dist_add = (price - add) / add if add and price else None
+        # Trim/Add now hold declared-type levels (a P/E, a P/B, a discount %,
+        # or a price) per build_valuation_card.py -- evaluate against the
+        # matching live metric, not always Price. See
+        # prompts/typed_trigger_crosshairs_2026-08-24.md.
+        trigger_type = resolve_trigger_type(ticker, vdata)
+        if trigger_type == "ceiling_only":
+            trim = add = dist_trim = dist_add = None
+        else:
+            m = resolve_typed_metric(trigger_type, {"Price": price}, vdata)
+            trim, add, dist_trim, dist_add = m["trim"], m["add"], m["dist_trim"], m["dist_add"]
 
         lo_hi = ranges_52w.get(ticker)
         pos_52w = None
@@ -463,6 +482,7 @@ def _build_position_table(
             "Rationale": "",
             "no_valuation": no_valuation,
             "Earnings": earnings_val,
+            "Trigger Type": trigger_type,
         })
     return results
 
@@ -688,8 +708,8 @@ def _print_dry_run(
             _fmt_preview(pos["Fwd P/E"], "f1"),
             _fmt_preview(pos["PEG"], "f2"),
             _fmt_preview(pos["52w %"], "%u"),
-            _fmt_preview(pos["Trim"], "$"),
-            _fmt_preview(pos["Add"], "$"),
+            format_level(pos["Trigger Type"], pos["Trim"]),
+            format_level(pos["Trigger Type"], pos["Add"]),
             _fmt_preview(pos["->Trim %"], "%"),
             _fmt_preview(pos["->Add %"], "%"),
             pos["Signal"] or "",
@@ -708,8 +728,8 @@ def _print_dry_run(
                 _fmt_preview(item.mv, "$0"),
                 _fmt_preview(item.wt, "%u"),
                 _fmt_preview(item.price, "$"),
-                _fmt_preview(item.trim, "$"),
-                _fmt_preview(item.add, "$"),
+                format_level(item.trigger_type, item.trim),
+                format_level(item.trigger_type, item.add),
                 _fmt_preview(item.dist_trim, "%"),
                 _fmt_preview(item.dist_add, "%"),
                 item.rationale or "",
@@ -828,8 +848,13 @@ def _apply_formatting(ws, headline: dict, positions: list[dict]) -> None:
     ranges.append((f"H{d0}:H{d1}", CellFormat(numberFormat=float1_fmt)))
     ranges.append((f"I{d0}:I{d1}", CellFormat(numberFormat=float2_fmt)))
     ranges.append((f"J{d0}:J{d1}", CellFormat(numberFormat=pct_unsigned_fmt)))
-    ranges.append((f"K{d0}:K{d1}", CellFormat(numberFormat=dollar2_fmt)))
-    ranges.append((f"L{d0}:L{d1}", CellFormat(numberFormat=dollar2_fmt)))
+    # K/L (Trim/Add) can hold a P/E, P/B, discount %, or a dollar level
+    # depending on the row's declared trigger_type -- a blanket CURRENCY
+    # format would show "$15.85" for a forward P/E. Plain NUMBER is the
+    # safe column-wide choice (matches Valuation_Card's own Trim Target /
+    # Add Target format). See prompts/typed_trigger_crosshairs_2026-08-24.md.
+    ranges.append((f"K{d0}:K{d1}", CellFormat(numberFormat=float2_fmt)))
+    ranges.append((f"L{d0}:L{d1}", CellFormat(numberFormat=float2_fmt)))
     ranges.append((f"M{d0}:M{d1}", CellFormat(numberFormat=pct_signed_fmt)))
     ranges.append((f"N{d0}:N{d1}", CellFormat(numberFormat=pct_signed_fmt)))
 
@@ -923,7 +948,7 @@ def main(live: bool = False, crosshairs: Optional[CrosshairsResult] = None) -> O
     holdings_rows = _read_records(ss, config.TAB_HOLDINGS_CURRENT)
     daily_rows = _read_records(ss, config.TAB_DAILY_SNAPSHOTS)
     risk_rows = _read_records(ss, config.TAB_RISK_METRICS)
-    valuation_rows = _read_records(ss, "Valuation_Card")
+    valuation_rows = _read_records(ss, config.TAB_VALUATION_CARD)
     rotation_rows = _read_records(ss, config.TAB_ROTATION_REVIEW)
     rotation_perf = _rotation_performance(rotation_rows) if rotation_rows else None
 

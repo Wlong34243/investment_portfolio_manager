@@ -37,7 +37,7 @@ class CompositeBundle:
     vault_doc_count: int
     theses_present: list[str]
     theses_missing: list[str]
-    recent_rotations: list[dict] # From Trade_Log Sheet tab
+    recent_rotations: list[dict]  # From Trade_Log via get_store() / STORE_PRIMARY
     
     # Internal cache for resolved sub-bundles (not serialized)
     _market_data: dict = field(default_factory=dict, repr=False)
@@ -112,10 +112,11 @@ def build_composite_bundle(
     market_hash = market_data["bundle_hash"]
     vault_hash = vault_data["vault_hash"]
     
-    # 2. Fetch recent rotations from Trade_Log (Tier 2 data - baked into composite)
-    from utils.sheet_readers import get_trade_log
+    # 2. Fetch recent rotations from Trade_Log (Tier 2 — honors STORE_PRIMARY)
     try:
-        trade_log_df = get_trade_log()
+        from core.store import get_store
+
+        trade_log_df = get_store().get_trade_log()
         if not trade_log_df.empty:
             recent_rotations = trade_log_df.sort_values("Date", ascending=False).head(10).to_dict(orient="records")
         else:

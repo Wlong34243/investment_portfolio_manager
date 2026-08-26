@@ -54,6 +54,7 @@ class VaultDocument:
     size_bytes: int
     skipped: bool               # True if over MAX_FILE_BYTES
     triggers: dict = field(default_factory=dict)  # arbitrary trigger_type-shaped keys; see _parse_thesis_fields
+    pattern: dict | None = None  # optional descriptive pattern block; never a signal
 
 @dataclass
 class VaultBundle:
@@ -131,7 +132,7 @@ def _parse_thesis_fields(content: str) -> dict:
     Scaling State / Rotation Priority still come from body sections.
     Triggers from fenced ```yaml or nested frontmatter YAML.
     """
-    from utils.thesis_reader import get_style, load_frontmatter
+    from utils.thesis_reader import get_pattern, get_style, load_frontmatter
 
     lines = content.splitlines()
     result = {
@@ -139,6 +140,7 @@ def _parse_thesis_fields(content: str) -> dict:
         "scaling_state": None,
         "rotation_priority": None,
         "triggers": {},
+        "pattern": get_pattern(content),
     }
 
     for i, line in enumerate(lines):
@@ -210,8 +212,13 @@ def _load_vault_document(
     if doc_type == "thesis":
         parsed = _parse_thesis_fields(text)
     else:
-        parsed = {"style": None, "scaling_state": None, "rotation_priority": None,
-                  "triggers": {}}
+        parsed = {
+            "style": None,
+            "scaling_state": None,
+            "rotation_priority": None,
+            "triggers": {},
+            "pattern": None,
+        }
 
     return VaultDocument(
         ticker=ticker,
@@ -226,6 +233,7 @@ def _load_vault_document(
         size_bytes=size_bytes,
         skipped=False,
         triggers=parsed["triggers"],
+        pattern=parsed.get("pattern"),
     )
 
 def _discover_vault_files() -> dict[str, list[Path]]:

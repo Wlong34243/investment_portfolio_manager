@@ -69,6 +69,14 @@ SCHWAB_TOKEN_BLOB_ACCOUNTS = "token_accounts.json"
 SCHWAB_TOKEN_BLOB_MARKET   = "token_market.json"
 SCHWAB_ALERT_BLOB          = "schwab_alert.json"
 
+# --- Schwab market data (added 2026-08-25, Phase 1) -------------------------
+# Verified 2026-08-25: config has no DATA_DIR — literal Path matching fmp_cache style.
+PRICE_HISTORY_SOURCE = os.getenv("PRICE_HISTORY_SOURCE", "auto")  # yfinance | schwab | auto
+PRICE_HISTORY_CACHE_DIR = Path("data/schwab_price_cache")
+PRICE_HISTORY_CACHE_TTL_H = int(os.getenv("PRICE_HISTORY_CACHE_TTL_H", "20"))
+SCHWAB_MAX_RETRIES = int(os.getenv("SCHWAB_MAX_RETRIES", "3"))
+SCHWAB_REFRESH_TOKEN_WARN_DAYS = float(os.getenv("SCHWAB_REFRESH_TOKEN_WARN_DAYS", "2.0"))
+
 # Client cache TTL (Cloud Function does the actual refresh — this just caches the client object in Streamlit)
 SCHWAB_CLIENT_CACHE_TTL = 1500   # 25 min
 
@@ -155,6 +163,7 @@ TAB_TRANSACTIONS = "Transactions"
 TAB_TARGET_ALLOCATION = "Target_Allocation"
 TAB_RISK_METRICS = "Risk_Metrics"
 TAB_INCOME_TRACKING = "Income_Tracking"
+TAB_CASH_FLOWS = "Cash_Flows"
 TAB_REALIZED_GL = "Realized_GL"
 TAB_CONFIG = "Config"
 TAB_LOGS = "Logs"
@@ -467,6 +476,9 @@ ROTATION_REVIEW_COLUMNS = [
     'Bench_Spread_90d',
     'Bench_Spread_180d',
     'Bench_QQQ_Note',
+    # Gate C (2026-08-25): self-identifying bar vendor. Frozen historical rows
+    # keep published numbers and stamp yfinance|frozen_pre_schwab_2026-08-25.
+    'Price_Source',
 ]
 
 # ---------------------------------------------------------------------------

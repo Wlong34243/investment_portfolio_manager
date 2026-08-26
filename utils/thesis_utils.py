@@ -36,11 +36,30 @@ class ThesisManager:
         self.yaml.preserve_quotes = True
         self.yaml.indent(mapping=2, sequence=4, offset=2)
 
-    def get_frontmatter(self) -> Optional[Dict]:
+    def get_frontmatter_safe(self) -> tuple[Optional[Dict], Optional[str]]:
+        """
+        Returns (data, error_message).
+        - (None, None)  — no frontmatter block present
+        - (dict, None)  — parsed OK
+        - (None, str)   — frontmatter present but unparseable under ruamel
+        """
         match = self.FRONTMATTER_PATTERN.search(self.raw_content)
-        if match:
-            return self.yaml.load(match.group(1))
-        return None
+        if not match:
+            return None, None
+        try:
+            data = self.yaml.load(match.group(1))
+            if data is None:
+                return {}, None
+            if not isinstance(data, dict):
+                return None, f"frontmatter is not a mapping (got {type(data).__name__})"
+            return data, None
+        except Exception as e:
+            return None, str(e)
+
+    def get_frontmatter(self) -> Optional[Dict]:
+        """Return frontmatter dict, or None if absent or unparseable."""
+        data, _err = self.get_frontmatter_safe()
+        return data
 
     def get_triggers(self) -> Optional[Dict]:
         match = self.TRIGGERS_BLOCK_PATTERN.search(self.raw_content)

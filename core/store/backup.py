@@ -69,6 +69,12 @@ def backup_sqlite(
         "drive_copy": None,
         "warn": None,
         "ok": False,
+        "pruned": {
+            "keep_daily": config.STORE_BACKUP_KEEP_DAILY,
+            "keep_weekly": config.STORE_BACKUP_KEEP_WEEKLY,
+            "deleted": [],
+            "dry_run": True,
+        },
     }
 
     if not live:
@@ -80,12 +86,47 @@ def backup_sqlite(
         result["warn"] = f"Source DB missing: {src}"
         return result
 
-    # VACUUM INTO requires a new destination path and exclusive access.
-    conn = sqlite3.connect(str(src))
+    # File lock: VACUUM INTO cannot run inside BEGIN IMMEDIATE, so an advisory
+    # lock serializes backup vs morning --live writers that cooperate via the
+    # same lock path. Contended VACUUM still soft-skips (no traceback).
+    lock_path = Path(str(src) + ".backup.lock")
+    lock_fd: Optional[int] = None
     try:
-        conn.execute(f"VACUUM INTO '{dest.as_posix()}'")
+        try:
+            lock_fd = os.open(str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            os.write(lock_fd, f"{os.getpid()}\n".encode("utf-8"))
+        except FileExistsError:
+            result["warn"] = (
+                f"SKIPPED — backup lock held ({lock_path}). Concurrent write/backup; retry later."
+            )
+            result["ok"] = True
+            result["pruned"]["dry_run"] = False
+            result["pruned"]["skipped"] = True
+            return result
+
+        conn = sqlite3.connect(str(src), timeout=0.25)
+        try:
+            conn.execute(f"VACUUM INTO '{dest.as_posix()}'")
+        except sqlite3.OperationalError as e:
+            msg = str(e).lower()
+            if "locked" in msg or "busy" in msg:
+                result["warn"] = (
+                    f"SKIPPED — database locked during VACUUM INTO: {e}. Retry later."
+                )
+                result["ok"] = True
+                result["pruned"]["dry_run"] = False
+                result["pruned"]["skipped"] = True
+                return result
+            raise
+        finally:
+            conn.close()
     finally:
-        conn.close()
+        if lock_fd is not None:
+            try:
+                os.close(lock_fd)
+            except OSError:
+                pass
+            lock_path.unlink(missing_ok=True)
 
     digest = _sha256_file(dest)
     sha_path.write_text(f"{digest}  {dest.name}\n", encoding="utf-8")

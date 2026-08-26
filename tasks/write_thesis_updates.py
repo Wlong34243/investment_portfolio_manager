@@ -178,5 +178,7 @@ def write_thesis_updates(
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    payloads = gather_thesis_sync_data(datetime.now().strftime("%Y-%m-%d"), tickers=["UNH", "AMZN"])
-    write_thesis_updates(payloads, dry_run=True)
+    result = gather_thesis_sync_data(datetime.now().strftime("%Y-%m-%d"), tickers=["UNH", "AMZN"])
+    if result.parse_errors:
+        print("parse_errors:", result.parse_errors)
+    write_thesis_updates(result.payloads, dry_run=True)

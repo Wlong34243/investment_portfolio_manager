@@ -43,7 +43,7 @@ EXCLUDE_TICKERS = set(config.VALUATION_SKIP)
 # "Forward P/E (FMP)" would have if left hardcoded.
 VALUATION_CARD_COLUMNS = [
     "Ticker", "Name", "Position MV", "Sector", "Market Cap", "Price",
-    "Trim Target", "Add Target", "Trailing P/E", "Forward P/E (yf)",
+    "Trigger Type", "Trim Target", "Add Target", "Trailing P/E", "Forward P/E (yf)",
     "P/B", "PEG", "Gross Margin", "ROIC", "D/E", "Rev Growth YoY",
     "Div Yield %", "Payout Ratio", "52w Low", "52w High",
     "52w Position %", "Discount from 52w High %", "Valuation_Signal",
@@ -148,12 +148,26 @@ def fetch_ticker_valuation(
     fmp_missing = not fmp_data or "error" in fmp_data
 
     try:
+        from utils.price_history import get_bars
+        import yfinance as yf
+
         t = yf.Ticker(ticker_symbol)
         info = t.info
 
-        high = info.get("fiftyTwoWeekHigh")
-        low  = info.get("fiftyTwoWeekLow")
+        # 52w high/low from bars (PRICE_HISTORY_SOURCE) with info fallback
+        bars = get_bars(ticker_symbol, period_days=365, interval="daily", adjusted=True)
+        if not bars.empty:
+            high = float(bars["high"].max())
+            low = float(bars["low"].min())
+            logging.getLogger(__name__).info(
+                "valuation_card 52w source=%s ticker=%s", bars.attrs.get("source"), ticker_symbol
+            )
+        else:
+            high = info.get("fiftyTwoWeekHigh")
+            low = info.get("fiftyTwoWeekLow")
         price = info.get("currentPrice") or info.get("regularMarketPrice")
+        if price is None and not bars.empty:
+            price = float(bars["close"].iloc[-1])
 
         # Get triggers from composite bundle (price-denominated for Trim/Add cols)
         triggers = {"valuation_trim": None, "valuation_add": None,
@@ -230,8 +244,15 @@ def fetch_ticker_valuation(
             "Sector":               info.get("sector", ""),
             "Market Cap":           market_cap,
             "Price":                price,
-            "Trim Target":          triggers.get("valuation_trim", triggers.get("price_trim_above")),
-            "Add Target":           triggers.get("valuation_add", triggers.get("price_add_below")),
+            # Declared-type numeric levels (a fwd P/E, a P/B, a discount %,
+            # or a dollar price -- whatever trigger_type says), not the
+            # price-only fallback. ceiling_only -> both None -> blank cell.
+            # Crosshairs (_near_candidates) reads these against the matching
+            # typed metric, never assumes dollars. See
+            # prompts/typed_trigger_crosshairs_2026-08-24.md.
+            "Trigger Type":         triggers.get("trigger_type", "price"),
+            "Trim Target":          triggers.get("trim_level"),
+            "Add Target":           triggers.get("add_level"),
             "Trailing P/E":         trailing_pe,
             "Forward P/E (yf)":     info.get("forwardPE"),
             "P/B":                  info.get("priceToBook"),
@@ -374,7 +395,7 @@ def main(
                        "Valuation_Signal", "FMP_Data_Available"]].to_string(index=False))
         return
 
-    tab_name = "Valuation_Card"
+    tab_name = config.TAB_VALUATION_CARD
     try:
         ws_val = spreadsheet.worksheet(tab_name)
         ws_val.clear()
@@ -422,6 +443,15 @@ def main(
         fmt_pe = CellFormat(numberFormat=NumberFormat(type='NUMBER', pattern='0.0'))
         fmt_peg = CellFormat(numberFormat=NumberFormat(type='NUMBER', pattern='0.00'))
         fmt_pct = CellFormat(numberFormat=NumberFormat(type='PERCENT', pattern='0.0%'))
+        # Trim Target / Add Target now hold whatever unit the declared
+        # trigger_type uses (dollars, a P/E, a P/B, or a discount-% point
+        # value) -- a single column can span all of them across rows, so a
+        # blanket CURRENCY format would show "$15.85" for a forward P/E.
+        # Plain NUMBER is the safe choice; it also round-trips correctly
+        # through coerce_sheet_numeric_series() (no "%" means no /100 on
+        # re-read), which a PERCENT format would corrupt for
+        # discount_from_high's raw percentage-point levels (e.g. IBM's 2.0).
+        fmt_level = CellFormat(numberFormat=NumberFormat(type='NUMBER', pattern='0.00'))
 
         def fmt_col(col_name, fmt):
             letter = col_letter(col_name)
@@ -429,8 +459,10 @@ def main(
 
         fmt_col("Position MV", fmt_dollar0)
         fmt_col("Market Cap", fmt_marketcap)
-        for name in ("Price", "Trim Target", "Add Target", "52w Low", "52w High"):
+        for name in ("Price", "52w Low", "52w High"):
             fmt_col(name, fmt_curr)
+        for name in ("Trim Target", "Add Target"):
+            fmt_col(name, fmt_level)
         for name in ("Trailing P/E", "Forward P/E (yf)", "P/B", "D/E"):
             fmt_col(name, fmt_pe)
         fmt_col("PEG", fmt_peg)

@@ -37,6 +37,51 @@ T = TypeVar('T', bound=BaseModel)
 
 SAFETY_PREAMBLE = "You must NEVER recommend executing specific trades. You provide analysis and considerations only. All buy/sell decisions are the investor's."
 
+# One retry budget when structured output is truncated (FinishReason.MAX_TOKENS).
+_MAX_TOKENS_RETRY = 4000
+
+
+def _gemini_debug_enabled() -> bool:
+    return os.environ.get("GEMINI_DEBUG", "").strip().lower() in ("1", "true", "yes")
+
+
+def _debug_print(msg: str) -> None:
+    if _gemini_debug_enabled():
+        print(msg)
+    else:
+        logging.debug(msg)
+
+
+def _finish_reason_name(response) -> str:
+    try:
+        if not response.candidates:
+            return "Unknown"
+        fr = response.candidates[0].finish_reason
+        return getattr(fr, "name", None) or str(fr)
+    except Exception:
+        return "Unknown"
+
+
+def _is_max_tokens_finish(response) -> bool:
+    name = _finish_reason_name(response).upper()
+    return "MAX_TOKEN" in name  # MAX_TOKENS / MAX_TOKEN
+
+
+def _parse_schema_response(response, response_schema: Type[T]) -> T | None:
+    """Parse structured output; return None on failure (including truncated JSON)."""
+    if response.parsed is not None:
+        return response.parsed
+    try:
+        cleaned_text = (response.text or "").strip()
+        if cleaned_text.startswith("```"):
+            match = re.search(r"```(?:json)?\s*(.*?)\s*```", cleaned_text, re.DOTALL)
+            if match:
+                cleaned_text = match.group(1).strip()
+        return response_schema.model_validate_json(cleaned_text)
+    except Exception as pe:
+        _debug_print(f"DEBUG: Pydantic Parsing Failed: {pe}\nRaw text: {(response.text or '')[:200]}")
+        return None
+
 
 def _build_genai_client():
     """
@@ -48,7 +93,7 @@ def _build_genai_client():
 
     Path 2 — ADC / Vertex AI:
       genai.Client(vertexai=True, ...) lets the SDK discover ADC automatically.
-      Falls back to this if API key is not present. Model strings must use 
+      Falls back to this if API key is not present. Model strings must use
       Vertex AI naming convention.
     """
     project_id = getattr(config, 'GCP_PROJECT_ID', 're-property-manager-487122')
@@ -102,47 +147,63 @@ def ask_gemini(prompt: str, system_instruction: str = None, json_mode: bool = Fa
     if json_mode and not response_schema:
         full_system_instruction += "\n\nRespond ONLY with a valid JSON object."
 
-    generation_config = types.GenerateContentConfig(
-        system_instruction=full_system_instruction,
-        max_output_tokens=max_tokens,
-        temperature=0.1,
-    )
-    
-    if response_schema:
-        generation_config.response_mime_type = "application/json"
-        generation_config.response_schema = response_schema
-    elif json_mode:
-        generation_config.response_mime_type = "application/json"
+    def _make_config(token_budget: int):
+        cfg = types.GenerateContentConfig(
+            system_instruction=full_system_instruction,
+            max_output_tokens=token_budget,
+            temperature=0.1,
+        )
+        if response_schema:
+            cfg.response_mime_type = "application/json"
+            cfg.response_schema = response_schema
+        elif json_mode:
+            cfg.response_mime_type = "application/json"
+        return cfg
 
-    try:
+    def _one_call(token_budget: int):
+        generation_config = _make_config(token_budget)
         response = client.models.generate_content(
             model=model_name,
             contents=prompt,
-            config=generation_config
+            config=generation_config,
         )
-        
-        # DEBUG
-        print(f"DEBUG: Gemini Response Finish Reason: {response.candidates[0].finish_reason if response.candidates else 'Unknown'}")
-        print(f"DEBUG: Gemini Raw Response: {response.text[:200]}...")
-        
+        fr = _finish_reason_name(response)
+        _debug_print(f"DEBUG: Gemini Response Finish Reason: {fr}")
+        raw_preview = ""
+        try:
+            raw_preview = (response.text or "")[:200]
+        except Exception:
+            raw_preview = ""
+        if raw_preview:
+            _debug_print(f"DEBUG: Gemini Raw Response: {raw_preview}...")
+        return response, generation_config
+
+    try:
+        response, generation_config = _one_call(max_tokens)
+
         if response_schema:
-            # response.parsed is populated by AI Studio but not always by
-            # Vertex AI backend. Fall back to manual JSON parse when None.
-            if response.parsed is not None:
-                return response.parsed
-            try:
-                cleaned_text = response.text.strip()
-                if cleaned_text.startswith("```"):
-                    match = re.search(r"```(?:json)?\s*(.*?)\s*```", cleaned_text, re.DOTALL)
-                    if match:
-                        cleaned_text = match.group(1).strip()
-                return response_schema.model_validate_json(cleaned_text)
-            except Exception as pe:
-                print(f"DEBUG: Pydantic Parsing Failed: {pe}\nRaw text: {response.text[:200]}")
-                return None
+            truncated = _is_max_tokens_finish(response)
+            parsed = None if truncated else _parse_schema_response(response, response_schema)
+            # Truncation or parse failure: one retry at a higher budget (once).
+            if parsed is None and max_tokens < _MAX_TOKENS_RETRY:
+                logging.info(
+                    "Gemini structured output incomplete (finish=%s, max_tokens=%d); "
+                    "retrying once with max_tokens=%d",
+                    _finish_reason_name(response), max_tokens, _MAX_TOKENS_RETRY,
+                )
+                response, generation_config = _one_call(_MAX_TOKENS_RETRY)
+                if _is_max_tokens_finish(response):
+                    logging.warning(
+                        "Gemini still FinishReason.MAX_TOKENS after retry at %d tokens",
+                        _MAX_TOKENS_RETRY,
+                    )
+                    return None
+                parsed = _parse_schema_response(response, response_schema)
+            return parsed
+
         return response.text
     except Exception as e:
-        print(f"DEBUG: Gemini API error: {e}")
+        _debug_print(f"DEBUG: Gemini API error: {e}")
         logging.error(f"Gemini API error ({model_name}): {e}")
         if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
             # Vertex AI TPM/RPM quota — exponential backoff with two retries
@@ -150,24 +211,20 @@ def ask_gemini(prompt: str, system_instruction: str = None, json_mode: bool = Fa
                 logging.info("429/RESOURCE_EXHAUSTED — waiting %ds before retry...", wait_sec)
                 time.sleep(wait_sec)
                 try:
-                    response = client.models.generate_content(
-                        model=model_name,
-                        contents=prompt,
-                        config=generation_config,
+                    response, generation_config = _one_call(max_tokens)
+                    _debug_print(
+                        f"DEBUG: Gemini Response Finish Reason: {_finish_reason_name(response)}"
                     )
-                    print(f"DEBUG: Gemini Response Finish Reason: {response.candidates[0].finish_reason if response.candidates else 'Unknown'}")
                     if response_schema:
-                        if response.parsed is not None:
-                            return response.parsed
-                        try:
-                            return response_schema.model_validate_json(response.text)
-                        except Exception:
+                        if _is_max_tokens_finish(response):
                             return None
+                        return _parse_schema_response(response, response_schema)
                     return response.text
                 except Exception as retry_e:
                     if "429" not in str(retry_e) and "RESOURCE_EXHAUSTED" not in str(retry_e):
                         break  # non-quota error; stop retrying
         return "" if not response_schema else None
+
 
 def ask_gemini_json(prompt: str, system_instruction: str = None, max_tokens: int = 2000) -> dict:
     """Legacy wrapper for raw JSON extraction."""

@@ -170,6 +170,117 @@ def _check_schwab_token_market() -> CheckResult:
     return result
 
 
+def _refresh_token_days_remaining(blob: dict) -> float | None:
+    """Days remaining on Schwab refresh token (~7-day life from blob creation_timestamp).
+
+    Observed blob keys 2026-08-25: top-level ``creation_timestamp`` + nested ``token``
+    with access/refresh fields. Do not assume other key names.
+    """
+    if not blob:
+        return None
+    created = blob.get("creation_timestamp")
+    if created is None and isinstance(blob.get("token"), dict):
+        created = blob["token"].get("creation_timestamp")
+    if created is None:
+        return None
+    age_days = (_time.time() - float(created)) / 86400.0
+    return 7.0 - age_days
+
+
+def _check_schwab_refresh_token_age() -> CheckResult:
+    """Warn before refresh-token expiry; fail when expired. WARNING level only —
+    never CRITICAL, so this cannot write HEALTH_FAILURE.flag (verified 2026-08-25:
+    sentinel requires CRITICAL+FAIL). Remediation: schwab_emergency_reauth.bat"""
+    import config
+    from utils.schwab_token_store import load_token
+
+    result = CheckResult(
+        name="schwab_refresh_token_age",
+        label="schwab_refresh_token_age",
+        level=WARNING, status=WARN,
+        detail="Refresh-token age unknown",
+    )
+    try:
+        details = []
+        worst = PASS
+        warn_days = float(getattr(config, "SCHWAB_REFRESH_TOKEN_WARN_DAYS", 2.0))
+        for blob_name, label in (
+            (config.SCHWAB_TOKEN_BLOB_ACCOUNTS, "accounts"),
+            (config.SCHWAB_TOKEN_BLOB_MARKET, "market"),
+        ):
+            blob = load_token(blob_name)
+            if not blob:
+                details.append(f"{label}: missing")
+                worst = FAIL
+                continue
+            remaining = _refresh_token_days_remaining(blob)
+            if remaining is None:
+                details.append(f"{label}: creation_timestamp absent")
+                if worst == PASS:
+                    worst = WARN
+                continue
+            details.append(f"{label}: {remaining:.1f}d remaining")
+            if remaining <= 0:
+                worst = FAIL
+            elif remaining < warn_days and worst != FAIL:
+                worst = WARN
+
+        result.status = worst
+        result.detail = "; ".join(details)
+        if worst == FAIL:
+            result.detail += " — expired. Remediation: run schwab_emergency_reauth.bat"
+        elif worst == WARN:
+            result.detail += (
+                f" — under {warn_days}d threshold. Remediation: run schwab_emergency_reauth.bat"
+            )
+        result.verbose = (
+            "Refresh tokens last ~7 days from blob creation_timestamp; "
+            "access-token checks remain separate."
+        )
+    except Exception as e:
+        result.status = WARN
+        result.detail = f"Error reading refresh-token age: {e}"
+    return result
+
+
+def _check_market_status() -> CheckResult:
+    """Informational only — never CRITICAL, never writes HEALTH_FAILURE.flag."""
+    result = CheckResult(
+        name="market_status",
+        label="market_status",
+        level=WARNING, status=PASS,
+        detail="unknown",
+    )
+    try:
+        from utils.schwab_client import get_market_client, fetch_market_hours, is_trading_day
+        client = get_market_client()
+        if client is None:
+            result.status = WARN
+            result.detail = "market client unavailable"
+            return result
+        flag = is_trading_day(client)
+        payload = fetch_market_hours(client)
+        session = ""
+        try:
+            eq = (payload.get("equity") or {}).get("EQ") or (payload.get("equity") or {}).get("equity") or {}
+            hours = (eq.get("sessionHours") or {}).get("regularMarket") or []
+            if hours:
+                session = f" regular={hours[0].get('start')}→{hours[0].get('end')}"
+        except Exception:
+            pass
+        if flag is True:
+            result.detail = f"open{session}"
+        elif flag is False:
+            result.detail = "closed"
+        else:
+            result.status = WARN
+            result.detail = "unknown"
+    except Exception as e:
+        result.status = WARN
+        result.detail = f"error: {e}"
+    return result
+
+
 def _check_schwab_api_positions() -> CheckResult:
     result = CheckResult(
         name="schwab_api_positions",
@@ -575,6 +686,8 @@ def _check_tax_control_freshness() -> CheckResult:
 _ALL_CHECKS: list[Callable[[], CheckResult]] = [
     _check_schwab_token_accounts,
     _check_schwab_token_market,
+    _check_schwab_refresh_token_age,
+    _check_market_status,
     _check_schwab_api_positions,
     _check_sheet_reachable,
     _check_latest_bundle_exists,

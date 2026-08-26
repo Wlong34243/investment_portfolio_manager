@@ -122,12 +122,19 @@ def read_gsheet_robust(ws: gspread.Worksheet) -> pd.DataFrame:
     # Identify columns that should NOT be converted to numeric
     # Using lowercase and substring matches for robustness
     text_indicators = [
-        'ticker', 'symbol', 'description', 'sector', 'industry', 
-        'asset class', 'asset strategy', 'import date', 'closed date', 
+        'ticker', 'symbol', 'description', 'sector', 'industry',
+        'asset class', 'asset strategy', 'import date', 'closed date',
         'opened date', 'acquisition date', 'date', 'import timestamp', 'fingerprint',
         'is cash', 'wash sale', 'is primary acct', 'winner', 'unnamed_',
         'action', 'account', 'status', 'rotation', 'implicit', 'thesis', 'term',
-        'trade date', 'settlement date'
+        'trade date', 'settlement date',
+        # Valuation_Card's declared trigger_type label (price/fwd_pe/
+        # trailing_pe/price_to_book/discount_from_high/ceiling_only) --
+        # without this, coerce_sheet_numeric_series zeroes it (real value
+        # written to the Sheet correctly; only the read-back was broken).
+        # See prompts/typed_trigger_crosshairs_2026-08-24.md.
+        'trigger',
+        'data_source', 'source',
     ]
     
     for col in df.columns:

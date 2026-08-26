@@ -336,7 +336,23 @@ def append_holdings_history(ws, data: list[list], existing_fps: set = None) -> i
 
 
 def append_daily_snapshot(ws, df: pd.DataFrame, existing_fps: set = None) -> bool:
-    """Build a Daily_Snapshots row and append if fingerprint is new."""
+    """Build a Daily_Snapshots row and append if fingerprint is new.
+
+    On a non-trading day, skip the row and log the reason.
+    is_trading_day() returning None (unknown) must behave exactly as today —
+    proceed and write. Degrading an API outage into 'market closed' would
+    silently drop real trading days from the history.
+    """
+    try:
+        from utils.market_calendar import is_session_open
+        flag = is_session_open()
+        if flag is False:
+            print("Daily_Snapshots: market closed — skipping snapshot row")
+            return False
+        # flag is True or None → proceed
+    except Exception as e:
+        print(f"Daily_Snapshots: calendar check failed ({e}) — proceeding")
+
     from utils.column_guard import ensure_display_columns
     df = ensure_display_columns(df)
 

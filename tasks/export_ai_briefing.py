@@ -22,6 +22,14 @@ import re
 import sys
 import unicodedata
 from datetime import datetime, timezone
+from pathlib import Path
+
+# Running as `python tasks/export_ai_briefing.py` puts tasks/ on sys.path[0],
+# not the repo root — so `from utils...` fails. Morning STEP 9 uses that
+# invocation. Mirror manager.py: pin the project root first.
+_ROOT = Path(__file__).resolve().parent.parent
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
 
 _ASCII_REPLACEMENTS = {
     "‐": "-", "‑": "-", "‒": "-", "–": "-", "—": "--",
@@ -46,11 +54,18 @@ def to_ascii(text):
 PROMPT_PAYLOAD = """# Portfolio Analysis Briefing — {DATE}
 
 You are analyzing the portfolio of a self-directed investor (Bill). Attached are
-four documents: this prompt, `portfolio.md` (positions, tax lots, recent
-rotations, stamped with a data fingerprint), `podcasts.md` (summaries of the
-investment podcasts he follows, most recent first), and `theses.md` (a digest of
-his written investment thesis for each position, with style tags and size
-ceilings).
+these documents: this prompt, `doctrine.md` (standing portfolio constraints —
+Bill's own writing, authoritative on what he will and will not do),
+`portfolio.md` (positions, tax lots, recent rotations, stamped with a data
+fingerprint), `podcasts.md` (summaries of the investment podcasts he follows,
+most recent first), and `theses.md` (a digest of his written investment thesis
+for each position, with style tags and size ceilings).
+
+When `doctrine.md` is present it **outranks inference from the trade log** on
+Bill's constraints. Do not invent constraints that are not in that file. When a
+Crosshairs or valuation signal conflicts with doctrine (e.g. a NEAR_TRIM on a
+ticker listed under `tax_hold_runners`), treat the doctrine as decisive context,
+not as something to litigate away.
 
 ## Who you are working for
 
@@ -116,6 +131,23 @@ discovery.
    everything above, in plain language, followed by the two or three open
    questions he should resolve before acting.
 
+## Undocumented changes (from manifest.json)
+
+If `manifest.json` contains an `undocumented_changes.findings` list that is
+non-empty, render it as a short **question block near the top** of your reply
+(before theme extraction). Rules:
+
+- One line per finding: ticker, what changed, then the `question` field verbatim.
+  No surrounding prose. Do not speculate about the answer.
+- Cap at five. If the block carries a SYSTEM miscalibration line, print that
+  single line instead of listing more than five.
+- If the findings list is empty or absent, omit this section entirely — do not
+  write "no findings today".
+- Route answers (for Bill, not for you to invent): Review Log for
+  entry/exit/resize rationale; `pm journal rotation` for sell-funding-buy;
+  `vault/doctrine.md` for standing constraints that govern future decisions
+  generally rather than one position.
+
 ## Ground rules
 
 - Be candid and specific. He wants pushback, not validation.
@@ -144,12 +176,13 @@ which file doesn't say so yet.
 
 ### Hard rules (each exists because the 2026-07-26 briefing violated it)
 
-1. Never infer liquidity posture, dry powder, or "fully invested" status from
-   this export. CASH_MANUAL does NOT represent the cash position — cash is held
-   outside what the bundle captures. Do not compute a cash percentage, do not
-   compare it to podcast cash allocations, do not conclude that strategic cash
-   is absent, shrinking, or has been converted into something else. If a
-   liquidity question is load-bearing, write it as a question for Bill.
+1. Cash is now sourced from Schwab account balances across the three allowlisted
+   accounts and reconciles to Schwab's own liquidationValue. A cash percentage
+   computed against the bundle total is therefore meaningful *for those three
+   accounts*. It is still not Bill's total liquidity — three further accounts
+   are out of scope, and strategic dry powder may sit outside Schwab entirely.
+   State the scope whenever citing a cash figure; do not extrapolate to net worth.
+   CASH_MANUAL remains the synthetic row ticker name (do not rename).
 
 2. Do not relitigate the role of an established position. JEPI is held for low
    beta; that is settled. For any position whose thesis states a role, describe
@@ -1008,6 +1041,22 @@ def _state_preflight_message(ticker, heading, key, state):
     return None
 
 
+def build_doctrine_md(issues=None):
+    """Load vault/doctrine.md for the briefing package. Absent → preflight, no file."""
+    issues = issues if issues is not None else []
+    path = Path("vault") / "doctrine.md"
+    if not path.is_file():
+        issues.append(
+            "SYSTEM: vault/doctrine.md missing — doctrine.md omitted from this package."
+        )
+        return None
+    try:
+        return to_ascii(path.read_text(encoding="utf-8"))
+    except OSError as e:
+        issues.append("SYSTEM: failed to read vault/doctrine.md: %s" % e)
+        return None
+
+
 def build_theses_md(styles_path, held_tickers=None, issues=None, detail="standard", provenance=None):
     lines = []
     held = set(held_tickers or [])
@@ -1088,6 +1137,24 @@ def build_theses_md(styles_path, held_tickers=None, issues=None, detail="standar
             "### %s — style: %s | scaling: %s | priority: %s | reviewed: %s"
             % (ticker, style, next_step, priority, last_reviewed)
         )
+        if detail in ("standard", "full"):
+            try:
+                from utils.thesis_reader import get_pattern
+                pat = get_pattern(raw)
+            except Exception:
+                pat = None
+            if pat:
+                comp = pat.get("comp")
+                note = pat.get("note")
+                extra = ""
+                if comp:
+                    extra += f" | comp: {comp}"
+                if note:
+                    note_s = str(note).strip().replace("\n", " ")
+                    if len(note_s) > 120:
+                        note_s = note_s[:117] + "..."
+                    extra += f" | {note_s}"
+                lines.append(f"**Pattern:** `{pat.get('name')}`{extra}")
         lines.append("**Core Thesis**")
         lines.append(core_full)
         lines.append("")
@@ -1207,6 +1274,29 @@ def build_theses_md(styles_path, held_tickers=None, issues=None, detail="standar
     return to_ascii("\n".join(lines) + "\n")
 
 
+def _cleanup_empty_pkg_dir(pkg_dir: str) -> None:
+    """Remove a package dir that never got real content.
+
+    Google Drive File Stream often drops a desktop.ini into a new folder
+    within seconds, so treat 'only desktop.ini' as empty too — otherwise
+    morning leaves husk dirs like exports/ai_briefing_* with nothing usable.
+    """
+    try:
+        if not os.path.isdir(pkg_dir):
+            return
+        names = [n for n in os.listdir(pkg_dir) if n.lower() != "desktop.ini"]
+        if names:
+            return
+        for n in os.listdir(pkg_dir):
+            try:
+                os.remove(os.path.join(pkg_dir, n))
+            except OSError:
+                pass
+        os.rmdir(pkg_dir)
+    except OSError:
+        pass
+
+
 def main():
     parser = argparse.ArgumentParser(description="Export AI portfolio briefing package.")
     parser.add_argument("--days", type=int, default=14)
@@ -1261,131 +1351,161 @@ def main():
         suffix += 1
     os.makedirs(pkg_dir)
 
-    issues = []
-    provenance = {}
-    styles_path = os.path.join("data", "styles.json")
-    styles = load_styles(styles_path)
-    style_map = build_style_map()
-    ceiling_overrides = build_ceiling_overrides()
+    try:
+        issues = []
+        provenance = {}
+        styles_path = os.path.join("data", "styles.json")
+        styles = load_styles(styles_path)
+        style_map = build_style_map()
+        ceiling_overrides = build_ceiling_overrides()
 
-    positions = bundle.get("_market_data", {}).get("positions", [])
-    held_tickers = {p.get("ticker") for p in positions if p.get("ticker")}
+        positions = bundle.get("_market_data", {}).get("positions", [])
+        held_tickers = {p.get("ticker") for p in positions if p.get("ticker")}
 
-    compute_level_coverage = _level_coverage()
-    level_coverage = (
-        compute_level_coverage(held_tickers - {"CASH_MANUAL"})
-        if compute_level_coverage else None
-    )
-
-    portfolio_md = build_portfolio_md(
-        bundle, style_map=style_map, styles=styles, lookthrough_mode=args.lookthrough,
-        ceiling_overrides=ceiling_overrides,
-    )
-    podcasts_md = build_podcasts_md(
-        args.days, positions=positions, composite_hash=bundle.get("composite_hash", "unknown")
-    )
-    theses_md = build_theses_md(
-        styles_path, held_tickers=held_tickers, issues=issues, detail=args.thesis_detail, provenance=provenance
-    )
-    prompt_md = PROMPT_PAYLOAD.replace("{DATE}", now.strftime("%Y-%m-%d"))
-
-    blocking = [i for i in issues if i.startswith("BLOCKING")]
-    if issues:
-        print("\n--- Preflight ---")
-        for i in issues:
-            print("  %s" % i)
-        print("--- end preflight ---\n")
-    if blocking and not args.force:
-        print(
-            "ABORTED: %d blocking issue(s) above. Fix them, or re-run with --force "
-            "to export anyway." % len(blocking)
-        )
-        # Do not leave an empty package dir behind (makedirs runs before write).
-        try:
-            if os.path.isdir(pkg_dir) and not os.listdir(pkg_dir):
-                os.rmdir(pkg_dir)
-        except OSError:
-            pass
-        sys.exit(1)
-
-    # Prepend staleness banner if degraded health sentinel is present
-    from tasks.health import read_failure_sentinel
-    sentinel = read_failure_sentinel()
-    if sentinel:
-        banner = (
-            "=========================================================================\n"
-            "WARNING: PORTFOLIO DATA IS DEGRADED AND STALE (CRITICAL HEALTH FAILURE)\n"
-            f"Failing checks since (UTC): {sentinel.get('timestamp_utc', 'N/A')}\n"
-        )
-        for fc in sentinel.get("failing_checks", []):
-            banner += f"  - {fc.get('label', fc.get('name', 'Unknown'))}: {fc.get('detail', '')}\n"
-        banner += f"Remediation: {sentinel.get('remediation', 'N/A')}\n"
-        banner += "=========================================================================\n\n"
-        banner = to_ascii(banner)
-
-        portfolio_md = banner + portfolio_md
-        theses_md = banner + theses_md
-
-    submit_me_md = "\n\n---\n\n".join([prompt_md, portfolio_md, podcasts_md, theses_md])
-    if sentinel:
-        # Prepend to the composite file too
-        submit_me_md = banner + submit_me_md
-
-    file_map = {
-        "prompt.md": prompt_md,
-        "portfolio.md": portfolio_md,
-        "podcasts.md": podcasts_md,
-        "theses.md": theses_md,
-        "SUBMIT_ME.md": submit_me_md,
-    }
-
-    sizes = {}
-    hashes = {}
-    for name, content in file_map.items():
-        path = os.path.join(pkg_dir, name)
-        with open(path, "w", encoding="utf-8", newline="\n") as f:
-            f.write(content)
-        sizes[name] = os.path.getsize(path)
-        with open(path, "rb") as f:
-            hashes[name] = hashlib.sha256(f.read()).hexdigest()
-
-    SIZE_WARN_BYTES = 250_000
-    if sizes.get("SUBMIT_ME.md", 0) > SIZE_WARN_BYTES:
-        print(
-            "WARNING: SUBMIT_ME.md is %d bytes (> %d byte guideline). Consider "
-            "--thesis-detail minimal or --lookthrough off for this run."
-            % (sizes["SUBMIT_ME.md"], SIZE_WARN_BYTES)
+        compute_level_coverage = _level_coverage()
+        level_coverage = (
+            compute_level_coverage(held_tickers - {"CASH_MANUAL"})
+            if compute_level_coverage else None
         )
 
-    manifest = {
-        "composite_hash": bundle.get("composite_hash"),
-        "bundle_path": bundle_path,
-        "generated_at": now.strftime("%Y-%m-%dT%H:%M:%S"),
-        "days_window": args.days,
-        "days_window_applies_to": "podcast summaries only",
-        "thesis_detail": args.thesis_detail,
-        "level_coverage": level_coverage,
-        "provenance": provenance,
-        "files": sizes,
-        "file_sha256": hashes,
-        "preflight_issues": issues,
-    }
-    manifest_path = os.path.join(pkg_dir, "manifest.json")
-    with open(manifest_path, "w", encoding="utf-8", newline="\n") as f:
-        json.dump(manifest, f, indent=2)
-    sizes["manifest.json"] = os.path.getsize(manifest_path)
+        portfolio_md = build_portfolio_md(
+            bundle, style_map=style_map, styles=styles, lookthrough_mode=args.lookthrough,
+            ceiling_overrides=ceiling_overrides,
+        )
+        podcasts_md = build_podcasts_md(
+            args.days, positions=positions, composite_hash=bundle.get("composite_hash", "unknown")
+        )
+        theses_md = build_theses_md(
+            styles_path, held_tickers=held_tickers, issues=issues, detail=args.thesis_detail, provenance=provenance
+        )
+        prompt_md = PROMPT_PAYLOAD.replace("{DATE}", now.strftime("%Y-%m-%d"))
+        doctrine_md = build_doctrine_md(issues=issues)
 
-    print("Package: %s" % pkg_dir)
-    for name, size in sizes.items():
-        print("  %s: %d bytes" % (name, size))
+        blocking = [i for i in issues if i.startswith("BLOCKING")]
+        if issues:
+            print("\n--- Preflight ---")
+            for i in issues:
+                print("  %s" % i)
+            print("--- end preflight ---\n")
+        if blocking and not args.force:
+            print(
+                "ABORTED: %d blocking issue(s) above. Fix them, or re-run with --force "
+                "to export anyway." % len(blocking)
+            )
+            _cleanup_empty_pkg_dir(pkg_dir)
+            sys.exit(1)
 
-    if not args.no_open:
-        try:
-            os.startfile(os.path.abspath(pkg_dir))
-        except Exception:
-            pass
+        # Prepend staleness banner if degraded health sentinel is present
+        from tasks.health import read_failure_sentinel
+        sentinel = read_failure_sentinel()
+        if sentinel:
+            banner = (
+                "=========================================================================\n"
+                "WARNING: PORTFOLIO DATA IS DEGRADED AND STALE (CRITICAL HEALTH FAILURE)\n"
+                f"Failing checks since (UTC): {sentinel.get('timestamp_utc', 'N/A')}\n"
+            )
+            for fc in sentinel.get("failing_checks", []):
+                banner += f"  - {fc.get('label', fc.get('name', 'Unknown'))}: {fc.get('detail', '')}\n"
+            banner += f"Remediation: {sentinel.get('remediation', 'N/A')}\n"
+            banner += "=========================================================================\n\n"
+            banner = to_ascii(banner)
 
-    sys.exit(0)
+            portfolio_md = banner + portfolio_md
+            theses_md = banner + theses_md
+            if doctrine_md is not None:
+                doctrine_md = banner + doctrine_md
+
+        submit_parts = [prompt_md]
+        if doctrine_md is not None:
+            submit_parts.append(doctrine_md)
+        submit_parts.extend([portfolio_md, podcasts_md, theses_md])
+        submit_me_md = "\n\n---\n\n".join(submit_parts)
+        if sentinel:
+            # Prepend to the composite file too
+            submit_me_md = banner + submit_me_md
+
+        file_map = {
+            "prompt.md": prompt_md,
+            "portfolio.md": portfolio_md,
+            "podcasts.md": podcasts_md,
+            "theses.md": theses_md,
+            "SUBMIT_ME.md": submit_me_md,
+        }
+        if doctrine_md is not None:
+            file_map = {
+                "prompt.md": prompt_md,
+                "doctrine.md": doctrine_md,
+                "portfolio.md": portfolio_md,
+                "podcasts.md": podcasts_md,
+                "theses.md": theses_md,
+                "SUBMIT_ME.md": submit_me_md,
+            }
+
+        sizes = {}
+        hashes = {}
+        for name, content in file_map.items():
+            path = os.path.join(pkg_dir, name)
+            with open(path, "w", encoding="utf-8", newline="\n") as f:
+                f.write(content)
+            sizes[name] = os.path.getsize(path)
+            with open(path, "rb") as f:
+                hashes[name] = hashlib.sha256(f.read()).hexdigest()
+
+        SIZE_WARN_BYTES = 250_000
+        if sizes.get("SUBMIT_ME.md", 0) > SIZE_WARN_BYTES:
+            print(
+                "WARNING: SUBMIT_ME.md is %d bytes (> %d byte guideline). Consider "
+                "--thesis-detail minimal or --lookthrough off for this run."
+                % (sizes["SUBMIT_ME.md"], SIZE_WARN_BYTES)
+            )
+
+        from tasks.detect_undocumented_changes import detect_for_export
+        # Banner lines (if any) are not Positions table rows — parse is safe on portfolio_md.
+        undocumented = detect_for_export(
+            current_portfolio_md=portfolio_md,
+            exports_dir=args.out,
+            current_pkg_name=os.path.basename(pkg_dir),
+            generated_at=now.strftime("%Y-%m-%dT%H:%M:%S"),
+        )
+
+        manifest = {
+            "composite_hash": bundle.get("composite_hash"),
+            "bundle_path": bundle_path,
+            "generated_at": now.strftime("%Y-%m-%dT%H:%M:%S"),
+            "days_window": args.days,
+            "days_window_applies_to": "podcast summaries only",
+            "thesis_detail": args.thesis_detail,
+            "level_coverage": level_coverage,
+            "provenance": provenance,
+            "files": sizes,
+            "file_sha256": hashes,
+            "preflight_issues": issues,
+            "undocumented_changes": {
+                k: v for k, v in undocumented.items() if k != "suppress_log"
+            },
+        }
+        # suppress_log stays out of the shipped manifest (CLI detector retains it).
+        manifest_path = os.path.join(pkg_dir, "manifest.json")
+        with open(manifest_path, "w", encoding="utf-8", newline="\n") as f:
+            json.dump(manifest, f, indent=2)
+        sizes["manifest.json"] = os.path.getsize(manifest_path)
+
+        print("Package: %s" % pkg_dir)
+        for name, size in sizes.items():
+            print("  %s: %d bytes" % (name, size))
+
+        if not args.no_open:
+            try:
+                os.startfile(os.path.abspath(pkg_dir))
+            except Exception:
+                pass
+
+        sys.exit(0)
+    except SystemExit:
+        raise
+    except Exception:
+        _cleanup_empty_pkg_dir(pkg_dir)
+        raise
 
 
 if __name__ == "__main__":

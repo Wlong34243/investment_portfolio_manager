@@ -58,8 +58,15 @@ WEIGHT_RECONCILE_TOL = 0.02
 COVERAGE_FLAG_PCT = 0.90
 BETA_REFERENCE = "SPY"
 BENCH_QQQ_NOTE = "Held equivalent is QQQM (same index, lower fee); QQQ used for longer price history."
+# Gate C (2026-08-25): freeze historical Rotation_Review numbers at the
+# yfinance→Schwab bar-router boundary. New/incomplete rows recompute and
+# stamp the live vendor(s) from get_bars attrs.
+PRICE_SOURCE_FROZEN_BOUNDARY = "yfinance|frozen_pre_schwab_2026-08-25"
 OUTPUT_DIR = _ROOT / "agent_outputs" / "rotation_attribution"
 JEPI_INCOME_TICKERS = {"JEPI", "JPIE"}
+
+# Sources seen during the current attribute_row() call (cleared each row).
+_BAR_SOURCES_THIS_ROW: set[str] = set()
 
 # --historical-ledger (2026-08-09): the 2026-08-03 account-scope fix means the
 # live Transactions tab only ever held the 3-account-scoped view, even for
@@ -80,7 +87,13 @@ _BETA_CACHE: Dict[str, Optional[float]] = {}
 # ---------------------------------------------------------------------------
 
 def get_ohlcv(ticker: str, start_date: date, end_date: Optional[date] = None) -> Optional[pd.DataFrame]:
-    """Fetch and cache OHLCV for ticker. auto_adjust=True → total-return (div-adjusted) closes."""
+    """Fetch and cache OHLCV for ticker via price_history.get_bars.
+
+    Phase 1 verdict: Schwab bars are NOT dividend-adjusted. Requesting adjusted=True
+    uses yfinance auto_adjust when source is yfinance; Schwab leg is split-only.
+    """
+    from utils.price_history import get_bars
+
     requested_end = end_date if end_date is not None else start_date + timedelta(days=380)
 
     cached = _YF_CACHE.get(ticker)
@@ -88,24 +101,31 @@ def get_ohlcv(ticker: str, start_date: date, end_date: Optional[date] = None) ->
         c0 = cached.index[0].date() if hasattr(cached.index[0], "date") else cached.index[0]
         c1 = cached.index[-1].date() if hasattr(cached.index[-1], "date") else cached.index[-1]
         if c0 <= start_date and c1 >= min(requested_end, date.today()):
+            src = cached.attrs.get("source") or "unknown"
+            _BAR_SOURCES_THIS_ROW.add(str(src))
             return cached
 
     try:
-        df = yf.download(
-            ticker,
-            start=start_date.strftime("%Y-%m-%d"),
-            end=(requested_end + timedelta(days=1)).strftime("%Y-%m-%d"),
-            progress=False,
-            auto_adjust=True,
-        )
+        period_days = max(30, (requested_end - start_date).days + 30)
+        df = get_bars(ticker, period_days=period_days, interval="daily", adjusted=True)
         if df is None or df.empty:
             return None
-        if isinstance(df.columns, pd.MultiIndex):
-            df = df.droplevel(1, axis=1)
-        # Prefer wider series in cache
-        if cached is None or len(df) >= len(cached):
-            _YF_CACHE[ticker] = df
-        return df
+        src = df.attrs.get("source") or "unknown"
+        _BAR_SOURCES_THIS_ROW.add(str(src))
+        # Expose Capitalised columns for downstream code that still expects yfinance shape
+        out = df.rename(columns={
+            "open": "Open", "high": "High", "low": "Low",
+            "close": "Close", "volume": "Volume",
+        })
+        out.attrs["source"] = src
+        out.attrs["adjusted"] = df.attrs.get("adjusted")
+        logger.info(
+            "attribution bars source=%s ticker=%s rows=%d",
+            src, ticker, len(out),
+        )
+        if cached is None or len(out) >= len(cached):
+            _YF_CACHE[ticker] = out
+        return out
     except Exception as e:
         logger.warning(f"Failed to download {ticker}: {e}")
         return None
@@ -833,8 +853,20 @@ def cache_is_fresh(cached: Dict[str, Any], today: date) -> bool:
     Pair horizons filled. (Prompt Step 0 claimed AND; code historically used OR —
     Step 6 says preserve existing.)
     Also require Residual_Pair_30d so schema upgrades force one recompute.
+
+    Gate C (2026-08-25): rows already stamped with the freeze boundary, or
+    published rows that still lack Price_Source (pre-boundary Sheet), are never
+    recomputed for a bar-vendor change — stamp/preserve only.
     """
     try:
+        ps = str(cached.get("Price_Source") or "").strip()
+        if ps.startswith("yfinance|frozen") or ps == PRICE_SOURCE_FROZEN_BOUNDARY:
+            return True
+        # One-time Gate C migration: published numbers with no Price_Source yet
+        # must be stamped, not recomputed (the 2026-08-25 --live failure mode).
+        if not ps and _gate_c_has_published_numbers(cached):
+            return True
+
         as_of_str = cached.get("Attribution_As_Of", "")
         as_of_dt = datetime.strptime(as_of_str, "%Y-%m-%d").date()
         age_days = (today - as_of_dt).days
@@ -859,6 +891,18 @@ def cache_is_fresh(cached: Dict[str, Any], today: date) -> bool:
     return False
 
 
+def _gate_c_has_published_numbers(cached: Dict[str, Any]) -> bool:
+    """True when the row already carries published attribution output."""
+    st = str(cached.get("Status") or "")
+    if st.startswith(("WEIGHTS", "SUPERSEDED", "BAD_DATE")):
+        return True
+    if not st.startswith(("OK", "LOW_COVERAGE")):
+        return False
+    if cached.get("Residual_Pair_30d") not in ("", None):
+        return True
+    return any(cached.get(f"Pair_Return_{h}d") not in ("", None) for h in HORIZONS)
+
+
 # ---------------------------------------------------------------------------
 # Per-row attribution
 # ---------------------------------------------------------------------------
@@ -870,6 +914,9 @@ def attribute_row(
     today_str: str,
     weight_details_out: Optional[List[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
+    global _BAR_SOURCES_THIS_ROW
+    _BAR_SOURCES_THIS_ROW = set()
+
     rid = str(_row_get(row, "Trade_Log_ID", "Stage_ID", default=""))
     dt_str = str(_row_get(row, "Date", default=""))
     anchor = _parse_date(dt_str)
@@ -880,6 +927,7 @@ def attribute_row(
             "Status": "BAD_DATE",
             "Attribution_As_Of": today_str,
             "Fingerprint": f"{rid}|{today_str}",
+            "Price_Source": "",
         }
 
     sell_tickers = _split_tickers(str(_row_get(row, "Sell_Ticker", "Sell_Tickers", default="")))
@@ -956,6 +1004,9 @@ def attribute_row(
     if not sell_ok or not buy_ok or not sell_net or not buy_net:
         base["Status"] = "WEIGHTS_UNRECONCILED"
         base["Coverage_Pct"] = ""
+        base["Price_Source"] = (
+            "+".join(sorted(_BAR_SOURCES_THIS_ROW)) if _BAR_SOURCES_THIS_ROW else ""
+        )
         logger.warning(
             f"{rid}: WEIGHTS_UNRECONCILED sell {recon_sell:.2f}/{stated_sell:.2f} "
             f"buy {recon_buy:.2f}/{stated_buy:.2f}"
@@ -1033,6 +1084,10 @@ def attribute_row(
         if base["Status"] == "OK":
             base["Status"] = "OK_JEPI_BETA_CAVEAT"
 
+    if _BAR_SOURCES_THIS_ROW:
+        base["Price_Source"] = "+".join(sorted(_BAR_SOURCES_THIS_ROW))
+    else:
+        base["Price_Source"] = "unknown"
     return base
 
 
@@ -1541,13 +1596,22 @@ def run_attribution(
                 "Fingerprint": f"{rid}|{today_str}",
                 "Beta_Reference": BETA_REFERENCE,
                 "Bench_QQQ_Note": BENCH_QQQ_NOTE,
+                "Price_Source": PRICE_SOURCE_FROZEN_BOUNDARY,
             })
             continue
 
         cached = existing_review.get(rid)
         if cached and cache_is_fresh(cached, today_dt) and not from_staging:
-            # Pad missing new cols
+            # Pad missing new cols; Gate C — stamp freeze boundary without recomputing
             padded = {col: cached.get(col, "") for col in config.ROTATION_REVIEW_COLUMNS}
+            ps = str(padded.get("Price_Source") or "").strip()
+            # Restore path: a prior failed Gate C write may have stamped a live
+            # vendor after silently recomputing. Prefer archive-backed restore
+            # (caller loads archive into existing_review); if we still see a
+            # live vendor here with published numbers, leave it — restore job
+            # overwrites from archive first.
+            if not ps or ps.startswith("yfinance|frozen") or ps == PRICE_SOURCE_FROZEN_BOUNDARY:
+                padded["Price_Source"] = PRICE_SOURCE_FROZEN_BOUNDARY
             review_dicts.append(padded)
             continue
 
@@ -1601,6 +1665,15 @@ def run_attribution(
             value_input_option="USER_ENTERED",
         )
         logger.info(f"SUCCESS: Wrote {len(review_rows)} rows to {config.TAB_ROTATION_REVIEW}")
+
+    try:
+        from core.store import get_store
+        import pandas as pd
+
+        rr_df = pd.DataFrame(review_dicts) if review_dicts else pd.DataFrame()
+        get_store().replace_rotation_review(rr_df, live=True)
+    except Exception as e:
+        logger.warning(f"PortfolioStore rotation_review shadow failed: {e}")
 
     try:
         from tasks.format_sheets_dashboard_v2 import format_rotation_review

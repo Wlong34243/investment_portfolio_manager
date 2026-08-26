@@ -18,6 +18,7 @@ import pandas as pd
 import logging
 import time
 from datetime import datetime, timedelta
+from pathlib import Path
 import schwab.auth
 import schwab.client
 from utils import schwab_token_store
@@ -261,7 +262,8 @@ def fetch_positions(client: schwab.client.Client) -> pd.DataFrame:
                     'Unrealized G/L': unrealized_gl,
                     'Unrealized G/L %': (unrealized_gl / cost_basis) if cost_basis > 0 else 0,
                     'Est Annual Income': float(p.get('estimatedAnnualIncome', 0) or 0),
-                    'Dividend Yield':    0.0,   # Filled by enrichment
+                    # Tier 8b (2026-08-25): None until quote enrichment fills; never 0.0 for unknown
+                    'Dividend Yield':    None,
                     'Acquisition Date':  '',    # Not in positions summary endpoint
                     'Wash Sale':   False,
                     'Is Cash':     False,
@@ -329,6 +331,33 @@ def fetch_positions(client: schwab.client.Client) -> pd.DataFrame:
         # Drop internal tracking column before schema enforcement
         df = df.drop(columns=['_acct_idx'], errors='ignore')
 
+        # Tier 8b: fill Dividend Yield from Schwab quotes (None when absent — never invent 0.0)
+        try:
+            non_cash = [
+                t for t in df["Ticker"].tolist()
+                if t and t not in ("CASH_MANUAL",) and t not in PURE_CASH_SWEEP_TICKERS
+            ]
+            if non_cash:
+                mkt = get_market_client()
+                if mkt is not None:
+                    qdf = fetch_quotes(mkt, non_cash)
+                    if not qdf.empty:
+                        ymap = {
+                            r["ticker"]: r["div_yield"]
+                            for _, r in qdf.iterrows()
+                            if r.get("div_yield") is not None
+                        }
+                        df["Dividend Yield"] = df["Ticker"].map(
+                            lambda t: ymap.get(t) if t in ymap else None
+                        )
+                        logging.info(
+                            "fetch_positions: filled Dividend Yield from Schwab quotes "
+                            "for %d/%d tickers",
+                            len(ymap), len(non_cash),
+                        )
+        except Exception as e:
+            logging.warning("fetch_positions: quote dividend-yield fill failed: %s", e)
+
         # Fallback: empty/UNKNOWN description → use ticker symbol
         df['Description'] = df.apply(
             lambda x: x['Description'] if x['Description'] and x['Description'] != 'UNKNOWN' else x['Ticker'],
@@ -360,11 +389,14 @@ def fetch_positions(client: schwab.client.Client) -> pd.DataFrame:
         numeric_cols = [
             'quantity', 'price', 'market_value', 'cost_basis', 'unit_cost',
             'unrealized_gl', 'unrealized_gl_pct', 'est_annual_income',
-            'dividend_yield', 'daily_change_pct', 'weight'
+            'daily_change_pct', 'weight'
         ]
         for col in numeric_cols:
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0.0).astype(float)
+        # dividend_yield: coerce but keep None (unknown ≠ zero yield)
+        if 'dividend_yield' in df.columns:
+            df['dividend_yield'] = pd.to_numeric(df['dividend_yield'], errors='coerce')
 
         # Ensure all snake_case columns exist to avoid KeyError downstream
         for col in config.POSITION_COL_MAP.keys():
@@ -433,23 +465,27 @@ def _fetch_account_transactions(
     end_date: datetime,
     max_retries: int = 3,
     base_delay: float = 2.0,
+    transaction_types=None,
 ) -> list:
     """
     Fetch raw transaction list for one account with exponential-backoff retry.
     Returns list of raw dicts, or empty list on permanent failure.
     Isolated per-account so a single bad account does not abort others.
+
+    transaction_types: optional Schwab filter (e.g. DIVIDEND_OR_INTEREST).
+    Default None preserves today's behaviour exactly.
     """
     masked = f"...{acct_hash[-4:]}"
     last_exc: Exception | None = None
 
     for attempt in range(max_retries):
         try:
-            r_tx = client.get_transactions(
-                acct_hash,
-                start_date=start_date.date(),
-                end_date=end_date.date(),
-                transaction_types=None
+            kwargs = dict(
+                start_date=start_date.date() if hasattr(start_date, "date") else start_date,
+                end_date=end_date.date() if hasattr(end_date, "date") else end_date,
+                transaction_types=transaction_types,
             )
+            r_tx = client.get_transactions(acct_hash, **kwargs)
             if r_tx.status_code == 429 or r_tx.status_code >= 500:
                 delay = base_delay * (2 ** attempt)
                 logging.warning(
@@ -489,19 +525,58 @@ def _fetch_account_transactions(
     return []
 
 
-def fetch_transactions(client: "schwab.client.Client", start_date=None, end_date=None) -> pd.DataFrame:
+def fetch_transactions(
+    client: "schwab.client.Client",
+    start_date=None,
+    end_date=None,
+    transaction_types=None,
+) -> pd.DataFrame:
     """
     Fetch transaction history for allowlisted Schwab accounts
     (config.SCHWAB_PRIMARY_ACCOUNT_SUFFIXES). Empty allowlist fails closed
     unless SCHWAB_FORCE_UNSCOPED=1.
     Uses get_account_numbers() to retrieve the hashValue required for the
     transactions endpoint.
+
+    transaction_types: optional Schwab filter list. Default None preserves
+    today's behaviour. Windows longer than ~60 days are chunked (logged).
+    Do not re-sync the live Transactions tab from this path with new types —
+    new surfaces only (Income_Tracking / Cash_Flows).
     """
     _require_account_scope()
     if not start_date:
         start_date = datetime.now() - timedelta(days=30)
     if not end_date:
         end_date = datetime.now()
+    if isinstance(start_date, datetime) is False:
+        start_date = datetime.combine(start_date, datetime.min.time())
+    if isinstance(end_date, datetime) is False:
+        end_date = datetime.combine(end_date, datetime.min.time())
+
+    # schwab-py EnumEnforcer rejects bare strings for transaction_types
+    if transaction_types:
+        enum_cls = getattr(getattr(client, "Transactions", None), "TransactionType", None)
+        if enum_cls is not None:
+            coerced = []
+            for t in transaction_types:
+                if isinstance(t, str):
+                    coerced.append(getattr(enum_cls, t))
+                else:
+                    coerced.append(t)
+            transaction_types = coerced
+
+    # Chunk >60-day windows
+    chunks = []
+    cursor = start_date
+    while cursor < end_date:
+        chunk_end = min(cursor + timedelta(days=60), end_date)
+        chunks.append((cursor, chunk_end))
+        cursor = chunk_end
+    if len(chunks) > 1:
+        logging.info(
+            "fetch_transactions: splitting %s→%s into %d ≤60d chunks",
+            start_date.date(), end_date.date(), len(chunks),
+        )
 
     # Get account hashes — required for the transactions endpoint
     try:
@@ -528,7 +603,17 @@ def fetch_transactions(client: "schwab.client.Client", start_date=None, end_date
         if not _is_primary_account(acct_num):
             logging.info("fetch_transactions: skipping non-primary account %s", masked)
             continue
-        txns = _fetch_account_transactions(client, acct_hash, start_date, end_date)
+        txns = []
+        for c_start, c_end in chunks:
+            logging.info(
+                "fetch_transactions: %s chunk %s→%s types=%s",
+                masked, c_start.date(), c_end.date(), transaction_types,
+            )
+            part = _fetch_account_transactions(
+                client, acct_hash, c_start, c_end,
+                transaction_types=transaction_types,
+            )
+            txns.extend(part or [])
 
         if txns is None:
             accounts_failed += 1
@@ -733,42 +818,596 @@ def fetch_tax_lots(client: "schwab.client.Client") -> list[dict]:
     return lots
 
 
+def fetch_account_balances(client: "schwab.client.Client") -> pd.DataFrame:
+    """
+    One row per allowlisted account, full cash/liquidity picture.
+    Columns: account_masked, tax_treatment, cash_balance, money_market_fund,
+             cash_available_for_trading, available_funds, total_cash,
+             long_market_value, liquidation_value, as_of_utc
+    Fields absent from a given account's payload are None, never 0.0.
+    """
+    _require_account_scope()
+    try:
+        r = client.get_accounts(fields=client.Account.Fields.POSITIONS)
+        r.raise_for_status()
+        accounts = r.json()
+    except Exception as e:
+        logging.error("fetch_account_balances failed: %s", e)
+        return pd.DataFrame()
+
+    if not isinstance(accounts, list):
+        return pd.DataFrame()
+
+    def _num(d, k):
+        v = (d or {}).get(k)
+        if v is None or v == "":
+            return None
+        try:
+            return float(v)
+        except (TypeError, ValueError):
+            return None
+
+    rows = []
+    as_of = datetime.utcnow().replace(tzinfo=None).isoformat() + "Z"
+    for acct_idx, acc in enumerate(accounts):
+        sa = acc.get("securitiesAccount", {})
+        raw = sa.get("accountNumber") or sa.get("accountId") or ""
+        if not _is_primary_account(raw):
+            continue
+        masked = f"...{str(raw)[-4:]}" if raw else f"acct_{acct_idx}"
+        bal = sa.get("currentBalances") or {}
+        tax = _classify_tax_treatment(sa.get("type", "") or "")
+        cash = _num(bal, "cashBalance")
+        lmv = _num(bal, "longMarketValue")
+        liq = _num(bal, "liquidationValue")
+        if cash is not None and lmv is not None and liq is not None:
+            if abs((cash + lmv) - liq) > 1.0:
+                logging.warning(
+                    "fetch_account_balances: %s reconciliation warn "
+                    "cash=%.2f + long=%.2f vs liq=%.2f (delta=%.2f)",
+                    masked, cash, lmv, liq, (cash + lmv) - liq,
+                )
+        rows.append({
+            "account_masked": masked,
+            "tax_treatment": tax,
+            "cash_balance": cash,
+            "money_market_fund": _num(bal, "moneyMarketFund"),
+            "cash_available_for_trading": _num(bal, "cashAvailableForTrading"),
+            "available_funds": _num(bal, "availableFunds"),
+            "total_cash": _num(bal, "totalCash"),
+            "long_market_value": lmv,
+            "liquidation_value": liq,
+            "as_of_utc": as_of,
+        })
+    df = pd.DataFrame(rows)
+    if not df.empty:
+        y = float(pd.to_numeric(df["cash_balance"], errors="coerce").fillna(0).sum())
+        z = float(pd.to_numeric(df["money_market_fund"], errors="coerce").fillna(0).sum())
+        logging.info(
+            "fetch_account_balances: cash $%.2f = cashBalance $%.2f + moneyMarketFund $%.2f across %d accounts",
+            y + z, y, z, len(df),
+        )
+    return df
+
+
+def _quote_sub(payload: dict, *keys: str):
+    """Read a key from a Schwab quote payload, preferring nested quote/fundamental."""
+    if not isinstance(payload, dict):
+        return None
+    for section in ("quote", "fundamental", "reference", "extended"):
+        nested = payload.get(section)
+        if isinstance(nested, dict):
+            for k in keys:
+                if k in nested and nested[k] is not None:
+                    return nested[k]
+    for k in keys:
+        if k in payload and payload[k] is not None:
+            return payload[k]
+    return None
+
+
 def fetch_quotes(client: schwab.client.Client, tickers: list[str]) -> pd.DataFrame:
     """
-    Fetch real-time quotes via the Market Data client.
-    Returns DataFrame: ticker, last_price, bid, ask, volume, change_pct, timestamp
+    Fetch quotes via the Market Data client (get_quotes — already in daily use).
+
+    Original columns preserved exactly: ticker, last_price, bid, ask, volume,
+    change_pct, timestamp (wall-clock write time, legacy behaviour).
+
+    Phase 1 Step 3b also extracts (None when absent — never 0.0 for these):
+        high_52_week, low_52_week, net_change, div_yield, div_amount, pe_ratio,
+        quote_time, extended_hours_price, extended_hours_volume.
+
+    Feed latency: labelled at runtime from quote_time vs wall clock when present;
+    delayed feeds are fine for 52w/yield use but must not be assumed live.
+    adjustment: N/A (spot quote, not bars).
     """
     if not tickers:
         return pd.DataFrame()
-        
+
     try:
         r = client.get_quotes(tickers)
         r.raise_for_status()
         data = r.json()
-        
+
         rows = []
-        for ticker, quote in data.items():
+        for ticker, payload in data.items():
+            # Legacy five fields — preserve names and zero-fill semantics for callers.
+            last_price = _quote_sub(payload, "lastPrice")
+            bid = _quote_sub(payload, "bidPrice")
+            ask = _quote_sub(payload, "askPrice")
+            volume = _quote_sub(payload, "totalVolume")
+            change_pct = _quote_sub(payload, "netPercentChange")
+
+            quote_time_raw = _quote_sub(
+                payload, "quoteTime", "quoteTimeInLong", "tradeTimeInLong"
+            )
             rows.append({
-                'ticker': ticker,
-                'last_price': quote.get('lastPrice', 0),
-                'bid': quote.get('bidPrice', 0),
-                'ask': quote.get('askPrice', 0),
-                'volume': quote.get('totalVolume', 0),
-                'change_pct': quote.get('netPercentChange', 0),
-                'timestamp': datetime.utcnow().isoformat()
+                "ticker": ticker,
+                "last_price": last_price if last_price is not None else 0,
+                "bid": bid if bid is not None else 0,
+                "ask": ask if ask is not None else 0,
+                "volume": volume if volume is not None else 0,
+                "change_pct": change_pct if change_pct is not None else 0,
+                "timestamp": datetime.utcnow().isoformat(),
+                # Step 3b widened fields — None, never 0.0, when missing
+                "high_52_week": _quote_sub(payload, "52WeekHigh", "high52", "highPrice52"),
+                "low_52_week": _quote_sub(payload, "52WeekLow", "low52", "lowPrice52"),
+                "net_change": _quote_sub(payload, "netChange"),
+                "div_yield": _quote_sub(payload, "divYield", "dividendYield"),
+                "div_amount": _quote_sub(payload, "divAmount", "dividendAmount"),
+                "pe_ratio": _quote_sub(payload, "peRatio", "pe"),
+                "quote_time": quote_time_raw,
+                "extended_hours_price": _quote_sub(
+                    payload, "mark", "regularMarketLastPrice"
+                ) if _quote_sub(payload, "isExtendedHours") else _quote_sub(
+                    payload, "extendedHoursPrice", "postMarketPrice"
+                ),
+                "extended_hours_volume": _quote_sub(
+                    payload, "extendedHoursVolume", "postMarketVolume"
+                ),
             })
         df = pd.DataFrame(rows)
 
-        # Nuclear type enforcement
-        quote_numeric_cols = ['last_price', 'bid', 'ask', 'volume', 'change_pct']
+        # Legacy columns keep fillna(0.0); widened columns stay nullable.
+        quote_numeric_cols = ["last_price", "bid", "ask", "volume", "change_pct"]
         for col in quote_numeric_cols:
             if col in df.columns:
-                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0.0)
+                df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0.0)
+        for col in (
+            "high_52_week", "low_52_week", "net_change", "div_yield",
+            "div_amount", "pe_ratio", "extended_hours_price", "extended_hours_volume",
+        ):
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors="coerce")
 
         return df
     except Exception as e:
         logging.error(f"fetch_quotes failed: {e}")
         return pd.DataFrame()
+
+
+# ---------------------------------------------------------------------------
+# Phase 1 market-data gatherers (2026-08-25) — additive; no consumer changes
+# ---------------------------------------------------------------------------
+
+_INTERVAL_CEILING_DAYS = {
+    "1min": 35,
+    "5min": 270,
+    "10min": 270,
+    "15min": 270,
+    "30min": 270,
+    "daily": 36500,
+    "weekly": 36500,
+}
+
+_INTERVAL_METHOD = {
+    "daily": "get_price_history_every_day",
+    "weekly": "get_price_history_every_week",
+    "30min": "get_price_history_every_thirty_minutes",
+    "15min": "get_price_history_every_fifteen_minutes",
+    "10min": "get_price_history_every_ten_minutes",
+    "5min": "get_price_history_every_five_minutes",
+    "1min": "get_price_history_every_minute",
+}
+
+
+def _price_history_cache_path(ticker: str, interval: str, period_days: int) -> Path:
+    cache_dir = Path(config.PRICE_HISTORY_CACHE_DIR)
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    return cache_dir / f"{ticker.upper()}_{interval}_{period_days}.parquet"
+
+
+def _read_price_cache(path: Path) -> pd.DataFrame | None:
+    ttl_h = float(getattr(config, "PRICE_HISTORY_CACHE_TTL_H", 20))
+    if not path.exists():
+        return None
+    age_h = (time.time() - path.stat().st_mtime) / 3600.0
+    if age_h > ttl_h:
+        return None
+    try:
+        if path.suffix == ".parquet":
+            df = pd.read_parquet(path)
+        else:
+            df = pd.read_csv(path, parse_dates=["datetime"], index_col="datetime")
+        if not isinstance(df.index, pd.DatetimeIndex):
+            df.index = pd.to_datetime(df.index, utc=True)
+        elif df.index.tz is None:
+            df.index = df.index.tz_localize("UTC")
+        else:
+            df.index = df.index.tz_convert("UTC")
+        logging.info("fetch_price_history: cache HIT %s (age %.1fh)", path.name, age_h)
+        return df
+    except Exception as e:
+        logging.warning("fetch_price_history: cache read failed %s: %s", path, e)
+        return None
+
+
+def _write_price_cache(path: Path, df: pd.DataFrame) -> None:
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        out = df.copy()
+        out.index.name = "datetime"
+        try:
+            out.to_parquet(path)
+        except Exception:
+            csv_path = path.with_suffix(".csv")
+            out.to_csv(csv_path)
+            logging.info("fetch_price_history: wrote CSV cache (parquet unavailable) %s", csv_path)
+            return
+        logging.info("fetch_price_history: wrote cache %s", path.name)
+    except Exception as e:
+        logging.warning("fetch_price_history: cache write failed: %s", e)
+
+
+def _request_with_retries(callable_fn, *, label: str, max_retries: int | None = None):
+    """Call a schwab-py method that returns a Response. Retry 429/5xx only."""
+    retries = max_retries if max_retries is not None else int(
+        getattr(config, "SCHWAB_MAX_RETRIES", 3)
+    )
+    last_exc: Exception | None = None
+    for attempt in range(retries):
+        try:
+            r = callable_fn()
+            status = getattr(r, "status_code", None)
+            if status == 429 or (status is not None and status >= 500):
+                delay = 2.0 * (2 ** attempt)
+                logging.warning(
+                    "%s: HTTP %s attempt %d/%d — retry in %.0fs",
+                    label, status, attempt + 1, retries, delay,
+                )
+                time.sleep(delay)
+                continue
+            return r
+        except Exception as exc:
+            last_exc = exc
+            if attempt < retries - 1:
+                delay = 2.0 * (2 ** attempt)
+                logging.warning(
+                    "%s: error attempt %d/%d (%s) — retry in %.0fs",
+                    label, attempt + 1, retries, exc, delay,
+                )
+                time.sleep(delay)
+    if last_exc:
+        raise last_exc
+    return None
+
+
+def fetch_price_history(
+    client: "schwab.client.Client",
+    ticker: str,
+    period_days: int = 365,
+    interval: str = "daily",
+    use_cache: bool = True,
+) -> pd.DataFrame:
+    """
+    Daily/intraday OHLCV bars from the Schwab market-data client.
+
+    Returns a DataFrame indexed by tz-aware UTC datetime with columns:
+        open, high, low, close, volume
+    Returns an EMPTY DataFrame on any failure — never raises, never returns partial
+    data silently. Callers must check .empty.
+
+    adjustment: split-adjusted; dividend adjustment VERIFIED 2026-08-25 as NOT
+    dividend-adjusted (matches yfinance auto_adjust=False; see
+    agent_outputs/schwab_probe/price_history_reconciliation_2026-08-25.md).
+    JEPI mean abs rel bps: ~398 vs adj=True, ~0.007 vs adj=False.
+    """
+    empty = pd.DataFrame(columns=["open", "high", "low", "close", "volume"])
+    ticker = (ticker or "").upper().strip()
+    if not ticker:
+        return empty
+
+    interval = (interval or "daily").lower()
+    if interval not in _INTERVAL_METHOD:
+        logging.error("fetch_price_history: unsupported interval %r", interval)
+        return empty
+
+    ceiling = _INTERVAL_CEILING_DAYS[interval]
+    if period_days > ceiling:
+        logging.warning(
+            "fetch_price_history: period_days=%d exceeds %s ceiling=%d — clamping",
+            period_days, interval, ceiling,
+        )
+        period_days = ceiling
+
+    cache_path = _price_history_cache_path(ticker, interval, period_days)
+    if use_cache:
+        cached = _read_price_cache(cache_path)
+        if cached is not None and not cached.empty:
+            return cached
+        # Also try CSV fallback sibling
+        csv_cached = _read_price_cache(cache_path.with_suffix(".csv"))
+        if csv_cached is not None and not csv_cached.empty:
+            return csv_cached
+
+    method_name = _INTERVAL_METHOD[interval]
+    method = getattr(client, method_name, None)
+    if method is None:
+        logging.error("fetch_price_history: client lacks %s", method_name)
+        return empty
+
+    end_dt = datetime.utcnow()
+    start_dt = end_dt - timedelta(days=period_days)
+
+    try:
+        r = _request_with_retries(
+            lambda: method(
+                ticker,
+                start_datetime=start_dt,
+                end_datetime=end_dt,
+            ),
+            label=f"fetch_price_history[{ticker}/{interval}]",
+        )
+        if r is None:
+            return empty
+        if getattr(r, "status_code", 200) >= 400:
+            logging.error(
+                "fetch_price_history: %s HTTP %s body=%s",
+                ticker, r.status_code, (r.text or "")[:200],
+            )
+            return empty
+        payload = r.json()
+    except Exception as e:
+        logging.error("fetch_price_history: %s failed: %s", ticker, e)
+        return empty
+
+    candles = payload.get("candles") if isinstance(payload, dict) else None
+    if not candles:
+        logging.warning("fetch_price_history: %s no candles", ticker)
+        return empty
+
+    rows = []
+    for c in candles:
+        ms = c.get("datetime")
+        if ms is None:
+            continue
+        # Schwab returns epoch milliseconds — factor-of-1000 defect is the common bug.
+        try:
+            ts = pd.to_datetime(int(ms), unit="ms", utc=True)
+        except Exception:
+            continue
+        rows.append({
+            "datetime": ts,
+            "open": c.get("open"),
+            "high": c.get("high"),
+            "low": c.get("low"),
+            "close": c.get("close"),
+            "volume": c.get("volume"),
+        })
+
+    if not rows:
+        return empty
+
+    df = pd.DataFrame(rows).set_index("datetime").sort_index()
+    for col in ("open", "high", "low", "close", "volume"):
+        df[col] = pd.to_numeric(df[col], errors="coerce")
+    df = df.dropna(subset=["close"])
+
+    if df.empty:
+        return empty
+
+    year = int(df.index[0].year)
+    current_year = datetime.utcnow().year
+    if year < 1985 or year > current_year + 1:
+        logging.error(
+            "fetch_price_history: epoch conversion sanity failed for %s "
+            "(first year=%d) — returning empty",
+            ticker, year,
+        )
+        return empty
+
+    # Always write cache (even when use_cache=False for the read)
+    _write_price_cache(cache_path, df)
+    return df
+
+
+def fetch_price_history_batch(
+    client,
+    tickers: list[str],
+    period_days: int = 365,
+    interval: str = "daily",
+) -> dict[str, pd.DataFrame]:
+    """Sequential price-history fetch. Do not parallelise — rate limit unknown."""
+    out: dict[str, pd.DataFrame] = {}
+    for i, t in enumerate(tickers):
+        out[t.upper()] = fetch_price_history(
+            client, t, period_days=period_days, interval=interval
+        )
+        if i < len(tickers) - 1:
+            time.sleep(0.25)
+    return out
+
+
+def fetch_instrument_fundamentals(
+    client: "schwab.client.Client", tickers: list[str]
+) -> pd.DataFrame:
+    """
+    Fundamentals via get_instruments(projection=FUNDAMENTAL).
+    One row per ticker; missing tickers are omitted, not zero-filled.
+    Missing numeric fields are None, never 0.0.
+    Does not replace FMP — second independent reading of overlapping fields.
+    """
+    if not tickers:
+        return pd.DataFrame()
+
+    try:
+        r = _request_with_retries(
+            lambda: client.get_instruments(
+                [t.upper() for t in tickers],
+                client.Instrument.Projection.FUNDAMENTAL,
+            ),
+            label="fetch_instrument_fundamentals",
+        )
+        if r is None:
+            return pd.DataFrame()
+        r.raise_for_status()
+        data = r.json()
+    except Exception as e:
+        logging.error("fetch_instrument_fundamentals failed: %s", e)
+        return pd.DataFrame()
+
+    # Response shapes vary: {"instruments": [...]} or list or symbol-keyed dict
+    instruments = []
+    if isinstance(data, dict):
+        if "instruments" in data and isinstance(data["instruments"], list):
+            instruments = data["instruments"]
+        else:
+            for k, v in data.items():
+                if isinstance(v, dict):
+                    row = dict(v)
+                    row.setdefault("symbol", k)
+                    instruments.append(row)
+    elif isinstance(data, list):
+        instruments = data
+
+    rows = []
+    for inst in instruments:
+        fund = inst.get("fundamental") if isinstance(inst.get("fundamental"), dict) else {}
+        # Prefer nested fundamental; fall back to top-level keys
+        src = fund if fund else inst
+        symbol = inst.get("symbol") or src.get("symbol")
+        if not symbol:
+            continue
+
+        def _num(*keys):
+            for k in keys:
+                if k in src and src[k] is not None and src[k] != "":
+                    try:
+                        return float(src[k])
+                    except (TypeError, ValueError):
+                        return None
+            return None
+
+        rows.append({
+            "ticker": symbol,
+            "pe_ratio": _num("peRatio", "pe"),
+            "peg_ratio": _num("pegRatio"),
+            "pb_ratio": _num("pbRatio"),
+            "beta": _num("beta"),
+            "eps_ttm": _num("epsTTM"),
+            "eps_change_pct_ttm": _num("epsChangePercentTTM"),
+            "rev_change_ttm": _num("revChangeTTM"),
+            "roe": _num("returnOnEquity"),
+            "market_cap": _num("marketCap"),
+            "market_cap_float": _num("marketCapFloat"),
+            "shares_outstanding": _num("sharesOutstanding"),
+            "div_yield": _num("dividendYield", "divYield"),
+            "div_amount": _num("dividendAmount", "divAmount"),
+            "div_date": src.get("dividendDate") or src.get("divDate"),
+            "high_52": _num("high52", "52WeekHigh"),
+            "low_52": _num("low52", "52WeekLow"),
+            "vol_10d_avg": _num("vol10DayAvg"),
+            "vol_3m_avg": _num("vol3MonthAvg"),
+            "book_value_per_share": _num("bookValuePerShare"),
+            "debt_to_equity": _num("totalDebtToEquity"),
+            "quick_ratio": _num("quickRatio"),
+            "current_ratio": _num("currentRatio"),
+            "net_profit_margin_ttm": _num("netProfitMarginTTM"),
+            "_raw_fundamental_keys": sorted(src.keys()),
+        })
+
+    return pd.DataFrame(rows)
+
+
+def fetch_market_hours(client, date_=None) -> dict:
+    """Raw get_market_hours(EQUITY) payload for date_ (default today).
+
+    Schwab rejects dates more than ~7 days in the past (HTTP 400). Future
+    holidays within the window return isOpen=False. Callers that need a
+    closed-session answer for an older date must not treat API failure as
+    'closed' — is_trading_day returns None in that case.
+    """
+    from datetime import date as date_cls
+
+    if date_ is None:
+        date_ = date_cls.today()
+    elif isinstance(date_, datetime):
+        date_ = date_.date()
+
+    cache_dir = Path(config.PRICE_HISTORY_CACHE_DIR)
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    cache_path = cache_dir / f"market_hours_{date_.isoformat()}.json"
+    if cache_path.exists():
+        try:
+            import json as _json
+            return _json.loads(cache_path.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+
+    try:
+        r = _request_with_retries(
+            lambda: client.get_market_hours(
+                client.MarketHours.Market.EQUITY, date=date_
+            ),
+            label=f"fetch_market_hours[{date_}]",
+        )
+        if r is None:
+            return {}
+        r.raise_for_status()
+        data = r.json()
+        try:
+            import json as _json
+            cache_path.write_text(_json.dumps(data, default=str), encoding="utf-8")
+        except Exception:
+            pass
+        return data if isinstance(data, dict) else {}
+    except Exception as e:
+        logging.error("fetch_market_hours failed: %s", e)
+        return {}
+
+
+def is_trading_day(client, date_=None) -> bool | None:
+    """
+    True  — regular equity session open on date_
+    False — market closed (weekend/holiday)
+    None  — could not determine (API failure); CALLERS MUST TREAT None AS 'unknown',
+            never as False. Degrading to 'market closed' on an API error would
+            silently skip a real trading day.
+    """
+    payload = fetch_market_hours(client, date_=date_)
+    if not payload:
+        return None
+
+    # Typical shape: {"equity": {"EQ": {"isOpen": true, ...}}} or similar
+    try:
+        equity = payload.get("equity") or payload.get("EQ") or payload
+        if not isinstance(equity, dict):
+            return None
+        # Walk nested product keys looking for isOpen
+        for _k, v in equity.items():
+            if isinstance(v, dict) and "isOpen" in v:
+                return bool(v["isOpen"])
+            if isinstance(v, dict):
+                for _k2, v2 in v.items():
+                    if isinstance(v2, dict) and "isOpen" in v2:
+                        return bool(v2["isOpen"])
+        if "isOpen" in equity:
+            return bool(equity["isOpen"])
+    except Exception as e:
+        logging.error("is_trading_day parse failed: %s", e)
+        return None
+    return None
+
 
 def is_api_available() -> dict:
     """Returns availability status for both Accounts and Market Data APIs."""

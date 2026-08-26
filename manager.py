@@ -108,6 +108,42 @@ app.add_typer(store_app, name="store")
 ui_app = typer.Typer(help="Local read-mostly Command Center UI.")
 app.add_typer(ui_app, name="ui")
 
+probe_app = typer.Typer(
+    help="Read-only Schwab market-data probes (Phase 1). Writes only under agent_outputs/schwab_probe/.",
+    hidden=True,
+)
+app.add_typer(probe_app, name="probe")
+
+build_app = typer.Typer(help="Build computed Sheet views (income, cash-flows, risk-metrics).")
+app.add_typer(build_app, name="build")
+
+
+@build_app.command("income-tracking")
+def build_income_tracking_cmd(
+    live: bool = typer.Option(False, "--live"),
+    days: int = typer.Option(400, "--days"),
+):
+    from tasks.build_income_tracking import main as m
+    m(live=live, days=days)
+
+
+@build_app.command("cash-flows")
+def build_cash_flows_cmd(
+    live: bool = typer.Option(False, "--live"),
+    days: int = typer.Option(90, "--days"),
+):
+    from tasks.build_flow_ledger import main as m
+    m(live=live, days=days)
+
+
+@build_app.command("risk-metrics")
+def build_risk_metrics_cmd(
+    live: bool = typer.Option(False, "--live"),
+    lookback_days: int = typer.Option(400, "--lookback-days"),
+):
+    from tasks.build_risk_metrics import main as m
+    m(live=live, lookback_days=lookback_days)
+
 # --- TOP LEVEL COMMANDS ---
 
 @refresh_app.command("rotations")
@@ -1807,6 +1843,7 @@ def morning(
     skip_composite: bool = typer.Option(False, "--skip-composite", help="Skip building composite bundle."),
     skip_export: bool = typer.Option(False, "--skip-export", help="Skip building the AI briefing package in exports/."),
     skip_dislocation: bool = typer.Option(False, "--skip-dislocation", help="Skip the dislocation scan."),
+    skip_risk_metrics: bool = typer.Option(False, "--skip-risk-metrics", help="Skip Risk_Metrics rebuild inside STEP 5."),
 ):
     """
     Run the full market-open pipeline: health -> Schwab sync -> snapshot -> podcast sync ->
@@ -2028,6 +2065,12 @@ def morning(
     console.print("\n[bold cyan]STEP 5 - Refreshing Dashboard...[/]")
     try:
         build_val(live=live, include_all=True)
+        if not skip_risk_metrics:
+            try:
+                from tasks.build_risk_metrics import main as build_risk
+                build_risk(live=live)
+            except Exception as e:
+                console.print(f"[yellow]Risk_Metrics rebuild failed (non-fatal): {e}[/]")
         crosshairs = produce_crosshairs(
             dislocation_payload=dislocation_payload,
             dislocation_path=dislocation_path,
@@ -2320,6 +2363,112 @@ def extract_moments(
     )
     if result["failed"]:
         console.print(f"[yellow]Failed: {', '.join(result['failed'])}[/]")
+
+
+@probe_app.command("price-history")
+def probe_price_history(
+    ticker: str = typer.Argument(..., help="Ticker symbol"),
+    days: int = typer.Option(365, "--days"),
+    interval: str = typer.Option("daily", "--interval"),
+    no_cache: bool = typer.Option(False, "--no-cache"),
+):
+    """Fetch Schwab OHLCV bars and print head/tail. Read-only."""
+    from utils.schwab_client import get_market_client, fetch_price_history
+
+    client = get_market_client()
+    if client is None:
+        console.print("[red]Market client unavailable[/]")
+        raise typer.Exit(1)
+    df = fetch_price_history(
+        client, ticker, period_days=days, interval=interval, use_cache=not no_cache
+    )
+    if df.empty:
+        console.print("[yellow]Empty frame[/]")
+        raise typer.Exit(1)
+    console.print(f"rows={len(df)} min={df.index.min()} max={df.index.max()} tz={df.index.tz}")
+    console.print(df.head(3).to_string())
+    console.print("...")
+    console.print(df.tail(3).to_string())
+
+
+@probe_app.command("fundamentals")
+def probe_fundamentals(
+    tickers: list[str] = typer.Argument(..., help="One or more tickers"),
+):
+    """Dump Schwab instrument fundamentals. Writes raw JSON under agent_outputs/schwab_probe/."""
+    import json
+    from pathlib import Path
+    from utils.schwab_client import get_market_client, fetch_instrument_fundamentals
+
+    client = get_market_client()
+    if client is None:
+        console.print("[red]Market client unavailable[/]")
+        raise typer.Exit(1)
+
+    # Raw dump for three (or whatever was passed)
+    out_dir = Path("agent_outputs/schwab_probe")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    raw_path = out_dir / "fundamentals_raw_2026-08-25.json"
+    try:
+        r = client.get_instruments(
+            [t.upper() for t in tickers],
+            client.Instrument.Projection.FUNDAMENTAL,
+        )
+        r.raise_for_status()
+        raw = r.json()
+        raw_path.write_text(json.dumps(raw, indent=2, default=str), encoding="utf-8")
+        console.print(f"Raw dump → {raw_path}")
+    except Exception as e:
+        console.print(f"[yellow]Raw dump failed: {e}[/]")
+
+    df = fetch_instrument_fundamentals(client, tickers)
+    if df.empty:
+        console.print("[yellow]Empty fundamentals frame[/]")
+        raise typer.Exit(1)
+    for _, row in df.iterrows():
+        console.print(f"\n=== {row['ticker']} keys ===")
+        console.print(row.get("_raw_fundamental_keys"))
+        console.print(row.drop(labels=["_raw_fundamental_keys"], errors="ignore").to_string())
+
+
+@probe_app.command("market-hours")
+def probe_market_hours(
+    date: Optional[str] = typer.Option(None, "--date", help="YYYY-MM-DD"),
+):
+    """Print is_trading_day and raw market hours for a date."""
+    from datetime import date as date_cls
+    from utils.schwab_client import get_market_client, fetch_market_hours, is_trading_day
+
+    client = get_market_client()
+    if client is None:
+        console.print("[red]Market client unavailable[/]")
+        raise typer.Exit(1)
+    d = date_cls.fromisoformat(date) if date else None
+    payload = fetch_market_hours(client, date_=d)
+    open_flag = is_trading_day(client, date_=d)
+    console.print(f"is_trading_day={open_flag!r}")
+    console.print(payload)
+
+
+@probe_app.command("reconcile")
+def probe_reconcile():
+    """Run scripts/reconcile_price_history_2026-08-25.py (Schwab vs yfinance)."""
+    import runpy
+    from pathlib import Path
+
+    script = Path("scripts/reconcile_price_history_2026-08-25.py")
+    if not script.exists():
+        console.print(f"[red]Missing {script}[/]")
+        raise typer.Exit(1)
+    runpy.run_path(str(script), run_name="__main__")
+
+
+@probe_app.command("price-source-stats")
+def probe_price_source_stats():
+    """Show auto-fallback counter from utils.price_history."""
+    from utils.price_history import fallback_stats
+    stats = fallback_stats()
+    console.print(stats)
 
 
 @app.command("login")

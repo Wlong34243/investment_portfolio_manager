@@ -22,13 +22,12 @@ Usage   : python tasks/dislocation_scan.py [--live] [--losers-limit N]
 import argparse
 import hashlib
 import json
+import logging
 import os
 import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-
-import yfinance as yf
 
 # Support both `python tasks/dislocation_scan.py` (sys.path[0] == tasks/)
 # and `from tasks.dislocation_scan import ...` from manager.py (repo root
@@ -93,12 +92,16 @@ def _thesis_style(ticker: str):
 
 def _price_history_returns(ticker: str) -> dict:
     """1d/5d/20d close-to-close returns from ~3mo of daily history. Missing
-    history (new listing, bad ticker, yfinance hiccup) degrades to None
+    history (new listing, bad ticker, vendor hiccup) degrades to None
     fields rather than raising -- callers treat all fields as optional."""
+    from utils.price_history import get_bars
+
     out = {"return_1d": None, "return_5d": None, "return_20d": None, "last_close": None}
     try:
-        hist = yf.Ticker(ticker).history(period="3mo")
-        closes = hist["Close"].dropna()
+        hist = get_bars(ticker, period_days=90, interval="daily", adjusted=True)
+        if hist.empty:
+            return out
+        closes = hist["close"].dropna()
         if closes.empty:
             return out
         out["last_close"] = float(closes.iloc[-1])
@@ -107,6 +110,9 @@ def _price_history_returns(ticker: str) -> dict:
                 prior = float(closes.iloc[-1 - n])
                 if prior:
                     out[key] = (float(closes.iloc[-1]) / prior) - 1.0
+        logging.getLogger(__name__).info(
+            "dislocation returns source=%s ticker=%s", hist.attrs.get("source"), ticker
+        )
     except Exception:
         pass
     return out
@@ -149,7 +155,20 @@ def _scan_ticker(ticker: str, classification: str, held_by_ticker: dict):
 
     price = bundle_pos.get("price") or hist.get("last_close")
     market_cap = fund.get("market_cap")
+    # Tier 8a (2026-08-25): prefer Schwab quote 52w high over FMP; FMP remains for everything else
     week52_high = fund.get("52w_high")
+    try:
+        from utils.schwab_client import get_market_client, fetch_quotes
+        mkt = get_market_client()
+        if mkt is not None:
+            qdf = fetch_quotes(mkt, [ticker])
+            if not qdf.empty and qdf.iloc[0].get("high_52_week") is not None:
+                try:
+                    week52_high = float(qdf.iloc[0]["high_52_week"])
+                except (TypeError, ValueError):
+                    pass
+    except Exception:
+        pass
     forward_pe = fund.get("forward_pe")
     gross_margin = fund.get("gross_margin")
     fcf = fund.get("free_cashflow")

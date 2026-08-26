@@ -23,7 +23,7 @@ import config
 from utils.sheet_readers import get_gspread_client
 from utils.sheet_writers import safe_execute
 from tasks.build_command_center import _read_records
-from tasks.build_crosshairs import CrosshairsResult, produce_crosshairs
+from tasks.build_crosshairs import CrosshairsResult, produce_crosshairs, format_level
 
 app = typer.Typer(add_completion=False)
 
@@ -54,8 +54,8 @@ def _print_dry_run(header: str, items: list) -> None:
             f"${item.mv:,.0f}" if item.mv is not None else "—",
             f"{item.wt * 100:.1f}%" if item.wt is not None else "—",
             f"${item.price:,.2f}" if item.price is not None else "—",
-            f"${item.trim:,.2f}" if item.trim else "—",
-            f"${item.add:,.2f}" if item.add else "—",
+            format_level(item.trigger_type, item.trim),
+            format_level(item.trigger_type, item.add),
             f"{item.dist_trim * 100:+.1f}%" if item.dist_trim is not None else "—",
             f"{item.dist_add * 100:+.1f}%" if item.dist_add is not None else "—",
             item.rationale,
@@ -84,6 +84,11 @@ def _apply_formatting(ws, n_rows: int) -> None:
 
     dollar_fmt = NumberFormat(type='CURRENCY', pattern='$#,##0.00')
     dollar0_fmt = NumberFormat(type='CURRENCY', pattern='$#,##0')
+    # F/G (Trim/Add) can hold a P/E, P/B, discount %, or a dollar level
+    # depending on the row's declared trigger_type -- CURRENCY would show
+    # "$15.85" for a forward P/E. Plain NUMBER is the safe column-wide
+    # choice. See prompts/typed_trigger_crosshairs_2026-08-24.md.
+    level_fmt = NumberFormat(type='NUMBER', pattern='0.00')
     pct_fmt = NumberFormat(type='PERCENT', pattern='0.0%')
     pct_signed_fmt = NumberFormat(type='PERCENT', pattern='+0.0%;-0.0%')
 
@@ -94,8 +99,8 @@ def _apply_formatting(ws, n_rows: int) -> None:
         (f"C{_DATA_START_ROW}:C{data_end}", CellFormat(numberFormat=dollar0_fmt)),
         (f"D{_DATA_START_ROW}:D{data_end}", CellFormat(numberFormat=pct_fmt)),
         (f"E{_DATA_START_ROW}:E{data_end}", CellFormat(numberFormat=dollar_fmt)),
-        (f"F{_DATA_START_ROW}:F{data_end}", CellFormat(numberFormat=dollar_fmt)),
-        (f"G{_DATA_START_ROW}:G{data_end}", CellFormat(numberFormat=dollar_fmt)),
+        (f"F{_DATA_START_ROW}:F{data_end}", CellFormat(numberFormat=level_fmt)),
+        (f"G{_DATA_START_ROW}:G{data_end}", CellFormat(numberFormat=level_fmt)),
         (f"H{_DATA_START_ROW}:H{data_end}", CellFormat(numberFormat=pct_signed_fmt)),
         (f"I{_DATA_START_ROW}:I{data_end}", CellFormat(numberFormat=pct_signed_fmt)),
         (f"J{_DATA_START_ROW}:J{data_end}", CellFormat(wrapStrategy="WRAP", verticalAlignment="TOP")),
@@ -177,6 +182,8 @@ def main(live: bool = False, crosshairs: Optional[CrosshairsResult] = None) -> O
                 "dist_trim": item.dist_trim,
                 "dist_add": item.dist_add,
                 "rationale": item.rationale,
+                "doctrine_tag": item.doctrine_tag,
+                "doctrine_reason": item.doctrine_reason,
             }
             for item in items
         ]
