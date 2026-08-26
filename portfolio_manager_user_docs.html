@@ -129,6 +129,7 @@ footer{color:var(--tx-faint);font-size:12.5px;border-top:1px solid var(--line);p
   <div class="grp">Workflows</div>
   <a href="#rotations">Rotations &amp; Attribution</a>
   <a href="#podcasts">Podcast Ingestion</a>
+  <a href="#store">PortfolioStore &amp; Local UI</a>
 
   <div class="grp">Care &amp; Feeding</div>
   <a href="#rules">Conventions</a>
@@ -165,13 +166,16 @@ python manager.py morning --live
 python manager.py login
 
 <span class="cmt"># 3 — check what broke without running the whole pipeline</span>
-python manager.py health --verbose</code></pre>
+python manager.py health --verbose
 
-  <p>Then read the <b>0_DASHBOARD</b> tab in the Sheet, and the briefing bundle under <code>exports/ai_briefing_&lt;timestamp&gt;/</code>.</p>
+<span class="cmt"># 4 — refresh the phone-readable dashboard (static HTML, mirrored to Drive)</span>
+python manager.py store publish-cockpit --live --publish</code></pre>
+
+  <p>Then read the <b>0_DASHBOARD</b> tab in the Sheet, and the briefing bundle under <code>exports/ai_briefing_&lt;timestamp&gt;/</code>. For a phone-friendly read, the published cockpit is at the Drive-synced <code>Portfolio_Analysis</code> folder, not <code>pm ui serve</code> — see <a href="#store">PortfolioStore &amp; Local UI</a>.</p>
 
   <div class="note warn">
     <p><b>Every write needs <code>--live</code>.</b> Commands default to dry run and print what they would do. <span class="pill p-dry">dry</span> is the default; <span class="pill p-live">--live</span> writes.</p>
-    <p style="margin-top:8px">Two known exceptions where that is currently not true — see <a href="#gotchas">Known Issues</a>.</p>
+    <p style="margin-top:8px">A dry run still writes local files (bundles, moment caches, exports) even without <code>--live</code> — only Sheet/SQLite writes are gated. See <a href="#morning">The Morning Pipeline</a>.</p>
   </div>
 </section>
 
@@ -180,25 +184,25 @@ python manager.py health --verbose</code></pre>
   <p class="sub"><code>python manager.py morning --live</code> runs these in order. Any step can fail without killing the run except the health gate.</p>
 
   <ol class="steps">
-    <li data-n="0"><b>Health check</b> <span class="d">— Schwab tokens, Sheet connectivity, bundle age, FMP cache, transactions freshness. A critical failure stops the run.</span></li>
+    <li data-n="0"><b>Health check</b> <span class="d">— Schwab tokens, Sheet connectivity, bundle age, FMP cache, transactions freshness. A critical failure stops the run; an unattended run (no TTY) writes <code>logs/HEALTH_FAILURE.flag</code> instead of prompting for reauth.</span></li>
     <li data-n="1"><b>Sync Schwab</b> <span class="d">— transactions and positions, scoped to the three primary accounts.</span></li>
-    <li data-n="2"><b>Update portfolio state</b> <span class="d">— Holdings_Current, Daily_Snapshots.</span></li>
-    <li data-n="3"><b>Freeze market bundle</b> <span class="d">— positions, prices, cash, realized G/L. Hashed.</span></li>
+    <li data-n="2"><b>Update portfolio state</b> <span class="d">— fresh prices, <code>Holdings_Current</code>, <code>Daily_Snapshots</code>.</span></li>
+    <li data-n="3"><b>Freeze market bundle</b> <span class="d">— positions, prices, cash, realized G/L, fundamentals. Hashed.</span></li>
     <li data-n="4"><b>Batch podcast sync</b> <span class="d">— RSS → transcript → Gemini summary.</span></li>
-    <li data-n="4b"><b>Spotify digests</b> <span class="d">— ingests <code>allocation-YYYY-MM-DD.txt</code> from the Studio folder, dedup by sha256.</span></li>
-    <li data-n="4c"><b>Extract moments</b> <span class="d">— high-signal fragments from new transcripts.</span></li>
-    <li data-n="5"><b>Refresh dashboard</b> <span class="d">— rebuilds <code>0_DASHBOARD</code> (the Command Center) in one batch write.</span></li>
-    <li data-n="6"><b>Sheets → thesis files</b> <span class="d">— writes current allocation, cost basis and transaction logs into <code>vault/theses/</code>.</span></li>
+    <li data-n="4b"><b>Spotify digests</b> <span class="d">— ingests <code>allocation-YYYY-MM-DD.txt</code> from the Studio folder, dedup by sha256. Non-fatal if the folder doesn't exist on this machine.</span></li>
+    <li data-n="4c"><b>Extract high-signal moments</b> <span class="d">— cached, position-independent fragment extraction (reversals, non-consensus claims, disclosures) from new transcripts only.</span></li>
+    <li data-n="4.5"><b>Dislocation scan</b> <span class="d">— flags drawdowns and valuation gaps. Runs <em>before</em> the dashboard step so Crosshairs sees today's payload — <code>0_DASHBOARD</code> is clear-and-rebuild, so a late scan can't be patched in.</span></li>
+    <li data-n="5"><b>Refresh dashboard</b> <span class="d">— Valuation_Card → Crosshairs → <code>0_DASHBOARD</code> / <code>Decision_View</code> → <code>Tax_Control</code> → conditional formatting, in one pass.</span></li>
+    <li data-n="6"><b>Sheets → thesis files</b> <span class="d">— writes current allocation, cost basis and transaction logs into <code>vault/theses/</code>. Skips (warns) any thesis with unparseable frontmatter rather than aborting the whole vault.</span></li>
     <li data-n="7"><b>Freeze vault bundle</b> <span class="d">— thesis files, research, styles.json. Hashed.</span></li>
     <li data-n="8"><b>Build composite bundle</b> <span class="d">— market + vault + recent rotations. This hash stamps every agent response.</span></li>
     <li data-n="9"><b>Export AI briefing</b> <span class="d">— writes <code>exports/ai_briefing_&lt;timestamp&gt;/</code>.</span></li>
     <li data-n="10"><b>Derive rotations</b> <span class="d">— clusters sell/buy pairs into candidates on <code>Trade_Log_Staging</code>. Dry-run within morning.</span></li>
-    <li data-n="11"><b>Dislocation scan</b> <span class="d">— flags drawdowns and valuation gaps across held and watchlist names.</span></li>
-    <li data-n="12"><b>Publish analysis</b> <span class="d">— copies readable output to the Drive-synced folder.</span></li>
+    <li data-n="11"><b>Publish analysis</b> <span class="d">— copies readable output to the Drive-synced folder.</span></li>
   </ol>
 
   <div class="note warn">
-    <p><b>A dry run still writes to disk.</b> Steps 3, 4c, 7–9 and 11 create local files regardless of <code>--live</code>. Only Sheet writes are gated. "Dry run" means <em>Sheets-dry</em>, not no-op.</p>
+    <p><b>A dry run still writes to disk.</b> Steps 3 (bundle), 4.5 (dislocation), 4c (moments), and 7–9 (vault bundle, composite bundle, briefing export) create local files regardless of <code>--live</code>. Only Sheet writes are gated, per-step. "Dry run" means <em>Sheets-dry</em>, not no-op — this is a known, deliberately-deferred design gap, not a bug to report.</p>
   </div>
 </section>
 
@@ -252,16 +256,42 @@ python manager.py health --verbose</code></pre>
     <tr><td><code>journal promote</code></td><td><code>Trade_Log_Staging</code> → <code>Trade_Log</code>. Acts only on <code>Status = approved</code>.</td></tr>
   </table>
 
-  <h3>bundle · export · podcast · clean · agent</h3>
+  <h3>store — PortfolioStore (SQLite shadow ledger)</h3>
+  <table>
+    <tr><th style="width:38%">Command</th><th>Does</th></tr>
+    <tr><td><code>store status</code></td><td>Backend, row counts, SQLite path — a fast "is this in sync" check.</td></tr>
+    <tr><td><code>store verify [--require-streak]</code></td><td>Value-level Sheets ↔ SQLite reconcile to the cent (proceeds, cost, G/L, ST/LT, disallowed). <code>--require-streak</code> exits 1 unless N consecutive green runs.</td></tr>
+    <tr><td><code>store bundle-parity</code></td><td>Diffs Sheets vs SQLite ledger fingerprints using the same canonical-JSON SHA the bundles use.</td></tr>
+    <tr><td><code>store sync-from-sheets [--live] [--include-holdings]</code></td><td>Copies transactions / realized G/L / trade log into SQLite. <code>Tax_Control</code> syncs via <code>refresh tax --live</code> instead.</td></tr>
+    <tr><td><code>store backup [--live]</code></td><td><code>VACUUM INTO</code> + SHA-256 sidecar + copy to Drive <code>db_backups/</code>.</td></tr>
+    <tr><td><code>store publish-cockpit [--live] [--publish]</code></td><td>Renders the Command Center as static HTML for phone/Drive reading. <b>This is the real monitoring surface</b> — not <code>ui serve</code>.</td></tr>
+  </table>
+
+  <div class="note info">
+    <p><b>Sheets is still authoritative.</b> <code>STORE_PRIMARY</code> defaults to <code>sheets</code>; the SQLite ledger is a value-verified shadow, not a replacement. Flipping primacy is a deliberate future step, not something any command does automatically today. Phase 1 scope is <code>transactions</code> + <code>realized_gl</code> + <code>tax_control</code> only — <code>Holdings_Current</code> stays a morning-refresh cache, not part of the ledger.</p>
+  </div>
+
+  <h3>ui — local debug server</h3>
+  <table>
+    <tr><th style="width:38%">Command</th><th>Does</th></tr>
+    <tr><td><code>ui serve [--host] [--port]</code></td><td>Local FastAPI/HTMX read of PortfolioStore at <code>127.0.0.1:8765</code>. <span class="pill p-open">debug-only</span> — for phone/remote access use <code>store publish-cockpit</code> instead.</td></tr>
+  </table>
+
+  <h3>bundle · export · publish · podcast · clean · agent</h3>
   <table>
     <tr><th style="width:38%">Command</th><th>Does</th></tr>
     <tr><td><code>bundle composite</code></td><td>Build a composite bundle.</td></tr>
     <tr><td><code>bundle verify</code></td><td>Verify a bundle's hash.</td></tr>
-    <tr><td><code>export list</code> / <code>run</code></td><td>Scenario exports. <span class="pill p-open">note</span> only <code>tax-rebalance</code> is implemented.</td></tr>
+    <tr><td><code>export list</code> / <code>run</code></td><td>Scenario exports. <span class="pill p-open">note</span> only <code>tax-rebalance</code> is implemented; the other six listed scenarios are stubs.</td></tr>
+    <tr><td><code>export sheets [--live]</code></td><td>Re-exports computed <code>Tax_Control</code> from SQLite back to Sheets, for cockpit continuity.</td></tr>
+    <tr><td><code>export cleanup</code> / <code>inspect</code></td><td>Purge old export packages / inspect one.</td></tr>
+    <tr><td><code>publish analysis [--live]</code></td><td>One-way, newest-wins copy of <code>agent_outputs/{ai_briefing_analysis,ideas,dislocation_scan}/*.md</code> to the Drive-synced folder. Never deletes at the destination; skips identical-hash files.</td></tr>
     <tr><td><code>podcast fetch</code> / <code>batch</code></td><td>Pull transcripts, one or many.</td></tr>
     <tr><td><code>podcast ingest-spotify</code></td><td>Ingest Studio digests manually.</td></tr>
+    <tr><td><code>podcast bundle [--last-n]</code></td><td>Concatenate recent transcripts into one markdown file for ad-hoc LLM use.</td></tr>
     <tr><td><code>clean theses</code> / <code>exports</code> / <code>podcasts</code> / <code>bundles</code> / <code>all</code></td><td>Filesystem hygiene.</td></tr>
-    <tr><td><code>agent ideas</code></td><td>Run the Idea Generator over the composite bundle.</td></tr>
+    <tr><td><code>agent ideas [--since-days] [--dry-run] [--skip-ingest]</code></td><td>Idea Generator — candidates from recent podcasts + composite bundle. Auto-ingests podcasts as step 1 unless <code>--skip-ingest</code>.</td></tr>
+    <tr><td><code>agent valuation-drift [--ticker] [--dry-run]</code></td><td>Fundamentals drift vs. each thesis's first-run baseline. Python measures from the bundle's <code>fundamentals</code> block; the LLM narrates only. No Sheets writes — local markdown under <code>agent_outputs/valuation_drift/</code>.</td></tr>
   </table>
 
   <div class="note info">
@@ -290,6 +320,10 @@ python manager.py health --verbose</code></pre>
 
   <div class="note danger">
     <p><b>Do not hand-edit <code>0_DASHBOARD</code>.</b> It is cleared and rebuilt in a single batch write on every dashboard refresh. Anything added by another path disappears.</p>
+  </div>
+
+  <div class="note info">
+    <p><b>A SQLite shadow ledger runs alongside the Sheet.</b> <code>core/store/</code> mirrors <code>Transactions</code>, <code>Realized_GL</code> and <code>Tax_Control</code> into a local SQLite file on every live write. The Sheet stays authoritative — <code>STORE_PRIMARY</code> defaults to <code>sheets</code> and nothing flips that automatically. <code>pm store verify</code> reconciles the two to the cent; see <a href="#store">PortfolioStore &amp; Local UI</a>.</p>
   </div>
 </section>
 
@@ -371,7 +405,7 @@ triggers:
                   └─ refresh rotations --live  ─→  Rotation_Review</code></pre>
 
   <div class="note danger">
-    <p><b>Set <code>Status</code> to <code>approved</code>, not <code>promoted</code>.</b> <code>promoted</code> is what the command <em>writes</em> on success. Typing it yourself makes the row invisible — this silently blocked 122 rows for months. A real promotion also stamps <code>Promoted_At</code>; a blank timestamp on a <code>promoted</code> row means it was hand-typed.</p>
+    <p><b>Set <code>Status</code> to <code>approved</code>, not <code>promoted</code>.</b> <code>promoted</code> is what the command <em>writes</em> on success. Typing it yourself makes the row invisible to <code>journal promote</code> — roughly 16 pre-existing rows were found mismarked this way before the 2026-08-08 hardening pass caught it. A real promotion also stamps <code>Promoted_At</code>; a blank timestamp on a <code>promoted</code> row means it was hand-typed.</p>
   </div>
 
   <h3>Reading the attribution</h3>
@@ -407,10 +441,41 @@ triggers:
     <p><b>Never take a position weight from a digest.</b> One cited JPIE at 4.7% against an actual 0.83%. Read weights from the bundle.</p>
     <p style="margin-top:8px"><b>Count a theme once per run.</b> Consecutive daily aggregates repeat each other, and aggregates discuss episodes that are separately ingested in the same window.</p>
   </div>
+
+  <div class="note info">
+    <p><b>A separate high-signal moment pass runs alongside summarization</b> (STEP 4c). <code>extract-moments</code> pulls falsifiable, verbatim fragments — a conviction reversal, a disclosed position, a specific numeric claim — cached per transcript and independent of what you currently hold. Relevance (<code>HELD</code> / <code>THESIS_ON_FILE</code> / <code>ADJACENT</code> / <code>ZERO_EXPOSURE</code>) is computed fresh every time the cache is read, not baked in at extraction time, since the position set changes but the transcript doesn't. Re-run manually with <code>python manager.py extract-moments [--force NAME] [--limit N]</code>.</p>
+  </div>
+</section>
+
+<section id="store">
+  <h2><span class="num">10</span>PortfolioStore &amp; Local UI</h2>
+  <p class="sub">A SQLite shadow ledger and a local FastAPI Command Center, built alongside the Sheet — not a replacement for it.</p>
+
+  <div class="cards">
+    <div class="card"><h4>Sheets stays authoritative</h4><p><code>STORE_PRIMARY</code> defaults to <code>sheets</code>. SQLite is a verified shadow copy, kept in sync on live writes — nothing flips primacy automatically.</p></div>
+    <div class="card"><h4>Phase 1 scope only</h4><p>The ledger covers <code>transactions</code>, <code>realized_gl</code> and <code>tax_control</code>. <code>Holdings_Current</code> stays a morning-refresh cache, not part of it.</p></div>
+    <div class="card"><h4>Verified to the cent</h4><p><code>pm store verify</code> reconciles proceeds, cost, G/L, ST/LT and disallowed-loss between Sheets and SQLite — not just row counts.</p></div>
+    <div class="card"><h4>Two different UIs</h4><p><code>pm ui serve</code> is a localhost debug tool. Phone/remote monitoring is <code>pm store publish-cockpit</code> — a static HTML render mirrored to Drive.</p></div>
+  </div>
+
+  <h3>Why a second store exists</h3>
+  <p>The Sheet is fast to hand-edit but has no query language and no integrity check beyond what you notice by eye. <code>core/store/</code> defines a <code>PortfolioStore</code> protocol with two implementations — <code>SheetsPortfolioStore</code> (reads the live Sheet) and <code>SqlitePortfolioStore</code> (reads the local ledger) — plus a <code>DualStore</code> that writes both and lets reads be compared. This is the infrastructure for an eventual primacy flip; today it exists so drift between the two can be caught early, not to change where you look for the truth.</p>
+
+  <h3>Verification &amp; the streak gate</h3>
+  <table>
+    <tr><th style="width:34%">Concept</th><th>Means</th></tr>
+    <tr><td>Value-level verify</td><td><code>pm store verify</code> checks Sheets vs SQLite figure-by-figure, not just that the same number of rows exist on both sides.</td></tr>
+    <tr><td>Ledger hash parity</td><td><code>pm store bundle-parity</code> compares a canonical-JSON SHA fingerprint of each side's ledger — the same hashing discipline the bundles use.</td></tr>
+    <tr><td>Streak</td><td><code>STORE_VERIFY_STREAK_N</code> (default 5) consecutive green verify runs, gated non-vacuous by requiring ≥1 realized lot in the window. Weekends with no run neither advance nor break it.</td></tr>
+  </table>
+
+  <div class="note warn">
+    <p><b>This is Phase 1 infrastructure, not a finished migration.</b> No command here changes what you should treat as ground truth — that's still the Sheet, until a deliberate, hand-run primacy flip happens later.</p>
+  </div>
 </section>
 
 <section id="rules">
-  <h2><span class="num">10</span>Conventions</h2>
+  <h2><span class="num">11</span>Conventions</h2>
   <p class="sub">The rules the system is built around, and why.</p>
 
   <table>
@@ -427,39 +492,42 @@ triggers:
 </section>
 
 <section id="gotchas">
-  <h2><span class="num">11</span>Known Issues</h2>
-  <p class="sub">Recorded so they aren't rediscovered. Current as of 2026-08-09.</p>
+  <h2><span class="num">12</span>Known Issues</h2>
+  <p class="sub">Recorded so they aren't rediscovered. Current as of 2026-08-20.</p>
 
-  <h3>Write safety</h3>
+  <h3>Write safety — 2026-08-09 pass, all closed</h3>
   <table>
     <tr><th style="width:34%">Issue</th><th>Effect</th></tr>
-    <tr><td><code>derive_rotations</code> CLI <span class="pill p-open">open</span></td><td>Running it bare <b>writes</b> to <code>Trade_Log_Staging</code> — <code>--dry-run</code> defaults to off. The morning path is safe.</td></tr>
-    <tr><td><code>journal promote</code> <span class="pill p-open">open</span></td><td>Adds the <code>Promoted_At</code> column <em>before</em> checking <code>--live</code>, so a dry run can alter the live header.</td></tr>
-    <tr><td><code>create_dashboard.py</code> ×2 <span class="pill p-open">open</span></td><td>Dead modules that can clear-rebuild <code>0_DASHBOARD</code>. Not wired to anything — don't run them.</td></tr>
+    <tr><td><code>derive_rotations</code> CLI <span class="pill p-dry">fixed</span></td><td>Now requires <code>--live</code> to write; bare CLI is dry-run. Fixed 2026-08-09.</td></tr>
+    <tr><td><code>journal promote</code> <span class="pill p-dry">fixed</span></td><td><code>Promoted_At</code> schema-ensure and staging status marks now happen only under <code>--live</code>, and are batched. Fixed 2026-08-09.</td></tr>
+    <tr><td><code>create_dashboard.py</code> ×2 <span class="pill p-dry">fixed</span></td><td>Dead modules archived to <code>archive/</code> 2026-08-09; can no longer clear-rebuild <code>0_DASHBOARD</code>.</td></tr>
   </table>
 
   <h3>Data accuracy</h3>
   <table>
     <tr><th style="width:34%">Issue</th><th>Effect</th></tr>
-    <tr><td>Sanitizer residuals <span class="pill p-open">open</span></td><td><code>build_tax_control</code> and <code>pipeline.py</code> still gate currency stripping on the old dtype check. Under pandas ≥3 they return <b>zero</b> silently — YTD gains, wash sales and estimated tax can understate.</td></tr>
-    <tr><td>Tax_Control account scope <span class="pill p-open">open</span></td><td>Filters on an IRA/401k name test, not the three-account suffix list. Out-of-scope taxable lots can inflate it.</td></tr>
-    <tr><td>Nested supersets <span class="pill p-open">open</span></td><td>Re-running the deriver against an open window emits a new, larger row each time. Five rows existed for one basket. Attribution reads around it.</td></tr>
-    <tr><td>Cash KPIs <span class="pill p-open">open</span></td><td>Dashboard cash percentage is built on an incomplete cash model and can imply dry powder that isn't there.</td></tr>
-    <tr><td>Stale <code>Signal</code> column <span class="pill p-open">open</span></td><td>Populated from an agent run dated 2026-04-20 with no staleness stamp. Reads as current; lists names you don't hold.</td></tr>
+    <tr><td>Nested supersets <span class="pill p-open">open</span></td><td>Re-running <code>derive_rotations</code> against an open cluster window emits a new, larger row each time — its fingerprint is keyed on the literal ticker set, not a stable cluster identity. Attribution reads around it (widest row wins); the deriver itself is unfixed.</td></tr>
+    <tr><td>Cash KPIs <span class="pill p-open">open</span></td><td>Dashboard cash percentage is built on an incomplete cash model (<code>CASH_MANUAL</code> passes <code>0.0</code> at snapshot time) and can imply dry powder that isn't there. Needs Bill's input on the fix, not a code guess.</td></tr>
+    <tr><td>Dual Schwab token signals <span class="pill p-open">open</span></td><td><code>tasks/health.py</code> and the dashboard's own token check are independent and have twice been observed to disagree in the same session (2026-07-29, 2026-08-07). Not reconciled to one underlying check.</td></tr>
+    <tr><td><code>--enrich-atr</code> / <code>--enrich-technicals</code> flags <span class="pill p-open">open</span></td><td>Default on, do nothing — the <code>snapshot</code> command body never calls the enrich tasks. <code>CLI_MANUAL.md</code> documents them as working; it's wrong either way.</td></tr>
+    <tr><td>Six of seven export scenarios are stubs <span class="pill p-open">open</span></td><td>Only <code>tax-rebalance</code> is implemented under <code>export run</code>; the rest are listed and fail if run.</td></tr>
+    <tr><td>Sanitizer residuals <span class="pill p-dry">fixed</span></td><td><code>build_tax_control</code> and <code>pipeline.py</code> now route through <code>coerce_sheet_numeric_series()</code>. Fixed 2026-08-09 — Tax_Control YTD figures moved upward, a real correction.</td></tr>
+    <tr><td>Tax_Control account scope <span class="pill p-dry">fixed</span></td><td>Now filters to <code>SCHWAB_PRIMARY_ACCOUNT_SUFFIXES</code> and fails loudly on an unparseable Account mask. Fixed 2026-08-09; empty-suffix fail-closed (unless <code>SCHWAB_FORCE_UNSCOPED=1</code>) added 2026-08-20.</td></tr>
+    <tr><td>Chase Realized_GL <code>term</code> guess <span class="pill p-dry">fixed</span></td><td>Was inferring Short/Long Term from which G/L dollar column was larger near breakeven. Now derives <code>term</code> from <code>holding_days</code> (&gt;365 → Long Term). Fixed 2026-08-20.</td></tr>
+    <tr><td><code>sync realized-gl --merge</code> could shrink real lots <span class="pill p-dry">fixed</span></td><td>Now refuses to merge when the import file has fewer lots for an account than the sheet, unless <code>--force-partial-merge</code>. Fixed 2026-08-20.</td></tr>
+    <tr><td>Stale <code>Signal</code> column <span class="pill p-dry">fixed</span></td><td>Superseded 2026-08-10 by Crosshairs — the Agent_Outputs join is gone, so <code>Signal</code> on <code>0_DASHBOARD</code> is blank by design, not stale.</td></tr>
     <tr><td>Currency sanitizer <span class="pill p-dry">fixed</span></td><td>pandas ≥3 string-dtype inference zeroed every currency cell read centrally. Fixed 2026-08-08.</td></tr>
   </table>
 
   <h3>Operations</h3>
   <table>
     <tr><th style="width:34%">Issue</th><th>Effect</th></tr>
-    <tr><td><code>DailyWake</code> task <span class="pill p-open">open</span></td><td><b>Has never successfully fired.</b> The morning pipeline is effectively manual-only. Fix is a Windows Task Scheduler change.</td></tr>
-    <tr><td>Dual token signals <span class="pill p-open">open</span></td><td>Health check and dashboard use independent logic and can disagree on the same morning.</td></tr>
-    <tr><td><code>--enrich-atr</code> flags <span class="pill p-open">open</span></td><td>Default on, do nothing. <code>CLI_MANUAL.md</code> documents them as working.</td></tr>
+    <tr><td><code>DailyWake</code> task <span class="pill p-open">open</span></td><td><b>Has never successfully fired.</b> The morning pipeline is effectively manual-only. A v3 rewrite of <code>setup_wake_timer.ps1</code> (unattended password logon) is committed but has not yet been re-registered on this machine — a one-time <code>-Unattended</code> run, not a code fix.</td></tr>
   </table>
 </section>
 
 <section id="files">
-  <h2><span class="num">12</span>File Map</h2>
+  <h2><span class="num">13</span>File Map</h2>
   <p class="sub">Where things live.</p>
 
   <table>
@@ -471,15 +539,20 @@ triggers:
     <tr><td><code>vault/theses/</code></td><td>One thesis file per position, plus <code>archive/</code>.</td></tr>
     <tr><td><code>exports/ai_briefing_*/</code></td><td>Frozen briefing bundles. <code>portfolio.md</code>, <code>theses.md</code>, <code>podcasts.md</code>, <code>SUBMIT_ME.md</code>, <code>manifest.json</code>.</td></tr>
     <tr><td><code>bundles/</code></td><td>Hashed composite bundles.</td></tr>
-    <tr><td><code>agent_outputs/</code></td><td>Sandbox output — ideas, dislocation scans, attribution, briefing analysis.</td></tr>
+    <tr><td><code>core/store/</code></td><td>PortfolioStore: <code>protocol.py</code> (interface), <code>sheets_store.py</code> / <code>sqlite_store.py</code> / <code>dual_store.py</code>, <code>verify.py</code>, <code>bundle_parity.py</code>, <code>ledger_hash.py</code>, <code>sync_from_sheets.py</code>, <code>backup.py</code>, <code>publish_static.py</code>, <code>export_sheets.py</code>.</td></tr>
+    <tr><td><code>ui/app.py</code></td><td>Local FastAPI/Jinja Command Center (<code>pm ui serve</code>). Reads only; CLI owns all mutations.</td></tr>
+    <tr><td><code>utils/gl_parser.py</code></td><td>Realized G/L parsing — auto-detects Schwab Lot Details CSV vs. Chase HTML-as-.xls export.</td></tr>
+    <tr><td><code>utils/agents/valuation_drift.py</code></td><td>Valuation Drift Monitor agent — fundamentals drift vs. first-run baseline.</td></tr>
+    <tr><td><code>agent_outputs/</code></td><td>Sandbox output — ideas, dislocation scans, attribution, briefing analysis, valuation drift, <code>command_center/</code> (published static cockpit HTML).</td></tr>
     <tr><td><code>data/podcast_summaries/</code></td><td>Gemini summaries and Spotify digests, plus <code>verification/</code> sidecars.</td></tr>
+    <tr><td><code>data/moments/</code></td><td>Cached high-signal moment extractions, one JSON per transcript.</td></tr>
     <tr><td><code>prompts/</code></td><td>Sequenced build prompts for Claude Code / Gemini CLI.</td></tr>
     <tr><td><code>docs/</code></td><td>Audits and architecture notes.</td></tr>
-    <tr><td><code>logs/</code></td><td>Pipeline logs and the health-failure flag.</td></tr>
+    <tr><td><code>logs/</code></td><td>Pipeline logs, the health-failure flag, and <code>pipeline.lock</code>.</td></tr>
   </table>
 
   <footer>
-    <p>Generated 2026-08-09 · Verified against live code the same day. Re-check before trusting specifics if read much later.<br>
+    <p>Generated 2026-08-09, updated 2026-08-20 · Verified against live code the same day. Re-check before trusting specifics if read much later.<br>
     Full code audit: <code>docs/CODE_AUDIT_2026-08-09.md</code> · Conventions: <code>CLAUDE.md</code> · Build state: <code>state.md</code></p>
   </footer>
 </section>

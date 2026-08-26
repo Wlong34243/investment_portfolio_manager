@@ -1,7 +1,8 @@
 """
 scripts/fetch_transactions_historical_all_accounts_2026-08-09.py
 
-One-off historical fetch for prompts/commit_recover_dashboard_2026-08-09.md Step 3.
+One-off historical fetch for prompts/archive/commit_recover_dashboard_2026-08-09.md Step 3
+(historical recovery deferred by design — Open Question; do not re-sync live Transactions).
 
 Fetches ALL SIX linked Schwab accounts (env override at call time, not a
 config.py edit -- gone the moment this process exits) for
