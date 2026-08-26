@@ -3,11 +3,12 @@ ticker: IFRA
 style: ETF
 framework_preference:
 entry_date:
-last_reviewed: '2026-08-08'
-cost_basis: 10568.379999999976
-current_allocation: 1.92%
+last_reviewed: '2026-08-21'
+cost_basis: 10568.38
+current_allocation: 1.89%
 triggers:
   trigger_type: ceiling_only
+  style_size_ceiling_pct: 8.0
 ---
 # IFRA — Investment Thesis
 
@@ -47,14 +48,14 @@ priority: low
 - 2026-08-09: trigger_type set explicit: ceiling_only (thematic basket). See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
-**Current Allocation:** 1.92%
+**Current Allocation:** 1.89%
 **Cost Basis:** $10,568.38
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** ETF
 **Size Ceiling:** 8.00%
-**Drift:** -6.08%
+**Drift:** -6.11%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -75,9 +76,9 @@ priority: low
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
-Total Realized G/L: $477.55 over 12 closed lots. Total Proceeds: $2,865.89.
+Total Realized G/L: $1,332.45 over 11 closed lots. Total Proceeds: $8,714.40.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-08 09:05: Auto-sync allocation 1.92%, drift -6.08%
+2026-08-21 08:45: Auto-sync allocation 1.89%, drift -6.11%
 <!-- endregion:change_log -->

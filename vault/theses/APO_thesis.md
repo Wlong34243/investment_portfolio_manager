@@ -3,11 +3,12 @@ ticker: APO
 style: GARP
 framework_preference:
 entry_date:
-last_reviewed: '2026-08-08'
-cost_basis: 7673.799999999
-current_allocation: 1.38%
+last_reviewed: '2026-08-21'
+cost_basis: 7673.8
+current_allocation: 1.41%
 triggers:
   trigger_type: ceiling_only
+  style_size_ceiling_pct: 9.0
 ---
 # APO — Investment Thesis
 
@@ -31,6 +32,7 @@ Bought as a valuation-conscious way to own the private-credit secular trend — 
 - Opacity: private credit marks lag public markets; stress shows up late.
 - Rate sensitivity on the insurance liabilities side; regulatory attention to insurance-affiliated origination.
 - Sector-wide repricing if private credit becomes the next crowded consensus trade.
+- **AI data-center financing correlation** — Apollo is a named counterparty in Nvidia's $500B AI data-center financing coalition announced 2026-08-10 (with Blackstone, BlackRock, Brookfield, Goldman, KKR). APO rose 6.26% on 2026-08-11 partly on that news. Existing risks above cover private credit, Athene funding costs, and spread compression only — they do not surface this position's correlation with the NVDA / VST / VRT / ETN / PWR AI-buildout sleeve. Ceiling and rotation review should treat that link as visible. Cross-ref: 2026-08-02 Review Log on the recurring ZERO-EXPOSURE mis-tag (digest delivered a named negative on a held position while reporting it unheld); the 2026-08-12 digest repeated that mis-tag pattern against GOOG.
 
 ## Scaling State
 next_step: hold
@@ -87,14 +89,14 @@ priority: medium
 - 2026-08-09: trigger_type: ceiling_only, not trailing_pe. Same step-function lag bug as LLY/AMZN, mirrored: APO's EPS *declined* FY2023-2025 (8.49->7.33->5.54), so the step-function holds the prior, higher EPS too long, understating the historical band (min/p25/median/p75/max = 10.4/13.0/17.2/19.1/25.9) -- live current trailing P/E (45.5) sits entirely above it. Caught via the same inside-range sanity check that flagged LLY/AMZN. Revisit with true rolling-TTM data. See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
-**Current Allocation:** 1.38%
+**Current Allocation:** 1.41%
 **Cost Basis:** $7,673.80
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** GARP
 **Size Ceiling:** 9.00%
-**Drift:** -7.62%
+**Drift:** -7.59%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -107,9 +109,9 @@ priority: medium
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
-No realized G/L history.
+Total Realized G/L: $242.78 over 3 closed lots. Total Proceeds: $5,175.88.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-08 09:05: Auto-sync allocation 1.38%, drift -7.62%
+2026-08-21 08:45: Auto-sync allocation 1.41%, drift -7.59%
 <!-- endregion:change_log -->

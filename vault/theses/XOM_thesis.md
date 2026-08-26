@@ -3,9 +3,9 @@ ticker: XOM
 style: THEME
 framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
 entry_date: (PXD-close stock consideration date)
-last_reviewed: '2026-08-08'
-current_allocation: 3.16%
-cost_basis: 15042.629999999957
+last_reviewed: '2026-08-21'
+current_allocation: 3.44%
+cost_basis: 15042.63
 time_horizon: 3 to 5 years
 triggers:
   trigger_type: price
@@ -82,14 +82,14 @@ priority: [INFERRED] low — steady accumulation, no urgency signal in the trade
 - 2026-08-09: trigger_type set explicit: price (kept over a cyclical price_to_book override -- the cyclicals objection is specifically that earnings *multiples* invert at peak; XOM's existing 100/140 band is a raw price level, not earnings-based, so that failure mode doesn't apply. fwd_pe band (9/14) retained as secondary, non-primary data. See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
-**Current Allocation:** 3.16%
+**Current Allocation:** 3.44%
 **Cost Basis:** $15,042.63
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** THEME
 **Size Ceiling:** 5.00%
-**Drift:** -1.84%
+**Drift:** -1.56%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -106,9 +106,9 @@ priority: [INFERRED] low — steady accumulation, no urgency signal in the trade
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
-Total Realized G/L: $0.00 over 2 closed lots. Total Proceeds: $0.00.
+Total Realized G/L: $549.18 over 3 closed lots. Total Proceeds: $1,596.02.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-08 09:05: Auto-sync allocation 3.16%, drift -1.84%
+2026-08-21 08:45: Auto-sync allocation 3.44%, drift -1.56%
 <!-- endregion:change_log -->

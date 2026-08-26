@@ -3,8 +3,8 @@ ticker: GLD
 style: ETF
 framework_preference: macro_hedge_v1
 entry_date: 2026-05-03
-last_reviewed: '2026-08-08'
-current_allocation: 1.06%
+last_reviewed: '2026-08-21'
+current_allocation: 1.12%
 cost_basis: 6537.43
 time_horizon: 3 to 5 years
 triggers:
@@ -13,11 +13,16 @@ triggers:
   fwd_pe_trim_above:
   fwd_pe_historical_median:
   price_add_below: 220              # add on meaningful pullback if macro hedge thesis intact
-  price_trim_above: 400             # evaluate trimming if gold is running on pure momentum/panic
+  price_trim_above: 400             # evaluate-if-momentum only; does not override size-and-role (see Scaling State)
   discount_from_52w_high_add: 0.15  # add on 15% pullback; gold drawdowns tend to be buy opportunities
   revenue_growth_floor_pct:
   operating_margin_floor_pct:
   style_size_ceiling_pct: 8.0
+pattern:
+  name: debasement_hedge
+  established: '2026-08-24'
+  note: Monetary policies driving down USD purchasing power; world moving off 
+    USD as a core store of value and into more gold.
 ---
 # GLD — Investment Thesis
 
@@ -56,21 +61,25 @@ Cost basis: ~$1,278 total at entry. Gold had already moved significantly from 20
 ## Scaling State
 next_step: starter size; build toward 3-5% over time as a portfolio stabilizer
 
+Governing rule: size-and-role, not the 400 print. `price_trim_above: 400` is an evaluate-if-momentum flag. It does not override "I will NOT trim GLD based on gold price moving up alone" or this 3–5% build path while the position is a ~1% starter. Reduction test is Exit condition 4 (extreme vs real rates), not a print through 400. Rotation: add on pullbacks, not on momentum.
+
 ## Rotation Priority
 priority: low -- add opportunistically on pullbacks, not on momentum
 
 ## Review Log
+- 2026-08-24: `pattern: debasement_hedge` tagged from 2026-08-24 dollar/gold store-of-value statement.
 - 2026-08-09: trigger_type set explicit: price (argued exception, same logic as JPIE -- gold has no earnings, so fwd_pe/price_to_book are impossible; existing 220/400 band is a deliberate nominal range, the only option available. See prompts/trigger_types_2026-08-09.md.
+- 2026-08-14: Named the governing rule at ~$401 / 1.05% weight. Size-and-role (build toward 3–5%; do not trim on price up alone) wins over the 400 print. 400 remains an evaluate-if-momentum flag, not a close-out. Core Thesis unchanged.
 
 <!-- region:position_state -->
-**Current Allocation:** 1.06%
+**Current Allocation:** 1.12%
 **Cost Basis:** $6,537.43
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** ETF
 **Size Ceiling:** 8.00%
-**Drift:** -6.94%
+**Drift:** -6.88%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -82,9 +91,9 @@ priority: low -- add opportunistically on pullbacks, not on momentum
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
-No realized G/L history.
+Total Realized G/L: $0.00 over 3 closed lots. Total Proceeds: $2,440.07.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-08 09:05: Auto-sync allocation 1.06%, drift -6.94%
+2026-08-21 08:45: Auto-sync allocation 1.12%, drift -6.88%
 <!-- endregion:change_log -->

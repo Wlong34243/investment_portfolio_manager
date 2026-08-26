@@ -16,8 +16,9 @@ This matrix defines which system component is authorized to write to each tab.
 | **Holdings_History** | Pipeline | Append with dedup | Historical position log |
 | **Daily_Snapshots** | Pipeline | Append with dedup | Portfolio total value over time |
 | **Transactions** | Pipeline | Append with dedup | Broker trade history |
-| **Risk_Metrics** | Pipeline | Append with dedup | Portfolio Beta / VaR history |
-| **Income_Tracking** | Pipeline | Append with dedup | Dividend projection history |
+| **Risk_Metrics** | Pipeline (`pm build risk-metrics`) | Clear-and-rebuild | Per-ticker beta/vol/drawdown + portfolio summary row (`Portfolio Beta` last) |
+| **Income_Tracking** | Pipeline (`pm build income-tracking`) | Clear-and-rebuild | Realised DIVIDEND_OR_INTEREST + TTM summary |
+| **Cash_Flows** | Pipeline (`pm build cash-flows`) | Append with fingerprint dedup | External ACH/wire/journal flows (no TWR) |
 | **Trade_Log_Staging**| Pipeline | Append with dedup | Queue for new rotation candidates |
 | **Trade_Log** | Manual/CLI | Append with dedup | Enriched and approved rotations |
 | **Decision_Log** | Manual/CLI | Append | Qualitative decision journal |
@@ -180,8 +181,10 @@ Layout:
 | Q-S | Pair Returns | Float | Buy Return - Sell Return (Additive check) |
 | T | As Of | Date | Calculation timestamp |
 | U | Fingerprint | String | `Trade_Log_ID\|Attribution_As_Of` |
+| V+ | Basket cols | … | Status, betas, residual/explained, benches (see `config.ROTATION_REVIEW_COLUMNS`) |
+| last | Price_Source | String | Gate C: `yfinance\|frozen_pre_schwab_2026-08-25` on frozen rows; live `schwab`/`yfinance`/`schwab+yfinance` on recomputed |
 
-*Since Phase 5.*
+*Since Phase 5; Price_Source Gate C 2026-08-25.*
 
 ---
 
@@ -213,6 +216,24 @@ Layout:
 
 ---
 
+### Income_Tracking
+**Purpose:** Realised DIVIDEND_OR_INTEREST (Block A) + TTM summary by ticker (Block B).
+**Authority:** Pipeline (`pm build income-tracking`). Clear-and-rebuild. `--live` required.
+**Source:** Schwab typed transaction fetch; Est Annual Income from positions. Qualified column only when `qualifiedDividend` is present on the payload (not inferred).
+**Note:** Schwab often omits equity symbols on dividend payloads; writer resolves description → ticker against holdings / alias table; unresolved rows tagged `UNRESOLVED`.
+
+### Cash_Flows
+**Purpose:** External cash movements (ACH/wire/journal/cash receipt-disbursement) for future TWR/IRR input. No return figure computed here.
+**Authority:** Pipeline (`pm build cash-flows`). Append with fingerprint dedup. `--live` required.
+**Columns:** Date, Account, Type, Amount (signed, + into portfolio), Description, Transaction ID, Classification (`external` / `internal` / `unclassified`), Fingerprint.
+
+### Risk_Metrics
+**Purpose:** Descriptive per-ticker risk stats + one portfolio-summary row (`Ticker=_PORTFOLIO_`) **last** so dashboard `_compute_beta` can read `[-1]["Portfolio Beta"]`.
+**Authority:** Pipeline (`pm build risk-metrics`; morning STEP 5 sub-step). Clear-and-rebuild. `--live` required.
+**Bars:** `utils.price_history.get_bars` — does **not** call `build_price_histories`. Does **not** write capm_projection / stress / van_tharp (Hard Rule 4).
+
+---
+
 ## 🛠️ Fingerprint Formats
 Standardized keys used to prevent duplicate data entry.
 
@@ -222,7 +243,8 @@ Standardized keys used to prevent duplicate data entry.
 | `Daily_Snapshots` | `import_date\|pos_count\|total_value` |
 | `Transactions` | `date\|ticker\|action\|net_amount` |
 | `Realized_GL` | `closed_dt\|ticker\|opened_dt\|qty\|proceeds\|cost` |
-| `Income_Tracking` | `import_date\|pos_count\|projected_income` |
-| `Risk_Metrics` | `import_date\|beta\|top_pos_pct` |
+| `Income_Tracking` | clear-and-rebuild (no append fingerprint) |
+| `Cash_Flows` | sha256 prefix of Date\|Account\|Type\|Amount\|Transaction ID |
+| `Risk_Metrics` | clear-and-rebuild (portfolio row last) |
 | `Rotation_Review` | `Trade_Log_ID\|Attribution_As_Of` |
 | `Decision_Log` | `date\|timestamp\|action\|tickers` |

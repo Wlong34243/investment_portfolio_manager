@@ -3,9 +3,9 @@ ticker: RRC
 style: THEME
 framework_preference:
 entry_date: '2026-08-07'
-last_reviewed: '2026-08-08'
-cost_basis: 5602.275
-current_allocation: 0.93%
+last_reviewed: '2026-08-21'
+cost_basis: 6398.48
+current_allocation: 1.12%
 triggers:
   trigger_type: price_to_book
   pb_trim_above: 2.36
@@ -216,17 +216,19 @@ Assembled 2026-08-07. **Research, not thesis** — recorded so the reasoning is 
 - 2026-08-09: trigger_type: price_to_book (cyclical override -- gas E&P commodity, GARP-style multiple-based triggers fail on cyclicals). Band from FY2022-2025 annual book value (price ÷ book equity/share at each fiscal year-end, n=4 annual observations, tight 1.7x range 1.74-3.02): pb_add_below=2.05 (~p25), pb_trim_above=2.36 (~p75). Live current P/B 1.90 sits near the add zone. See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
-**Current Allocation:** 0.93%
-**Cost Basis:** $5,602.27
+**Current Allocation:** 1.12%
+**Cost Basis:** $6,398.48
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** THEME
 **Size Ceiling:** 3.00%
-**Drift:** -2.07%
+**Drift:** -1.88%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
+- 2026-08-10: Buy 10.0 @ $39.81
+- 2026-08-10: Buy 10.0 @ $39.81
 - 2026-08-07: Buy 50.0 @ $38.62
 - 2026-08-07: Buy 95.0 @ $38.65
 <!-- endregion:transaction_log -->
@@ -236,5 +238,5 @@ No realized G/L history.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-08 09:05: Auto-sync allocation 0.93%, drift -2.07%
+2026-08-21 08:45: Auto-sync allocation 1.12%, drift -1.88%
 <!-- endregion:change_log -->

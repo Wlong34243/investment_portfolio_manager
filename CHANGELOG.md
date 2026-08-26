@@ -1,5 +1,121 @@
 # CHANGELOG — Investment Portfolio Manager
 
+## [2026-08-26] — Repo hygiene (prompt closure + obsolete archive)
+
+- Incomplete prompts presumed not useful — archived with declined stamps (no builds): `prompts/archive/surface_attribution_2026-08-09.md`, `vault_framework_visibility_2026-08-01.md`, `commit_recover_dashboard_2026-08-09.md` (partially shipped; historical recovery deferred by design). `schwab_signal_layer_PROPOSAL` kept at `prompts/`; remaining §§ stamped unauthorized.
+- Root one-shot notes → `docs/archive/root_notes_2026-08-26/` (`EXPORTER_FIX_*`, `THESIS_SYNC_FIX_*`, `GEMINI_REVIEW_REQUEST.md`, `lessonsLearned.md`, `re_portfolio_math.md`, `Implementation Plan.md`, `Functions.txt`, `bundle_audit.md`). Working-tree deletions left deleted: `UI_IMPROVEMENT_*`, `OBSOLETE_FILES_TO_ARCHIVE.md`, `GEMINI_REVIEW_REQUEST_briefing_integrity.md`.
+- One-shot scripts → `archive/one_shot_scripts_2026-08-26/` (incl. cash probe, Agent_Outputs archive helper). Byte-identical `vault/frameworks/Macro_super_cycle_framework.md` + `joys_of_compounding_framework.json` → `archive/vault_frameworks_dup_2026-08-26/` (`vault/research/` copy remains the live loader).
+- Docs sync: `state.md` What’s Next / Deferred; `CLAUDE.md` Known Doc Gaps + `PRICE_HISTORY_SOURCE` default `auto`; Phase 3 Rule 1 line corrected below.
+
+## [2026-08-25] — Schwab Phases 2–4 (router, cash truth, Risk_Metrics + calendar)
+
+### Phase 2 — price_history router + consumer migration
+- Added `utils/price_history.py` (`get_bars` with yfinance/schwab/auto; fallback counter via `pm probe price-source-stats`).
+- Migrated enrich_atr, technicals, enrich_technicals, dislocation returns, valuation_card 52w bars, command_center SPY YTD + 52w ranges, derive_rotations, compute_rotation_attribution onto the router.
+- Tier 8a: dislocation 52w high prefers Schwab quote over FMP (FMP remains for other fundamentals).
+- Tier 8b: `fetch_positions` Dividend Yield from Schwab quotes or `None` (never 0.0 for unknown).
+- Default `PRICE_HISTORY_SOURCE` flipped to `auto`.
+- **Gate C (attribution historical rows):** **FREEZE** (Bill 2026-08-25). `Price_Source` column; frozen rows stamp `yfinance|frozen_pre_schwab_2026-08-25`; new rows stamp live `get_bars` vendor(s).
+
+### Phase 3 — cash / income / flows
+- Cash probe (`archive/one_shot_scripts_2026-08-26/probe_cash_balances_2026-08-25.py`, formerly under `scripts/`): **ASSUMPTION HOLDS** — A=D=$2,359.98, B=0 across ...8767/...6499/...5119. No cash-formula remediation.
+- Added `fetch_account_balances`, optional `transaction_types` + 60d chunking on `fetch_transactions`.
+- `tasks/build_income_tracking.py` / `pm build income-tracking`; `tasks/build_flow_ledger.py` / `pm build cash-flows`; `TAB_CASH_FLOWS`.
+- Analysis Rule 1 **rewritten** in `export_ai_briefing.py` / `PROMPT_PAYLOAD`: cash from Schwab balances across the three allowlisted accounts, reconciles to `liquidationValue`; still three-of-six scope — state the scope; do not extrapolate to net worth.
+
+### Phase 4 — Risk_Metrics + market calendar
+- `tasks/build_risk_metrics.py` / `pm build risk-metrics`; portfolio-summary row last for `_compute_beta`; bars via `get_bars`; no capm/stress/van_tharp.
+- Morning STEP 5 sub-step (after val, before CC); `--skip-risk-metrics`.
+- `utils/market_calendar.py`; STALE uses trading-day lag; Daily_Snapshots skips closed sessions (`None` still writes); `pm health` `market_status` informational.
+
+## [2026-08-25] — Schwab data expansion Phase 1 (client + harness)
+
+Prompt: `prompts/schwab_data_expansion_2026-08-25.md`. Additive only — no consumer behaviour change; `PRICE_HISTORY_SOURCE` defaults to `yfinance`.
+
+### Added
+- `config.PRICE_HISTORY_SOURCE` / `PRICE_HISTORY_CACHE_DIR` (`data/schwab_price_cache`) / TTL / `SCHWAB_MAX_RETRIES` / `SCHWAB_REFRESH_TOKEN_WARN_DAYS`
+- `utils/schwab_client.py`: `fetch_price_history`, `fetch_price_history_batch`, `fetch_instrument_fundamentals`, `fetch_market_hours`, `is_trading_day`; quote-field widening on `fetch_quotes` (52w high/low, div yield/amount, P/E, quote_time, extended) — extraction only, five legacy columns preserved
+- `scripts/reconcile_price_history_2026-08-25.py` + `pm probe` (price-history, fundamentals, market-hours, reconcile)
+- `tasks/health.py`: `schwab_refresh_token_age` (WARNING level; never writes `HEALTH_FAILURE.flag`)
+
+### Findings on record
+- **Schwab daily bars are NOT dividend-adjusted** — match yfinance `auto_adjust=False` (JEPI mean abs rel bps ~0.007 vs False, ~398 vs True; same pattern XOM/VTI). Split-adjusted only.
+- Quote payload nested under `quote` / `fundamental` / `reference` / `extended`; `realtime` present; quote_time ≈ wall clock → real-time feed for this account.
+- `get_market_hours` rejects dates more than ~7 days in the past (HTTP 400); `is_trading_day` returns `None` on that failure.
+
+## [2026-08-24] — Realized_GL multi-account import + parser fix
+
+- Fixed `utils/gl_parser._find_account_sections_gl`: blank CSV cells (float NaN) caused every lot to be attributed to the first account section. Multi-account Schwab "All_Accounts" exports now split correctly.
+- Imported `All_Accounts_GainLoss_Realized_Details_20260824-120714.csv` via `pm ingest realized-gl --merge --live` → 871 lots (was 636). Chase ...8895 preserved (80). New sections: Contributory ...767 (8767), Individual 401(k) ...499 (6499), HSA, Joint Tenants.
+- Tax_Control rebuilt; YTD unchanged ($45,404.67 on 555× ...119) — 6499/8767 are tax-deferred. Corrects the earlier "Tax_Control understates" read.
+- JPIE 08-21 exit broker-confirmed: −$55.43 Short Term in Contributory ...767 (matches Holdings_History-derived figure). Thesis Review Log updated; thesis archived to `vault/theses/archive/` same day.
+
+## [2026-08-24] — JPIE exit log; Realized_GL single-account finding
+
+- `vault/theses/JPIE_thesis.md`: Review Log exit terms for 2026-08-21 liquidating sells in Schwab...8767 (110 sh, proceeds $5,044.42, derived G/L −$55.43 from Holdings_History — labeled not broker-confirmed). Scaling state → exited. Thesis left live (archive held).
+- Finding: Realized_GL / Tax_Control cover Schwab 5119 (`Individual ...119`) + Chase 8895 only — **zero** lots for in-scope 6499/8767. Tax YTD understates. Prompt: `prompts/realized_gl_multi_account_2026-08-24.md`.
+
+## [2026-08-24] — Doctrine layer, decision-capture detector, thesis pattern tags
+
+Three sequenced prompts: `doctrine_layer_2026-08-24.md`, `decision_capture_detector_2026-08-24.md`, `thesis_pattern_tags_2026-08-24.md`.
+
+### Doctrine
+- Added `vault/doctrine.md` (manual-only) + `utils/doctrine_reader.py` (soft-fail; never HEALTH_FAILURE).
+- Seed constraints: `no_withdrawal_need`, `accumulation_phase`, `tax_hold_runners` (UNH+COF, any NEAR_TRIM → informational).
+- Crosshairs: post-merge downgrade to bucket 400+ with `doctrine_tag=HOLD_TAX`; `reason_code` stays `NEAR_TRIM`.
+- Briefing ships sixth file `doctrine.md` (after prompt, before portfolio); PROMPT_PAYLOAD treats it as authoritative on constraints.
+- Migrated restated RE-cash-flow rationale out of QQQM / VST / VRT theses (pointers only; VRT position-specific accumulation sentence retained).
+
+### Decision-capture detector
+- `tasks/detect_undocumented_changes.py`: `NEW_POSITION_NO_THESIS`, `EXITED_POSITION_LIVE_THESIS`, `MATERIAL_RESIZE_NO_REVIEW` (both ≥0.50pp and ≥25% relative; suppress when no txn in thesis `transaction_log`).
+- Manifest sibling `undocumented_changes` (independent of `preflight_issues`). Read-only — no Trade_Log / Holdings / Target_Allocation writes.
+- Verified 08-24 vs 08-21 → exactly one JPIE `EXITED_POSITION_LIVE_THESIS`.
+
+### Pattern tags
+- Optional frontmatter `pattern:` via `thesis_reader.get_pattern` + vault bundle; one line in `theses.md` at standard detail.
+- Tagged: QXO+UNH (`turnaround_reversion`), GLD (`debasement_hedge`), VRT+COF (`accumulate_on_decline`). COWZ/LLY/WSM/XBI/RRC left untagged by design. Screener deliberately not built.
+
+## [2026-08-24] — Typed triggers reachable by Crosshairs
+
+Prompt `prompts/typed_trigger_crosshairs_2026-08-24.md`. Crosshairs `NEAR_TRIM`/`NEAR_ADD` previously evaluated every position's Trim/Add distance as a dollar price, even when the thesis's declared `trigger_type` was `fwd_pe`/`trailing_pe`/`price_to_book`/`discount_from_high` — those bands were computed (`utils/thesis_reader.resolve_band_levels`) and carried in the bundle (`get_ticker_triggers`) but dropped at `build_valuation_card.py`'s Sheet write, which only ever emitted the price-denominated fallback.
+
+### Changed
+- `build_valuation_card.py`: new `Trigger Type` column; `Trim Target`/`Add Target` now hold the declared-type numeric level (a P/E, a P/B, a discount %, or a price), not always the price fallback; `ceiling_only` → blank. Number format switched from CURRENCY to plain NUMBER (mixed units per row).
+- `build_crosshairs.py`: `_near_candidates`/`_dislocation_candidates` branch on declared `trigger_type` (`METRIC_MAP`), compare against the matching live metric column, and emit metric-aware rationale (`"fwd P/E 15.90; add 18.00; ->Add -11.7%"`). One valuation NEAR_* row per ticker — a secondary/unused band (e.g. UNH's price 290/380) no longer produces a second row, since it's never written to Trim Target/Add Target in the first place.
+- `build_command_center.py` (`_build_position_table`), `build_decision_view.py`, `format_sheets_dashboard_v2.py`: renderers and CF made type-aware so a non-price row isn't shown/formatted as a dollar figure. `format_sheets_dashboard_v2.py`'s "price trigger action zones" CF rule gated on `Trigger Type == "price"` — it was comparing raw share price against Trim/Add directly and would have misfired on every non-price row.
+- **Found during implementation, not in the original audit:** `utils/sheet_readers.read_gsheet_robust()`'s `text_indicators` allowlist didn't know about the new `Trigger Type` column, so `coerce_sheet_numeric_series` zeroed it on every read (the Sheet cell itself was written correctly — only the read-back was broken). Added `'trigger'` to the allowlist. Masked in Crosshairs by an existing `level_coverage` fallback, but silently broke the Command Center position table (no such fallback) until the earlier `--live` write was re-run after this fix.
+- **`discount_from_high` unit correction:** the live "Discount from 52w High %" reading round-trips through the Sheet as a fraction (PERCENT format), while thesis-stored `trim_below_discount_pct`/`add_above_discount_pct` are plain percentage points (IBM: 2.0/11.9) — scaled ×100 before comparison, or IBM/WSM (the two live `discount_from_high` tickers) would never have compared correctly.
+
+### Verified (live data, 2026-08-24)
+Dry-run harness + real `python tasks/build_crosshairs.py` against live Sheet data: META (fwd P/E 15.90, add 18) → `NEAR_ADD`, through level. VRT (fwd P/E 27.70, add 28) → `NEAR_ADD`. AAPL (trailing 35.90, trim 36.06) → `NEAR_TRIM`. UNH → exactly one row (`NEAR_TRIM`, fwd-P/E rationale, no `$290`/`$380`). GILD/XOM (price type) unchanged. Zero `ceiling_only` tickers appeared as `NEAR_*`. `--live` applied to Valuation_Card, 0_DASHBOARD, Decision_View; spot-checked round-trip on 9 tickers across all 6 trigger types.
+
+## [2026-08-21] — PortfolioStore Phase 2 read flip
+
+Prompt `store_migration_sqlite_2026-08-20.md` **2.4.0** (archives v2.3.0).
+
+### Decisions
+- **`STORE_PRIMARY=sqlite`** hand-flipped in `.env` (dual-write still on). Revert: `STORE_PRIMARY=sheets`.
+- Market `bundle_hash` remains Schwab-sourced; ledger / composite Tier-2 `Trade_Log` honor `get_store()`.
+
+### Added / changed
+- `docs/sheets_hand_edit_inventory.md` — no blocked store-backed surfaces.
+- `core/composite_bundle.py` reads Trade_Log via `get_store()` (closes Sheets-vs-SQLite dual-state gap).
+
+### Verified
+- `--require-streak` green before flip; post-flip `store status` reader=`SqlitePortfolioStore`; `store verify` + `bundle-parity` PASS/MATCH.
+
+## [2026-08-20] — PortfolioStore v2.3 Phase 1 closeout
+
+Prompt `store_migration_sqlite_2026-08-20.md` **2.3.0** (archives v2.2.0). No `STORE_PRIMARY` flip.
+
+### Fixed / clarified
+- **Backup:** advisory `.backup.lock` + soft-skip on contention; dry-run reports `pruned` metadata.
+- **Docstring:** `thesis_sync_data._store_frames` honors `STORE_PRIMARY` only (removed “when populated”).
+- **Parity wording:** Phase 1 `bundle-parity` is ledger fingerprint, not full market `ContextBundle`.
+
+### Verified (raw stdout in prompt)
+- `store verify` PASS; `bundle-parity` MATCH; `--require-streak` exit 1 (4/5); backup dry+live+lock skip.
+
 ## [2026-08-20] — Audit follow-up: Chase term, merge guard, Tax_Control cache
 
 Fixes from scoped code review of PortfolioStore / Realized_GL / store CLI batch.

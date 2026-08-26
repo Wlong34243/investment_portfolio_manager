@@ -3,13 +3,14 @@ ticker: IBM
 style: FUND
 framework_preference:
 entry_date: '2026-07-27'
-last_reviewed: '2026-08-08'
-cost_basis: 11391.830000000511
-current_allocation: 2.00%
+last_reviewed: '2026-08-21'
+cost_basis: 11391.83
+current_allocation: 1.99%
 triggers:
   trigger_type: discount_from_high
   trim_below_discount_pct: 2.0
   add_above_discount_pct: 11.9
+  style_size_ceiling_pct: 5.0
 ---
 # IBM — Investment Thesis
 
@@ -52,14 +53,14 @@ priority: medium
 - 2026-08-09: trigger_type: discount_from_high (FUND default -- thesis is about price dislocation, trigger should be too). 2021-2026 daily discount-from-52w-high (n=1196 trading days): trim_below_discount_pct=2.0 (~p25, near highs), add_above_discount_pct=11.9 (~p75, a meaningful pullback). Live current discount 27.9% is well past the add threshold -- a real reading, not thin-sample noise (n=1196). See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
-**Current Allocation:** 2.00%
+**Current Allocation:** 1.99%
 **Cost Basis:** $11,391.83
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** FUND
 **Size Ceiling:** 5.00%
-**Drift:** -3.00%
+**Drift:** -3.01%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -78,5 +79,5 @@ No realized G/L history.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-08 09:05: Auto-sync allocation 2.00%, drift -3.00%
+2026-08-21 08:45: Auto-sync allocation 1.99%, drift -3.01%
 <!-- endregion:change_log -->

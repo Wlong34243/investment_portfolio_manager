@@ -3,11 +3,12 @@ ticker: VEA
 style: ETF
 framework_preference:
 entry_date:
-last_reviewed: '2026-08-08'
-cost_basis: 16405.4100000055
-current_allocation: 3.05%
+last_reviewed: '2026-08-21'
+cost_basis: 16405.41
+current_allocation: 3.09%
 triggers:
   trigger_type: ceiling_only
+  style_size_ceiling_pct: 8.0
 ---
 # VEA — Investment Thesis
 
@@ -47,14 +48,14 @@ priority: very low (core foundational holding)
 - 2026-08-09: trigger_type set explicit: ceiling_only (ballast). See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
-**Current Allocation:** 3.05%
+**Current Allocation:** 3.09%
 **Cost Basis:** $16,405.41
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** ETF
 **Size Ceiling:** 8.00%
-**Drift:** -4.95%
+**Drift:** -4.91%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -79,9 +80,9 @@ priority: very low (core foundational holding)
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
-Total Realized G/L: $1,311.22 over 18 closed lots. Total Proceeds: $13,919.33.
+Total Realized G/L: $1,643.55 over 16 closed lots. Total Proceeds: $21,451.42.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-08 09:05: Auto-sync allocation 3.05%, drift -4.95%
+2026-08-21 08:45: Auto-sync allocation 3.09%, drift -4.91%
 <!-- endregion:change_log -->

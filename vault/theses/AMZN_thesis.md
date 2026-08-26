@@ -3,9 +3,9 @@ ticker: AMZN
 style: GARP
 framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: '2026-08-08'
-current_allocation: 4.93%
-cost_basis: 24968.1699999954
+last_reviewed: '2026-08-21'
+current_allocation: 4.71%
+cost_basis: 24968.17
 time_horizon: 3 to 5 years
 triggers:
   trigger_type: ceiling_only
@@ -56,14 +56,14 @@ next_step: [BILL]
 priority: [BILL]
 
 <!-- region:position_state -->
-**Current Allocation:** 4.93%
+**Current Allocation:** 4.71%
 **Cost Basis:** $24,968.17
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** GARP
 **Size Ceiling:** 9.00%
-**Drift:** -4.07%
+**Drift:** -4.29%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -81,9 +81,9 @@ priority: [BILL]
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
-Total Realized G/L: $517.71 over 5 closed lots. Total Proceeds: $2,441.91.
+Total Realized G/L: $517.71 over 2 closed lots. Total Proceeds: $2,441.91.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-08 09:05: Auto-sync allocation 4.93%, drift -4.07%
+2026-08-21 08:45: Auto-sync allocation 4.71%, drift -4.29%
 <!-- endregion:change_log -->

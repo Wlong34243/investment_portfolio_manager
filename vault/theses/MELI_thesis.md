@@ -3,11 +3,12 @@ ticker: MELI
 style: THEME
 framework_preference:
 entry_date:
-last_reviewed: '2026-08-08'
-cost_basis: 17073.460000000297
-current_allocation: 3.00%
+last_reviewed: '2026-08-21'
+cost_basis: 15441.85
+current_allocation: 2.89%
 triggers:
   trigger_type: ceiling_only
+  style_size_ceiling_pct: 3.0
 ---
 # MELI — Investment Thesis
 
@@ -45,19 +46,21 @@ priority: medium
 ## Review Log
 - 2026-07: Thesis file created. At ceiling (~3.1% vs 3.0% THEME ceiling); adds come from the theme budget, not opportunism.
 - 2026-08-09: trigger_type set explicit: ceiling_only (THEME default; position-size bet on the platform, not a valuation bet). See prompts/trigger_types_2026-08-09.md.
+- 2026-08-17: MercadoLibre plans R$57B (~$10.9B) in Brazil investment for 2026, +50% YoY, and $3.4B in Argentina, +30% YoY — disclosed around the 2026-08-05 Q2 report. Not a contradiction of the market-position thesis (heavier investment reads as bullish for platform dominance, if anything); recorded because the file otherwise hasn't incorporated the print. Bull Case unchanged. Sources: Rio Times, Yahoo Finance (2026-08-17 AI briefing §6).
 
 <!-- region:position_state -->
-**Current Allocation:** 3.00%
-**Cost Basis:** $17,073.46
+**Current Allocation:** 2.89%
+**Cost Basis:** $15,441.85
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** THEME
 **Size Ceiling:** 3.00%
-**Drift:** +0.00%
+**Drift:** -0.11%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
+- 2026-08-10: Sell -1.0 @ $1,840.44
 - 2026-07-14: Buy 2.0 @ $1,880.09
 - 2026-07-06: Buy 1.0 @ $1,772.01
 - 2026-06-30: Buy 2.0 @ $1,681.84
@@ -67,9 +70,9 @@ priority: medium
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
-No realized G/L history.
+Total Realized G/L: $208.80 over 1 closed lots. Total Proceeds: $1,840.41.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-08 09:05: Auto-sync allocation 3.00%, drift +0.00%
+2026-08-21 08:45: Auto-sync allocation 2.89%, drift -0.11%
 <!-- endregion:change_log -->

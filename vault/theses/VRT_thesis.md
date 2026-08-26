@@ -3,9 +3,9 @@ ticker: VRT
 style: THEME
 framework_preference: thematic_specialist_v1, lynch_garp_v1
 entry_date: 2026-05
-last_reviewed: '2026-08-08'
-current_allocation: 3.11%
-cost_basis: 19854.969999999965
+last_reviewed: '2026-08-21'
+current_allocation: 3.05%
+cost_basis: 19854.97
 time_horizon: 2 to 4 years
 triggers:
   trigger_type: fwd_pe
@@ -21,6 +21,11 @@ triggers:
 drawdown_tolerance_pct: 0.35
 panic_buy_trigger_drawdown_pct: 0.25
 add_triggers_suspended: true
+pattern:
+  name: accumulate_on_decline
+  established: '2026-08-19'
+  note: Accumulated because "I like the company and the price was dropping — it 
+    got big, same as COF."
 ---
 # VRT (Vertiv) — Investment Thesis (New 2026-05-18)
 
@@ -95,11 +100,13 @@ Current allocation 1.20% (30 shares, cost basis $9,693.23, avg $323.11). This re
 
 ## Scaling State
 
-next_step: **[BILL] Position is now 68 shares / 3.14% — in breach of the 3.00% ceiling** (bundle 6c531c97, 2026-08-07). The figures above (30 shares, 1.20%, "nominal headroom") are stale: the position more than doubled between the 2026-07-29 review and this bundle despite the add path being described as closed pending backlog-conversion evidence. Flag for Bill to reconcile — was this a deliberate add through the "closed" gate, and does the position need to be trimmed back toward the 2.0-2.5% target / 3.00% ceiling? Not resolved here; no new scaling state inferred.
+next_step: hold — ceiling breach reconciled (Bill, 2026-08-19): the size run-up past the 3.00% ceiling was a deliberate accumulation, not an accidental add through the "closed" event-gate. Rationale as stated: "VRT was accumulated because I like the company and the price was dropping — it got big, same as COF." Standing risk-tolerance rationale moved to vault/doctrine.md (`no_withdrawal_need`, established 2026-08-19). Not trimmed solely to close the ceiling drift.
+
+*(Superseded 2026-08-19 — kept for record: [BILL] Position is now 68 shares / 3.14% — in breach of the 3.00% ceiling** (bundle 6c531c97, 2026-08-07). The figures above (30 shares, 1.20%, "nominal headroom") are stale: the position more than doubled between the 2026-07-29 review and this bundle despite the add path being described as closed pending backlog-conversion evidence. Flag for Bill to reconcile — was this a deliberate add through the "closed" gate, and does the position need to be trimmed back toward the 2.0-2.5% target / 3.00% ceiling? Not resolved here; no new scaling state inferred.)*
 
 The file's own drawdown triggers are firing right now and are being deliberately overridden: `discount_from_52w_high_add: 0.20` and `panic_buy_trigger_drawdown_pct: 0.25` are both satisfied at current levels (roughly -36% from the $379.94 52-week high). Those triggers were written for a de-rating in an intact thesis. What is in front of me is a possible execution problem, and averaging down into an unresolved management question is the one move this framework has no answer for. **The add trigger is now event-based, not price-based: a quarter in which backlog converts on schedule.** Until then, price weakness is not a signal.
 
-Drawdown tolerance of 35% from cost is not yet breached (~-25% at $243 against $323.11 avg). That tolerance stands, but it is a tolerance, not a target — it does not obligate me to hold to it if the Q3 evidence goes the wrong way.
+Drawdown tolerance of 35% from cost is not yet breached (~-7% at $271 against $291.99 avg). That tolerance stands, but it is a tolerance, not a target — it does not obligate me to hold to it if the Q3 evidence goes the wrong way.
 
 Style note: this is THEME — market position over company quality. That tag is correct and it is the reason the position stays small. "I love the products, I am unsure about the operator" is precisely a thematic-specialist position and precisely not a dip-buying candidate; dip-buying belongs to the FUND sleeve and requires a durable business I trust, which by my own assessment this is not right now.
 
@@ -109,11 +116,14 @@ priority: **high** — elevated from medium on 2026-07-29.
 
 This position is the weakest leg of a physical-AI-infrastructure sleeve (VST 3.55%, IFRA 1.90%, ETN 1.64%, VRT 3.14% = 10.23% of book) whose theme I still believe in — sleeve math corrected 2026-08-07 against bundle 6c531c97 (prior figures were stale). If capital is rotated out of VRT it should stay inside that sleeve rather than leaving the theme. ETN is the natural destination: same power-infrastructure exposure, a business I rate more highly, not substantially identical for wash-sale purposes, and it currently carries ~1.36% of headroom to its own 3.00% THEME ceiling. [BILL — VST's own headroom figure (previously cited as 0.37%) needs re-check: at 3.55% it now appears to be over its own 3.00% THEME ceiling, which may rule it out as a rotation destination.]
 
-Tax posture if rotated: unrealized loss is roughly -$2,400 at $243. All lots in the transaction log were acquired 2026-05 through 2026-06, which implies **short-term** treatment — the more valuable offset, since it shelters short-term gains at ordinary rates. Verify holding periods and the ~10 shares predating 2026-05-27 in Schwab before acting; this file's transaction log shows only the five most recent entries. Wash-sale window is clean: no VRT purchase since 2026-06-11, so only the forward 30 days would constrain a re-entry.
+Tax posture if rotated: unrealized loss is roughly -$1,200 at $271.00 against a $291.99 avg cost across 58 shares. All lots are **short-term** (oldest: 2026-05-27, 84 days held as of 2026-08-19). Wash-sale constraint: the most recent VRT purchases are 2026-08-04 (33 shares) and 2026-07-31 (5 shares) — both within the 30-day look-back window. A sale today would trigger wash-sale adjustments on those 38 shares unless no VRT repurchase occurs within the forward 30 days (through 2026-09-18). The pre-July lots (2026-05-27 through 2026-06-11, 20 shares) are outside the look-back and would realize clean short-term losses.
 
 ## Review Log
+- 2026-08-24: Standing rationale for this breach acceptance moved to `vault/doctrine.md` (`no_withdrawal_need`, established 2026-08-19). Text unchanged; single-sourced.
+- 2026-08-24: `pattern: accumulate_on_decline` tagged from 2026-08-19 next_step rationale (company liked; price dropping).
 
 - **2026-05-18:** Initiated as a starter position at 0.56% on a Stephanie Link recommendation. Funded from ETN gains (sold 7 @ $427.90 on 05-04 and 10 @ $403.68 on 05-08, ~$7,032 of proceeds). Built across three-plus legs to 30 shares at a $323.11 average.
+- **2026-08-19 (Bill):** Resolves the 2026-08-07 open flag on how the position doubled past the ceiling. It was deliberate: "I like the company and the price was dropping, so it got big — same as COF." Recorded as the actual scaling behavior rather than an inferred execution error. This sits alongside, not in place of, the file's own management-confidence caveat under Scaling State — both can be true: he added on price weakness because he likes the business, while remaining unconvinced on this particular operator's execution.
 - **2026-07-29 — Q2 2026 print and first material thesis review.** Revenue $3.27B vs. ~$3.39B consensus, a 3.4% miss but +24.1% YoY. Adjusted EPS $1.52 vs. $1.43, a 6.4% beat. FY26 adjusted EPS guidance raised to ~$6.70 midpoint from $6.30-6.40; FY revenue guide lifted to ~$14B from $13.75B. Q3 revenue guided to $3.75B midpoint, slightly above estimates. Operating margin 19.5%, up 2.7 points YoY. Shortfall concentrated in the Americas at roughly $106M. Stock traded down ~10.4% to roughly $243 on the print, following a 6.27% decline to $269.56 the prior session.
   - **Assessment:** demand is not the problem — backlog ~$15B, revenue +24% YoY, margins expanding, Q3 guided above consensus. The problem is that the FY raise now depends on a very large Q4 that no one can verify for six months, delivered by a management team whose first test at this project scale produced a regional miss. **The decisive near-term check is arithmetic: FY guide minus Q1 actual minus Q2 actual ($3.27B) minus Q3 guide ($3.75B) = implied Q4.** Near $4.0B is a normal seasonal step and the raise is credible. At $4.4B or above, the guide is carrying the year on an unverifiable quarter.
   - **Actions:** added management-execution risk (was absent from this file). Added Hard Exit Condition 5 on backlog conversion. Suspended price-based add triggers in favor of an event-based trigger. Raised rotation priority to high. Corrected stale allocation (file read 0.56%; actual 1.20%).
@@ -123,18 +133,18 @@ Tax posture if rotated: unrealized loss is roughly -$2,400 at $243. All lots in 
 - 2026-08-09: trigger_type set explicit: fwd_pe (argued exception to the THEME default of ceiling_only -- existing 28/50 band is a genuine, fully-populated anchor). See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
-**Current Allocation:** 3.11%
+**Current Allocation:** 3.05%
 **Cost Basis:** $19,854.97
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** THEME
 **Size Ceiling:** 3.00%
-**Drift:** +0.11%
+**Drift:** +0.05%
 <!-- endregion:sizing -->
 
 <!-- region:change_log -->
-2026-08-08 09:05: Auto-sync allocation 3.11%, drift +0.11%
+2026-08-21 08:45: Auto-sync allocation 3.05%, drift +0.05%
 <!-- endregion:change_log -->
 
 <!-- region:transaction_log -->

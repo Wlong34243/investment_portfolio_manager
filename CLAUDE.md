@@ -58,7 +58,7 @@ These live in `PROMPT_PAYLOAD` inside `tasks/export_ai_briefing.py` and are enfo
 
 ### The eight rules, condensed
 
-1. **Never infer liquidity posture from the export.** `CASH_MANUAL` does not represent the cash position. Do not compute a cash percentage or draw conclusions about dry powder. Ask instead.
+1. **Cash is sourced from Schwab balances across the three allowlisted accounts and reconciles to `liquidationValue`.** A cash percentage against the bundle total is meaningful *for those three accounts*. It is not total liquidity — three further accounts are out of scope, and dry powder may sit outside Schwab. State the scope when citing cash; do not extrapolate to net worth. `CASH_MANUAL` remains the synthetic row ticker (do not rename).
 2. **Do not relitigate the role of an established position.** Where a thesis states a role, describe drift *within* that role. Explaining an instrument's mechanics back to a CPA/CISA who selected it deliberately is noise.
 3. **Style size ceilings apply only to SECTOR_ETF, GARP, THEME and FUND — never to ballast/core.** JEPI, JPIE, VTI, COWZ and VEA are ballast; suppress BREACH flags on those tickers. See the taxonomy note under Investment Style Context.
 4. **Check for an offsetting leg before calling anything drift.** Scan other positions' transaction logs for buys of comparable size within ±3 days. A sell funding a buy is a rotation and must be reported as one.
@@ -121,11 +121,12 @@ Agents interact strictly with the composite hash via `ask_gemini_composite()`.
 
 ### ⚠️ The bundle is deterministic about *gathering*, not about *content*
 
-Hash-stamping proves the bytes have not changed since creation. It does not make the contents true, and the four bundle files are not equally trustworthy:
+Hash-stamping proves the bytes have not changed since creation. It does not make the contents true, and the bundle files are not equally trustworthy:
 
 | File | Provenance | Trust |
 |---|---|---|
 | `portfolio.md` | Python, from Schwab + Sheets | Deterministic. Reproducible. |
+| `doctrine.md` | Bill's own writing (`vault/doctrine.md`) | **Authoritative on standing constraints.** Outranks inference from the trade log. Manual-only — no agent writes it. |
 | `theses.md` | Bill's own writing | Authoritative on intent; may be stale on figures |
 | `prompt.md` / `SUBMIT_ME.md` | `PROMPT_PAYLOAD`, hand-maintained | Deterministic |
 | **`podcasts.md`** | **Entirely model output** — Gemini summaries of YouTube transcripts, plus third-party Studio by Spotify Labs digests | **Unverified. Largest single file after SUBMIT_ME.md.** |
@@ -146,10 +147,11 @@ Hash-stamping proves the bytes have not changed since creation. It does not make
 | Path | Purpose |
 |---|---|
 | `manager.py` | CLI spine (Typer). Entry point for everything. |
-| `config.py` | Constants: `PORTFOLIO_SHEET_ID`, `GEMINI_MODEL`, tax rates, `GCP_PROJECT_ID`, `TAB_*` names, `SCHWAB_PRIMARY_ACCOUNT_SUFFIXES`, `SPOTIFY_STUDIO_TRANSCRIPTS_DIR`, `STORE_BACKEND` / `SQLITE_DB_PATH` |
-| `core/store/` | PortfolioStore shadow (tax/txn/realized); value-level verify + ledger_hash parity + run streak; `STORE_PRIMARY` default sheets; backup prune; `publish-cockpit`; `pm ui serve` debug-only |
+| `config.py` | Constants: `PORTFOLIO_SHEET_ID`, `GEMINI_MODEL`, tax rates, `GCP_PROJECT_ID`, `TAB_*` names, `SCHWAB_PRIMARY_ACCOUNT_SUFFIXES`, `PRICE_HISTORY_SOURCE` (default `auto`; yfinance \| schwab \| auto), `SPOTIFY_STUDIO_TRANSCRIPTS_DIR`, `STORE_BACKEND` / `SQLITE_DB_PATH` |
+| `core/store/` | PortfolioStore dual-write (tax/txn/realized); value-level verify + ledger_hash parity + run streak; **`STORE_PRIMARY=sqlite` (hand-flipped 2026-08-21; default in code still `sheets`; revert via `.env`)**; backup prune; `publish-cockpit`; `pm ui serve` debug-only |
 | `state.md` | Current build state — **read first** |
-| `PORTFOLIO_SHEET_SCHEMA.md` | Sheet tab definitions — **materially incomplete, see Known Doc Gaps** |
+| `vault/doctrine.md` | Standing portfolio constraints (manual-only). Parsed by `utils/doctrine_reader.py`. Crosshairs may downgrade `NEAR_TRIM` → `HOLD_TAX` (rank ≥ 400) when `action: downgrade_informational`. |
+| `PORTFOLIO_SHEET_SCHEMA.md` | Sheet tab definitions + PortfolioStore role matrix (kept current for live tabs) |
 | `CHANGELOG.md` | Dated change history |
 
 ### Bundles
@@ -170,10 +172,11 @@ Hash-stamping proves the bytes have not changed since creation. It does not make
 | `tasks/ingest_spotify_digests.py` | **STEP 4b — Spotify Studio digest ingestion. BUILT and live** (shipped 2026-08-01, first live multi-file run 2026-08-07). Two collision guards; sha256 ledger at `data/spotify_digests/.ingested.json` |
 | `tasks/build_valuation_card.py` | Valuation_Card build; sources `Trim Target` / `Add Target` from thesis triggers |
 | `tasks/build_command_center.py` | **Builds the `0_DASHBOARD` tab.** "Command Center" is the content; `0_DASHBOARD` is the tab. Clear-and-rebuild in one `batch_update`. Embeds Crosshairs top 5. |
-| `tasks/build_crosshairs.py` | **Ranked Crosshairs producer** (NEAR_TRIM/NEAR_ADD, DISLOCATION, MISSING_LEVEL). One list → CC top 5 + Decision_View full. |
+| `tasks/build_crosshairs.py` | **Ranked Crosshairs producer** (NEAR_TRIM/NEAR_ADD, DISLOCATION, MISSING_LEVEL). One list → CC top 5 + Decision_View full. Doctrine may re-rank NEAR_TRIM to HOLD_TAX (≥400). |
 | `tasks/build_decision_view.py` | **Decision_View** = full Crosshairs list (not Agent_Outputs). |
 | `tasks/write_thesis_updates.py` | Sheets → local thesis files |
-| `tasks/export_ai_briefing.py` | Assembles the briefing bundle. **Owns the analysis rules above.** |
+| `tasks/export_ai_briefing.py` | Assembles the briefing bundle. **Owns the analysis rules above.** Ships `doctrine.md` + `undocumented_changes` in manifest. |
+| `tasks/detect_undocumented_changes.py` | Read-only decision-capture detector (NEW / EXITED / MATERIAL_RESIZE). Manifest sibling of `preflight_issues`. |
 | `tasks/derive_rotations.py` | Clusters sell/buy pairs into candidate rotations → `Trade_Log_Staging` |
 | `tasks/dislocation_scan.py` | Dislocation scanner — **runs as STEP 4.5 before dashboard** so Crosshairs sees today’s payload |
 
@@ -187,7 +190,12 @@ Hash-stamping proves the bytes have not changed since creation. It does not make
 ### Ingestion & enrichment
 | Path | Purpose |
 |---|---|
-| `utils/schwab_client.py` | Schwab API client (read-only); account-suffix scoping |
+| `utils/schwab_client.py` | Schwab API client (read-only); account-suffix scoping; `fetch_price_history` / `fetch_price_history_batch` / `fetch_instrument_fundamentals` / `fetch_market_hours` / `is_trading_day` / `fetch_account_balances`; quote-field widening (52w, div yield) |
+| `utils/price_history.py` | Bar router (`get_bars`); `PRICE_HISTORY_SOURCE` = yfinance \| schwab \| auto |
+| `utils/market_calendar.py` | Trading-day helpers for STALE / Daily_Snapshots / health `market_status` |
+| `tasks/build_risk_metrics.py` | Risk_Metrics clear-and-rebuild; portfolio-summary row last |
+| `tasks/build_income_tracking.py` | Income_Tracking from DIVIDEND_OR_INTEREST |
+| `tasks/build_flow_ledger.py` | Cash_Flows external ACH/wire/journal ledger |
 | `utils/sheet_readers.py` | Sheets I/O. **`read_gsheet_robust()` is the central currency/percent sanitizer — route all Sheet reads through it.** |
 | `utils/sheet_writers.py` | Sheets writes |
 | `utils/fmp_client.py` | FMP fundamentals — **extend this before adding any new vendor** |
@@ -222,7 +230,9 @@ A typed-trigger system is in flight — see `prompts/trigger_types_2026-08-09.md
 
 **Trigger chain** *(verified 2026-08-10)*: thesis `triggers:` block → `vault_bundle._parse_thesis_fields()` → `composite_bundle.get_ticker_triggers()` (declared type + price `valuation_trim`/`valuation_add`) → `build_valuation_card()` writes `Trim Target`/`Add Target` → `build_command_center._build_position_table()` / Crosshairs. Style for ceilings: `utils/thesis_reader.style_map_from_vault()` (not `## Style` prose).
 
-**Crosshairs feed** *(shipped 2026-08-10)*: `build_crosshairs.produce_crosshairs()` ranks NEAR_TRIM/NEAR_ADD (Valuation_Card distances within 20% or through level), DISLOCATION (same-day scan), MISSING_LEVEL (`level_coverage`). `0_DASHBOARD` shows top 5; `Decision_View` shows all. Position-table **Signal is blank** — Agent_Outputs is no longer joined (April 2026 `cbc10a99` archived). Morning order: STEP 4.5 dislocation → STEP 5 val → crosshairs → CC → Decision_View. `pm refresh dashboard` runs the scan if no same-calendar-day artifact.
+**Crosshairs feed** *(shipped 2026-08-10; typed metrics 2026-08-24; doctrine downgrade 2026-08-24)*: `build_crosshairs.produce_crosshairs()` ranks NEAR_TRIM/NEAR_ADD (Valuation_Card distances within 20% or through level), DISLOCATION (same-day scan), MISSING_LEVEL (`level_coverage`). After merge, `utils/doctrine_reader.downgrade_rule` can re-rank a NEAR_TRIM into bucket 400+ (`HOLD_TAX` for `tax_hold_runners`) — still visible on Decision_View, dropped from CC top 5 by sort. `0_DASHBOARD` shows top 5; `Decision_View` shows all. Position-table **Signal is blank** — Agent_Outputs is no longer joined (April 2026 `cbc10a99` archived). Morning order: STEP 4.5 dislocation → STEP 5 val → crosshairs → CC → Decision_View. `pm refresh dashboard` runs the scan if no same-calendar-day artifact.
+
+Optional thesis frontmatter `pattern:` (`turnaround_reversion` / `debasement_hedge` / `accumulate_on_decline`) is descriptive metadata only — surfaces in `theses.md`, never feeds Crosshairs. A pattern screener was deliberately not built.
 
 ---
 
@@ -304,8 +314,8 @@ Recorded so they are not rediscovered.
 
 ## Known Doc Gaps
 
-- **`PORTFOLIO_SHEET_SCHEMA.md` is materially incomplete** (last touched 2026-05-07). It documents 10 tabs; `config.py` defines 20+, and `Rotation_Review`, `Valuation_Card`, `Trade_Log_Staging` and `Tax_Control` are all live and undocumented. It is cited as authoritative — it is not.
-- **21 loose markdown files at repo root**, including one-off fix notes (`EXPORTER_FIX_2026-07-26.md`, `THESIS_SYNC_FIX_2026-07-26.md`, `UI_IMPROVEMENT_*.md`, `OBSOLETE_FILES_TO_ARCHIVE.md`). Fold into `CHANGELOG.md` or move to `docs/archive/`.
+- **`PORTFOLIO_SHEET_SCHEMA.md` caught up** (authority matrix includes `Rotation_Review`, `Valuation_Card`, `Trade_Log_Staging`, `Tax_Control`, `Risk_Metrics`, `Income_Tracking`, `Cash_Flows`, PortfolioStore roles). Treat it as the live tab map; re-verify against `config.py` `TAB_*` if a new tab ships.
+- **Root one-shot notes archived 2026-08-26** → `docs/archive/root_notes_2026-08-26/`. Incomplete prompts → `prompts/archive/` (declined, not a backlog). Do not re-open `surface_attribution` / `vault_framework_visibility` as build work.
 - **`README.md` last touched 2026-06-04**; `CLI_MANUAL.md` and `CLI_CHEATSHEET.md` freshness unverified. `docs/` carries `phase1/`, `phase5/`, `phase6/`, `phase-prompts/` from April–May.
 - **Tab naming:** `config.py` uses `Realized_GL`; some external docs say `RealizedGL`. `config.py` wins.
 - **`state.md` vs `STATE.md`:** the file is `state.md`. Any reference to `STATE.md` breaks on case-sensitive filesystems.
@@ -329,4 +339,9 @@ Recorded so they are not rediscovered.
 - Do not deploy to Streamlit Cloud
 - Do not propose MCP integrations
 - Do not propose auto-trading features
+- Do not propose Schwab streaming (WebSocket L1/L2, order books, `ACCT_ACTIVITY`).
+  Evaluated and declined 2026-08-25: a daily batch pipeline consumes no sub-daily
+  latency, a persistent daemon exceeds current operational maturity, and a stream is
+  not re-runnable, which defeats the reproducibility rationale behind "Python
+  gathers, LLMs reason." Reasoning: `prompts/schwab_signal_layer_PROPOSAL_2026-08-25.md` §5.
 - Do not add unrequested scope. Deliver exactly what was asked.

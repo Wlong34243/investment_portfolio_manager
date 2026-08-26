@@ -3,11 +3,12 @@ ticker: QQQM
 style: ETF
 framework_preference:
 entry_date:
-last_reviewed: '2026-08-08'
-cost_basis: 60864.509999999966
-current_allocation: 10.64%
+last_reviewed: '2026-08-21'
+cost_basis: 60871.26
+current_allocation: 10.61%
 triggers:
   trigger_type: ceiling_only
+  style_size_ceiling_pct: 8.0
 ---
 # QQQM — Investment Thesis
 
@@ -33,6 +34,7 @@ Cost basis: ~$253.68 (Assumed). At this level, you are paying a premium for the 
 
 ## Scaling State
 next_step: hold / dollar-cost average
+Over-ceiling size accepted (Bill, 2026-08-17). 10.71% vs 8.00% ETF ceiling — deliberate concentration in the core growth engine, not a taxonomy gap. QQQM's own "Extreme Concentration" Key Risk is exactly why it does not belong on the JEPI/JPIE/VTI/COWZ/VEA ballast-exemption list (CLAUDE.md); this is a real, acknowledged breach, held on purpose. Do not trim solely to close the ~2.7pp drift.
 
 ## Rotation Priority
 priority: very low (core foundational holding)
@@ -45,16 +47,18 @@ priority: very low (core foundational holding)
 ## Review Log
 - 2026-04: Initiated. Thesis intact. Monitoring overall tech multiples, mega-cap earnings growth, and the 10-year Treasury yield.
 - 2026-08-09: trigger_type set explicit: ceiling_only (broad index ETF; no single-metric band is meaningful). See prompts/trigger_types_2026-08-09.md.
+- 2026-08-17: Ceiling breach reviewed (10.71% vs 8.00% ETF ceiling, largest breach in the book). Determined QQQM does not qualify for the ballast exemption CLAUDE.md documents for JEPI/JPIE/VTI/COWZ/VEA — those are diversified plain-beta or income-with-downside-management holdings; QQQM's own Key Risks lead with "Extreme Concentration" (mega-cap tech), which is a sector/thematic-style risk profile, not ballast. The breach is real and is accepted deliberately rather than exempted — see Scaling State.
+- 2026-08-24: Standing rationale for this breach acceptance moved to `vault/doctrine.md` (`no_withdrawal_need`, established 2026-08-19). Text unchanged; single-sourced.
 
 <!-- region:position_state -->
-**Current Allocation:** 10.64%
-**Cost Basis:** $60,864.51
+**Current Allocation:** 10.61%
+**Cost Basis:** $60,871.26
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** ETF
 **Size Ceiling:** 8.00%
-**Drift:** +2.64%
+**Drift:** +2.61%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -82,9 +86,9 @@ priority: very low (core foundational holding)
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
-Total Realized G/L: $22.38 over 38 closed lots. Total Proceeds: $26,259.45.
+Total Realized G/L: $220.45 over 34 closed lots. Total Proceeds: $43,098.08.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-08 09:05: Auto-sync allocation 10.64%, drift +2.64%
+2026-08-21 08:45: Auto-sync allocation 10.61%, drift +2.61%
 <!-- endregion:change_log -->

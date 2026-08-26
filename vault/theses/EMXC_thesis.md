@@ -3,11 +3,12 @@ ticker: EMXC
 style: ETF
 framework_preference:
 entry_date:
-last_reviewed: '2026-08-08'
-cost_basis: 14153.9400000045
-current_allocation: 2.27%
+last_reviewed: '2026-08-21'
+cost_basis: 14153.94
+current_allocation: 2.34%
 triggers:
   trigger_type: ceiling_only
+  style_size_ceiling_pct: 8.0
 ---
 # EMXC — Investment Thesis
 
@@ -63,14 +64,14 @@ priority: medium
 - 2026-08-09: trigger_type set explicit: ceiling_only (EM basket). See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
-**Current Allocation:** 2.27%
+**Current Allocation:** 2.34%
 **Cost Basis:** $14,153.94
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** ETF
 **Size Ceiling:** 8.00%
-**Drift:** -5.73%
+**Drift:** -5.66%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -91,9 +92,9 @@ priority: medium
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
-No realized G/L history.
+Total Realized G/L: $640.76 over 4 closed lots. Total Proceeds: $9,250.29.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-08 09:05: Auto-sync allocation 2.27%, drift -5.73%
+2026-08-21 08:45: Auto-sync allocation 2.34%, drift -5.66%
 <!-- endregion:change_log -->

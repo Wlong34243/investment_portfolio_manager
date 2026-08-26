@@ -3,9 +3,9 @@ ticker: GOOG
 style: GARP
 framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: '2026-08-08'
-current_allocation: 5.95%
-cost_basis: 26733.419999996368
+last_reviewed: '2026-08-21'
+current_allocation: 5.75%
+cost_basis: 26733.42
 time_horizon: 3 to 5 years
 triggers:
   trigger_type: fwd_pe
@@ -44,6 +44,12 @@ GOOG's balance sheet contains material stakes in:
 - **Verily, Wing, Calico, and other "Other Bets"** — biotech, drone delivery, longevity research, each with optionality that a passive market price doesn't capture.
 
 None of these are priced in. They're worth something between "rounding error" and "tens of billions in mark-to-market" depending on the next funding round. The point isn't to model them; the point is they're free options I get by owning GOOG, and they trend in my favor as the AI/frontier-tech cycle continues.
+
+## Key Risks
+- **Capex step-change / FCF inflection** — FY26 capex guided to $195–205B; Q2 capex $44.9B (+100% y/y). First reported stretch of negative free cash flow under that build. The 2026-08-11 move (−3.61%) priced this as a capital-intensity and duration risk, not a Search/Cloud demand miss.
+- **Balance-sheet funding of the build** — $25B senior notes closed 2026-08-10. Leverage is intentional and manageable at GOOG's scale, but it hard-wires the capex plan into the liability stack and reduces flexibility if AI infra returns lag.
+- **Anthropic / cloud-partner contingent exposure** — the private-stake section above treats Anthropic as unpriced upside. The other side: Google is linked to ~$35B of Anthropic-related data-center debt carrying Google backstops (Bloomberg 2026-06-09; CNBC 2026-07-30 on the $15B Nexus/Hubbard TX package). Equity upside and contingent credit support are the same relationship viewed from two sides; only the upside was documented before this section.
+- **Org / leadership continuity in AI** — Demis Hassabis stepping down as DeepMind CEO and Jeff Dean departing remove two of the most visible names on the frontier-model and infrastructure stack. Execution continuity, not headline optics, is the watch item.
 
 ## Entry Context & Position State
 
@@ -84,18 +90,18 @@ priority: very low
 - 2026-08-09: trigger_type set explicit: fwd_pe (GARP default; existing 20/32 band retained as primary). See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
-**Current Allocation:** 5.95%
+**Current Allocation:** 5.75%
 **Cost Basis:** $26,733.42
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** GARP
 **Size Ceiling:** 9.00%
-**Drift:** -3.05%
+**Drift:** -3.25%
 <!-- endregion:sizing -->
 
 <!-- region:change_log -->
-2026-08-08 09:05: Auto-sync allocation 5.95%, drift -3.05%
+2026-08-21 08:45: Auto-sync allocation 5.75%, drift -3.25%
 <!-- endregion:change_log -->
 
 <!-- region:transaction_log -->
@@ -115,5 +121,5 @@ priority: very low
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
-Total Realized G/L: $9,263.64 over 10 closed lots. Total Proceeds: $17,533.04.
+Total Realized G/L: $11,573.95 over 7 closed lots. Total Proceeds: $21,529.25.
 <!-- endregion:realized_gl -->

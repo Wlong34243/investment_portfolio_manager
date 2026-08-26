@@ -3,13 +3,14 @@ ticker: WSM
 style: FUND
 framework_preference:
 entry_date:
-last_reviewed: '2026-08-08'
-cost_basis: 15037.729999999898
-current_allocation: 2.66%
+last_reviewed: '2026-08-21'
+cost_basis: 15037.73
+current_allocation: 2.51%
 triggers:
   trigger_type: discount_from_high
   trim_below_discount_pct: 5.6
   add_above_discount_pct: 28.3
+  style_size_ceiling_pct: 5.0
 ---
 # WSM — Investment Thesis
 
@@ -49,14 +50,14 @@ priority: medium
 - 2026-08-09: trigger_type: discount_from_high (FUND default). 2021-2026 daily discount-from-52w-high (n=1196 trading days): trim_below_discount_pct=5.6 (~p25), add_above_discount_pct=28.3 (~p75). Live current discount 0.0% -- at its 52-week high, inside trim territory. See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
-**Current Allocation:** 2.66%
+**Current Allocation:** 2.51%
 **Cost Basis:** $15,037.73
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** FUND
 **Size Ceiling:** 5.00%
-**Drift:** -2.34%
+**Drift:** -2.49%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -76,5 +77,5 @@ No realized G/L history.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-08 09:05: Auto-sync allocation 2.66%, drift -2.34%
+2026-08-21 08:45: Auto-sync allocation 2.51%, drift -2.49%
 <!-- endregion:change_log -->

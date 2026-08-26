@@ -3,11 +3,12 @@ ticker: JEPI
 style: ETF
 framework_preference:
 entry_date:
-last_reviewed: '2026-08-08'
-cost_basis: 25923.000000000007
-current_allocation: 4.40%
+last_reviewed: '2026-08-21'
+cost_basis: 25923.0
+current_allocation: 4.43%
 triggers:
   trigger_type: ceiling_only
+  style_size_ceiling_pct: 8.0
 ---
 # JEPI — Investment Thesis
 
@@ -45,14 +46,14 @@ priority: low
 - 2026-08-09: trigger_type set explicit: ceiling_only (income/ballast; no clean valuation anchor for a covered-call overlay fund). See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
-**Current Allocation:** 4.40%
+**Current Allocation:** 4.43%
 **Cost Basis:** $25,923.00
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** ETF
 **Size Ceiling:** 8.00%
-**Drift:** -3.60%
+**Drift:** -3.57%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -80,9 +81,9 @@ priority: low
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
-Total Realized G/L: $0.00 over 2 closed lots. Total Proceeds: $0.00.
+Total Realized G/L: $293.55 over 9 closed lots. Total Proceeds: $20,762.79.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-08 09:05: Auto-sync allocation 4.40%, drift -3.60%
+2026-08-21 08:45: Auto-sync allocation 4.43%, drift -3.57%
 <!-- endregion:change_log -->

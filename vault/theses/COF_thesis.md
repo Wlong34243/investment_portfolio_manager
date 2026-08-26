@@ -3,12 +3,17 @@ ticker: COF
 style: GARP
 framework_preference:
 entry_date:
-last_reviewed: '2026-08-08'
+last_reviewed: '2026-08-21'
 triggers:
   trigger_type: ceiling_only
   # price_trim_above: 175.00  # superseded 2026-08-09, non-primary/stale -- see Review Log
-cost_basis: 17055.6169999975
-current_allocation: 2.89%
+  style_size_ceiling_pct: 9.0
+cost_basis: 16832.94
+current_allocation: 2.84%
+pattern:
+  name: accumulate_on_decline
+  established: '2026-08-24'
+  note: Named alongside VRT as the same accumulate-on-decline pattern.
 ---
 # COF — Investment Thesis
 
@@ -45,18 +50,22 @@ priority: low
 - A clearly superior capital deployment opportunity emerges in the financial sector offering a significantly better risk/reward profile.
 
 ## Review Log
+- 2026-08-24: `pattern: accumulate_on_decline` tagged — paired with VRT in the 2026-08-19 accumulation rationale.
 - 2026-04: Initiated. Thesis intact. Monitoring Discover integration timeline, consumer charge-off rates, and early progress on the Brex acquisition.
 - 2026-08-09: trigger_type: ceiling_only. Cyclical override to price_to_book considered (credit-cycle-exposed financial) but rejected: FY2024->FY2025 balance sheet shows the Discover Financial merger completing (equity $60.8B->$113.6B, shares 381M->625M) -- post-merger COF is a materially different company, so pre-2025 book value isn't a comparable basis for a P/B trigger, not just a data-continuity break. Commented out stale price_trim_above: 175.00 (predates the merger). Revisit once enough post-merger history accumulates. See prompts/trigger_types_2026-08-09.md.
+- 2026-08-17: Cross-reference (one-directional gap closed, matching the EMXC<->SKHY precedent 2026-07-31): the 2026-08-07 sale of 25 sh @ $217.45 (above the then-recorded price_trim_above: 175.00) funded a two-leg rotation documented fully in MU_thesis.md Entry Context -- COF -> XLF (same-sector swap) and COF -> MU (financials into memory/AI-infrastructure, the actual rotation). See MU_thesis.md Review Log, 2026-08-07 entries. Bill confirmed today he is comfortable with COF's resulting size (80 sh, 2.97%) -- no further trim planned; next_step: hold stands as recorded below.
+- 2026-08-19: Lot-selection / holding-period verification **resolved**. Under FIFO the 08-07 sale of 25 sh consumed: 8 sh from 2026-04-10 (119d), 10 sh from 2026-04-16 (113d), 5 sh from 2026-04-16 (113d), 2 sh from 2026-04-17 (112d). **All short-term** (held 112–119 days). Net realized gain on the 25 shares: +$455.00, all short-term. Remaining inventory: 13 sh @ $206.94 (2026-04-17), 10 sh @ $200.01 (2026-04-22), 5 sh @ $200.40 (2026-06-24) = 28 shares, all short-term as of today. No wash-sale concern — the 06-24 buy (nearest to the 08-07 sell) is 44 days prior, outside the 30-day look-back.
+- 2026-08-19 (Bill): Confirms the XLF leg's role directly: "XLF was just another place I could park a bit while the banks enjoy improving profitability" — not a replacement thesis for COF, a sector-level parking spot for the proceeds not routed to MU. See XLF_thesis.md 2026-08-19 entry for the mirrored note.
 
 <!-- region:position_state -->
-**Current Allocation:** 2.89%
-**Cost Basis:** $17,055.62
+**Current Allocation:** 2.84%
+**Cost Basis:** $16,832.94
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** GARP
 **Size Ceiling:** 9.00%
-**Drift:** -6.11%
+**Drift:** -6.16%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -78,9 +87,9 @@ priority: low
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
-Total Realized G/L: $0.00 over 2 closed lots. Total Proceeds: $1,927.21.
+Total Realized G/L: $-1,463.27 over 16 closed lots. Total Proceeds: $15,855.29.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-08 09:05: Auto-sync allocation 2.89%, drift -6.11%
+2026-08-21 08:45: Auto-sync allocation 2.84%, drift -6.16%
 <!-- endregion:change_log -->

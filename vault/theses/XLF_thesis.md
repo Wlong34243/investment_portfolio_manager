@@ -3,11 +3,12 @@ ticker: XLF
 style: ETF
 framework_preference:
 entry_date:
-last_reviewed: '2026-08-08'
-cost_basis: 8192.789999999999
-current_allocation: 1.39%
+last_reviewed: '2026-08-21'
+cost_basis: 8192.79
+current_allocation: 1.38%
 triggers:
   trigger_type: ceiling_only
+  style_size_ceiling_pct: 8.0
 ---
 # XLF — Investment Thesis
 
@@ -45,16 +46,17 @@ priority: low
 ## Review Log
 - 2026-04: Initiated. Thesis intact. Monitoring the 2-year/10-year Treasury yield curve, consumer credit card delinquency rates, and M&A volume.
 - 2026-08-09: trigger_type set explicit: ceiling_only (sector basket). See prompts/trigger_types_2026-08-09.md.
+- 2026-08-19 (Bill): Role clarified for the 2026-08-07 COF→XLF leg: "XLF was just another place I could park a bit while the banks enjoy improving profitability." Sector-level parking for proceeds not routed to MU that same day, not a standalone high-conviction add. See COF_thesis.md 2026-08-19 entry.
 
 <!-- region:position_state -->
-**Current Allocation:** 1.39%
+**Current Allocation:** 1.38%
 **Cost Basis:** $8,192.79
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** ETF
 **Size Ceiling:** 8.00%
-**Drift:** -6.61%
+**Drift:** -6.62%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -74,9 +76,9 @@ priority: low
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
-Total Realized G/L: $-80.76 over 21 closed lots. Total Proceeds: $9,466.25.
+Total Realized G/L: $-37.32 over 16 closed lots. Total Proceeds: $16,496.18.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-08 09:05: Auto-sync allocation 1.39%, drift -6.61%
+2026-08-21 08:45: Auto-sync allocation 1.38%, drift -6.62%
 <!-- endregion:change_log -->

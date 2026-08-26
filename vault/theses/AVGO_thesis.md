@@ -3,12 +3,13 @@ ticker: AVGO
 style: GARP
 framework_preference:
 entry_date:
-last_reviewed: '2026-08-08'
+last_reviewed: '2026-08-21'
 triggers:
   trigger_type: ceiling_only
   # price_trim_above: 195.00  # superseded 2026-08-09, non-primary/stale -- see Review Log
-cost_basis: 12002.9100000005
-current_allocation: 2.47%
+  style_size_ceiling_pct: 9.0
+cost_basis: 12002.91
+current_allocation: 2.15%
 ---
 # AVGO — Investment Thesis
 
@@ -48,14 +49,14 @@ priority: medium
 - 2026-08-09: trigger_type: ceiling_only, not trailing_pe. Commented out stale price_trim_above: 195.00 -- fires permanently against a $427.76 spot price and would have kept parsing as a dead trigger. trailing_pe band rejected: FY2024 diluted EPS of $1.23 (VMware acquisition amortization/costs) blows the computed historical max to 198.83, a GAAP artifact, not a real valuation reading. Revisit once that period rolls out of the trailing window. See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
-**Current Allocation:** 2.47%
+**Current Allocation:** 2.15%
 **Cost Basis:** $12,002.91
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** GARP
 **Size Ceiling:** 9.00%
-**Drift:** -6.53%
+**Drift:** -6.85%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -66,9 +67,9 @@ priority: medium
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
-No realized G/L history.
+Total Realized G/L: $1,208.26 over 1 closed lots. Total Proceeds: $2,095.31.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-08 09:05: Auto-sync allocation 2.47%, drift -6.53%
+2026-08-21 08:45: Auto-sync allocation 2.15%, drift -6.85%
 <!-- endregion:change_log -->

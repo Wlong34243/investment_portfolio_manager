@@ -3,11 +3,12 @@ ticker: VTI
 style: ETF
 framework_preference:
 entry_date:
-last_reviewed: '2026-08-08'
-cost_basis: 21199.2199999994
-current_allocation: 3.67%
+last_reviewed: '2026-08-21'
+cost_basis: 19386.48
+current_allocation: 3.34%
 triggers:
   trigger_type: ceiling_only
+  style_size_ceiling_pct: 8.0
 ---
 # VTI — Investment Thesis
 
@@ -46,17 +47,18 @@ priority: lowest
 - 2026-08-09: trigger_type set explicit: ceiling_only (ballast). See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
-**Current Allocation:** 3.67%
-**Cost Basis:** $21,199.22
+**Current Allocation:** 3.34%
+**Cost Basis:** $19,386.48
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** ETF
 **Size Ceiling:** 8.00%
-**Drift:** -4.33%
+**Drift:** -4.66%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
+- 2026-08-10: Sell -5.0 @ $381.94
 - 2026-07-06: Sell -5.0 @ $370.90
 - 2026-06-30: Buy 15.0 @ $368.69
 - 2026-06-25: Buy 15.0 @ $364.61
@@ -76,14 +78,13 @@ priority: lowest
 - 2026-05-08: Buy 5.0 @ $361.80
 - 2026-05-08: Buy 10.0 @ $361.65
 - 2026-05-07: Buy 5.0 @ $360.10
-- 2026-05-05: Buy 5.0 @ $357.14
-(showing 20 most recent of 41)
+(showing 20 most recent of 42)
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
-Total Realized G/L: $1,885.25 over 59 closed lots. Total Proceeds: $46,442.52.
+Total Realized G/L: $2,106.09 over 54 closed lots. Total Proceeds: $91,094.73.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-08 09:05: Auto-sync allocation 3.67%, drift -4.33%
+2026-08-21 08:45: Auto-sync allocation 3.34%, drift -4.66%
 <!-- endregion:change_log -->

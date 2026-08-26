@@ -3,14 +3,15 @@ ticker: VST
 style: THEME
 framework_preference: Thesis-first, scale-in, consensus-target trim discipline
 entry_date: 2026-05-03
-last_reviewed: '2026-08-08'
+last_reviewed: '2026-08-21'
 triggers:
   trigger_type: ceiling_only
   entry_price: 159.00
   seed_position_weight: 0.64%
   # price_trim_above: consensus_price_target  # superseded 2026-08-09, non-primary/stale -- see Review Log
-cost_basis: 23564.63000000001
-current_allocation: 3.63%
+  style_size_ceiling_pct: 3.0
+cost_basis: 23564.63
+current_allocation: 3.62%
 ---
 # VST — Investment Thesis
 
@@ -42,7 +43,8 @@ Initial purchase at $159.00 for a 0.64% seed position. The entry is being made a
 - **Opportunity Cost:** Selling a stronger technical name to buy a weaker one can backfire if the downtrend persists longer than expected.
 
 ## Scaling State
-next_step: [BILL — confirm] Bundle 6c531c97 (2026-08-07) has VST at 3.55% market weight — 0.55pp over the 3.00% THEME ceiling. Prior Scaling State prose ("built to 2.63% ... 0.37% headroom") is stale after the 2026-08-03/08-04 adds. Trim discipline unchanged: consensus_price_target per Exit Conditions / triggers.price_trim_above. Do not infer a new scaling state from the breach alone — Bill to confirm hold vs trim.
+next_step: hold
+Over-ceiling size accepted (Bill, 2026-08-14). 3.73% vs 3.00% THEME ceiling after the 2026-08-03/08-04 adds. The Aug 3 risk-on adds stand; do not trim solely to close the 0.73pp drift. Trigger remains `ceiling_only` (consensus_price_target retired 2026-08-09).
 
 ## Rotation Priority
 priority: medium
@@ -50,6 +52,7 @@ priority: medium
 ## Exit Conditions
 - Evidence emerges that AI-related load growth is being delayed, canceled, or captured by competitors in a way that weakens the core demand thesis.
   - *Status 2026-08-07: partially touched, immaterial so far.* The Texas Governor's directive has paused ERCOT Batch Zero reviews for an expected couple of months. Management states Comanche Peak (targeted energize end-2027) is unaffected and that no signal has come from Austin that baseload projects are materially off timeframe. **This is the condition to watch — a delay exists, but it is short and does not touch Vistra's own project timing.**
+  - **Status update, 2026-08-21 — the "short and immaterial" read above is now outdated.** Governor Abbott's August 3 directive has broadened into a full audit (tax incentives, financial assistance, water use, ownership) covering an estimated ~300 interconnection projects. ERCOT announced August 3 that it would miss its own August 7 Batch Zero study deadline. ERCOT then sought a "good cause exception" from the PUCT at the August 20 open meeting — the day before this file's bundle was generated. The interconnection queue itself is now described as ~474 GW of requests, over five times ERCOT's record peak demand. None of this yet contradicts Vistra's own project timeline (Comanche Peak still tracks end-2027 per the most recent management statement on file, 2026-08-07) — but the scope and duration of the pause itself have moved well past "short," and this is the single most time-sensitive item in the file right now. **[BILL] — this condition needs an active re-check against ERCOT's PUCT outcome and a revised Batch Zero timeline, not the passive "watch" framing from 08-07.**
 - Power-market or hedging results show that the company is not converting favorable demand conditions into durable cash generation.
   - *Status 2026-08-07: NOT firing — the evidence runs the other way.* Realized prices ~5% higher per MWh YoY; the comprehensive hedging program plus the nuclear PTC are what is holding the 2027 range together against lower ERCOT forwards. Hedging is doing its job. Do not read the ERCOT forward softness as this condition triggering.
 - Regulatory or market-structure changes materially reduce the upside of merchant generation economics.
@@ -57,22 +60,25 @@ priority: medium
   - ⚠️ **This trigger is unstable right now and should not be acted on without a manual check.** Consensus is about to be reset in both directions off the Q2 call: 2027 guided to the **low end** of $7.4–7.8B, but **Cogentrix and the Meta PPA are excluded** from that range and management indicated they would add roughly **$700M to the 2027 midpoint**. A guidance update is expected on the Q3 call, or after Cogentrix closes. **[BILL] — a trim trigger pegged to a consensus number nobody has recomputed is not a usable trigger. Either wait for the post-Q3 reset before treating it as live, or replace it with a fixed level.**
 
 ## Review Log
+- 2026-08-21: **Exit-condition #1 status update — "short and immaterial" is stale.** The 08-07 read of the ERCOT Batch Zero pause as short/immaterial no longer holds: Abbott's directive is now a ~300-project audit (tax incentives, financial assistance, water use, ownership), ERCOT missed its own Aug 7 study deadline (announced Aug 3), ERCOT sought a PUCT "good cause exception" at the Aug 20 open meeting, and the interconnection queue is described at ~474 GW — 5x+ ERCOT's record peak demand. See updated Exit Conditions note. Comanche Peak's own end-2027 timeline is not yet contradicted. No change to Core Thesis, Bull Case, or scaling state — this is a documentation-currency correction to the file's own named "condition to watch," not a new risk category. (Bill, 2026-08-21 briefing review.)
 - 2026-08-07 (Q2 2026 earnings call): Reviewed the file against the call transcript. **Key Risk #1 (theme crowding / expectations outrunning load conversion) was called correctly and is now the live risk, management-confirmed.** Added: Q2 segment figures confirming the earnings-torque claim; capital-return figures; battery storage as the named mechanism behind ERCOT scarcity-price compression; Helix as new non-power capital exposure. Flagged the consensus-price-target trim trigger as unstable pending a guidance reset. Exit condition #2 explicitly marked NOT firing — hedging is working, not failing. Position had moved to 3.63% (drift +0.63%) on the 14:18 auto-sync. No change to Core Thesis or scaling state.
   - *Also on record, not a thesis change:* the 08-03/08-04 adds (25 sh @ $152.71; 10/15/15 sh @ $145.67–146.00) went in days ahead of this print, and the stock marked $138.60 on the day. Noted so the sequence is legible later, not as a judgment.
 - 2026-08-07: Weight language corrected to bundle 6c531c97 (3.55%, ceiling breach 0.55pp). Long-end rate sensitivity added under Key Risks. next_step flagged for Bill confirmation; trim discipline unchanged (consensus price target).
 - 2026-05: Initiated at $159.00 as a 0.64% seed position. Trim discipline tied to consensus price targets. Monitoring AI-driven load growth, regional power-market tightness, merchant generation capture, and capital-allocation execution.
 - 2026-07-28: Scaling State updated. File had continued to describe a 0.64% seed after five further buys; position is 2.63%, 0.37% under the THEME ceiling. No thesis change.
 - 2026-08-09: trigger_type: ceiling_only, replacing the unusable consensus_price_target trim -- consensus targets ratchet upward with price and structurally can never fire (see prompts/trigger_types_2026-08-09.md "why not analyst price targets"). price_to_book considered (cyclical override) but live current P/B 15.23 is only 15% above the FY2022-2025 historical max of 13.24 -- inside noise for a 4-point series spanning 1.62-13.24, not a real signal. Reference only. Computed 2026-08-09: P/B min/p25/median/p75/max = 1.62/2.52/5.54/9.82/13.24, live current 15.23 @ $140.59.
+- 2026-08-14: Scaling State set to `hold` (Bill). Over-ceiling size accepted; Aug 3 risk-on adds stand. Core Thesis unchanged.
+- 2026-08-24: Standing rationale for this breach acceptance moved to `vault/doctrine.md` (`no_withdrawal_need`, established 2026-08-19). Text unchanged; single-sourced.
 
 <!-- region:position_state -->
-**Current Allocation:** 3.63%
+**Current Allocation:** 3.62%
 **Cost Basis:** $23,564.63
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** THEME
 **Size Ceiling:** 3.00%
-**Drift:** +0.63%
+**Drift:** +0.62%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -98,5 +104,5 @@ No realized G/L history.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-08 09:05: Auto-sync allocation 3.63%, drift +0.63%
+2026-08-21 08:45: Auto-sync allocation 3.62%, drift +0.62%
 <!-- endregion:change_log -->

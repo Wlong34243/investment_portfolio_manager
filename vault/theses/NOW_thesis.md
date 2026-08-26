@@ -3,12 +3,12 @@ ticker: NOW
 style: GARP
 framework_preference:
 entry_date:
-last_reviewed: '2026-08-08'
-triggers: {}
+last_reviewed: '2026-08-21'
 cost_basis: 2735.4
-current_allocation: 0.62%
+current_allocation: 0.65%
 triggers:
   trigger_type: ceiling_only
+  style_size_ceiling_pct: 9.0
 ---
 # NOW — Investment Thesis
 
@@ -63,14 +63,14 @@ Funding source of choice for higher-conviction ideas. The 2026-06-25 sell alread
 - 2026-08-09: trigger_type: ceiling_only, not trailing_pe. Band computed from FY2022-2025 annual EPS (n=4, range 76.4-171.1) but live current trailing P/E sits 2% off the historical min -- an add-below-p25 trigger (92.8) would fire immediately and stay fired. Reference only. Computed 2026-08-09: trailing P/E min/p25/median/p75/max = 76.4/92.8/119.4/135.9/171.1, live current 78.1 @ $124.88. See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
-**Current Allocation:** 0.62%
+**Current Allocation:** 0.65%
 **Cost Basis:** $2,735.40
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** GARP
 **Size Ceiling:** 9.00%
-**Drift:** -8.38%
+**Drift:** -8.35%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -98,9 +98,9 @@ Funding source of choice for higher-conviction ideas. The 2026-06-25 sell alread
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
-Total Realized G/L: $0.00 over 8 closed lots. Total Proceeds: $1,225.17.
+Total Realized G/L: $154.96 over 18 closed lots. Total Proceeds: $21,718.36.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-08 09:05: Auto-sync allocation 0.62%, drift -8.38%
+2026-08-21 08:45: Auto-sync allocation 0.65%, drift -8.35%
 <!-- endregion:change_log -->

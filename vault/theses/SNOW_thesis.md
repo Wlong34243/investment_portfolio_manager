@@ -3,9 +3,9 @@ ticker: SNOW
 style: THEME
 framework_preference: thematic_specialist_v1
 entry_date: '2026-07-31'
-last_reviewed: '2026-08-08'
-current_allocation: 1.62%
-cost_basis: 8930.300000001
+last_reviewed: '2026-08-21'
+current_allocation: 1.61%
+cost_basis: 8930.3
 time_horizon: TBD - see open items
 triggers:
   trigger_type: ceiling_only
@@ -393,14 +393,14 @@ later if the reasoning is not written down now.
 - 2026-08-09: trigger_type set explicit: ceiling_only (THEME default; growth/thematic bet). See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
-**Current Allocation:** 1.62%
+**Current Allocation:** 1.61%
 **Cost Basis:** $8,930.30
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** THEME
 **Size Ceiling:** 3.00%
-**Drift:** -1.38%
+**Drift:** -1.39%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -414,5 +414,5 @@ No realized G/L history.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-08 09:05: Auto-sync allocation 1.62%, drift -1.38%
+2026-08-21 08:45: Auto-sync allocation 1.61%, drift -1.39%
 <!-- endregion:change_log -->

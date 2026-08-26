@@ -3,11 +3,12 @@ ticker: EWZ
 style: ETF
 framework_preference:
 entry_date:
-last_reviewed: '2026-08-08'
-cost_basis: 11967.409999999505
-current_allocation: 1.85%
+last_reviewed: '2026-08-21'
+cost_basis: 11967.41
+current_allocation: 1.81%
 triggers:
   trigger_type: ceiling_only
+  style_size_ceiling_pct: 8.0
 ---
 # EWZ — Investment Thesis
 
@@ -28,6 +29,7 @@ Cost basis: $36.99. Buying at this level reflects a classic emerging market valu
 
 ## Key Risks
 - **Political Interference:** The absolute biggest risk. The current administration has a history of attempting to cap dividends, dictate capital expenditure, or fire CEOs at state-run giants like Petrobras to fund political agendas.
+  - **Correction, 2026-08-21: the 2026-08-17 entry below was already stale when it was written.** USTR completed its Section 301 investigation and the US imposed a 25% tariff on most Brazilian goods, effective mid/late July 2026 — roughly a month before this file's "weighing a reported investigation" language was recorded. Reported exemptions cover ~1,600 product categories, including petroleum, coffee, beef, orange juice and civil aircraft. Several of EWZ's largest constituents (Petrobras, Vale, Itaú) touch exempted categories, which may matter for how hard the tariff actually bites the fund's earnings base — but that reading is not sourced here and should not be assumed; it would need a separate pass through each company's actual revenue mix against the exemption list before being treated as a mitigant. Sources: CNBC, USTR, Federal Register.
 - **Currency Risk (FX):** EWZ is priced in US Dollars, but the underlying assets generate revenue in Brazilian Reais (BRL). If the Real structurally depreciates against the Dollar, the ETF's value and dividends will shrink for US investors, even if the local companies are doing well.
 - **China Dependence:** Brazil’s economy is heavily reliant on exporting raw materials to China. A structural, long-term slowdown in the Chinese property and manufacturing sectors will crush Brazilian export volumes.
 
@@ -45,16 +47,18 @@ priority: medium (requires monitoring of global FX and commodity trends)
 ## Review Log
 - 2026-04: Initiated. Thesis intact. Monitoring Petrobras dividend announcements, iron ore prices, and USD/BRL exchange rates.
 - 2026-08-09: trigger_type set explicit: ceiling_only. Cyclicality tension noted, not resolved: EWZ carries real commodity/EM-cyclical exposure, but price_to_book doesn't cleanly apply to a 50+-name basket the way it does a single name; argued alternative is discount_from_high, not adopted this pass. See prompts/trigger_types_2026-08-09.md.
+- 2026-08-17: Ibovespa currently weighing a reported US trade investigation that could bring tariffs on Brazilian goods, alongside election-year fiscal-slippage risk. More specific and more current than the existing generic "Political Interference" risk category — instantiates it, doesn't replace it. Bull Case unchanged. Sources: Yahoo Finance/AOL, 247wallst.com (2026-08-17 AI briefing §6).
+- 2026-08-21: **Documentation-currency correction, not a thesis-direction change.** The entry above described Brazil as "weighing a reported US trade investigation that could bring tariffs" — that was already out of date when it was written. USTR's Section 301 investigation concluded and the US imposed a 25% tariff on most Brazilian goods, effective mid/late July 2026. See the updated Key Risks / Political Interference note for exemption detail (~1,600 categories, including petroleum/coffee/beef/orange juice/civil aircraft) and the open, unsourced question of how much that exemption list blunts the hit to EWZ's top holdings. Bull Case and Core Thesis unchanged. Sources: CNBC, USTR, Federal Register.
 
 <!-- region:position_state -->
-**Current Allocation:** 1.85%
+**Current Allocation:** 1.81%
 **Cost Basis:** $11,967.41
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** ETF
 **Size Ceiling:** 8.00%
-**Drift:** -6.15%
+**Drift:** -6.19%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -82,9 +86,9 @@ priority: medium (requires monitoring of global FX and commodity trends)
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
-Total Realized G/L: $178.44 over 6 closed lots. Total Proceeds: $5,005.62.
+Total Realized G/L: $145.37 over 9 closed lots. Total Proceeds: $10,169.92.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-08 09:05: Auto-sync allocation 1.85%, drift -6.15%
+2026-08-21 08:45: Auto-sync allocation 1.81%, drift -6.19%
 <!-- endregion:change_log -->

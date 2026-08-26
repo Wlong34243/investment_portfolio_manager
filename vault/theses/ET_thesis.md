@@ -3,12 +3,14 @@ ticker: ET
 style: THEME
 framework_preference:
 entry_date:
-last_reviewed: '2026-08-08'
+last_reviewed: '2026-08-21'
 triggers:
   trigger_type: price
-  price_trim_above: 22.00
-cost_basis: 6465.590000010541
-current_allocation: 1.29%
+  price_trim_above: 22.00           # NOT changed to $24.33 (consensus target) 2026-08-19, see Review Log
+  # price_add_below intentionally unset -- Scaling State is "hold / reinvest distributions," not accumulation, so no add level applies
+  style_size_ceiling_pct: 3.0
+cost_basis: 6550.93
+current_allocation: 1.36%
 ---
 # ET — Investment Thesis
 
@@ -49,19 +51,21 @@ priority: low
 - 2026-04: Initiated. Thesis intact. Monitoring distribution coverage ratios, debt reduction targets, and NGL export volumes.
 - **2026-08-07:** Added a Bull Case bullet on domestic AI/data-center gas demand as a G&P volume driver, sourced to the 2026-07-26 ILTB episode, per `prompts/consolidate_and_thesis_repair_2026-08-07.md` Step 5.2. Edited directly rather than through the archive-before-overwrite convention; `ET_thesis.md.bak` backfilled retroactively from pre-edit content to close that gap.
 - 2026-08-09: trigger_type set explicit: price (kept -- existing 22.00 trim is a genuine, deliberately-set anchor; the THEME default of ceiling_only would have discarded it. See prompts/trigger_types_2026-08-09.md.
+- 2026-08-19 (Bill requested, not actioned as stated): Bill asked to raise price_trim_above to $24.33, the sell-side consensus target. Not made, same reasoning as UNH's 2026-08-19 entry and VST's retired consensus_price_target trigger (2026-08-09): a trim pegged to a consensus figure ratchets up with the stock and structurally tends not to fire. price_trim_above stays at 22.00. If Bill wants the level moved, it needs a level he sets directly rather than one sourced from analyst coverage — flagged for him to specify.
 
 <!-- region:position_state -->
-**Current Allocation:** 1.29%
-**Cost Basis:** $6,465.59
+**Current Allocation:** 1.36%
+**Cost Basis:** $6,550.93
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** THEME
 **Size Ceiling:** 3.00%
-**Drift:** -1.71%
+**Drift:** -1.64%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
+- 2026-08-19: Buy 3.9965 @ $21.35
 - 2026-05-20: Buy 4.0982 @ $20.33
 - 2026-02-19: Buy 4.2443 @ $19.15
 - 2025-11-19: Buy 4.398 @ $16.95
@@ -73,9 +77,9 @@ priority: low
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
-Total Realized G/L: $-237.83 over 12 closed lots. Total Proceeds: $2,930.72.
+Total Realized G/L: $-237.83 over 6 closed lots. Total Proceeds: $2,930.72.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-08 09:05: Auto-sync allocation 1.29%, drift -1.71%
+2026-08-21 08:45: Auto-sync allocation 1.36%, drift -1.64%
 <!-- endregion:change_log -->

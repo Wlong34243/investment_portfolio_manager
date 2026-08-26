@@ -3,12 +3,13 @@ ticker: NVDA
 style: GARP
 framework_preference:
 entry_date:
-last_reviewed: '2026-08-08'
+last_reviewed: '2026-08-21'
 triggers:
   trigger_type: ceiling_only
   # price_trim_above: 265.00  # superseded 2026-08-09, non-primary/stale -- see Review Log
-cost_basis: 16756.910000003998
-current_allocation: 3.50%
+  style_size_ceiling_pct: 9.0
+cost_basis: 16756.91
+current_allocation: 3.45%
 ---
 # NVDA — Investment Thesis
 
@@ -48,14 +49,14 @@ priority: low
 - 2026-08-09: trigger_type: ceiling_only, not trailing_pe. Commented out stale price_trim_above: 265.00 -- non-primary once trailing_pe was considered, would have kept parsing as a dead trigger against a ~$224-878 range seen this year. trailing_pe band computed from FY2023-2026 annual EPS (n=4, range 32.0-181.7) but live current trailing P/E sits right at the historical min -- an add-below-p25 trigger (59.6) would fire immediately and stay fired. Reference only. Computed 2026-08-09: trailing P/E min/p25/median/p75/max = 32.0/59.6/73.2/112.0/181.7, live current 34.2 @ $223.96. See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
-**Current Allocation:** 3.50%
+**Current Allocation:** 3.45%
 **Cost Basis:** $16,756.91
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** GARP
 **Size Ceiling:** 9.00%
-**Drift:** -5.50%
+**Drift:** -5.55%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -71,9 +72,9 @@ priority: low
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
-Total Realized G/L: $0.00 over 2 closed lots. Total Proceeds: $0.00.
+No realized G/L history.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-08 09:05: Auto-sync allocation 3.50%, drift -5.50%
+2026-08-21 08:45: Auto-sync allocation 3.45%, drift -5.55%
 <!-- endregion:change_log -->

@@ -3,11 +3,12 @@ ticker: COWZ
 style: ETF
 framework_preference:
 entry_date:
-last_reviewed: '2026-08-08'
-cost_basis: 14782.019999999939
-current_allocation: 2.58%
+last_reviewed: '2026-08-21'
+cost_basis: 14782.02
+current_allocation: 2.67%
 triggers:
   trigger_type: ceiling_only
+  style_size_ceiling_pct: 8.0
 ---
 # COWZ — Investment Thesis
 
@@ -45,14 +46,14 @@ priority: low
 - 2026-08-09: trigger_type set explicit: ceiling_only (ballast, FCF-yield basket). See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
-**Current Allocation:** 2.58%
+**Current Allocation:** 2.67%
 **Cost Basis:** $14,782.02
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** ETF
 **Size Ceiling:** 8.00%
-**Drift:** -5.42%
+**Drift:** -5.33%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -68,9 +69,9 @@ priority: low
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
-No realized G/L history.
+Total Realized G/L: $-3.31 over 2 closed lots. Total Proceeds: $4,768.02.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-08 09:05: Auto-sync allocation 2.58%, drift -5.42%
+2026-08-21 08:45: Auto-sync allocation 2.67%, drift -5.33%
 <!-- endregion:change_log -->
