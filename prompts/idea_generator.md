@@ -11,6 +11,7 @@ You will receive:
 - His four investment style definitions: GARP (Growth at a Reasonable Price), Thematic (sector/theme specialists), BoringFundamentals (durable businesses + dip-buying), SectorETF (broad sector or thematic ETFs)
 - Existing thesis files for current positions
 - Podcast transcripts to analyze
+- Spotify aggregate digests (labeled `--- SPOTIFY AGGREGATE ---`), each optionally paired with a `--- VERIFICATION SIDECAR FOR ABOVE ---` block. Sidecar pairing and episode/aggregate overlap are computed in Python before you see them — do not re-derive which digest maps to which sidecar, and do not infer overlap that is not listed in `--- EPISODE/AGGREGATE OVERLAP ---`.
 
 ## Task
 For each genuinely actionable investment idea mentioned in the transcripts:
@@ -48,7 +49,7 @@ Use natural language. Examples:
 - "potential rotation candidate from INTC — same semiconductor space, different quality tier"
 
 ## current_holdings_overlap guidance
-List only tickers that genuinely overlap thematically or by sector. Empty list if it's truly new exposure.
+List only tickers currently held in the bundle that genuinely overlap thematically or by sector. Never a sector proxy the investor does not own (e.g. XLE when the book holds XOM). Empty list if it's truly new exposure.
 
 ## Market Themes (market_themes field)
 In addition to specific candidates, capture 3–8 recurring macro or thematic observations from across the transcripts that seemed significant — Fed policy shifts, commodity cycle views, sector-level structural changes, notable risk flags, or consensus views that multiple speakers reinforced.
@@ -72,3 +73,10 @@ Rules for market_themes:
 - Frame candidates as "worth attention" not "worth buying"
 - If a candidate overlaps heavily with something the investor already owns at high weight, flag it in notable_concerns but do not suppress the candidate — he decides
 - Return bundle_hash exactly as provided in the composite bundle header
+
+## Source clustering
+If a transcript or digest names multiple tickers as co-participants in the same deal, financing structure, program, or one-sentence structural theme (example: six named counterparties in one financing consortium), emit **one** candidate. Set `ticker` to the participant the source discussed most substantively, and list the rest in `related_tickers`. Do not pick the primary based on whether the investor already owns it — if he owns one of the participants, name that in `portfolio_relationship` and include it in `current_holdings_overlap`, but let the source's emphasis decide the primary. Do not emit one candidate per named participant. This does not apply to tickers that merely appear in the same episode discussing genuinely separate ideas — only to tickers presented as the same thesis.
+
+If a Spotify aggregate digest is paired with a `[VERIFICATION SIDECAR]` block, and a claim underlying a candidate's thesis is marked CONTRADICTED or OVERSTATED in that sidecar, do not build a candidate on the contradicted framing. You may still surface the underlying idea using the sidecar's corrected fact, but say so explicitly in `notable_concerns` (e.g. "digest framed this as X; verification sidecar corrects this to Y"). If a digest has no paired sidecar (`[UNVERIFIED]`), say so in `notable_concerns` rather than treating the claim as fact.
+
+If a cited episode inside a Spotify aggregate is also separately provided to you as a full transcript in this same batch (you will be told which pairs this applies to), treat the transcript as the primary source for that theme and the aggregate as commentary on it — do not generate two candidates for the same underlying idea, one sourced to each.

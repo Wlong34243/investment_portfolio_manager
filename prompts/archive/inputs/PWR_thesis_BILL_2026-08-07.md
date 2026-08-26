@@ -1,4 +1,6 @@
 ---
+# Archived input — consumed into live vault/theses/PWR_thesis.md (2026-08-07).
+# Moved to prompts/archive/inputs/ 2026-08-26. Not a build prompt.
 ticker: PWR
 style: Infrastructure / Quality Growth
 framework_preference: AI Power Infrastructure & Electrification

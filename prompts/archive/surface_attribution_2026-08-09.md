@@ -1,5 +1,7 @@
 # Build: Surface Rotation Attribution in the Brief and the Bundle
 
+> **STATUS: not built; declined 2026-08-26.** Measurement already exists on `Rotation_Review` and the Command Center rotation-performance block. Extra brief/bundle surfaces were presumed not useful (CLAUDE Rule 9 already constrains aggregate over-reading). Do not implement. Archived under `prompts/archive/`.
+
 **Repo:** `C:\Dev\Investment_Portfolio` (authoritative).
 
 **Run this AFTER** `prompts/trigger_types_2026-08-09.md` completes. It touches the morning-brief

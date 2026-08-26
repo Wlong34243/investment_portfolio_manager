@@ -1,5 +1,7 @@
 # Prompt: Make Vault Framework Material Visible to the Bundle
 
+> **STATUS: not built; declined 2026-08-26.** Frameworks stay offline until a concrete consumer exists. Wiring April 2026 framework JSON into every composite would inflate theme weight without a decision surface that reads it. Do not implement. Archived under `prompts/archive/`.
+
 **Created:** 2026-08-01
 **Target executor:** Claude Code or Gemini CLI, run locally in the repo
 **Scope:** one function in `core/vault_bundle.py`, one dataclass field comment, one test

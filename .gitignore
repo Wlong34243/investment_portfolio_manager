@@ -107,3 +107,8 @@ desktop.ini
 
 # Processed-video ledger — regenerated per run, same treatment as podcast_summaries/
 data/processed_videos.json
+
+# Generated / local-only
+data/schwab_price_cache/
+morningstar.pdf
+vault/theses/*.bak

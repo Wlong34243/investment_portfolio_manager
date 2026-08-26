@@ -1,5 +1,7 @@
 # Build: Commit the Work, Re-test the Exclusions, Then Dashboard
 
+> **STATUS: partially shipped; historical recovery deferred by design (2026-08-26).** Useful parts landed (Command Center rotation-performance block). Pre-2026 / multi-account historical ledger recovery remains an Open Question — never re-sync live `Transactions` unfiltered. Incomplete remainder is not a product gap. Archived under `prompts/archive/`.
+
 **Repo:** `C:\Dev\Investment_Portfolio` (authoritative).
 
 Three jobs, deliberately ordered. **Step 1 first because 71 changed/untracked files with no
