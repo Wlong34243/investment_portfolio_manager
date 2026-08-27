@@ -86,8 +86,20 @@ class CrosshairItem:
     dist_add: Optional[float] = None
     rationale: str = ""
     trigger_type: str = "price"
-    doctrine_tag: Optional[str] = None
+    # override_tag: HOLD_TAX (doctrine) or ADD_SUSPENDED (thesis frontmatter) — not
+    # doctrine-only; name is deliberate. doctrine_downgraded is True ONLY when the
+    # tag came from a doctrine.md constraint with action: downgrade_informational.
+    override_tag: Optional[str] = None
     doctrine_reason: str = ""
+    doctrine_downgraded: bool = False
+    # Prompt 9 tax surface (3a/3b/3c measurement). ESTIMATE only; no 3d bound yet.
+    days_to_lt: Optional[int] = None
+    wash_window_open: bool = False
+    wash_disallow_through: Optional[str] = None
+    is_tax_hold_runner: bool = False
+    # Bound fields reserved — stay None until doctrine method+effective date (Step 2).
+    est_tax_cost_low: Optional[float] = None
+    est_tax_cost_high: Optional[float] = None
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -334,8 +346,9 @@ def _near_candidates(
         if len(candidates) > 1:
             rationale = primary + " | also " + candidates[1][2]
 
-        doctrine_tag: Optional[str] = None
+        override_tag: Optional[str] = None
         doctrine_reason = ""
+        doctrine_downgraded = False
         if reason == REASON_NEAR_TRIM:
             try:
                 from utils.doctrine_reader import downgrade_rule, load_doctrine
@@ -345,16 +358,18 @@ def _near_candidates(
             if rule is not None:
                 dist_for_rank = abs(dist_trim) if dist_trim is not None else 0.0
                 score = _BUCKET_DOCTRINE_HOLD + dist_for_rank
-                doctrine_tag = "HOLD_TAX" if rule.id == "tax_hold_runners" else rule.id.upper()
+                override_tag = "HOLD_TAX" if rule.id == "tax_hold_runners" else rule.id.upper()
                 doctrine_reason = rule.summary
+                doctrine_downgraded = True  # downgrade_rule only returns downgrade_informational
                 rationale = rationale + " | doctrine: " + rule.summary
         elif reason == REASON_NEAR_ADD and _add_triggers_suspended(ticker):
             # Policy (b): keep on Decision_View, re-rank out of CC top 5 — same
             # bucket as doctrine HOLD_TAX. Do not drop the row (a).
             dist_for_rank = abs(dist_add) if dist_add is not None else 0.0
             score = _BUCKET_DOCTRINE_HOLD + dist_for_rank
-            doctrine_tag = "ADD_SUSPENDED"
+            override_tag = "ADD_SUSPENDED"
             doctrine_reason = "add_triggers_suspended in thesis frontmatter"
+            doctrine_downgraded = False  # thesis frontmatter, not doctrine
             rationale = rationale + " | add_triggers_suspended: true"
 
         items.append(CrosshairItem(
@@ -370,8 +385,9 @@ def _near_candidates(
             dist_add=dist_add,
             rationale=rationale,
             trigger_type=trigger_type,
-            doctrine_tag=doctrine_tag,
+            override_tag=override_tag,
             doctrine_reason=doctrine_reason,
+            doctrine_downgraded=doctrine_downgraded,
         ))
     return items
 
@@ -512,7 +528,7 @@ def _apply_doctrine_downgrades(items: list[CrosshairItem]) -> list[CrosshairItem
     """
     After merge: if a ticker has NEAR_TRIM in play (primary or merged extra) and
     doctrine says downgrade_informational, force reason_code=NEAR_TRIM, rank into
-    the HOLD bucket, and stamp doctrine_tag. DISLOCATION / other facts stay in
+    the HOLD bucket, and stamp override_tag + doctrine_downgraded. DISLOCATION / other facts stay in
     rationale. NEAR_ADD is never downgraded here.
     """
     try:
@@ -549,8 +565,9 @@ def _apply_doctrine_downgrades(items: list[CrosshairItem]) -> list[CrosshairItem
             **item.to_dict(),
             "reason_code": REASON_NEAR_TRIM,
             "rank_score": _BUCKET_DOCTRINE_HOLD + dist_for_rank,
-            "doctrine_tag": tag,
+            "override_tag": tag,
             "doctrine_reason": rule.summary,
+            "doctrine_downgraded": True,
             "rationale": rationale,
         }))
     out.sort(key=lambda x: (x.rank_score, x.ticker))
@@ -574,7 +591,7 @@ def _apply_add_suspensions(items: list[CrosshairItem]) -> list[CrosshairItem]:
         if not near_add_in_play or not _add_triggers_suspended(item.ticker):
             out.append(item)
             continue
-        if item.doctrine_tag == "ADD_SUSPENDED" and item.rank_score >= _BUCKET_DOCTRINE_HOLD:
+        if item.override_tag == "ADD_SUSPENDED" and item.rank_score >= _BUCKET_DOCTRINE_HOLD:
             out.append(item)
             continue
         # If primary is something else (e.g. DISLOCATION) but NEAR_ADD is in
@@ -590,8 +607,9 @@ def _apply_add_suspensions(items: list[CrosshairItem]) -> list[CrosshairItem]:
         out.append(CrosshairItem(**{
             **item.to_dict(),
             "rank_score": _BUCKET_DOCTRINE_HOLD + dist_for_rank,
-            "doctrine_tag": "ADD_SUSPENDED",
+            "override_tag": "ADD_SUSPENDED",
             "doctrine_reason": "add_triggers_suspended in thesis frontmatter",
+            "doctrine_downgraded": False,
             "rationale": rationale,
         }))
     out.sort(key=lambda x: (x.rank_score, x.ticker))
@@ -689,6 +707,7 @@ def produce_crosshairs(
     items = _apply_add_suspensions(
         _apply_doctrine_downgrades(_merge_by_ticker([near, disloc, missing]))
     )
+    items = _annotate_tax_surface(items)
 
     as_of = datetime.now().strftime("%Y-%m-%d %H:%M")
     return CrosshairsResult(
@@ -699,6 +718,36 @@ def produce_crosshairs(
     )
 
 
+def _annotate_tax_surface(items: list[CrosshairItem]) -> list[CrosshairItem]:
+    """Attach 3a/3b/3c measurement to trim-side rows. Never fails the list."""
+    try:
+        from core.tax.surface import annotate_ticker
+    except Exception:
+        return items
+    out: list[CrosshairItem] = []
+    for it in items:
+        trim_side = (
+            it.reason_code == REASON_NEAR_TRIM
+            or it.override_tag == "HOLD_TAX"
+            or it.doctrine_downgraded
+        )
+        if not trim_side:
+            out.append(it)
+            continue
+        try:
+            ann = annotate_ticker(it.ticker)
+            it.days_to_lt = ann.days_to_lt
+            it.wash_window_open = ann.wash_window_open
+            it.wash_disallow_through = (
+                ann.wash_windows[0].disallow_through.isoformat() if ann.wash_windows else None
+            )
+            it.is_tax_hold_runner = ann.is_tax_hold_runner
+        except Exception:
+            pass
+        out.append(it)
+    return out
+
+
 def print_dry_run(result: CrosshairsResult, top_n: int = TOP_N_DASHBOARD) -> None:
     print(result.header_line)
     if result.dislocation_path:
@@ -706,7 +755,7 @@ def print_dry_run(result: CrosshairsResult, top_n: int = TOP_N_DASHBOARD) -> Non
     print(f"{'Rank':<5} {'Ticker':<8} {'Reason':<16} {'Score':>8} {'Doctrine':<10}  Rationale")
     for i, item in enumerate(result.items, 1):
         mark = "*" if i <= top_n else " "
-        tag = item.doctrine_tag or ""
+        tag = item.override_tag or ""
         print(
             f"{mark}{i:<4} {item.ticker:<8} {item.reason_code:<16} "
             f"{item.rank_score:8.3f} {tag:<10}  {item.rationale}"

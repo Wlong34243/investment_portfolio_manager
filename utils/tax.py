@@ -122,7 +122,15 @@ def days_until_long_term(
 
 
 # ---------------------------------------------------------------------------
-# FIFO lot reconstruction
+# FIFO lot reconstruction — NOT Tax Lot Optimizer relief
+#
+# WARNING (Prompt 9 / Hard Rule 9, 2026-08-27): The brokerage uses Schwab's Tax Lot
+# Optimizer, not FIFO. This function reconstructs *remaining open inventory* from
+# Transactions by consuming sells oldest-first. That is wrong whenever past sells
+# were relieved under the optimizer. Do NOT use it to project which lot a future
+# sale will hit, or to price a trim. Prefer Realized_GL (Opened Date) to remove
+# closed lots from the buy stream (core/tax/open_lots.py). Kept for unit tests and
+# the Phase-1 fallback documented in schwab_client.fetch_tax_lots.
 # ---------------------------------------------------------------------------
 
 def reconstruct_lots_fifo(

@@ -1,6 +1,6 @@
 # Investment Portfolio Manager — Current State
 
-**Last updated:** 2026-08-26
+**Last updated:** 2026-08-27
 **Maintainer:** Bill (sole user)
 
 This is the "where are we" document. Open this at the start of any coding session.
@@ -8,6 +8,33 @@ This is the "where are we" document. Open this at the start of any coding sessio
 ---
 
 ## What's Working Today
+
+### Instrument — evidence + corpus + ledger relocate (2026-08-27)
+- **`SQLITE_DB_PATH=C:\Users\wlong\AppData\Local\Investment_Portfolio\portfolio_store.db`** (`.env` only; literal path). Live ledger is off Drive sync. Pre-move `pm store backup --live` landed Drive copy at `G:\My Drive\Portfolio_Analysis\db_backups\portfolio_store_20260827T130624Z.db` (23.6 MB incl. FTS). Post-move: `pm store status` + `pm corpus status` → **848 docs / 10,666 chunks** unchanged; Drive-tree guard **silent**.
+- **Drive-tree guard earned its keep on first real use:** proposed `C:\Dev\_local\` looked clean but `C:\Dev` itself carries `.tmp.drivedownload` / `.tmp.driveupload` — the whole Dev tree is synced. A move there would have changed nothing. Guard is in `core/store/models.get_engine()`.
+- **`BACKUP_DIR` anchored to repo root** (`core/store/backup.py`) so cwd cannot silently split snapshots from the absolute DB path. Snapshots stay under `data/portfolio_store_backups/` (Drive-synced on purpose).
+- Evidence tables: `signal_events` / `bars_daily` / `fundamentals_snapshot` (append-only, `--live`-gated). CLI: `pm store evidence-status` / `evidence-capture`. Morning wires capture after Decision_View.
+- **First live capture 2026-08-27:** `signal_events` 15 rows (= `len(crosshairs.items)` = sqlite `decision_view` 15 — **full list, not top 5**); second `--live` → `inserted=0, ignored_duplicate=15`.
+- **Row 7 stain (append-only, unfixable):** event_date `2026-08-27` ticker **VRT** has `doctrine_downgraded=1` with `signal_type=ADD_SUSPENDED`. Cause: writer treated any `doctrine_tag` as a doctrine downgrade. **Fixed** to allowlist: flag only when CrosshairItem.doctrine_downgraded is set from a `doctrine.md` `downgrade_informational` rule; field renamed `override_tag` (covers HOLD_TAX + ADD_SUSPENDED). UNH HOLD_TAX that day was correct. Tomorrow's capture is clean; this VRT row stays wrong forever.
+- `evidence_first_accrual_date=2026-08-27`. GATE: NOT MET — 9 more clean trading days (blocked on DailyWake actually completing — see below).
+- Corpus FTS: `pm corpus index|status|search`. Empty `framework` source dropped (dir empty). Research JSON gap → What's Next.
+- **Retrieval layer Steps 1–4 (2026-08-27):** `core/retrieval/` — twelve templates, RO URI, `RetrievalSet` hash, `retrieval_log`. Checklist 1–12 PASS literal. **Step 5 agent rewire NOT done** (separate commit). `retrieval_hash` canonicalizes table rows via `core.store.canonicalize` (shared with ledger fingerprint).
+- **Step 0 mirror parity (before templates):**
+
+| table | sqlite | sheets | notes |
+|---|---:|---:|---|
+| trade_log | 116 | 116 | OK — **not** in ledger fingerprint |
+| trade_log_staging | **0** | **149** | dual-write gap; Prompt 7 reads Sheets — **not** in fingerprint |
+| transactions | 978 | 978 | OK — in fingerprint |
+| realized_gl | 871 | 871 | OK — in fingerprint |
+| holdings_current | 40 | 40 | OK — **not** in fingerprint |
+| tax_control_lots | 555 | (Tax_Control zone) | value verify MATCH 555 — in fingerprint |
+| rotation_review | 116 | 116 | OK — **not** in fingerprint |
+| decision_view | 15 | 15 data | OK — **not** in fingerprint |
+
+- **`ledger_fingerprint` scope (`portfolio_store_ledger_v1`):** only `transactions`, `realized_gl`, `tax_control_metrics`, `tax_control_lots`. Staging / trade_log / holdings / rotation / decision_view are outside it — a red hash never meant “the whole mirror is suspect.”
+- **Bisect 2026-08-27 (control was broken, not the ledger):** per-section hashes → only `realized_gl` differed. First mismatch: one row, `Wash Sale` Sheets `''`→`None` vs SQLite `'FALSE'`. Txn / tax metrics / tax lots already equal. Fixed in `core/store/canonicalize.py` (`BOOL_BLANK_MEANS_FALSE` opt-in for Wash Sale only — blank→False is not a global bool rule). Post-fix: `pm store verify` **VERIFY PASS** + `bundle-parity` **MATCH** (literal). **Streak:** still FAIL until 5 consecutive PASS; today's PASS is run 1 — **expected green by 2026-08-31** if verify runs ~once/day (or sooner if run more often). If still red after 2026-08-31 → real problem, not residual window.
+- Tax_Control lots mirror is the **wash/closed zone** (not Schwab open lots) — `position_lots` maps declared fields with None where absent; `tax_control_lots` returns wash-sale columns.
 
 ### Schwab multi-account scope fix (2026-08-03)
 Driven by `prompts/schwab_account_scope_fix_2026-08-03.md`, following the discovery (same day, via `AI_Suggested_Allocation`-triggered analysis) that the 2026-08-02 composite bundle reported `total_value: $897,748.49` against the Sheet's known-correct ~$591-596K KPI, with JEPI/JPIE weights ~3.5x too high while `Trade_Log` showed net *selling* in both over the same window.
@@ -178,6 +205,34 @@ Driven by `prompts/build_basket_attribution_2026-08-08.md`. The basket (multi-ti
 
 ## What's Next
 
+### Instrument build set (2026-08-27) — Wave A / C
+- Evidence + corpus + **retrieval Steps 1–4** shipped. **Prompt 3 Step 5 (agent rewire) HELD** — gates nothing; revisit anytime with a fresh parity baseline.
+- **Prompt 7 batch (2026-08-27) CLOSED — scope corrected same day:** Signed-off set was **112** promoted-blank staging. Live write closed **128** because a fingerprint-identity fix between failed attempt (`63.5` collision) and retry changed Trade_Log twin inclusion (dry-run 5 → live 16). **Rollback of first attempt was clean** (`count=0` before retry). Post-hoc: **112 rejected** remain (`count(*)=112`, `count(distinct cluster_fingerprint)=112`); **16 Trade_Log extras → `status=void_scope`** (not dismissed for prompt 10). Zero pending closed; zero fill ≥2026-08-27. **`63.5` fix = fall back to Stage_ID / `date|tickers` when Fingerprint is non-hex** — both clusters survive; not a silent dedupe. Prompt 7 gate amended: identity change after sign-off requires a fresh dry-run. Hand-author Implicit_Bet (no clock), 2026 only: 02-09, 04-09, 04-13, 05-04, 05-11, 06-04, 08-03.
+- **`rationale_proposals.status` vocabulary (closed):** `open` / `confirmed` / `edited` / `rejected` / `deferred` / `void_scope`. `void_scope` ≠ `rejected` — scope error / outside signed-off population; prompt 10 must not treat as dismissed. Enumerated in `prompts/rationale_loop_2026-08-27.md` and model comment.
+- **Two blank-bet backlogs, not one:** **112** = staging clusters closed as `predates_evidence_capture` (proposal table). **113** = `Trade_Log` rows with blank `Implicit_Bet` (authoritative log). Overlapping population under different keys — closing a staging proposal does **not** fill Trade_Log `Implicit_Bet`. The 113 is a second, untouched authorship backlog (seven 2026 dates prioritized by hand); not the same fact as the 112.
+- **Outstanding (none blocking):** seven 2026 hand-author Implicit_Bet; staging writer unsafe for `--live` (header mismatch); prompt 3 Step 5 held.
+- **Prompt 8 SHIPPED (2026-08-27):** `precommitments` / `precommitment_firings`; `pm journal precommit`; morning detect after evidence capture; `declared_before` only via acted firing join. No `thesis_sync` bootstrap (false precision refused). Calibration table still Phase 3 / out of scope.
+- **Prompt 8 smoke-test row deleted (2026-08-27, same day):** Executor wrote `precommitments.id=1` (META `fwd_pe` trim@28, `source=cli`, note stamped "prompt8 first live declare…") as a post-build checklist write. **Neither Bill nor a real declaration produced it** — `declared_at` was a smoke-test timestamp; `intended_action` was inferred from the thesis band (the `thesis_sync` bootstrap Prompt 8 forbade, as one row). Zero `precommitment_firings` referenced it. **Deleted** (`DELETE FROM precommitments WHERE id=1`), not `closed_manual` — closing would invent "Bill declared then retired," which is false history in a table whose semantic is declarations he made. Leaving it open would contaminate Phase 3 calibration on the next META cross of 28. Pattern: never seed from thesis frontmatter; a seeded row has a file-scan date where a decision date should be. If META@28 is the real band, Bill declares it himself (`id` will be 2+).
+- **Prompt 9 (2026-08-27) — Step 1 + 3a/3b shipped; Step 2 gated on Bill; 3d withheld:**
+  - **Step 0.3 FIFO audit:** `utils/tax.reconstruct_lots_fifo` + tests + `schwab_client.fetch_tax_lots` docstring pointer. **Not used for pre-trade relief.** COF/MU thesis Review Logs (2026-08-19) narrate FIFO lot consumption for a past sale — documentation debt vs optimizer; do not treat as system authority. No live path sorts open lots by open date to price a trim.
+  - CLAUDE.md Hard Rule 9 + hierarchy committed in docs.
+  - `pm tax project --ticker X`: wash [3a], LT ladder [3b], doctrine flag [3c]. Crosshairs NEAR_TRIM gets `days_to_lt` / `wash_window_open` in payload.
+  - Historical EMXC/GLD/XLF windows from state.md: as of 2026-08-27 **all closed** (GLD wash 7/21 → through 8/20; XLF −$0.63 on 6/30 → through 7/30; EMXC 7/20 rows are *gains* in current Realized_GL — state note was about an earlier disallow framing). Detector still correct on historical `as_of`.
+  - **Step 2 STOP:** cost-basis method + effective date per allowlisted account → Bill pastes into `doctrine.md`. Until then 3d bound stays withheld.
+- **Tomorrow:** `logs/morning_auto.log` start line dated 8/28 — day two of nine (MorningAutoDirect).
+- **Arithmetic (literal):** dry-run Status split 141 = 112 promoted + 24 pending + 5 Trade_Log; live operated on a third clustering after identity fix → 112 + 16 Trade_Log closed; current `load_unreconciled` 152 = 112 + 24 + 16 (Trade_Log twins still blank on Implicit_Bet, as designed).
+- **Trade_Log_Staging column integrity (2026-08-27):** Live headers diverge from `config.TRADE_LOG_STAGING_COLUMNS` — sheet has `Window` / `Sell Dates` / `Sell RSI` … `Fingerprint` then blank then `Promoted_At` at col 22; config expects `Promoted_At` at index 10 and long RSI names. `derive_rotations._existing_fingerprints` was indexing Fingerprint by config position (wrong column) — **fixed to header-name lookup**. Separately, `read_gsheet_robust` coerced `Stage_ID` UUIDs and `Promoted_At` ISO stamps to `0.0` (not in text skip list) — **fixed** (`stage_id` / `promoted_at` added to skip list). **Writer is now the top staging follow-up** — still appends by config column order into mismatched headers; every `--live` staging write is live corruption until archive-and-rewrite header to config *or* writer uses header-name lookup. Treat any `--live` staging write as unsafe until then. `Trade_Log_Staging` has **no** Q/R/S.
+- **`read_gsheet_robust` skip-list pattern:** third instance of the CLAUDE "bug class, not a one-off" (after currency/percent zeroing and Tax_Control residuals). Identifier-typed columns should be opted *in* to coercion, not remembered one incident at a time — follow-up, not this batch.
+  `100bangers.json`, `joys_of_compounding.json`, `sector_specific.json`, `morning_starMay12.json`,
+  and `Macro_super_cycle_framework.json` (check redundancy vs its `.md` twin before writing a
+  `research_json` reader). Registry seam already exists; small addendum after Wave A closes.
+- **31 transcripts under 1KB** — likely failed/truncated `batch_podcast_sync` fetches written as
+  stubs. Prefer this over the research JSON gap when picking a corpus hygiene pass (13% of podcast
+  corpus; still being written if the fetcher fails weekly). Not a Wave A blocker.
+- **DailyWake** still broken (exit 1, zero log lines). **Do not hand-run DailyWake interactively** — wrong environment. Static: Parse OK, no Mandatory params. **`MorningAutoDirect`** registered → `morning_auto.bat` weekdays 7:50 (bypasses wake wrapper). **Tomorrow (2026-08-28): check `logs/morning_auto.log` for `===== morning_auto start =====` dated 8/28** — day two of nine; first real test of MorningAutoDirect. Still run `pm morning --live` manually if the task misses so accrual day 2 counts.
+- **SQLite `trade_log_staging` empty while Sheets has 149 rows** (`STORE_PRIMARY=sqlite` since 2026-08-21). Dual-write gap: mirror never populated for staging. **Prompt 7 reads staging from Sheets**, not the store — otherwise reconcile reports zero backlog with no error.
+- **112 vs 113 (not the same backlog):** Prompt 7 closed **112** staging clusters into `rationale_proposals` (`rejected` / `predates_evidence_capture`). Separately, **113** `Trade_Log` rows still have blank `Implicit_Bet` — overlapping population under a different key; closing the staging proposal does not author the log. Prompt 10 Unit A "documented Implicit_Bet" split has **n=3**.
+- **Trade_Log Q/R/S migrated 2026-08-27** (append after Fingerprint): `Proposed_Bet`, `Rationale_Provenance`, `Rationale_Evidence`. Bak `data/Trade_Log_bak_20260827T135331Z.csv` (Fingerprint present, Proposed_Bet absent pre-edit). `column_guard.ensure_trade_log_columns` added.
 ### Ongoing: trim / promote staging as clusters appear
 `tasks/derive_rotations.py` still runs as STEP 10 of `pm morning` (dry-run staging). **2026-08-08 promote backlog shipped** — three clean July-31 rows + Aug 3 widest (`ca3bedba`) → `Trade_Log` (1→5 rows). Nested-superset deriver is still unfixed, so new open windows can still emit duplicate staging rows; trim to real substitution legs before promote. Do not treat “none promoted” as current state.
 
@@ -221,7 +276,7 @@ Full audit: **`docs/CODE_AUDIT_2026-08-09.md`** — code-backed, definition-vs-c
 - **Morning double-ingests transactions** (A19) — STEP 1 `sync_transactions` and STEP 2 `live_update`→`ingest_schwab_transactions` both run. Fingerprint dedup should prevent duplicates; the cost is redundant API and Sheet work.
 - **Fallback transaction fingerprints omit the account** (A20) — fallback key is `trade_date|ticker|action|net_amount|settlement_date`, used only when `activityId` is absent. Two identically-shaped fills in different accounts could collide and one be silently dropped. Namespace the fingerprint by account.
 - **`manager.py snapshot --enrich-atr` / `--enrich-technicals` are no-ops** — flags default `True` but the body never calls the enrich tasks. `CLI_MANUAL.md` documents them as working. Either wire them up or delete the flags and archive `tasks/enrich_atr.py` / `tasks/enrich_technicals.py`; the docs are currently wrong either way.
-- **`manager.py:2224` SyntaxWarning on generator subscript** — `(l for l in out.splitlines() if l.strip())[-12:]` triggers `SyntaxWarning: 'generator' object is not subscriptable` (needs `list(...)` or similar). Pre-existing and harmless on current Python; will become an error later. Same deferred bucket as A20 / enrich no-ops.
+- ~~**`manager.py:2224` SyntaxWarning on generator subscript**~~ — **FIXED 2026-08-26.** List comprehension instead of generator expression before `[-12:]`.
 - **`manager.py export_run`** — six of seven `EXPORT_SCENARIOS` are stubs; only `tax-rebalance` is implemented. Delete the stubs or implement them.
 - **`ThesisManager.update_triggers` is a no-op on every live thesis** (A12) — it matches only fenced ```yaml blocks, and all 39 live files use nested frontmatter. `write_thesis_updates` still calls it. Harmless today (it means sync cannot clobber nested trigger keys, which is desirable), but it is dead code masquerading as a working write path, and the frontmatter ceiling can drift from the `sizing` region display.
 - **Thesis reader vs writer YAML strictness** (recorded 2026-08-11) — `utils/thesis_reader.load_frontmatter` uses PyYAML and falls back to flat-line parse on error; `ThesisManager` uses strict ruamel (rejects duplicate keys). Vault sync now soft-skips unparseable files via `get_frontmatter_safe` / `parse_errors` rather than aborting gather; lint check 6 uses the ruamel path. Unifying the two loaders is deferred.

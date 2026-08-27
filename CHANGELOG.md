@@ -1,5 +1,37 @@
 # CHANGELOG — Investment Portfolio Manager
 
+## [2026-08-27] — Prompt 8 phantom precommit deleted; Prompt 9 Step 1 + 3a/3b
+
+- **Deleted** `precommitments.id=1` (META smoke-test row) — not `closed_manual`. Zero firings. Audit in `state.md`.
+- CLAUDE.md Hard Rule 9 + What NOT to Do + Tax Lot Optimizer six-step hierarchy (Schwab, not FIFO).
+- `core/tax/`: wash windows (3a), LT ladder (3b), open-lot reconstruct via Realized_GL Opened Date (not FIFO sells), `pm tax project`, Crosshairs NEAR_TRIM annotation (`days_to_lt`, `wash_window_open`). 3d bound withheld pending doctrine method+effective date.
+
+## [2026-08-27] — Pre-commitment capture (Instrument prompt 8)
+
+- `precommitments` / `precommitment_firings` tables; `core/journal/precommit.py`; `pm journal precommit` (declare / list / close / detect / pending / respond).
+- Crossing: trim fires at/above, add at/below. Doctrine-downgraded signals still fire. No auto-response — `pending` until Bill answers.
+- `pm morning` runs detect immediately after evidence capture; surfaces pending count.
+- Reconcile join: acted firing in fill window → `declared_before`; else `reconstructed_after`. First live row: META fwd_pe trim@28.
+- Status vocab for rationale_proposals documented as six values including `void_scope`; 112 staging-closed vs 113 Trade_Log-blank called out as two backlogs.
+
+## [2026-08-27] — Rationale-loop batch close (prompt 7)
+
+- `pm journal reconcile --live --backlog-only`: signed-off **112** promoted-blank → `rationale_proposals` rejected / `predates_evidence_capture` (SQLite only). Pending untouched. No Sheets writes.
+- Scope stain same day: identity fix between failed `63.5` attempt and retry closed 16 extra Trade_Log twins → marked `void_scope` (not prompt-10 dismiss). `rejected` now **112|112**. Prompt 7 gate: identity change after sign-off requires fresh dry-run.
+
+## [2026-08-27] — ledger_hash bisect + shared canonicalize (control repair)
+
+- **Bisect:** fingerprint covers only txn / realized_gl / tax_metrics / tax_lots. Only `realized_gl` section differed — one row, `Wash Sale` blank vs `FALSE` (not date/money lists this time).
+- **`core/store/canonicalize.py`:** single vocabulary for money/bool/date cell rules; `ledger_hash` and `retrieval_hash` both consume it. `bool_cell` maps `''`/`None`/`FALSE` → `False`.
+- Post-fix: `VERIFY PASS`, `bundle-parity MATCH`. Streak lags until window clears.
+
+## [2026-08-27] — Retrieval layer Steps 1–4 (Instrument prompt 3)
+
+- **`core/retrieval/`** — read-only URI + `query_only`; twelve whitelisted templates; `retrieve()` → hash-stamped `RetrievalSet`; `retrieval_log` via write engine. Blob unpack via `serialize.payloads_to_df` (no `json_extract`). Citation token contract in `to_prompt_context()`.
+- **Step 0 mirror parity:** value-level MATCH on fingerprint datasets; staging 0/149 outside fingerprint. Ledger hash FAIL was a **normalization control bug** (fixed same day — see entry above), not a content divergence.
+- **Step 5 (agent rewire) not in this commit** — separate commit; stop after checklist 1–12.
+- Tests: `tests/test_retrieval.py` (10), `tests/test_canonicalize.py` (2).
+
 ## [2026-08-27] — Trade_Log rationale columns Q–S (Instrument prompt 7 Step 1)
 
 Appended `Proposed_Bet`, `Rationale_Provenance`, `Rationale_Evidence` after `Fingerprint`
