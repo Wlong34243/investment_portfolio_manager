@@ -738,12 +738,13 @@ def format_trade_log_staging(spreadsheet) -> None:
 @require_formatting
 def format_trade_log(spreadsheet) -> None:
     """
-    Trade_Log (16 cols A–P):
+    Trade_Log (19 cols A–S as of 2026-08-27):
     A=Date, B=Sell_Ticker(wrap), C=Sell_Proceeds, D=Buy_Ticker(wrap),
     E=Buy_Amount, F=Implicit_Bet(wrap), G=Thesis_Brief(wrap), H=Rotation_Type,
     I=Sell_RSI, J=Sell_Trend, K=Sell_vs_MA200,
     L=Buy_RSI, M=Buy_Trend, N=Buy_vs_MA200,
-    O=Trade_Log_ID(hidden), P=Fingerprint(hidden)
+    O=Trade_Log_ID(hidden), P=Fingerprint(hidden),
+    Q=Proposed_Bet(wrap), R=Rationale_Provenance, S=Rationale_Evidence(wrap)
     """
     tab_name = getattr(config, 'TAB_TRADE_LOG', 'Trade_Log')
     try:
@@ -755,9 +756,10 @@ def format_trade_log(spreadsheet) -> None:
             ("I", 70),  ("J", 110), ("K", 90),
             ("L", 70),  ("M", 110), ("N", 90),
             ("O", 20),  ("P", 20),
+            ("Q", 280), ("R", 140), ("S", 220),
         ]
         safe_api_call(set_column_widths, ws, widths)
-        format_standard_table(ws, header_range="A1:P1", header_row=1, data_start=2, data_end=MAX_DATA_ROWS)
+        format_standard_table(ws, header_range="A1:S1", header_row=1, data_start=2, data_end=MAX_DATA_ROWS)
 
         # Hide Trade_Log_ID (O) and Fingerprint (P)
         ws.spreadsheet.batch_update({"requests": [
@@ -777,9 +779,10 @@ def format_trade_log(spreadsheet) -> None:
             ws.update_cell(1, col_idx, label)
         safe_api_call(set_row_height, ws, "1", 40)
 
-        # Word wrap: Sell_Ticker(B), Buy_Ticker(D), Implicit_Bet(F), Thesis_Brief(G)
+        # Word wrap: Sell_Ticker(B), Buy_Ticker(D), Implicit_Bet(F), Thesis_Brief(G),
+        # Proposed_Bet(Q), Rationale_Evidence(S)
         wrap = CellFormat(wrapStrategy="WRAP")
-        for col in ["B", "D", "F", "G"]:
+        for col in ["B", "D", "F", "G", "Q", "S"]:
             safe_format(ws, f"{col}2:{col}{MAX_DATA_ROWS}", wrap)
 
         # Currency: Sell_Proceeds(C), Buy_Amount(E)

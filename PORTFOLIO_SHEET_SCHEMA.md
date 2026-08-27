@@ -159,14 +159,17 @@ Layout:
 | C | Sell_Proceeds | Float | | |
 | D | Buy_Ticker | String | | |
 | E | Buy_Amount | Float | | |
-| F | Implicit_Bet | String | | Bill's core assumption |
+| F | Implicit_Bet | String | | **Bill's words only** — never machine-written |
 | G | Thesis_Brief | String | | Link to thesis docs |
 | H | Rotation_Type | String | | upgrade / rebalance / tax_loss |
 | I-N | Technical Snap | Float/Str| | RSI, Trend, MA200 at trade time |
 | O | Trade_Log_ID | String | | |
 | P | Fingerprint | String | | |
+| Q | Proposed_Bet | String | | Machine proposal text (retained on edit). Appended 2026-08-27 after P so A–P stay stable. |
+| R | Rationale_Provenance | String | | `declared_before` \| `reconstructed_after` |
+| S | Rationale_Evidence | String | | Citation tokens for the proposal |
 
-*Since Phase 5.*
+*Since Phase 5. Rationale columns Q–S: Instrument prompt 7, 2026-08-27.*
 
 ---
 

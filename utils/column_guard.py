@@ -98,3 +98,51 @@ def ensure_display_columns(df: pd.DataFrame) -> pd.DataFrame:
     # 5. Return exactly the schema columns in order
     # (Removes any persistent garbage columns)
     return df[config.POSITION_COLUMNS]
+
+
+def ensure_trade_log_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Guard Trade_Log against silent column drift (documented 2026-08-08 misalignment).
+    Ensures exactly config.TRADE_LOG_COLUMNS exist, in order. Missing rationale
+    columns are added blank — never invent Implicit_Bet text.
+    """
+    if df is None or (isinstance(df, pd.DataFrame) and df.empty):
+        return pd.DataFrame(columns=config.TRADE_LOG_COLUMNS)
+
+    df = df.copy()
+
+    def _clean_header(name):
+        c = str(name).strip()
+        c = re.sub(r"[^\x20-\x7E]", "", c)
+        return c
+
+    df.columns = [_clean_header(c) for c in df.columns]
+
+    # Alias map for shortened Sheet display headers
+    aliases = {
+        "sell rsi": "Sell_RSI_At_Decision",
+        "sell_rsi": "Sell_RSI_At_Decision",
+        "sell trend": "Sell_Trend_At_Decision",
+        "sell_trend": "Sell_Trend_At_Decision",
+        "sell vs ma200": "Sell_Price_vs_MA200_At_Decision",
+        "buy rsi": "Buy_RSI_At_Decision",
+        "buy trend": "Buy_Trend_At_Decision",
+        "buy vs ma200": "Buy_Price_vs_MA200_At_Decision",
+    }
+    rename = {}
+    for col in df.columns:
+        key = col.lower().replace(" ", "_")
+        spaced = col.lower()
+        if col in config.TRADE_LOG_COLUMNS:
+            continue
+        target = aliases.get(spaced) or aliases.get(key)
+        if target and target not in df.columns:
+            rename[col] = target
+    if rename:
+        df = df.rename(columns=rename)
+
+    for col in config.TRADE_LOG_COLUMNS:
+        if col not in df.columns:
+            df[col] = ""
+
+    return df[config.TRADE_LOG_COLUMNS]

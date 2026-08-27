@@ -395,6 +395,11 @@ TRADE_LOG_COLUMNS = [
     'Buy_Price_vs_MA200_At_Decision',
     'Trade_Log_ID',
     'Fingerprint',
+    # Appended 2026-08-27 (Instrument prompt 7) — Q/R/S after Fingerprint so
+    # existing A–P letter positions stay stable. Implicit_Bet remains Bill-only.
+    'Proposed_Bet',
+    'Rationale_Provenance',
+    'Rationale_Evidence',
 ]
 
 TRADE_LOG_STAGING_COLUMNS = [

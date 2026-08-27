@@ -272,12 +272,14 @@ def get_ai_suggested_allocation() -> pd.DataFrame:
 
 @lru_cache(maxsize=32)
 def get_trade_log() -> pd.DataFrame:
-    """Reads Trade_Log tab."""
+    """Reads Trade_Log tab; column-guarded to config.TRADE_LOG_COLUMNS."""
     try:
+        from utils.column_guard import ensure_trade_log_columns
+
         client = get_gspread_client()
         spreadsheet = client.open_by_key(config.PORTFOLIO_SHEET_ID)
         ws = spreadsheet.worksheet(config.TAB_TRADE_LOG)
-        return read_gsheet_robust(ws)
+        return ensure_trade_log_columns(read_gsheet_robust(ws))
     except Exception:
         return pd.DataFrame()
 

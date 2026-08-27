@@ -1,5 +1,114 @@
 # CHANGELOG — Investment Portfolio Manager
 
+## [2026-08-27] — Trade_Log rationale columns Q–S (Instrument prompt 7 Step 1)
+
+Appended `Proposed_Bet`, `Rationale_Provenance`, `Rationale_Evidence` after `Fingerprint`
+(Sheet header Q1:S1). Pre-edit archive `data/Trade_Log_bak_20260827T135331Z.csv` — Fingerprint
+present, Proposed_Bet absent. `utils.column_guard.ensure_trade_log_columns` added;
+`get_trade_log()` routes through it. Formatter A–S.
+
+## [2026-08-27] — Instrument Wave A: evidence capture, corpus FTS, ledger off Drive
+
+- **Ledger relocate:** `SQLITE_DB_PATH=C:\Users\wlong\AppData\Local\Investment_Portfolio\portfolio_store.db` (`.env` only). Drive-tree guard in `get_engine()`; first use blocked `C:\Dev\_local` because `C:\Dev` itself is synced. Pre-move backup Drive copy landed. Post-move guard silent; corpus **848/10,666** intact.
+- **`BACKUP_DIR` repo-rooted** in `core/store/backup.py`; `pm store snapshot` / `provenance` added. Snapshots stay under `data/portfolio_store_backups/` (Drive offsite).
+- **Evidence tables** `signal_events` / `bars_daily` / `fundamentals_snapshot` + `core/store/evidence.py`; morning wire after Decision_View; `--live`-gated. First accrual `2026-08-27`. Checklist rows 5/6/7 verified literal (15=15 full list; second live `inserted=0`; doctrine flags=2).
+- **Corpus FTS** `core/corpus/` + `pm corpus`; empty `framework` source dropped; research JSON gap recorded in `state.md`.
+
+## [2026-08-27] — Schwab token status divergence, root-caused (no fix — proposal only)
+
+Third observation of the known issue (`state.md` 2026-07-29, 2026-08-07; `CLAUDE.md` Known Issues):
+Command Center printed `AUTH REQUIRED` at 2026-08-26 12:12 while `tasks/health.py` raised no
+`HEALTH_FAILURE.flag`, `Risk_Metrics` carried a Schwab `as_of` of `2026-08-26T04:00Z`, and the
+composite bundle built cleanly at 12:17. This entry documents what each check path actually
+measures and why they can disagree — **no code changed**, per instruction.
+
+### What `tasks/health.py` measures (`_check_schwab_token_accounts` / `_check_schwab_token_market`)
+- Two **independent, CRITICAL-level** checks — one for the "accounts" Schwab OAuth token blob,
+  one for the "market" token blob (`config.SCHWAB_TOKEN_BLOB_ACCOUNTS` /
+  `_MARKET`). Command Center's status string covers only the accounts token; a degraded market
+  token is invisible to it.
+- Reads via `utils/schwab_token_store.load_token()`, which resolves GCS credentials from
+  `GCP_SERVICE_ACCOUNT_JSON` and **falls back to a local token file** if the GCS client itself
+  fails to construct (`_get_storage_client()` returning `None`).
+- Computes `expires_at - now()` on the **access token**. **FAIL if < 15 minutes remaining**
+  (imminent expiry — the token will not survive the next pipeline step). Missing/unparseable
+  expiry is `WARN`, not `FAIL` — an unknown state is reported as unknown, not as broken.
+- Runs fresh, in parallel with every other check, on every `run_all_checks()` call — stateless,
+  no caching, no memory of a prior run.
+- Only a CRITICAL+FAIL result here (or from `_check_schwab_api_positions` /
+  `_check_sheet_reachable` / `_check_latest_bundle_exists`, the other three CRITICAL checks)
+  causes `write_failure_sentinel()` to write `logs/HEALTH_FAILURE.flag`, recording which check(s)
+  failed and a UTC timestamp. A passing run calls `clear_failure_sentinel()` (`manager.py`
+  `morning()`, around line 1905/1912) and deletes the flag. **The flag is written and cleared
+  only inside `pm morning`'s STEP 0** — nothing else calls `write_failure_sentinel` or
+  `clear_failure_sentinel`.
+
+### What `build_command_center._schwab_token_status()` measures
+This is a **different function measuring a different thing**, not a second copy of the same
+check:
+1. **First, and preferentially, it reads the sentinel file** (`read_failure_sentinel()`) — i.e.
+   whatever `pm morning`'s STEP 0 last recorded, which can be arbitrarily stale if no morning
+   run has completed since. If a sentinel exists:
+   - and any `failing_checks[].name` contains `"schwab_token"` → returns `"AUTH REQUIRED"`,
+     **regardless of whether the live token is fine right now**.
+   - else (the CRITICAL failure was `sheet_reachable` / `bundle_exists` / `schwab_api_positions`,
+     something unrelated to the token) → returns `"STALE (Nd)"` or `"DEGRADED"` from the
+     sentinel's age, not `"AUTH REQUIRED"`.
+2. **Only when no sentinel exists** does it fall through to a **live GCS read** — but this is a
+   *second, independent* implementation of the same download, written inline in
+   `build_command_center.py` rather than calling `schwab_token_store.load_token()`. It
+   constructs its own `storage.Client()` with ambient default credentials (no
+   `GCP_SERVICE_ACCOUNT_JSON` resolution, no local-file fallback), so the two code paths can
+   authenticate to GCS differently and diverge on grounds that have nothing to do with the
+   token's actual state.
+3. The live path's threshold is **`< 2 days` → `"Expiring soon"`**, not 15 minutes — a
+   coarser, differently-calibrated number answering a different operational question
+   ("does Bill need to re-auth soon") than health.py's ("will the *next pipeline step* have a
+   token").
+4. **Any exception anywhere in step 2** — a transient GCS hiccup, a credentials error, a
+   malformed blob, `blob.exists()` returning false — is caught and collapses to the single
+   `except:` branch, which re-checks the sentinel once more and, failing that,
+   **defaults to `"AUTH REQUIRED"`** as the final fallback. There is no way from the rendered
+   string to tell "the token is actually expired" apart from "this function could not find out."
+
+### Why 08-26 12:12 vs 12:17 is consistent with both mechanisms, and why neither is provable after the fact
+- **Path 1 (stale sentinel):** if any CRITICAL check had failed earlier in the session and the
+  flag naming a `schwab_token` check hadn't yet been cleared by a subsequent clean `pm morning`
+  run, Command Center would print `AUTH REQUIRED` on every render until the next passing STEP 0 —
+  independent of whether the token was fine a minute later. `logs/HEALTH_FAILURE.flag` does not
+  exist as of this write-up (2026-08-27), so the historical 12:12 state can't be re-read directly;
+  it was presumably cleared by a later clean `pm morning` run the same day or the next.
+- **Path 2 (silent exception → worst-case default):** this requires no stale file at all — a
+  transient failure in Command Center's own inline GCS call at exactly 12:12, self-healed by
+  12:17, produces the identical symptom. `state.md`'s 2026-08-07 occurrence (`AUTH REQUIRED` with
+  the flag *confirmed absent*) is only explainable by this path, which is why both mechanisms are
+  recorded here rather than picking one.
+- Either way, the bundle export succeeding at 12:17 and `Risk_Metrics`' `04:00Z` `as_of` both used
+  the Schwab API directly and are strong evidence the underlying token was never actually broken
+  that morning — Command Center's `AUTH REQUIRED` was a reporting-path artifact, not a real outage.
+
+### Proposal — not implemented, Bill's call
+A single shared `get_schwab_token_status(blob_name) -> TokenStatus` in `utils/schwab_token_store.py`
+that both `health.py` and `build_command_center.py` call, returning a small typed result
+(`state: PASS|WARN|FAIL|UNKNOWN`, `detail: str`, `checked_live: bool`) rather than two
+independently-formatted strings. Sketch, for Bill to accept/reject/amend — **do not build without
+sign-off**:
+- One credential-resolution path (`schwab_token_store._get_storage_client()`), so the two
+  consumers can no longer diverge on auth grounds alone.
+- One threshold, or two named thresholds both consumers agree on explicitly (e.g. `imminent`
+  at 15 minutes for pipeline-gating, `renewal_due` at 2 days for the human-facing display) —
+  today's 15-minute/2-day split is incidental, not a deliberate two-tier design.
+- Sentinel-awareness stays a Command-Center-only *rendering* decision (it wants "is the pipeline
+  currently degraded," which is legitimately different from "is the token valid right now"), but
+  it should render as e.g. `"AUTH REQUIRED (as of last health check, HH:MMZ)"` rather than a bare
+  `"AUTH REQUIRED"` indistinguishable from a live read — the timestamp is the cheap fix for the
+  worst part of the ambiguity.
+- A caught exception should render distinctly from a confirmed-bad token (`"STATUS UNKNOWN"` vs
+  `"AUTH REQUIRED"`) — collapsing "couldn't check" into "confirmed broken" is the single biggest
+  contributor to false alarms in this history.
+This is a proposal only. No code in `tasks/health.py` or `tasks/build_command_center.py` was
+changed in this pass.
+
 ## [2026-08-26] — Repo hygiene (prompt closure + obsolete archive)
 
 - Incomplete prompts presumed not useful — archived with declined stamps (no builds): `prompts/archive/surface_attribution_2026-08-09.md`, `vault_framework_visibility_2026-08-01.md`, `commit_recover_dashboard_2026-08-09.md` (partially shipped; historical recovery deferred by design). `schwab_signal_layer_PROPOSAL` kept at `prompts/`; remaining §§ stamped unauthorized.
