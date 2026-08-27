@@ -35,6 +35,8 @@ class Constraint:
     action: str = "context_only"
     tickers: list[str] = field(default_factory=list)
     restated: Optional[str] = None
+    method: Optional[str] = None
+    effective_date: Optional[str] = None
 
 
 @dataclass
@@ -99,6 +101,8 @@ def _parse_constraint(raw: Any, errors: list[str]) -> Optional[Constraint]:
         action=action,
         tickers=tickers,
         restated=(str(raw["restated"]).strip() if raw.get("restated") else None),
+        method=(str(raw.get("method") or "").strip() or None),
+        effective_date=(str(raw.get("effective_date") or "").strip() or None),
     )
 
 
@@ -185,3 +189,22 @@ def downgrade_rule(
         if c.scope == "portfolio":
             return c
     return None
+
+
+def cost_basis_method(doctrine: Doctrine | None = None) -> dict[str, str | None]:
+    """Return method + effective_date from cost_basis_method constraint."""
+    doc = doctrine if doctrine is not None else load_doctrine()
+    for c in doc.constraints:
+        if c.id == "cost_basis_method":
+            return {
+                "method": c.method,
+                "effective_date": c.effective_date,
+                "established": c.established,
+                "summary": c.summary,
+            }
+    return {
+        "method": None,
+        "effective_date": None,
+        "established": None,
+        "summary": "",
+    }

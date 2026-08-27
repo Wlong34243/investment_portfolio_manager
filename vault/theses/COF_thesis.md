@@ -50,6 +50,7 @@ priority: low
 - A clearly superior capital deployment opportunity emerges in the financial sector offering a significantly better risk/reward profile.
 
 ## Review Log
+- 2026-08-27: **Correction (lot relief narrative).** The 2026-08-19 entry below assumed FIFO lot consumption for the 08-07 sale. Account method is Schwab Tax Lot Optimizer (confirmed on Cost Basis Method screen 2026-08-27; see `vault/doctrine.md` `cost_basis_method`). **Realized_GL is authoritative on which lots closed** — the FIFO lot IDs in that entry are a reconstruction error, not observed relief. Holding-period facts stand (all short-term, net realized +$455 on 25 sh); do not cite the FIFO consumption sequence in corpus or analyst retrieval.
 - 2026-08-24: `pattern: accumulate_on_decline` tagged — paired with VRT in the 2026-08-19 accumulation rationale.
 - 2026-04: Initiated. Thesis intact. Monitoring Discover integration timeline, consumer charge-off rates, and early progress on the Brex acquisition.
 - 2026-08-09: trigger_type: ceiling_only. Cyclical override to price_to_book considered (credit-cycle-exposed financial) but rejected: FY2024->FY2025 balance sheet shows the Discover Financial merger completing (equity $60.8B->$113.6B, shares 381M->625M) -- post-merger COF is a materially different company, so pre-2025 book value isn't a comparable basis for a P/B trigger, not just a data-continuity break. Commented out stale price_trim_above: 175.00 (predates the merger). Revisit once enough post-merger history accumulates. See prompts/trigger_types_2026-08-09.md.

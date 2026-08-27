@@ -1,8 +1,8 @@
 """
-Assemble 3a/3b (and later 3c/3d) tax annotations for CLI + Crosshairs.
+Assemble 3a/3b/3c/3d tax annotations for CLI + Crosshairs.
 
 Every rendered figure is labelled ESTIMATE. Does not write Realized_GL.
-Does not call lot_relief (3d bound is a separate increment gated on doctrine).
+3d is forward-looking — not gated on effective_date (Step 6 diagnostic is).
 """
 
 from __future__ import annotations
@@ -12,9 +12,10 @@ from datetime import date
 from typing import Any, Optional
 
 from core.tax.ladder import LotLadderRow, days_to_lt_ladder, nearest_days_to_lt
+from core.tax.lot_relief import ReliefBound, bound_relief_cost, relief_lots_from_open_dicts
 from core.tax.open_lots import reconstruct_open_lots_from_realized
 from core.tax.wash import WashWindow, open_wash_windows
-from utils.doctrine_reader import load_doctrine
+from utils.doctrine_reader import cost_basis_method, load_doctrine
 
 
 @dataclass
@@ -27,6 +28,7 @@ class TaxAnnotation:
     wash_window_open: bool = False
     is_tax_hold_runner: bool = False
     doctrine_note: str = ""
+    relief: ReliefBound | None = None
     is_estimate: bool = True
     warnings: list[str] = field(default_factory=list)
 
@@ -42,9 +44,12 @@ class TaxAnnotation:
                 else None
             ),
             "is_tax_hold_runner": self.is_tax_hold_runner,
-            # 3d bound deliberately absent until doctrine method+effective date lands
-            "est_tax_cost_low": None,
-            "est_tax_cost_high": None,
+            "est_tax_cost_low": (
+                self.relief.best_case_tax if self.relief and self.relief.has_range else None
+            ),
+            "est_tax_cost_high": (
+                self.relief.worst_case_tax if self.relief and self.relief.has_range else None
+            ),
         }
 
 
@@ -58,12 +63,6 @@ def _tax_hold_runner_tickers() -> set[str]:
         if getattr(c, "id", None) == "tax_hold_runners":
             for t in getattr(c, "tickers", None) or []:
                 out.add(str(t).upper())
-    # dict-shaped fallback
-    if not out and isinstance(doc, dict):
-        for c in doc.get("constraints") or []:
-            if c.get("id") == "tax_hold_runners":
-                for t in c.get("tickers") or []:
-                    out.add(str(t).upper())
     return out
 
 
@@ -90,21 +89,93 @@ def _txn_records(ticker: str) -> list[dict]:
     return sub.to_dict(orient="records")
 
 
-def annotate_ticker(ticker: str, *, as_of: date | None = None) -> TaxAnnotation:
+def _holding_price_qty(ticker: str) -> tuple[float | None, float | None]:
+    from core.store import get_store
+
+    df = get_store().get_holdings_current()
+    if df is None or df.empty:
+        return None, None
+    t = ticker.upper()
+    col_t = "Ticker" if "Ticker" in df.columns else "ticker"
+    sub = df[df[col_t].astype(str).str.upper() == t]
+    if sub.empty:
+        return None, None
+    row = sub.iloc[0]
+    price = row.get("Price") or row.get("Last Price") or row.get("price")
+    qty = row.get("Quantity") or row.get("quantity")
+    try:
+        p = float(price) if price is not None else None
+    except (TypeError, ValueError):
+        p = None
+    try:
+        q = float(qty) if qty is not None else None
+    except (TypeError, ValueError):
+        q = None
+    return p, q
+
+
+def _tax_rates() -> tuple[float, float]:
+    try:
+        from tasks.build_tax_control import get_tax_rates
+
+        st, lt, _, _ = get_tax_rates()
+        return float(st), float(lt)
+    except Exception:
+        return 0.37, 0.20  # fallback for dry-run / tests only
+
+
+def _method_basis_label() -> str:
+    cb = cost_basis_method()
+    method = cb.get("method") or "tax_lot_optimizer"
+    eff = cb.get("effective_date") or "unknown"
+    label = "Schwab Tax Lot Optimizer" if "optimizer" in str(method) else str(method)
+    return f"{label} (effective_date={eff}, per doctrine.md)"
+
+
+def annotate_ticker(
+    ticker: str,
+    *,
+    as_of: date | None = None,
+    shares: float | None = None,
+) -> TaxAnnotation:
     ref = as_of or date.today()
     t = ticker.strip().upper()
     realized = _realized_records(t)
     windows = open_wash_windows(realized, ticker=t, as_of=ref, only_open=True)
     warnings: list[str] = []
+    open_lots: list[dict] = []
     try:
         txns = _txn_records(t)
         open_lots = reconstruct_open_lots_from_realized(txns, realized, ticker=t)
     except Exception as e:
-        open_lots = []
         warnings.append(f"open_lots unavailable: {e}")
     ladder = days_to_lt_ladder(open_lots, as_of=ref, ticker=t)
     runners = _tax_hold_runner_tickers()
     is_runner = t in runners
+
+    relief: ReliefBound | None = None
+    price, qty = _holding_price_qty(t)
+    trim_sh = shares
+    if trim_sh is None and qty is not None:
+        trim_sh = max(1.0, round(qty * 0.10, 2))  # nominal 10% trim for Crosshairs
+    if trim_sh is not None and price is not None and open_lots:
+        rate_st, rate_lt = _tax_rates()
+        relief = bound_relief_cost(
+            relief_lots_from_open_dicts(open_lots),
+            trim_sh,
+            price=price,
+            as_of=ref,
+            rate_st=rate_st,
+            rate_lt=rate_lt,
+            basis=_method_basis_label(),
+        )
+        if relief.refused:
+            warnings.append(relief.refuse_reason)
+    elif trim_sh is not None and price is None:
+        warnings.append("no live price — 3d bound skipped")
+    elif trim_sh is not None and not open_lots:
+        warnings.append("no open lots — 3d bound skipped")
+
     return TaxAnnotation(
         ticker=t,
         as_of=ref,
@@ -118,16 +189,19 @@ def annotate_ticker(ticker: str, *, as_of: date | None = None) -> TaxAnnotation:
             if is_runner
             else ""
         ),
+        relief=relief,
         warnings=warnings,
     )
 
 
 def format_project_report(ann: TaxAnnotation, *, shares: float | None = None) -> str:
+    cb = cost_basis_method()
+    eff = cb.get("effective_date") or "unknown"
     lines = [
         f"{ann.ticker} — tax surface, {ann.as_of.isoformat()}"
         f"              *** ESTIMATE — not a tax determination ***",
-        "Method: Schwab Tax Lot Optimizer (effective date: PENDING doctrine — "
-        "Prompt 9 Step 2; 3d cost bound withheld until then)",
+        f"Method: Schwab Tax Lot Optimizer (effective_date={eff}, per doctrine.md). "
+        "3d is forward-looking on open lots — election date does not block the bound.",
         "",
         "  HOLDING PERIOD                     [3b]   -- no optimizer model required",
     ]
@@ -170,13 +244,28 @@ def format_project_report(ann: TaxAnnotation, *, shares: float | None = None) ->
             "downgrade stays in doctrine.md (manual-only)."
         )
     lines.append("")
-    lines.append("  COST OF TRIMMING NOW               [3d]")
-    lines.append(
-        "    WITHHELD — cost-basis method effective date not yet in doctrine.md "
-        "(Prompt 9 Step 2). Bound will not be invented."
-    )
-    if shares is not None:
-        lines.append(f"    (requested size: {shares:g} sh — unused until 3d ships)")
+    lines.append("  COST OF TRIMMING NOW               [3d]   *** ESTIMATE bound ***")
+    trim_sh = shares
+    if ann.relief and ann.relief.has_range:
+        r = ann.relief
+        lines.append(
+            f"    Best case  (relief from ST/LT losses):   $ {r.best_case_tax:,.2f}"
+        )
+        lines.append(
+            f"    Worst case (relief hits ST/LT gains):    $ {r.worst_case_tax:,.2f}"
+        )
+        if r.is_tight:
+            lines.append("    Range is tight — lot selection unlikely to move the outcome much.")
+        else:
+            lines.append(
+                "    Range is wide — lot selection materially matters on this position."
+            )
+        if trim_sh is not None:
+            lines.append(f"    (for {trim_sh:g} sh at current price)")
+    elif ann.relief and ann.relief.refused:
+        lines.append(f"    REFUSED — {ann.relief.refuse_reason}")
+    else:
+        lines.append("    (bound not computed — missing price, lots, or share count)")
     for w in ann.warnings:
         lines.append(f"  WARNING: {w}")
     return "\n".join(lines)

@@ -82,8 +82,8 @@ app.add_typer(bundle_app, name="bundle")
 sync_app = typer.Typer(help="Sync data from external sources. (Deprecated: use 'ingest')")
 app.add_typer(sync_app, name="sync", hidden=True)
 
-tax_app = typer.Typer(help="Tax visibility and control. (Deprecated: use 'refresh tax')")
-app.add_typer(tax_app, name="tax", hidden=True)
+tax_app = typer.Typer(help="Tax visibility: Tax_Control refresh + pre-trade surface (Prompt 9).")
+app.add_typer(tax_app, name="tax")
 
 dashboard_app = typer.Typer(help="Dashboard maintenance commands. (Deprecated: use 'refresh dashboard')")
 app.add_typer(dashboard_app, name="dashboard", hidden=True)
@@ -104,6 +104,9 @@ app.add_typer(agent_app, name="agent")
 # --- STORE / UI (SQLite ledger + local Command Center) ---
 store_app = typer.Typer(help="PortfolioStore: SQLite shadow ledger status, verify, sync.")
 app.add_typer(store_app, name="store")
+
+corpus_app = typer.Typer(help="Corpus FTS5 index — searchable vault/transcripts/digests with citation.")
+app.add_typer(corpus_app, name="corpus")
 
 ui_app = typer.Typer(help="Local read-mostly Command Center UI.")
 app.add_typer(ui_app, name="ui")
@@ -449,6 +452,256 @@ def journal_promote(
 
     console.print(f"\n[bold green]SUCCESS:[/] Promoted {len(trade_log_rows)} row(s) to {config.TAB_TRADE_LOG}.")
     console.print(f"[dim]Staging Status=promoted; Promoted_At={promoted_at}.[/]")
+
+
+@journal_app.command("reconcile")
+def journal_reconcile(
+    live: bool = typer.Option(False, "--live", help="Write rationale_proposals. Default: DRY RUN."),
+    backlog_only: bool = typer.Option(
+        False,
+        "--backlog-only",
+        help="Batch-close promoted-blank pre-accrual + superseded; leave pending untouched.",
+    ),
+    interactive: bool = typer.Option(
+        False,
+        "--interactive",
+        help="Reserved — hand Implicit_Bet on Trade_Log for top-$ survivors, not machine proposals.",
+    ),
+):
+    """
+    Rationale loop batch triage (amended 2026-08-27).
+
+    Discriminator is staging Status + fill date, not match_strength:
+      pending → skip (queue, not backlog)
+      promoted + blank + fill < 2026-08-27 → predates_evidence_capture
+      superseded → superseded_cluster
+    Weak corpus hits on pre-accrual fills are ambient noise — not batched as proposals.
+    """
+    from rich.table import Table
+
+    from core.journal.batch import plan_batch, apply_batch_reasons, top_by_dollars
+    from core.journal.persist import batch_reject_none
+    from core.journal.reconcile import load_unreconciled_clusters
+    from core.journal.propose import EVIDENCE_ACCRUAL_START
+
+    console.print("[bold]Loading unreconciled clusters (Sheets staging + Trade_Log)…[/]")
+    # Clear robust-reader cache so Stage_ID UUID fix is visible this process
+    from utils.sheet_readers import get_trade_log_staging, get_trade_log
+
+    get_trade_log_staging.cache_clear()
+    get_trade_log.cache_clear()
+
+    clusters = load_unreconciled_clusters()
+    console.print(f"Clusters after superset collapse: {len(clusters)}")
+    plan = plan_batch(clusters)
+    console.print(
+        f"plan: predates(promoted+pre-{EVIDENCE_ACCRUAL_START})={len(plan.predates)} | "
+        f"superseded={len(plan.superseded)} | pending_skipped={len(plan.pending_skipped)} | "
+        f"post_accrual_promoted={len(plan.post_accrual_promoted)} | other={len(plan.other)}"
+    )
+
+    batch_props = apply_batch_reasons(clusters)
+    table = Table(title="Batch close candidates (sign-off — review before --live)")
+    table.add_column("reason")
+    table.add_column("id")
+    table.add_column("date")
+    table.add_column("status")
+    table.add_column("sells")
+    table.add_column("buys")
+    table.add_column("$")
+    from core.journal.batch import dollars
+
+    for p in batch_props:
+        # find cluster for dollars
+        c = next((x for x in clusters if x.cluster_id == p.cluster_id), None)
+        d = dollars(c) if c else 0.0
+        table.add_row(
+            p.batch_reason,
+            p.cluster_id[:14],
+            p.fill_date.isoformat(),
+            (p.status or "")[:10],
+            ",".join(p.sell_tickers[:4]),
+            ",".join(p.buy_tickers[:4]),
+            f"{d:,.0f}",
+        )
+    console.print(table)
+
+    console.print("\n[bold]Top 15 promoted-blank by $ — hand-author Implicit_Bet (reconstructed_after)[/]")
+    promoted_like = [
+        c
+        for c in clusters
+        if (c.status or "").lower() == "promoted" or c.source == "trade_log"
+    ]
+    top = top_by_dollars(promoted_like, n=15, status=None)
+    t2 = Table()
+    t2.add_column("#")
+    t2.add_column("date")
+    t2.add_column("$")
+    t2.add_column("sells")
+    t2.add_column("buys")
+    t2.add_column("id")
+    t2.add_column("src")
+    for i, (c, d) in enumerate(top, 1):
+        t2.add_row(
+            str(i),
+            c.fill_date.isoformat(),
+            f"{d:,.0f}",
+            ",".join(c.sell_tickers[:5]),
+            ",".join(c.buy_tickers[:5]),
+            c.cluster_id[:14],
+            c.source,
+        )
+    console.print(t2)
+
+    if not live:
+        console.print(
+            "\n[bold black on yellow] DRY RUN — wrote nothing. "
+            "After sign-off: --live --backlog-only closes predates + superseded only. [/]"
+        )
+        console.print(
+            "[dim]Write path: SQLite rationale_proposals only — "
+            "does not open Trade_Log_Staging or Trade_Log.[/]"
+        )
+        return
+
+    if not backlog_only:
+        console.print("[yellow]--live without --backlog-only: refusing broad write. Use --backlog-only.[/]")
+        return
+
+    console.print(
+        "[bold]LIVE write target: SQLite table rationale_proposals only. "
+        "No Sheets writes. Staging writer remains unsafe (header mismatch) — not invoked.[/]"
+    )
+    n = batch_reject_none(batch_props, live=True)
+    console.print(f"[green]Batch-closed {n} proposals (see rationale_proposals.batch_reason).[/]")
+    if interactive:
+        console.print(
+            "[dim]Interactive machine proposals deferred — author Implicit_Bet on Trade_Log "
+            "for the 2026 top-$ list when ready (no clock).[/]"
+        )
+
+
+@journal_app.command("precommit")
+def journal_precommit(
+    ticker: Optional[str] = typer.Option(None, "--ticker", help="Ticker for declare / filter list."),
+    type: Optional[str] = typer.Option(None, "--type", help="Trigger type (fwd_pe, price, …)."),
+    side: Optional[str] = typer.Option(None, "--side", help="trim | add"),
+    level: Optional[float] = typer.Option(None, "--level", help="Declared band level."),
+    action: Optional[str] = typer.Option(None, "--action", help="Intended action text."),
+    note: str = typer.Option("", "--note", help="Reasoning at declaration time."),
+    list_flag: bool = typer.Option(False, "--list", help="List precommitments."),
+    open_only: bool = typer.Option(False, "--open-only", help="With --list: open/fired only."),
+    close_id: Optional[int] = typer.Option(None, "--close", help="Close precommitment by id."),
+    reason: Optional[str] = typer.Option(None, "--reason", help="Close reason."),
+    pending: bool = typer.Option(False, "--pending", help="List pending firings; optional respond."),
+    detect: bool = typer.Option(False, "--detect", help="Run firing detector against signal_events."),
+    respond: Optional[str] = typer.Option(
+        None, "--respond", help="With --firing: a|p|d (acted|passed|defer)."
+    ),
+    firing: Optional[int] = typer.Option(None, "--firing", help="Firing id for --respond."),
+    force: bool = typer.Option(False, "--force", help="Allow declare when level ≠ thesis band."),
+    live: bool = typer.Option(False, "--live", help="Write SQLite. Default: DRY RUN."),
+):
+    """
+    Pre-commitment capture (Instrument prompt 8).
+
+    Declare a dated intention against a thesis band; morning detects crossings;
+    you respond acted/passed. Only path that produces Rationale_Provenance=declared_before.
+    """
+    from rich.table import Table
+
+    from core.journal import precommit as pc
+
+    if list_flag:
+        rows = pc.list_precommitments(ticker=ticker, open_only=open_only)
+        t = Table(title="precommitments")
+        for col in ("id", "ticker", "type", "side", "level", "status", "action", "thesis_at"):
+            t.add_column(col)
+        for r in rows:
+            t.add_row(
+                str(r.id),
+                r.ticker,
+                r.trigger_type,
+                r.band_side,
+                str(r.band_level),
+                r.status,
+                (r.intended_action or "")[:40],
+                str(r.thesis_band_at_declaration),
+            )
+        console.print(t)
+        return
+
+    if close_id is not None:
+        res = pc.close_precommitment(close_id, reason=reason or "", live=live)
+        console.print(("[green]" if res.ok else "[red]") + res.message + "[/]")
+        if not res.ok:
+            raise typer.Exit(code=1)
+        if not live:
+            console.print("[bold black on yellow] DRY RUN — wrote nothing [/]")
+        return
+
+    if detect:
+        summary = pc.detect_firings(live=live)
+        mode = "LIVE" if live else "DRY RUN"
+        console.print(f"[bold]{mode}[/] detect_firings: {summary}")
+        console.print(f"pending firings: {pc.pending_count()}")
+        return
+
+    if pending or (respond and firing is not None):
+        if respond and firing is not None:
+            res = pc.respond_firing(firing, response=respond, note=note, live=live)
+            console.print(("[green]" if res.ok else "[red]") + res.message + "[/]")
+            if not res.ok:
+                raise typer.Exit(code=1)
+            if not live:
+                console.print("[bold black on yellow] DRY RUN — wrote nothing [/]")
+            return
+        rows = pc.list_pending_firings()
+        if not rows:
+            console.print("[dim]No pending precommitment firings.[/]")
+            return
+        for r in rows:
+            decl = r["declared_at"]
+            decl_s = decl.date().isoformat() if hasattr(decl, "date") else str(decl)[:10]
+            doctr = "DOWNGRADED (HOLD_TAX)" if r["doctrine_downgraded"] else "not downgraded"
+            console.print(
+                f"[bold]{r['ticker']}[/]  {r['trigger_type']} {r['band_side']} @ {r['band_level']}   "
+                f"declared {decl_s} ({r['intended_action']!r})"
+            )
+            console.print(
+                f"  FIRED {r['event_date']} — reading {r['metric_value']}  "
+                f"[table:signal_events#{r['signal_event_id']}]  firing_id={r['firing_id']}"
+            )
+            console.print(f"  Doctrine: {doctr}.")
+            console.print("  Response?  [a]cted  [p]assed  [d]efer     (use --respond / --firing --live)")
+        console.print(f"\n[bold]{len(rows)}[/] pending. Pass recorded with `--respond p --firing N --live`.")
+        return
+
+    # Declare
+    if not ticker or not type or not side or level is None or not action:
+        console.print(
+            "[red]Declare requires --ticker --type --side --level --action "
+            "(or use --list / --pending / --close / --detect).[/]"
+        )
+        raise typer.Exit(code=1)
+    res = pc.declare(
+        ticker=ticker,
+        trigger_type=type,
+        side=side,
+        level=level,
+        action=action,
+        note=note,
+        force=force,
+        live=live,
+    )
+    style = "green" if res.ok else "red"
+    console.print(f"[{style}]{res.message}[/]")
+    if res.requires_force and not force:
+        raise typer.Exit(code=1)
+    if not res.ok:
+        raise typer.Exit(code=1)
+    if not live:
+        console.print("[bold black on yellow] DRY RUN — wrote nothing. Re-run with --live. [/]")
 
 
 @journal_app.command("rotation")
@@ -1195,6 +1448,25 @@ def tax_refresh(live: bool = typer.Option(False, "--live")):
     console.print("[green]Tax refresh complete.[/]")
 
 
+@tax_app.command("project")
+def tax_project(
+    ticker: str = typer.Option(..., "--ticker"),
+    shares: Optional[float] = typer.Option(None, "--shares", help="Trim size for 3d ESTIMATE bound."),
+    as_of: Optional[str] = typer.Option(None, "--as-of", help="YYYY-MM-DD (default today)."),
+):
+    """
+    Pre-trade tax surface (Prompt 9): wash [3a], LT ladder [3b], doctrine [3c], cost bound [3d].
+    Every figure is an ESTIMATE — not a tax determination.
+    """
+    from datetime import date as date_cls
+
+    from core.tax.surface import annotate_ticker, format_project_report
+
+    ref = date_cls.fromisoformat(as_of) if as_of else date_cls.today()
+    ann = annotate_ticker(ticker, as_of=ref, shares=shares)
+    console.print(format_project_report(ann, shares=shares))
+
+
 # --- DASHBOARD GROUP ---
 
 @refresh_app.command("dashboard")
@@ -1223,6 +1495,16 @@ def dashboard_refresh(
     crosshairs = produce_crosshairs(dislocation_payload=payload, dislocation_path=path)
     build_cc(live=live, crosshairs=crosshairs)
     build_dec(live=live, crosshairs=crosshairs)
+    try:
+        from core.store.evidence import format_evidence_status, run_evidence_capture
+
+        ev = run_evidence_capture(live=live, crosshairs=crosshairs)
+        if ev.get("skipped"):
+            console.print(f"[yellow]{ev.get('skip_reason')}[/]")
+        else:
+            console.print(format_evidence_status(ev.get("status")))
+    except Exception as e:
+        console.print(f"[yellow]Evidence capture failed (non-fatal): {e}[/]")
     format_v2(live=live)
     console.print("[green]Dashboard refresh complete (Valuation_Card, Decision_View, 0_DASHBOARD).[/]")
 
@@ -1315,6 +1597,129 @@ def store_backup(
     console.print(result)
     if not result.get("ok"):
         raise typer.Exit(code=1)
+
+
+@store_app.command("snapshot")
+def store_snapshot(
+    live: bool = typer.Option(False, "--live", help="VACUUM INTO daily snapshot under data/portfolio_store_backups/."),
+):
+    """Daily VACUUM INTO snapshot (stays in Drive-synced repo tree — offsite after ledger relocate)."""
+    from core.store.backup import snapshot_sqlite
+
+    result = snapshot_sqlite(live=live)
+    console.print(result)
+    if result.get("pruned") and result["pruned"].get("refused"):
+        console.print(f"[yellow]{result['pruned']['refused']}[/]")
+    if result.get("pruned") and result["pruned"].get("deleted"):
+        for p in result["pruned"]["deleted"]:
+            console.print(f"[dim]pruned:[/] {p}")
+    if not result.get("ok"):
+        raise typer.Exit(code=1)
+
+
+@store_app.command("provenance")
+def store_provenance():
+    """If the local ledger were lost — what Schwab cannot give back."""
+    from core.store.backup import provenance_table
+
+    console.print(provenance_table())
+
+
+@store_app.command("evidence-status")
+def store_evidence_status():
+    """Append-only evidence tables: row counts, accrual days, ten-day gate."""
+    from core.store.evidence import format_evidence_status
+
+    console.print(format_evidence_status())
+
+
+@store_app.command("evidence-capture")
+def store_evidence_capture(
+    live: bool = typer.Option(False, "--live", help="Write evidence tables. Default: DRY RUN."),
+):
+    """Standalone evidence capture (signals + bars + fundamentals). --live required to write."""
+    from core.store.evidence import format_evidence_status, run_evidence_capture
+
+    summary = run_evidence_capture(live=live)
+    mode = "LIVE" if live else "DRY RUN"
+    if summary.get("skipped"):
+        console.print(f"[yellow]{summary.get('skip_reason')}[/]")
+        return
+    console.print(f"[bold]{mode}[/] evidence-capture: {summary.get('results')}")
+    console.print(format_evidence_status(summary.get("status")))
+
+
+@corpus_app.command("index")
+def corpus_index(
+    live: bool = typer.Option(False, "--live", help="Write index. Default: DRY RUN."),
+    rebuild: bool = typer.Option(False, "--rebuild", help="Drop and rebuild (requires --live --yes)."),
+    yes: bool = typer.Option(False, "--yes", help="Confirm destructive --rebuild."),
+    source: Optional[str] = typer.Option(None, "--source", help="Limit to one source_type."),
+):
+    """Incremental corpus FTS index. Re-index of unchanged files writes nothing."""
+    from core.corpus.index import run_index
+
+    try:
+        report = run_index(live=live, rebuild=rebuild, yes=yes, source_type=source)
+    except RuntimeError as e:
+        console.print(f"[red]{e}[/]")
+        raise typer.Exit(code=1)
+    mode = "LIVE" if live else "DRY RUN"
+    console.print(
+        f"[bold]{mode}[/] corpus index: new={report.new} changed={report.changed} "
+        f"unchanged={report.unchanged} deleted={report.deleted} writes={report.writes}"
+    )
+    for st, bucket in sorted(report.by_source.items()):
+        console.print(f"  {st}: {bucket}")
+    if report.parse_failures:
+        console.print("[yellow]Parse failures:[/]")
+        for p in report.parse_failures:
+            console.print(f"  - {p}")
+
+
+@corpus_app.command("status")
+def corpus_status_cmd():
+    """Per source_type: docs, chunks, date range, last indexed."""
+    from core.corpus.index import corpus_status
+
+    st = corpus_status()
+    for name, bucket in st["by_source"].items():
+        console.print(
+            f"{name}: docs={bucket['docs']} chunks={bucket['chunks']} "
+            f"oldest={bucket['oldest']} newest={bucket['newest']} "
+            f"last_indexed={bucket['last_indexed']}"
+        )
+    console.print(f"totals: {st['totals']}")
+
+
+@corpus_app.command("search")
+def corpus_search_cmd(
+    query: str = typer.Argument(..., help="FTS5 query string"),
+    ticker: Optional[List[str]] = typer.Option(None, "--ticker", help="Filter by ticker tag (repeatable)."),
+    source_type: Optional[List[str]] = typer.Option(None, "--source-type", help="Filter source_type."),
+    since: Optional[str] = typer.Option(None, "--since", help="YYYY-MM-DD"),
+    until: Optional[str] = typer.Option(None, "--until", help="YYYY-MM-DD"),
+    limit: int = typer.Option(10, "--limit"),
+):
+    """Search the corpus; each hit is path:line with a snippet."""
+    from core.corpus.search import format_hit, search
+
+    since_d = date.fromisoformat(since) if since else None
+    until_d = date.fromisoformat(until) if until else None
+    hits = search(
+        query,
+        tickers=ticker,
+        source_types=source_type,
+        since=since_d,
+        until=until_d,
+        limit=limit,
+    )
+    if not hits:
+        console.print("[dim]No hits.[/]")
+        return
+    for h in hits:
+        console.print(format_hit(h))
+        console.print("")
 
 
 @store_app.command("publish-cockpit")
@@ -2077,6 +2482,37 @@ def morning(
         )
         build_cc(live=live, crosshairs=crosshairs)
         build_dec(live=live, crosshairs=crosshairs)
+        # Evidence capture after Decision_View so the list matches what Bill saw.
+        try:
+            from core.store.evidence import format_evidence_status, run_evidence_capture
+
+            ev = run_evidence_capture(live=live, crosshairs=crosshairs)
+            if ev.get("skipped"):
+                console.print(f"[yellow]{ev.get('skip_reason')}[/]")
+            else:
+                mode = "LIVE" if live else "DRY RUN"
+                console.print(f"[dim]Evidence capture ({mode}): {ev.get('results')}[/]")
+                console.print(format_evidence_status(ev.get("status")))
+            # Pre-commitment firings read signal_events — must run after evidence capture.
+            try:
+                from core.journal import precommit as pc
+
+                fire_summary = pc.detect_firings(live=live)
+                n_pending = pc.pending_count()
+                mode = "LIVE" if live else "DRY RUN"
+                console.print(
+                    f"[dim]Precommit detect ({mode}): {fire_summary} | "
+                    f"pending firings: {n_pending}[/]"
+                )
+                if n_pending:
+                    console.print(
+                        f"[bold yellow]{n_pending} precommitment firing(s) awaiting response "
+                        f"— pm journal precommit --pending[/]"
+                    )
+            except Exception as e:
+                console.print(f"[yellow]Precommit detect failed (non-fatal): {e}[/]")
+        except Exception as e:
+            console.print(f"[yellow]Evidence capture failed (non-fatal): {e}[/]")
         if not skip_tax:
             refresh_tax_control_sheet(live=live)
             tax_refreshed = True
@@ -2221,7 +2657,7 @@ def morning(
                 # Surface the real failure — otherwise ModuleNotFoundError etc.
                 # look identical to a preflight ABORT (warn, no traceback).
                 err_tail = "\n".join(
-                    (l for l in out.splitlines() if l.strip())[-12:]
+                    [l for l in out.splitlines() if l.strip()][-12:]
                 )
                 if err_tail:
                     console.print(f"[yellow]{err_tail}[/]")

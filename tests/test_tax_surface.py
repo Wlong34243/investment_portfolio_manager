@@ -139,3 +139,80 @@ def test_tax_hold_runner_surface_measurement_not_auto_expand(monkeypatch):
     text = surf.format_project_report(ann_meta)
     assert "ESTIMATE" in text
     assert "Not a tax_hold_runner" in text
+
+
+def test_relief_bound_ordering():
+    from core.tax.lot_relief import ReliefLot, bound_relief_cost
+
+    lots = [
+        ReliefLot(date(2026, 1, 1), 10, 100.0),
+        ReliefLot(date(2025, 1, 1), 10, 80.0),
+        ReliefLot(date(2024, 1, 1), 10, 120.0),
+    ]
+    price = 110.0
+    b = bound_relief_cost(lots, 15, price=price, as_of=date(2026, 8, 27), rate_st=0.37, rate_lt=0.20)
+    assert b.has_range
+    assert b.best_case_tax <= b.worst_case_tax
+
+
+def test_relief_bound_contains_fifo_and_tier():
+    """FIFO and six-tier-ish sorts should land inside the bound."""
+    from core.tax.lot_relief import ReliefLot, bound_relief_cost
+    from utils.tax import classify_holding_period
+
+    lots = [
+        ReliefLot(date(2026, 4, 1), 8, 206.94),
+        ReliefLot(date(2026, 4, 22), 10, 200.01),
+        ReliefLot(date(2026, 6, 24), 5, 200.40),
+    ]
+    price = 217.45
+    rate_st, rate_lt = 0.37, 0.20
+    b = bound_relief_cost(
+        lots, 23, price=price, as_of=date(2026, 8, 7), rate_st=rate_st, rate_lt=rate_lt
+    )
+    assert b.has_range
+
+    # FIFO: oldest first
+    fifo_tax = 0.0
+    rem = 23.0
+    for lot in sorted(lots, key=lambda x: x.open_date):
+        take = min(lot.shares, rem)
+        g = (price - lot.cost_basis_per_share) * take
+        term = classify_holding_period(lot.open_date, date(2026, 8, 7))
+        rate = rate_lt if term == "long_term" else rate_st
+        fifo_tax += g * rate
+        rem -= take
+    assert b.best_case_tax <= round(fifo_tax, 2) <= b.worst_case_tax
+
+
+def test_relief_refuses_cross_account():
+    from core.tax.lot_relief import ReliefLot, bound_relief_cost
+
+    lots = [
+        ReliefLot(date(2026, 1, 1), 10, 100.0, account="...6499"),
+        ReliefLot(date(2026, 2, 1), 10, 100.0, account="...8767"),
+    ]
+    b = bound_relief_cost(
+        lots, 5, price=110.0, as_of=date(2026, 8, 27), rate_st=0.37, rate_lt=0.20
+    )
+    assert b.refused
+    assert "CROSS_ACCOUNT" in b.refuse_reason
+
+
+def test_tax_no_point_estimate_api():
+    """Public bound API returns ReliefBound only — no scalar tax function."""
+    import core.tax.lot_relief as lr
+
+    src = Path("core/tax/lot_relief.py").read_text(encoding="utf-8")
+    assert "def bound_relief_cost" in src
+    assert "def project_tax_cost(" not in src
+    assert "def estimate_tax(" not in src
+    b = lr.bound_relief_cost(
+        [lr.ReliefLot(date(2026, 1, 1), 10, 100.0)],
+        5,
+        price=110.0,
+        rate_st=0.37,
+        rate_lt=0.20,
+    )
+    assert isinstance(b.best_case_tax, float)
+    assert isinstance(b.worst_case_tax, float)

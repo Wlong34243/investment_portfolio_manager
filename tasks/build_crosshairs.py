@@ -742,6 +742,9 @@ def _annotate_tax_surface(items: list[CrosshairItem]) -> list[CrosshairItem]:
                 ann.wash_windows[0].disallow_through.isoformat() if ann.wash_windows else None
             )
             it.is_tax_hold_runner = ann.is_tax_hold_runner
+            if ann.relief and ann.relief.has_range:
+                it.est_tax_cost_low = ann.relief.best_case_tax
+                it.est_tax_cost_high = ann.relief.worst_case_tax
         except Exception:
             pass
         out.append(it)

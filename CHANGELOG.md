@@ -1,5 +1,12 @@
 # CHANGELOG — Investment Portfolio Manager
 
+## [2026-08-27] — Prompt 9 3d bound + doctrine; journal CLI commit
+
+- `cost_basis_method` in `vault/doctrine.md`: Tax Lot Optimizer, uniform, `effective_date: unknown`.
+- 3d ESTIMATE bound (`core/tax/lot_relief.py`); guard on effective_date reserved for Step 6 only.
+- COF/MU Review Log corrections — FIFO narration flagged before corpus prompt 6.
+- `manager.py`: journal reconcile (7), precommit (8), tax project (9) CLI committed with `core/journal/`.
+
 ## [2026-08-27] — Prompt 8 phantom precommit deleted; Prompt 9 Step 1 + 3a/3b
 
 - **Deleted** `precommitments.id=1` (META smoke-test row) — not `closed_manual`. Zero firings. Audit in `state.md`.

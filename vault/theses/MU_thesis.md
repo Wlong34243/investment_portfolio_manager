@@ -97,7 +97,7 @@ Read separately:
 `price_trim_above: 175.00` and COF traded **$218.46** — the sale was above Bill's own recorded
 trim level. Noted because a trade matching its thesis file is worth recording as such. COF
 carried an unrealized gain (+2.61% at bundle `6c531c97`), so the sale realizes gain.
-**Lot verification resolved 2026-08-19:** FIFO consumed 8 sh from 04-10, 10 sh from 04-16, 5 sh from 04-16, 2 sh from 04-17 — all short-term (112–119 days held), net realized +$455.00. No wash-sale issue. See `COF_thesis.md` Review Log 2026-08-19.
+**Lot verification resolved 2026-08-19:** Realized_GL on the 08-07 COF sale: 25 sh, all short-term, net realized +$455.00. No wash-sale issue (06-24 buy 44 days prior). See `COF_thesis.md` Review Log 2026-08-19. *(FIFO lot IDs in the original note superseded — see COF Review Log 2026-08-27 correction.)*
 
 **Same-day cross-reference:** QQQM was also partially sold (to fund RRC). QQQM holds MU at
 0.63% per the bundle's look-through. Selling the index sleeve that contained MU while buying
@@ -219,6 +219,7 @@ priority: **[BILL]** — not stated at entry.
 
 ## Review Log
 
+- 2026-08-27: **Correction (lot relief narrative).** Entry Context above referenced FIFO lot consumption for the funding COF sale — same correction as `COF_thesis.md` Review Log 2026-08-27. Optimizer relief, not FIFO; Realized_GL is authoritative. Net ST gain +$455 and no wash-sale facts unchanged.
 - 2026-08-25: Key Risks — Netlist ITC/federal patent actions on DDR5 RDIMM/MRDIMM (exclusion-order seek, 2026-08-24); reported Apple memory sourcing from Chinese suppliers. Source: scheduled morning brief, bundle `6bacf63dd536`.
 - 2026-08-07: Position opened, funded by partial COF sale (COF sold above its own recorded
   `price_trim_above: 175.00`). Thesis drafted from Bill-supplied text; all company figures
