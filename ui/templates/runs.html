@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Runs{% endblock %}
+{% block content %}
+<h2>Routine launcher</h2>
+<p class="meta-line">Registry ids only — output streams to the console dock.</p>
+
+{% for group_name, items in routine_groups.items() %}
+<section>
+  <h3>{{ group_name }}</h3>
+  <div class="run-grid">
+  {% for r in items %}
+    <div class="run-card" data-routine-id="{{ r.id }}" data-confirm-name="{{ '1' if r.confirm_name else '0' }}" data-timeout-sec="{{ r.timeout_sec }}">
+      <strong>{{ r.label }}</strong>
+      <div class="duration-hint">~{{ r.duration_hint }}</div>
+      <div>{{ r.description }}</div>
+      {% if r.writes_banner %}
+      <div class="banner" style="margin-top:0.4rem;font-size:0.78rem">{{ r.writes_banner }}</div>
+      {% endif %}
+      {% if r.long_run_warning %}<div class="warn">{{ r.long_run_warning }}</div>{% endif %}
+      {% if r.confirm_name %}
+      <div style="margin-top:0.35rem">
+        <label>Type <code>{{ r.id }}</code> to confirm
+          <input type="text" name="confirm-name" autocomplete="off" placeholder="{{ r.id }}" style="width:100%;margin-top:0.15rem;background:var(--surface2);border:1px solid var(--line);color:var(--ink);padding:0.2rem"/>
+        </label>
+      </div>
+      {% endif %}
+      {% for arg in r.args %}
+      <div style="margin-top:0.35rem">
+        <label>{{ arg.label or arg.name }}
+          <input type="text" name="arg-{{ arg.name }}" placeholder="{{ arg.name }}" {% if arg.required %}required{% endif %} style="width:100%;margin-top:0.15rem;background:var(--surface2);border:1px solid var(--line);color:var(--ink);padding:0.2rem"/>
+        </label>
+      </div>
+      {% endfor %}
+      <button type="button" class="launch-routine">Run</button>
+      <div class="elapsed" hidden></div>
+    </div>
+  {% endfor %}
+  </div>
+</section>
+{% endfor %}
+
+<section>
+  <h3>Run history</h3>
+  {% if history %}
+  <div class="table-scroll">
+  <table class="data-table">
+    <thead><tr><th>ID</th><th>Routine</th><th>Started</th><th class="num">Duration</th><th>Exit</th><th>Artifact</th></tr></thead>
+    <tbody>
+    {% for h in history %}
+      <tr>
+        <td>{{ h.id }}</td>
+        <td>{{ h.routine_id }}</td>
+        <td>{{ h.started_at|dt }}</td>
+        <td class="num">{% if h.duration_sec is not none %}{{ h.duration_sec|round|int }}s{% else %}—{% endif %}</td>
+        <td>
+          {% if h.exit_code == 0 %}<span class="exit-chip exit-ok">0 ok</span>
+          {% elif h.exit_code == 3 %}<span class="exit-chip exit-skip">skipped — lock</span>
+          {% elif h.exit_code is not none %}<span class="exit-chip exit-fail">{{ h.exit_code }}</span>
+          {% else %}…{% endif %}
+        </td>
+        <td>{% if h.artifact_path %}<code>{{ h.artifact_path }}</code>{% else %}—{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  {% set message = "No UI runs yet." %}
+  {% include "partials/empty_state.html" %}
+  {% endif %}
+</section>
+{% endblock %}

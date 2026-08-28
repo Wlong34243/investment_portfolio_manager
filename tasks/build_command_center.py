@@ -37,6 +37,7 @@ from utils.sheet_writers import safe_execute
 from utils.level_coverage import compute_level_coverage, format_footer_line
 from tasks.build_crosshairs import (
     CrosshairsResult, TOP_N_DASHBOARD, produce_crosshairs,
+    format_tax_compact, is_trim_side_crosshair,
     resolve_trigger_type, resolve_typed_metric, format_level,
 )
 from tasks.compute_rotation_attribution import (
@@ -144,49 +145,13 @@ def _latest_bundle_hash() -> str:
 
 
 def _schwab_token_status() -> str:
+    """Phone/Sheet health strip — delegates to tasks.health single source."""
     try:
-        from datetime import timezone
-        # Check sentinel first for an active failure
-        from tasks.health import read_failure_sentinel
-        sentinel = read_failure_sentinel()
-        if sentinel:
-            # Check if schwab token was a failing check
-            for fc in sentinel.get("failing_checks", []):
-                if "schwab_token" in fc.get("name", ""):
-                    return "AUTH REQUIRED"
-            # Parse timestamp to report how long the pipeline has been degraded
-            ts_str = sentinel.get("timestamp_utc")
-            if ts_str:
-                try:
-                    ts = datetime.strptime(ts_str, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
-                    delta_days = (datetime.now(timezone.utc) - ts).days
-                    return f"STALE ({delta_days}d)"
-                except Exception:
-                    return "STALE"
-            return "DEGRADED"
+        from tasks.health import desk_schwab_token_summary
 
-        from google.cloud import storage
-        client = storage.Client()
-        blob = client.bucket(config.SCHWAB_TOKEN_BUCKET).blob(config.SCHWAB_TOKEN_BLOB_ACCOUNTS)
-        data = json.loads(blob.download_as_text())
-        expires_at = data.get("expires_at")
-        if not expires_at:
-            return "AUTH REQUIRED"
-        delta_days = (float(expires_at) - time.time()) / 86400
-        if delta_days < 0:
-            return f"STALE ({abs(delta_days):.0f}d)"
-        if delta_days < 2:
-            return "Expiring soon"
-        return "OK"
+        return desk_schwab_token_summary()
     except Exception:
-        try:
-            from tasks.health import read_failure_sentinel
-            sentinel = read_failure_sentinel()
-            if sentinel:
-                return "AUTH REQUIRED"
-        except Exception:
-            pass
-        return "AUTH REQUIRED"
+        return "unknown"
 
 
 def _fmp_cache_age() -> str:
@@ -548,9 +513,13 @@ def _crosshairs_block_rows(crosshairs: Optional[CrosshairsResult], top_n: int = 
         ]
     rows = [_pad([crosshairs.header_line]), _pad(_CROSS_COLS)]
     for item in crosshairs.top(top_n):
+        rationale = item.rationale or ""
+        tax_cell = format_tax_compact(item)
+        if tax_cell:
+            rationale = f"{rationale} | {tax_cell}" if rationale else tax_cell
         rows.append(_pad([
             item.reason_code, item.ticker, item.mv, item.wt, item.price,
-            item.trim, item.add, item.dist_trim, item.dist_add, item.rationale,
+            item.trim, item.add, item.dist_trim, item.dist_add, rationale,
         ]))
     if not crosshairs.items:
         rows.append(_pad(["(none)", "", "", "", "", "", "", "", "", ""]))

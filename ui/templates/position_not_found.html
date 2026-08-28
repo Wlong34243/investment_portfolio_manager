@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Position not found{% endblock %}
+{% block content %}
+<h2>Unknown position: {{ ticker }}</h2>
+<p class="note">This ticker is not in the current holdings scope.</p>
+{% if held_tickers %}
+<h3>Held tickers</h3>
+<ul class="plain ticker-list">
+{% for t in held_tickers %}
+  <li><a href="/position/{{ t }}">{{ t }}</a></li>
+{% endfor %}
+</ul>
+{% endif %}
+{% endblock %}

@@ -679,6 +679,32 @@ def _check_tax_control_freshness() -> CheckResult:
 
 
 # ---------------------------------------------------------------------------
+# Desk / Command Center — single Schwab token summary (2026-08-28)
+# ---------------------------------------------------------------------------
+
+def desk_schwab_token_summary() -> str:
+    """
+    One string for desk header strip and 0_DASHBOARD health KPI.
+    Uses health checks + failure sentinel — not a third independent GCS read path.
+    """
+    sentinel = read_failure_sentinel()
+    if sentinel:
+        for fc in sentinel.get("failing_checks", []):
+            name = fc.get("name", "")
+            if "schwab_token" in name or name.startswith("schwab_"):
+                return "AUTH REQUIRED"
+        return "DEGRADED"
+
+    acc = _check_schwab_token_accounts()
+    mkt = _check_schwab_token_market()
+    if acc.status == FAIL or mkt.status == FAIL:
+        return "AUTH REQUIRED"
+    if acc.status == WARN or mkt.status == WARN:
+        return "CHECK TOKENS"
+    return "OK"
+
+
+# ---------------------------------------------------------------------------
 # Runner
 # ---------------------------------------------------------------------------
 

@@ -1,0 +1,13 @@
+<div class="stat-tile">
+  <div class="label">{{ label }}</div>
+  <div class="value-row">
+    <div class="value num">{{ value }}</div>
+    {% if sparkline %}
+      {% include "partials/sparkline.html" %}
+    {% endif %}
+  </div>
+  {% if delta is not none %}
+    <div class="delta num {{ delta|polarity_class }}">{{ delta|pct }}</div>
+  {% endif %}
+  {% if note %}<div class="note">{{ note }}</div>{% endif %}
+</div>

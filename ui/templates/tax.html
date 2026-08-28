@@ -1,36 +1,55 @@
 {% extends "base.html" %}
 {% block title %}Tax Control{% endblock %}
 {% block content %}
+{% set tax_money_cols = ('Gain Loss', 'ST Gain Loss', 'LT Gain Loss', 'Disallowed Loss', 'Gain Loss $') %}
 <h2>Tax Control</h2>
+<p class="meta-line">Retrieval {{ retrieval_hash|hash8 }} · metrics from MetaKV (no retrieval template)</p>
+
 {% if metrics %}
 <div class="kpis">
-  {% for k, v in metrics.items() %}
-  <div class="kpi"><div class="label">{{ k }}</div><div class="value" style="font-size:1rem">{{ v }}</div></div>
+  {% for m in metrics %}
+  <div class="stat-tile">
+    <div class="label">{{ m.key }}</div>
+    <div class="value num">
+      {% if 'pct' in m.key|lower or '%' in m.key %}{{ m.raw|pct_pts }}
+      {% elif '$' in m.key|lower or 'value' in m.key|lower or 'gain' in m.key|lower %}{{ m.raw|money }}
+      {% else %}{{ m.raw }}{% endif %}
+    </div>
+  </div>
   {% endfor %}
 </div>
 {% else %}
-<p class="note">No tax metrics in SQLite yet. Run <code>pm refresh tax --live</code>.</p>
+<p class="note meta-line">No tax metrics in store — run <code>pm refresh tax --live</code>.</p>
 {% endif %}
 
-<h2>Lots (first 50 of {{ lot_count }})</h2>
+<h3>Lots (first 50 of {{ lot_count }})</h3>
 {% if lots %}
-<table>
+<div class="table-scroll">
+<table class="data-table">
   <thead>
     <tr>
       {% for col in lots[0].keys() %}
-      <th>{{ col }}</th>
+      <th{% if col in tax_money_cols %} class="num"{% endif %}>{{ col }}</th>
       {% endfor %}
     </tr>
   </thead>
   <tbody>
   {% for row in lots %}
     <tr>
-      {% for v in row.values() %}
-      <td>{{ v }}</td>
+      {% for k, v in row.items() %}
+      <td{% if k in tax_money_cols %} class="num {{ v|polarity_class }}"{% endif %}>
+        {% if k in ('Ticker', 'ticker') and v %}<a href="/position/{{ v }}">{{ v }}</a>
+        {% elif k in tax_money_cols %}{{ v|money }}
+        {% else %}{{ v }}{% endif %}
+      </td>
       {% endfor %}
     </tr>
   {% endfor %}
   </tbody>
 </table>
+</div>
+{% else %}
+{% set message = "No tax lots in store." %}
+{% include "partials/empty_state.html" %}
 {% endif %}
 {% endblock %}

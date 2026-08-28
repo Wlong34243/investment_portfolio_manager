@@ -350,10 +350,20 @@ def _ensure_staging_tab(ss) -> "gspread.Worksheet":
     return ws
 
 def _existing_fingerprints(ws) -> set[str]:
+    """Read Fingerprint by live header name — not config column index.
+
+    Trade_Log_Staging live headers diverge from TRADE_LOG_STAGING_COLUMNS
+    (Window vs Cluster_Window_Days; Promoted_At at end). Indexing by config
+    position reads the wrong column (found 2026-08-27).
+    """
     try:
-        fp_col_index = config.TRADE_LOG_STAGING_COLUMNS.index("Fingerprint") + 1
+        header = [h.strip() for h in ws.row_values(1)]
+        if "Fingerprint" not in header:
+            return set()
+        fp_col_index = header.index("Fingerprint") + 1  # 1-based
         return set(v.strip() for v in ws.col_values(fp_col_index)[1:] if v.strip())
-    except: return set()
+    except Exception:
+        return set()
 
 def write_staging(clusters: list[dict], dry_run: bool = True, dry_run_verify: bool = False) -> int:
     if not clusters: return 0

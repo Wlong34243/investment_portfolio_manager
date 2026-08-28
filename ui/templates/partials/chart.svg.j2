@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="{{ spec.width }}" height="{{ spec.height }}"
+     viewBox="0 0 {{ spec.width }} {{ spec.height }}"
+     role="img" aria-label="Price and cost-basis chart">
+  <rect x="0" y="0" width="{{ spec.width }}" height="{{ spec.height }}" fill="#1a1c1f"/>
+  {% set pad = spec.padding %}
+  {% set plot_w = spec.width - pad * 2 %}
+  {% set plot_h = spec.height - pad * 2 %}
+  {% set n = spec.dates | length %}
+  {% if n > 1 %}
+    {% set x_step = plot_w / (n - 1) %}
+  {% else %}
+    {% set x_step = plot_w %}
+  {% endif %}
+  {% set y_span = spec.y_max - spec.y_min if spec.y_max != spec.y_min else 1 %}
+
+  {% for band in spec.lot_bands %}
+    {% set x0 = pad + band.start_index * x_step %}
+    {% set x1 = pad + band.end_index * x_step %}
+    <rect x="{{ x0 }}" y="{{ pad }}" width="{{ x1 - x0 }}" height="{{ plot_h }}"
+          fill="#3987e5" opacity="0.12"/>
+  {% endfor %}
+
+  {% if spec.today_index is not none %}
+    {% set xt = pad + spec.today_index * x_step %}
+    <line x1="{{ xt }}" y1="{{ pad }}" x2="{{ xt }}" y2="{{ pad + plot_h }}"
+          stroke="#6a7078" stroke-width="1" stroke-dasharray="4,3"/>
+  {% endif %}
+
+  {% if n > 1 %}
+    <polyline fill="none" stroke="#6a7078" stroke-width="1.5" stroke-dasharray="5,3"
+              points="{% for i in range(n) %}{% if spec.cost_basis[i] is not none %}{{ pad + i * x_step }},{{ pad + plot_h - ((spec.cost_basis[i] - spec.y_min) / y_span) * plot_h }} {% endif %}{% endfor %}"/>
+  {% endif %}
+
+  <polyline fill="none" stroke="#3987e5" stroke-width="2"
+            points="{% for i in range(n) %}{{ pad + i * x_step }},{{ pad + plot_h - ((spec.closes[i] - spec.y_min) / y_span) * plot_h }} {% endfor %}"/>
+
+  {% for m in spec.markers %}
+    {% set x = pad + m.x_index * x_step %}
+    {% set y = pad + plot_h - ((m.y - spec.y_min) / y_span) * plot_h %}
+    {% if m.side == 'buy' %}
+      <polygon points="{{ x }},{{ y - m.size }} {{ x - m.size }},{{ y + m.size }} {{ x + m.size }},{{ y + m.size }}"
+               fill="#199e70"{% if m.is_rotation %} stroke="#1a1c1f" stroke-width="2"{% endif %}/>
+    {% else %}
+      <polygon points="{{ x }},{{ y + m.size }} {{ x - m.size }},{{ y - m.size }} {{ x + m.size }},{{ y - m.size }}"
+               fill="#e66767"{% if m.is_rotation %} stroke="#1a1c1f" stroke-width="2"{% endif %}/>
+    {% endif %}
+    {% if m.count is defined and m.count > 1 %}
+      <circle cx="{{ x + m.size + 2 }}" cy="{{ y - m.size - 2 }}" r="7" fill="#22252a"/>
+      <text x="{{ x + m.size + 2 }}" y="{{ y - m.size + 1 }}" text-anchor="middle" font-size="8" fill="#e8eaed">{{ m.count }}</text>
+    {% endif %}
+    {% if m.count is not defined or m.count <= 1 %}
+    <text x="{{ x }}" y="{{ y + m.size + 10 }}" text-anchor="middle" font-size="9" fill="#6a7078">#{{ m.txn_index + 1 }}</text>
+    {% endif %}
+  {% endfor %}
+
+  {% for s in spec.signals %}
+    {% set x = pad + s.x_index * x_step %}
+    {% set y = pad + 8 %}
+    <circle cx="{{ x }}" cy="{{ y }}" r="4"
+            fill="{% if s.downgraded %}#c98500{% else %}#6a7078{% endif %}"/>
+  {% endfor %}
+
+  <rect x="{{ pad }}" y="{{ pad }}" width="{{ plot_w }}" height="{{ plot_h }}"
+        fill="none" stroke="#2a2d33"/>
+  <text x="{{ pad }}" y="{{ spec.height - 8 }}" font-size="11" fill="#6a7078">{{ spec.dates[0] if n else '' }}</text>
+  <text x="{{ spec.width - pad }}" y="{{ spec.height - 8 }}" text-anchor="end" font-size="11" fill="#6a7078">{{ spec.dates[-1] if n else '' }}</text>
+</svg>

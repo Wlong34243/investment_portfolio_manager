@@ -194,6 +194,89 @@ def declare(
         return DeclareResult(True, f"declared id={row.id} — {msg}", precommitment_id=row.id)
 
 
+def declare_from_sheet(
+    *,
+    declared_at: datetime,
+    ticker: str,
+    trigger_type: str,
+    side: str,
+    level: float,
+    action: str,
+    note: str = "",
+    live: bool = False,
+) -> DeclareResult:
+    """
+    Ingest a Precommitments tab row. Band mismatch is ingested anyway (flagged).
+    declared_at comes from Bill's Date_Declared column, not ingest time.
+    """
+    ticker = (ticker or "").strip().upper()
+    trigger_type = (trigger_type or "").strip()
+    side = (side or "").strip().lower()
+    action = (action or "").strip()
+
+    if trigger_type not in TRIGGER_TYPE_FIELDS:
+        return DeclareResult(
+            False,
+            f"unknown trigger_type {trigger_type!r}; allowed: {sorted(TRIGGER_TYPE_FIELDS)}",
+        )
+    if side not in BAND_SIDES:
+        return DeclareResult(False, "side must be trim or add")
+    if TRIGGER_TYPE_FIELDS[trigger_type] == (None, None):
+        return DeclareResult(False, f"{trigger_type} has no valuation band — nothing to pre-commit")
+
+    raw = thesis_band_raw(ticker, trigger_type, side)
+    if is_consensus_ref(raw) or is_consensus_ref(level):
+        return DeclareResult(
+            False,
+            "refused: level references a sell-side / consensus price target",
+        )
+
+    thesis_level = thesis_band_level(ticker, trigger_type, side)
+    mismatch = (
+        thesis_level is not None
+        and abs(float(thesis_level) - float(level)) > 1e-9
+    )
+    mismatch_note = ""
+    if mismatch:
+        mismatch_note = (
+            f" FLAG: declared {level} disagrees with thesis band {thesis_level}"
+        )
+
+    if not action:
+        return DeclareResult(False, "Intended_Action required")
+
+    msg = (
+        f"would declare {ticker} {trigger_type} {side}@{level} "
+        f"declared_at={declared_at.date().isoformat()} action={action!r}"
+        f"{mismatch_note}"
+    )
+    if not live:
+        return DeclareResult(True, f"DRY RUN — {msg}")
+
+    get_engine()
+    with get_session() as session:
+        row = Precommitment(
+            declared_at=declared_at,
+            ticker=ticker,
+            trigger_type=trigger_type,
+            band_side=side,
+            band_level=float(level),
+            intended_action=action,
+            note=(note or None),
+            source="sheet",
+            thesis_band_at_declaration=thesis_level,
+            status="open",
+        )
+        session.add(row)
+        session.commit()
+        session.refresh(row)
+        return DeclareResult(
+            True,
+            f"declared id={row.id} — {msg}",
+            precommitment_id=row.id,
+        )
+
+
 def list_precommitments(
     *,
     ticker: str | None = None,

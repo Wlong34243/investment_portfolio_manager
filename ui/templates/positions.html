@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Positions{% endblock %}
+{% block content %}
+<h2>All positions</h2>
+<p class="meta-line">Retrieval {{ retrieval_hash|hash8 }}</p>
+{% if positions %}
+<div class="table-scroll">
+<table class="data-table" id="positions-table">
+  <thead>
+    <tr>
+      <th class="sticky-col" data-sort="ticker">Ticker</th>
+      <th class="num" data-sort="weight">Wt%</th>
+      <th data-sort="style">Style</th>
+      <th class="num" data-sort="ceiling">Ceiling</th>
+      <th class="num" data-sort="headroom">Headroom</th>
+      <th class="num" data-sort="day_pct">Day%</th>
+      <th class="num" data-sort="unrealized">Unrealized</th>
+      <th class="num" data-sort="days_to_lt">Days LT</th>
+      <th data-sort="signal">Signal</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for p in positions %}
+    <tr>
+      <td class="sticky-col"><a href="/position/{{ p.ticker }}">{{ p.ticker }}</a></td>
+      <td class="num" data-val="{{ p.weight or 0 }}">
+        <span class="weight-bar-wrap">
+          {% if p.weight_bar_pct is not none %}<span class="weight-bar" style="width: {{ p.weight_bar_pct }}px"></span>{% endif %}
+          {% if p.weight is not none %}{{ "%.2f"|format(p.weight) }}%{% else %}—{% endif %}
+        </span>
+      </td>
+      <td>{{ p.style }}</td>
+      <td class="num">{% if p.ceiling is not none %}{{ p.ceiling|pct_pts }}{% elif p.is_ballast %}—{% else %}—{% endif %}</td>
+      <td class="num">{% if p.headroom is not none %}{{ p.headroom|pct_pts }}{% if p.headroom_bar_pct is not none %}<span class="weight-bar" style="width:{{ p.headroom_bar_pct }}px;display:block;margin-top:2px"></span>{% endif %}{% elif p.is_ballast %}—{% else %}—{% endif %}</td>
+      <td class="num {{ p.day_pct|polarity_class }}" data-val="{{ p.day_pct or 0 }}">{% if p.day_pct is not none %}{{ p.day_pct|pct_pts }}{% else %}—{% endif %}</td>
+      <td class="num {{ p.unrealized|polarity_class }}" data-val="{{ p.unrealized or 0 }}">
+        {% if p.unrealized is not none %}{{ p.unrealized|money }}{% if p.unrealized_pct is not none %} <span class="note">({{ p.unrealized_pct|pct_pts }})</span>{% endif %}{% else %}—{% endif %}
+      </td>
+      <td class="num">{{ p.days_to_lt|days }}</td>
+      <td>{% if p.signal %}{% set signal = p.signal %}{% include "partials/signal_chip.html" %}{% endif %}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+{% set message = "No holdings in store." %}
+{% include "partials/empty_state.html" %}
+{% endif %}
+{% endblock %}
+{% block scripts %}
+<script>
+(function(){
+  var table = document.getElementById('positions-table');
+  if (!table) return;
+  table.querySelectorAll('th[data-sort]').forEach(function(th){
+    th.style.cursor = 'pointer';
+    th.addEventListener('click', function(){
+      var idx = Array.from(th.parentNode.children).indexOf(th);
+      var tbody = table.querySelector('tbody');
+      var rows = Array.from(tbody.querySelectorAll('tr'));
+      var asc = th.getAttribute('data-asc') !== '1';
+      th.setAttribute('data-asc', asc ? '1' : '0');
+      rows.sort(function(a,b){
+        var av = a.children[idx].getAttribute('data-val') || a.children[idx].textContent.trim();
+        var bv = b.children[idx].getAttribute('data-val') || b.children[idx].textContent.trim();
+        var an = parseFloat(av), bn = parseFloat(bv);
+        if (!isNaN(an) && !isNaN(bn)) return asc ? an - bn : bn - an;
+        return asc ? av.localeCompare(bv) : bv.localeCompare(av);
+      });
+      rows.forEach(function(r){ tbody.appendChild(r); });
+    });
+  });
+})();
+</script>
+{% endblock %}

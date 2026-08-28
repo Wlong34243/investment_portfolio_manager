@@ -68,6 +68,34 @@ def _warn_if_drive_synced(db_path: Path) -> None:
                 return
 
 
+class JudgmentCampaign(Base):
+    """Latest lifecycle artifact per ticker — freshness for Position Story."""
+
+    __tablename__ = "judgment_campaigns"
+
+    ticker: Mapped[str] = mapped_column(String(32), primary_key=True)
+    computed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    artifact_path: Mapped[str] = mapped_column(String(512), nullable=False)
+    json_path: Mapped[str] = mapped_column(String(512), nullable=False)
+    legs: Mapped[int] = mapped_column(Integer, default=0)
+    retrieval_hash: Mapped[str] = mapped_column(String(128), default="")
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
+class UiRun(Base):
+    """Desk launcher history — Tier 0 subprocess runs from POST /run/{routine_id}."""
+
+    __tablename__ = "ui_runs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    routine_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    args_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    exit_code: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    artifact_path: Mapped[str | None] = mapped_column(String(512), nullable=True)
+
+
 class PipelineRun(Base):
     __tablename__ = "pipeline_runs"
 

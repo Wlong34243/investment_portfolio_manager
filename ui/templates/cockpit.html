@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block title %}Cockpit{% endblock %}
+{% block content %}
+<section>
+  <h2>Morning cockpit</h2>
+  <p class="meta-line">Retrieval {{ retrieval_hash|hash8 }}</p>
+</section>
+
+{% if kpi_tiles %}
+<div class="kpis">
+  {% for tile in kpi_tiles %}
+  <div class="stat-tile">
+    <div class="label">{{ tile.label }}</div>
+    <div class="value-row">
+      <div class="value num">
+        {% if tile.kind == 'money' %}{{ tile.value|money }}
+        {% elif tile.kind == 'pct' %}{{ tile.value|pct }}
+        {% elif tile.kind == 'day' %}
+          {% if tile.dollar is not none %}{{ tile.dollar|money }}{% endif %}
+          {% if tile.pct is not none %} · {{ tile.pct|pct }}{% endif %}
+        {% elif tile.kind == 'ytd' %}
+          <span class="{{ tile.ytd|polarity_class }}">{{ tile.ytd|pct }}</span>
+          {% if tile.vs_spy is not none %} · <span class="{{ tile.vs_spy|polarity_class }}">{{ tile.vs_spy|pct }}</span> vs SPY{% endif %}
+        {% endif %}
+      </div>
+      {% if tile.sparkline %}{% include "partials/sparkline.html" %}{% endif %}
+    </div>
+    {% if tile.note %}<div class="note">{{ cash_scope_note }}</div>{% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% if kpi_omissions %}
+<p class="note meta-line">Not in today's snapshot: {{ kpi_omissions|join(', ') }}.</p>
+{% endif %}
+
+<section>
+  <h3>Crosshairs — top 5</h3>
+  {% if crosshairs %}
+  <div class="table-scroll">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>#</th><th>Ticker</th><th>Signal</th><th class="num">Distance</th>
+        <th class="num">Days LT</th><th>Wash</th><th class="num">Est. tax</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for row in crosshairs %}
+      <tr>
+        <td>{{ loop.index }}</td>
+        <td><a href="/position/{{ row.ticker }}">{{ row.ticker }}</a></td>
+        <td>{% set signal = row.signal %}{% include "partials/signal_chip.html" %}</td>
+        <td class="num">{% set value = row.dist_val %}{% include "partials/delta_bar.html" %}</td>
+        <td class="num">{% if row.trim_side %}{{ row.days_to_lt|days }}{% endif %}</td>
+        <td>{% if row.trim_side and row.wash_window %}<span class="wash-badge">{{ row.wash_window }}</span>{% endif %}</td>
+        <td class="num">{% if row.trim_side %}{{ row.est_tax_display }}{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  {% set message = "No crosshairs in store — run morning or refresh dashboard." %}
+  {% set action_url = "/runs" %}
+  {% set action_label = "Launch refresh" %}
+  {% include "partials/empty_state.html" %}
+  {% endif %}
+  {% if crosshairs_total %}
+  <p class="meta-line"><a href="/decision">Full Crosshairs list ({{ crosshairs_total }}) →</a></p>
+  {% endif %}
+</section>
+
+<section>
+  <h3>Pending pre-commitment firings</h3>
+  {% if pending_precommits %}
+  <div class="table-scroll">
+  <table class="data-table">
+    <thead><tr><th>Ticker</th><th>Declared</th><th>Band</th><th>Fired</th><th class="num">Reading</th><th>Action</th></tr></thead>
+    <tbody>
+    {% for p in pending_precommits %}
+      <tr>
+        <td><a href="/position/{{ p.ticker }}">{{ p.ticker }}</a></td>
+        <td>{{ p.declared_at|dt }}</td>
+        <td>{{ p.trigger_type }} {{ p.band_side }}@{{ p.band_level }}</td>
+        <td>{{ p.event_date|dt }}</td>
+        <td class="num">{{ p.metric_value }}</td>
+        <td>{{ p.intended_action }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <p class="note meta-line">No declarations yet — declare one on the Precommitments tab.</p>
+  {% endif %}
+</section>
+
+<section>
+  <h3>Today's evidence</h3>
+  <p class="meta">
+    <span>Signals captured today: <strong>{{ evidence.signals_today }}</strong></span>
+    <span>Accrual: <strong>day {{ evidence.accrual_day }} of {{ evidence.accrual_total }}</strong></span>
+    {% if evidence.first_accrual %}<span>First accrual: <strong>{{ evidence.first_accrual|dt }}</strong></span>{% endif %}
+    {% if not evidence.gate_met %}<span>Gate clears after <strong>{{ evidence.gate_remaining }}</strong> more clean day(s)</span>{% endif %}
+  </p>
+</section>
+
+<section>
+  <h3>Last run</h3>
+  {% if last_run %}
+  <p class="meta">
+    <span>Routine: <strong>{{ last_run.routine }}</strong></span>
+    <span>Started: <strong>{{ last_run.started_at|dt }}</strong></span>
+    <span>Finished: <strong>{{ last_run.finished_at|dt }}</strong></span>
+    <span>Exit:
+      {% if last_run.exit_code == 3 %}
+        <span class="exit-chip exit-skip">skipped — lock held</span>
+      {% elif last_run.exit_code == 0 %}
+        <span class="exit-chip exit-ok">0 ok</span>
+      {% else %}
+        <span class="exit-chip exit-fail">{{ last_run.exit_code }}</span>
+      {% endif %}
+    </span>
+  </p>
+  {% else %}
+  <p class="note meta-line">No last_run.json yet.</p>
+  {% endif %}
+</section>
+{% endblock %}

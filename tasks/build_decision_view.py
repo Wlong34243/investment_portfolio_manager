@@ -23,15 +23,52 @@ import config
 from utils.sheet_readers import get_gspread_client
 from utils.sheet_writers import safe_execute
 from tasks.build_command_center import _read_records
-from tasks.build_crosshairs import CrosshairsResult, produce_crosshairs, format_level
+from tasks.build_crosshairs import (
+    CrosshairsResult, produce_crosshairs, format_level,
+    format_tax_compact, format_wash_window_column, is_trim_side_crosshair,
+)
 
 app = typer.Typer(add_completion=False)
 
 _DEC_COLS = [
     "Ticker", "Reason", "Market Value", "Wt%", "Price", "Trim", "Add",
     "->Trim %", "->Add %", "Rationale",
+    "Days_To_LT", "Wash_Window", "Est_Tax_Low (ESTIMATE)", "Est_Tax_High (ESTIMATE)",
 ]
 _DATA_START_ROW = 3
+
+
+def _tax_row_values(item) -> list:
+    if not is_trim_side_crosshair(item):
+        return ["", "", "", ""]
+    return [
+        item.days_to_lt if item.days_to_lt is not None else "",
+        format_wash_window_column(item),
+        item.est_tax_cost_low if item.est_tax_cost_low is not None else "",
+        item.est_tax_cost_high if item.est_tax_cost_high is not None else "",
+    ]
+
+
+def _pending_precommit_rows() -> list[list]:
+    """Append-only visibility for unanswered firings — not Crosshairs rows."""
+    try:
+        from core.journal.precommit import list_pending_firings
+
+        rows: list[list] = []
+        for p in list_pending_firings():
+            rationale = (
+                f"PENDING response — declared {p['declared_at'].date() if p.get('declared_at') else '?'} "
+                f"{p['trigger_type']} {p['band_side']}@{p['band_level']}; "
+                f"fired {p.get('event_date')} metric={p.get('metric_value')}; "
+                f"action: {p.get('intended_action', '')}"
+            )
+            rows.append(_pad([
+                p["ticker"], "PRECOMMIT_PENDING", "", "", "", "", "", "", "", rationale,
+                "", "", "", "",
+            ]))
+        return rows
+    except Exception:
+        return []
 
 
 def _pad(row: list, n: int = len(_DEC_COLS)) -> list:
@@ -59,7 +96,13 @@ def _print_dry_run(header: str, items: list) -> None:
             f"{item.dist_trim * 100:+.1f}%" if item.dist_trim is not None else "—",
             f"{item.dist_add * 100:+.1f}%" if item.dist_add is not None else "—",
             item.rationale,
+            *[_tax_row_values(item)[0], _tax_row_values(item)[1],
+              _tax_row_values(item)[2] if _tax_row_values(item)[2] != "" else "—",
+              _tax_row_values(item)[3] if _tax_row_values(item)[3] != "" else "—"],
         )
+    pending = _pending_precommit_rows()
+    if pending:
+        console.print(f"[yellow]{len(pending)} pending precommitment firing(s) would append.[/]")
     console.print(table)
     console.print(f"[dim]{len(items)} Crosshairs rows.[/]")
     console.print("[dim]DRY RUN — no Sheet writes. Re-run with --live to apply.[/]")
@@ -79,15 +122,12 @@ def _apply_formatting(ws, n_rows: int) -> None:
     WHITE = Color(1, 1, 1)
     GREY_BG = Color(0.95, 0.95, 0.95)
 
-    last_col = "J"
+    AMBER = Color(1.0, 0.95, 0.80)
+    last_col = "N"
     data_end = _DATA_START_ROW - 1 + max(n_rows, 1)
 
     dollar_fmt = NumberFormat(type='CURRENCY', pattern='$#,##0.00')
     dollar0_fmt = NumberFormat(type='CURRENCY', pattern='$#,##0')
-    # F/G (Trim/Add) can hold a P/E, P/B, discount %, or a dollar level
-    # depending on the row's declared trigger_type -- CURRENCY would show
-    # "$15.85" for a forward P/E. Plain NUMBER is the safe column-wide
-    # choice. See prompts/typed_trigger_crosshairs_2026-08-24.md.
     level_fmt = NumberFormat(type='NUMBER', pattern='0.00')
     pct_fmt = NumberFormat(type='PERCENT', pattern='0.0%')
     pct_signed_fmt = NumberFormat(type='PERCENT', pattern='+0.0%;-0.0%')
@@ -104,11 +144,42 @@ def _apply_formatting(ws, n_rows: int) -> None:
         (f"H{_DATA_START_ROW}:H{data_end}", CellFormat(numberFormat=pct_signed_fmt)),
         (f"I{_DATA_START_ROW}:I{data_end}", CellFormat(numberFormat=pct_signed_fmt)),
         (f"J{_DATA_START_ROW}:J{data_end}", CellFormat(wrapStrategy="WRAP", verticalAlignment="TOP")),
+        (f"M{_DATA_START_ROW}:N{data_end}", CellFormat(numberFormat=dollar0_fmt)),
     ]
     try:
         format_cell_ranges(ws, ranges)
     except Exception as e:
         print(f"  ! Decision_View formatting failed: {e}")
+
+  # Amber: open wash window (L) or days_to_lt <= 30 (K) — facts, not alarms
+    try:
+        from gspread_formatting import (
+            get_conditional_format_rules, ConditionalFormatRule, BooleanRule,
+            BooleanCondition, GridRange,
+        )
+
+        rules = get_conditional_format_rules(ws)
+        rules.clear()
+        amber_fmt = CellFormat(backgroundColor=AMBER)
+        wash_rng = GridRange.from_a1_range(f"L{_DATA_START_ROW}:L{data_end}", ws)
+        days_rng = GridRange.from_a1_range(f"K{_DATA_START_ROW}:K{data_end}", ws)
+        rules.append(ConditionalFormatRule(
+            ranges=[wash_rng],
+            booleanRule=BooleanRule(
+                condition=BooleanCondition("NOT_BLANK", []),
+                format=amber_fmt,
+            ),
+        ))
+        rules.append(ConditionalFormatRule(
+            ranges=[days_rng],
+            booleanRule=BooleanRule(
+                condition=BooleanCondition("NUMBER_LESS_THAN_EQ", ["30"]),
+                format=amber_fmt,
+            ),
+        ))
+        rules.save()
+    except Exception as e:
+        print(f"  ! Decision_View conditional formatting failed: {e}")
 
     try:
         set_frozen(ws, rows=2, cols=1)
@@ -119,6 +190,7 @@ def _apply_formatting(ws, n_rows: int) -> None:
         set_column_widths(ws, [
             ("A", 70), ("B", 110), ("C", 100), ("D", 70), ("E", 90),
             ("F", 90), ("G", 90), ("H", 90), ("I", 90), ("J", 500),
+            ("K", 80), ("L", 140), ("M", 100), ("N", 100),
         ])
     except Exception as e:
         print(f"  ! Column widths failed: {e}")
@@ -154,7 +226,9 @@ def main(live: bool = False, crosshairs: Optional[CrosshairsResult] = None) -> O
         grid.append(_pad([
             item.ticker, item.reason_code, item.mv, item.wt, item.price,
             item.trim, item.add, item.dist_trim, item.dist_add, item.rationale,
+            *_tax_row_values(item),
         ]))
+    grid.extend(_pending_precommit_rows())
     grid = [["" if c is None else c for c in row] for row in grid]
 
     tab_name = config.TAB_DECISION_VIEW
@@ -165,7 +239,7 @@ def main(live: bool = False, crosshairs: Optional[CrosshairsResult] = None) -> O
 
     safe_execute(ws_dec.clear)
     safe_execute(ws_dec.update, range_name="A1", values=grid, value_input_option="RAW")
-    _apply_formatting(ws_dec, len(items))
+    _apply_formatting(ws_dec, len(grid) - 2)
 
     try:
         from core.store import get_store
@@ -182,8 +256,14 @@ def main(live: bool = False, crosshairs: Optional[CrosshairsResult] = None) -> O
                 "dist_trim": item.dist_trim,
                 "dist_add": item.dist_add,
                 "rationale": item.rationale,
-                "doctrine_tag": item.doctrine_tag,
+                "override_tag": item.override_tag,
                 "doctrine_reason": item.doctrine_reason,
+                "doctrine_downgraded": item.doctrine_downgraded,
+                "days_to_lt": item.days_to_lt,
+                "wash_window_open": item.wash_window_open,
+                "wash_window": format_wash_window_column(item),
+                "est_tax_cost_low": item.est_tax_cost_low,
+                "est_tax_cost_high": item.est_tax_cost_high,
             }
             for item in items
         ]
@@ -191,7 +271,9 @@ def main(live: bool = False, crosshairs: Optional[CrosshairsResult] = None) -> O
     except Exception as e:
         print(f"  ! PortfolioStore decision_view shadow failed: {e}")
 
-    print(f"Decision_View refreshed. {len(items)} Crosshairs rows.")
+    extra = len(grid) - len(items) - 2
+    suffix = f" + {extra} pending precommit" if extra > 0 else ""
+    print(f"Decision_View refreshed. {len(items)} Crosshairs rows{suffix}.")
     return crosshairs
 
 

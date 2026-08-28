@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}Corpus Search{% endblock %}
+{% block content %}
+<h2>Corpus Search</h2>
+<p class="note">BM25 term frequency — score shown so order is not mistaken for importance. Doctrine sorts first among equal scores.</p>
+
+<div class="search-layout">
+  <aside class="facets">
+    <h3>Filters</h3>
+    <form method="get" action="/search">
+      {% if q %}<input type="hidden" name="q" value="{{ q }}" />{% endif %}
+      <fieldset>
+        <legend>Source type</legend>
+        {% if facets.source_type %}
+          {% for st, cnt in facets.source_type.items() %}
+          <label class="facet-row">
+            <input type="checkbox" name="source_type" value="{{ st }}"
+              {% if st in source_types %}checked{% endif %} />
+            {{ st }} ({{ cnt }})
+          </label>
+          {% endfor %}
+        {% elif vocab %}
+          <p class="note">Run a query to see facet counts from results.</p>
+          <ul class="plain">
+          {% for row in vocab %}
+            <li>{{ row.source_type }} — {{ row.doc_count }} docs indexed</li>
+          {% endfor %}
+          </ul>
+        {% endif %}
+      </fieldset>
+      {% if facets.ticker %}
+      <fieldset>
+        <legend>Ticker (top {{ facets.ticker|length }})</legend>
+        {% for t, cnt in facets.ticker %}
+        <label class="facet-row">
+          <input type="checkbox" name="ticker" value="{{ t }}"
+            {% if t in tickers %}checked{% endif %} />
+          {{ t }} ({{ cnt }})
+        </label>
+        {% endfor %}
+      </fieldset>
+      {% endif %}
+      <fieldset>
+        <legend>Date</legend>
+        <label><input type="radio" name="preset" value="" {% if not preset %}checked{% endif %} /> All</label>
+        <label><input type="radio" name="preset" value="30d" {% if preset == '30d' %}checked{% endif %} /> 30d</label>
+        <label><input type="radio" name="preset" value="90d" {% if preset == '90d' %}checked{% endif %} /> 90d</label>
+        <label><input type="radio" name="preset" value="1y" {% if preset == '1y' %}checked{% endif %} /> 1y</label>
+        <label>From <input type="date" name="since" value="{{ since }}" /></label>
+        <label>To <input type="date" name="until" value="{{ until }}" /></label>
+      </fieldset>
+      <label>Ticker <input name="ticker" placeholder="ET" value="{{ tickers|join(',') if tickers|length == 1 else '' }}" /></label>
+      <button type="submit">Apply</button>
+    </form>
+  </aside>
+
+  <div class="results">
+    <form method="get" action="/search" class="search-form">
+      <input type="search" name="q" value="{{ q }}" placeholder="FTS query…" size="40" />
+      {% for t in tickers %}<input type="hidden" name="ticker" value="{{ t }}" />{% endfor %}
+      {% for st in source_types %}<input type="hidden" name="source_type" value="{{ st }}" />{% endfor %}
+      {% if since %}<input type="hidden" name="since" value="{{ since }}" />{% endif %}
+      {% if until %}<input type="hidden" name="until" value="{{ until }}" />{% endif %}
+      {% if preset %}<input type="hidden" name="preset" value="{{ preset }}" />{% endif %}
+      <button type="submit">Search</button>
+    </form>
+
+    {% if q and hits %}
+    <p class="meta-line">{{ hit_count }} hit(s) · showing {{ page_count }} · hash {{ retrieval_hash|hash8 }}</p>
+    {% for row in hits %}
+      {% set h = row.hit %}
+      <article class="hit {% if h.source_type == 'doctrine' %}hit-doctrine{% endif %}">
+        <header>
+          <span class="badge badge-{{ row.badge }}">{{ row.badge | replace('_', ' ') }}</span>
+          <strong>[{{ h.source_type }}]</strong>
+          <a href="{{ row.doc_url }}">{{ h.path }} : L{{ h.line_start }}</a>
+          {% if h.doc_date %}
+            <span class="date{% if h.date_is_inferred %} inferred{% endif %}"
+              {% if h.date_is_inferred %}title="Date inferred from file mtime — filter with care"{% endif %}>
+              {{ h.doc_date }}
+            </span>
+          {% else %}
+            <span class="date">undated</span>
+          {% endif %}
+          <span class="score">score {{ "%.3f"|format(h.score) }}</span>
+        </header>
+        <div class="snippet">{{ row.snippet_html }}</div>
+        {% if h.tickers %}<div class="tickers">{{ h.tickers }}</div>{% endif %}
+      </article>
+    {% endfor %}
+    {% elif q %}
+    <p class="note">No hits for <code>{{ q }}</code>.</p>
+    {% else %}
+    <p class="note">Enter a query — empty search shows the form, not the whole corpus.</p>
+    {% endif %}
+  </div>
+</div>
+
+<style>
+.search-layout { display: grid; grid-template-columns: 240px 1fr; gap: 1.25rem; }
+.facets fieldset { border: 1px solid var(--line); margin: 0 0 0.75rem; padding: 0.5rem; }
+.facet-row { display: block; font-size: 0.88rem; margin: 0.2rem 0; }
+.hit { border: 1px solid var(--line); background: #fff; padding: 0.75rem; margin: 0.6rem 0; }
+.hit-doctrine { border-left: 4px solid var(--accent); }
+.badge { font-size: 0.72rem; text-transform: uppercase; padding: 0.1rem 0.35rem; border-radius: 3px; margin-right: 0.35rem; }
+.badge-your_writing { background: #e8f0fe; color: #1f4e79; }
+.badge-model_output { background: #fde8e8; color: #8a1f1f; }
+.badge-third_party { background: #eef2f6; color: #5c6b7a; }
+.snippet mark { background: #fff3a3; padding: 0 0.1em; }
+.date.inferred { color: #9aa5b1; }
+.score { float: right; font-size: 0.8rem; color: var(--muted); }
+.search-form { margin-bottom: 1rem; }
+</style>
+{% endblock %}

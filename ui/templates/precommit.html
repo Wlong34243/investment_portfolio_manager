@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Pre-commitments{% endblock %}
+{% block content %}
+<h2>Pre-commitments</h2>
+<p class="meta-line">Declaration happens on the <strong>{{ sheets_tab }}</strong> tab in Sheets — this page is read-only.</p>
+
+<section>
+  <h3>Pending firings</h3>
+  {% if pending %}
+  <div class="table-scroll">
+  <table class="data-table">
+    <thead><tr><th>Ticker</th><th>Declared</th><th>Band</th><th>Fired</th><th class="num">Reading</th><th>Action</th></tr></thead>
+    <tbody>
+    {% for p in pending %}
+      <tr>
+        <td><a href="/position/{{ p.ticker }}">{{ p.ticker }}</a></td>
+        <td>{{ p.declared_at|dt }}</td>
+        <td>{{ p.trigger_type }} {{ p.band_side }}@{{ p.band_level }}</td>
+        <td>{{ p.event_date|dt }}</td>
+        <td class="num">{{ p.metric_value }}</td>
+        <td>{{ p.intended_action }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  {% set message = "No pending firings." %}
+  {% include "partials/empty_state.html" %}
+  {% endif %}
+</section>
+
+<section>
+  <h3>All declarations</h3>
+  {% if declarations %}
+  <div class="table-scroll">
+  <table class="data-table">
+    <thead><tr><th>ID</th><th>Ticker</th><th>Type</th><th>Side</th><th class="num">Level</th><th>Status</th><th>Action</th><th>Declared</th></tr></thead>
+    <tbody>
+    {% for d in declarations %}
+      <tr>
+        <td>{{ d.id }}</td>
+        <td><a href="/position/{{ d.ticker }}">{{ d.ticker }}</a></td>
+        <td>{{ d.type }}</td>
+        <td>{{ d.side }}</td>
+        <td class="num">{{ d.level }}</td>
+        <td>{{ d.status }}</td>
+        <td>{{ d.action }}</td>
+        <td>{{ d.thesis_at|dt }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  {% set message = "No declarations ingested yet." %}
+  {% include "partials/empty_state.html" %}
+  {% endif %}
+</section>
+{% endblock %}

@@ -146,3 +146,16 @@ def ensure_trade_log_columns(df: pd.DataFrame) -> pd.DataFrame:
             df[col] = ""
 
     return df[config.TRADE_LOG_COLUMNS]
+
+
+def ensure_precommitments_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """Guard Precommitments tab headers — manual authority, append-and-mark ingest."""
+    if df is None or (isinstance(df, pd.DataFrame) and df.empty):
+        return pd.DataFrame(columns=config.PRECOMMITMENTS_COLUMNS)
+
+    df = df.copy()
+    df.columns = [str(c).strip() for c in df.columns]
+    for col in config.PRECOMMITMENTS_COLUMNS:
+        if col not in df.columns:
+            df[col] = ""
+    return df[config.PRECOMMITMENTS_COLUMNS]

@@ -1,0 +1,263 @@
+{% extends "base.html" %}
+{% block title %}{{ ticker }} — Position Story{% endblock %}
+{% block content %}
+<section class="pos-header">
+  <h2>{{ ticker }}{% if is_archived %} <span class="tag tag-warn">Archived thesis</span>{% endif %}</h2>
+  <div class="meta">
+    {% if style %}<span>Style: <strong>{{ style }}</strong></span>{% endif %}
+    {% if weight is not none %}<span>Weight: <strong>{{ weight|pct_pts }}</strong></span>{% endif %}
+    {% if ceiling is not none and not is_ballast %}
+      <span>Ceiling: <strong>{{ ceiling|pct_pts }}</strong>
+      {% if headroom is not none %}({{ headroom|pct_pts }} headroom){% endif %}</span>
+    {% endif %}
+    {% if market_value is not none %}<span>MV: <strong>{{ market_value|money }}</strong></span>{% endif %}
+    {% if unrealized is not none %}<span>Unrealized: <strong class="{{ unrealized|polarity_class }}">{{ unrealized|money }}</strong></span>{% endif %}
+  </div>
+  <p class="meta-line">Retrieval {{ retrieval_hash|hash8 }} · as of {{ as_of|dt }}</p>
+</section>
+
+<section>
+  <h3>Price &amp; fills</h3>
+  <p class="note">Blue = close · dashed orange = average cost · ▲ buy ▼ sell · # = transaction index below · rotation legs outlined</p>
+  <div class="chart-wrap">{{ chart_svg | safe }}</div>
+  <script type="application/json" id="chart-spec-json">{{ chart_spec_json | safe }}</script>
+</section>
+
+<section>
+  <h3>Transactions</h3>
+  {% if transactions %}
+  <table>
+    <thead><tr><th>#</th><th>Date</th><th>Action</th><th>Shares</th><th>Price</th><th>Net</th><th>Account</th></tr></thead>
+    <tbody>
+    {% for t in transactions %}
+      <tr id="txn-{{ loop.index }}">
+        <td>{{ loop.index }}</td>
+        <td>{{ t.trade_date }}</td>
+        <td>{{ t.action }}</td>
+        <td>{{ t.shares }}</td>
+        <td>{{ t.price }}</td>
+        <td>{{ t.net_amount }}</td>
+        <td>{{ t.account }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="note">No transactions in scope for this ticker.</p>
+  {% endif %}
+</section>
+
+{% if lifecycle_summary %}
+<section>
+  <h3>Campaign (lifecycle)
+    {% if campaign_stale %}<span class="tag tag-warn" title="{{ campaign_stale_reason }}">stale</span>{% endif %}
+  </h3>
+  <p class="meta-line">Measurement only — not a recommendation.
+    {% if lifecycle_artifact and lifecycle_artifact.computed_at %}
+      As of {{ lifecycle_artifact.computed_at|dt }}{% if fills_since_campaign %} · {{ fills_since_campaign }} fill(s) since{% endif %}.
+    {% endif %}
+  </p>
+  <div class="run-launcher" data-routine-id="judge-lifecycle">
+    <input type="hidden" name="arg-ticker" value="{{ refresh_ticker }}" />
+    <button type="button" class="launch-routine">Refresh campaign</button>
+    <span class="warn">~3 min</span>
+    <span class="refresh-done note" hidden></span>
+    <a href="/runs" class="note" onclick="sessionStorage.setItem('prefill_ticker','{{ refresh_ticker }}')">Runs fallback</a>
+  </div>
+  {% if lifecycle_summary.scaling_delta_pct is not none %}
+  <div class="campaign-hero {{ lifecycle_summary.scaling_delta_pct|polarity_class }}">
+    Δ legs−buy-once: {{ lifecycle_summary.scaling_delta_pct|pct }}
+    {% if lifecycle_summary.scaling_delta_dollars is not none %}({{ lifecycle_summary.scaling_delta_dollars|money }}){% endif %}
+  </div>
+  {% elif lifecycle_summary.single_entry_cf is not none %}
+  <div class="campaign-hero">Single-entry CF: {{ lifecycle_summary.single_entry_cf|pct }}</div>
+  {% endif %}
+  <p class="campaign-support">
+    Status {% if lifecycle_summary.is_open %}OPEN{% else %}CLOSED{% endif %} · {{ lifecycle_summary.legs }} legs
+    · TWR {% if lifecycle_summary.twr is not none %}{{ lifecycle_summary.twr|pct }}{% else %}—{% endif %}
+    · Single-entry {% if lifecycle_summary.single_entry_cf is not none %}{{ lifecycle_summary.single_entry_cf|pct }}{% else %}—{% endif %}
+    {% if not lifecycle_summary.dwr_degenerate %}
+    · DWR {% if lifecycle_summary.dwr is not none %}{{ lifecycle_summary.dwr|pct }}{% else %}—{% endif %}
+    {% endif %}
+    · VTI bench {% if lifecycle_summary.benchmark_vti_cf is not none %}{{ lifecycle_summary.benchmark_vti_cf|pct }}{% else %}—{% endif %}
+  </p>
+  <p class="note">Adds strength/weakness: {{ lifecycle_summary.adds_strength }} / {{ lifecycle_summary.adds_weakness }}{% if lifecycle_summary.style_key %} ({{ lifecycle_summary.style_key }}){% endif %}</p>
+</section>
+{% else %}
+<section>
+  <h3>Campaign (lifecycle)</h3>
+  <div class="run-launcher" data-routine-id="judge-lifecycle">
+    <input type="hidden" name="arg-ticker" value="{{ refresh_ticker }}" />
+    <button type="button" class="launch-routine">Refresh campaign</button>
+    <span class="warn">~3 min</span>
+    <span class="refresh-done note" hidden></span>
+  </div>
+  {% set message = "No campaign computed — run Judgment lifecycle for " ~ ticker ~ "." %}
+  {% include "partials/empty_state.html" %}
+</section>
+{% endif %}
+
+<section>
+  <h3>Holding-period ladder</h3>
+  <p class="note">Open date → long-term crossover (365d). Dot = today. Display only.</p>
+  {% include "partials/ladder_chart.html" %}
+</section>
+
+<section>
+  <h3>Open lots</h3>
+  <p class="note">Sorted by days to long-term ascending. Display only — no lot-relief projection.</p>
+  {% if open_lots %}
+  <div class="table-scroll">
+  <table class="data-table">
+    <thead><tr><th>Open</th><th>Shares</th><th>Basis</th><th>Unrealized</th><th>Holding days</th><th>Term</th><th>Days to LT</th></tr></thead>
+    <tbody>
+    {% for lot in open_lots %}
+      <tr>
+        <td>{{ lot.lot_open_date }}</td>
+        <td>{{ lot.shares }}</td>
+        <td>{{ lot.cost_basis }}</td>
+        <td>{{ lot.unrealized }}</td>
+        <td>{{ lot.holding_days }}</td>
+        <td>{{ lot.term }}</td>
+        <td>{{ lot.days_to_lt }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <p class="note">No open-lot rows in Tax_Control mirror for this ticker (closed/wash zone may be all that is mirrored).</p>
+  {% endif %}
+</section>
+
+<section>
+  <h3>Closed lots (realized)</h3>
+  {% if closed_lots %}
+  <details>
+    <summary>{{ closed_lots | length }} closed lot row(s)</summary>
+    <table>
+      <thead><tr><th>Open</th><th>Shares</th><th>Basis</th><th>Gain/Loss</th><th>Term</th></tr></thead>
+      <tbody>
+      {% for lot in closed_lots %}
+        <tr>
+          <td>{{ lot.lot_open_date }}</td>
+          <td>{{ lot.shares }}</td>
+          <td>{{ lot.cost_basis }}</td>
+          <td>{{ lot.unrealized }}</td>
+          <td>{{ lot.term }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </details>
+  {% else %}
+  <p class="note">No closed-lot rows.</p>
+  {% endif %}
+</section>
+
+<section>
+  <h3>Realized &amp; unrealized</h3>
+  <table>
+    <tbody>
+      <tr><th>Lifetime ST realized</th><td>${{ "{:,.0f}".format(realized.lifetime_st) }}</td></tr>
+      <tr><th>Lifetime LT realized</th><td>${{ "{:,.0f}".format(realized.lifetime_lt) }}</td></tr>
+      <tr><th>YTD ST realized</th><td>${{ "{:,.0f}".format(realized.ytd_st) }}</td></tr>
+      <tr><th>YTD LT realized</th><td>${{ "{:,.0f}".format(realized.ytd_lt) }}</td></tr>
+      {% if unrealized is not none %}
+      <tr><th>Unrealized (position)</th><td>${{ "{:,.0f}".format(unrealized) }}</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h3>Signal lane</h3>
+  {% if gate_banner %}
+  <p class="banner">{{ gate_banner }}</p>
+  {% endif %}
+  {% if signals %}
+  <table>
+    <thead><tr><th>Date</th><th>Type</th><th>Trigger</th><th>Reading</th><th>Band</th><th>Downgraded</th></tr></thead>
+    <tbody>
+    {% for s in signals %}
+      <tr>
+        <td>{{ s.event_date }}</td>
+        <td>{{ s.signal_type }}</td>
+        <td>{{ s.trigger_type }}</td>
+        <td>{{ s.metric_value }}</td>
+        <td>{{ s.band_level }} {{ s.band_side }}</td>
+        <td>{% if s.doctrine_downgraded %}yes{% else %}—{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% elif not gate_banner %}
+  <p class="note">No signal events captured for this ticker yet.</p>
+  {% endif %}
+</section>
+
+<section>
+  <h3>Thesis state</h3>
+  {% if thesis %}
+  <ul class="plain">
+    <li>Trigger type: <strong>{{ bands.trigger_type or thesis.trigger_type }}</strong></li>
+    {% if bands.trim_level is not none %}<li>Trim band: {{ bands.trim_level }}</li>{% endif %}
+    {% if bands.add_level is not none %}<li>Add band: {{ bands.add_level }}</li>{% endif %}
+    {% if pattern %}<li>Pattern: {{ pattern.name }}</li>{% endif %}
+    <li>File: <code>{{ thesis_meta.path }}</code></li>
+  </ul>
+  {% endif %}
+  {% if review_log %}
+  <h4>Review log</h4>
+  {% for e in review_log %}
+    <div class="review-entry"><strong>{{ e.date }}</strong><pre>{{ e.body }}</pre></div>
+  {% endfor %}
+  {% endif %}
+</section>
+
+<section>
+  <h3>Rotation history</h3>
+  <p class="note">Rotation_Review describes a documented subset — effective N is far below nominal N; evidence, not a scorecard.</p>
+  {% if rotations %}
+  <table>
+    <thead><tr><th>Date</th><th>Sell</th><th>Buy</th><th>Residual 30d</th><th>Residual 90d</th><th>Implicit bet</th></tr></thead>
+    <tbody>
+    {% for r in rotations %}
+      <tr>
+        <td>{{ r.get('Date') or r.get('Rotation_Date') }}</td>
+        <td>{{ r.get('Sell_Ticker') }}</td>
+        <td>{{ r.get('Buy_Ticker') }}</td>
+        <td>{{ r.get('Residual_Pair_30d') or r.get('Residual_Pair_30') }}</td>
+        <td>{{ r.get('Residual_Pair_90d') or r.get('Residual_Pair_90') }}</td>
+        <td>{{ r.get('Implicit_Bet') }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="note">No Rotation_Review rows touching this ticker.</p>
+  {% endif %}
+</section>
+
+<section>
+  <h3>Corpus mentions</h3>
+  {% if corpus_hits %}
+  <ul class="plain">
+  {% for h in corpus_hits %}
+    <li>
+      {% if h.is_model_output %}<span class="tag tag-model">model output</span>{% endif %}
+      <strong>{{ h.source_type }}</strong>
+      {% if h.doc_date %}{{ h.doc_date }}{% endif %}
+      — <a href="/search?q={{ ticker }}&ticker={{ ticker }}">{{ h.path }}:L{{ h.line_start }}</a>
+      <div class="snippet">{{ h.snippet[:240] }}{% if h.snippet|length > 240 %}…{% endif %}</div>
+    </li>
+  {% endfor %}
+  </ul>
+  {% else %}
+  <p class="note">No corpus hits for this ticker.</p>
+  {% endif %}
+</section>
+{% endblock %}
+{% block scripts %}
+<script src="/static/chart_enhance.js"></script>
+{% endblock %}

@@ -1,5 +1,130 @@
 # CHANGELOG — Investment Portfolio Manager
 
+## [2026-08-28] — New positions: BTC, CF
+
+- **New position: BTC** (Grayscale Bitcoin Mini Trust ETF, not spot custody), entered between
+  the 2026-08-25 and 2026-08-26 bundles — 30 shares, $34.995/share, $1,049.85 cost basis, account
+  `...8767`. Gap caught by `preflight_issues` (held position, no thesis file). Scaffolded
+  2026-08-27 (`vault/theses/BTC_thesis.md`, all judgment sections `[BILL]`, no trigger_type
+  invented). Redrafted 2026-08-28 from Bill-supplied source material (a 2026-08-27 Motley Fool
+  article on post-Clarity-Act sentiment), with every factual claim independently verified against
+  primary reporting — three corrections on record where the source read stronger than the facts
+  support (most notably: the Strategic Bitcoin Reserve is not a new buyer, it was established by
+  executive order 2025-03-06 from forfeiture assets, ~17 months before the event the source
+  implies is new). `style`, levels, and exit conditions remain `[BILL]` — the draft is explicit
+  that it reflects the source article, not Bill's own stated thesis.
+- **New position: CF** (CF Industries), entered 2026-08-28 — 25 shares @ $125.265, $3,131.63 cost
+  basis, account `...5119`, taxable. Core Thesis is Bill's own stated rationale (valuation,
+  stability, upside); Bull Case / Key Risks are a research summary Bill supplied in the same
+  message (Blue Point One ammonia plant, H1 2026 financials, shareholder returns, Hold-rated
+  analyst sentiment), organized but not independently fact-checked beyond what's noted inline.
+  Position verified against a live Schwab positions/tax-lots fetch since Holdings_Current had not
+  yet synced to the trade. `vault/theses/CF_thesis.md`; style/triggers/exit conditions `[BILL]`.
+
+## [2026-08-28] — Desk redesign Phase 2 (remaining pages + daily-use gaps)
+
+- **`pm judge lifecycle --missing-json`** — dry-run table of tickers missing JSON sidecars; `--live` to recompute (mutually exclusive with `--ticker` / `--all`). UI routine `judge-lifecycle-missing-json` registered Tier 0 dry-run only.
+- **`ui/header_context.py`** — 60s header cache keyed on `logs/last_run.json` + newest manifest mtime (missing file = stable sentinel, not invalidate); pipeline lock always live outside cache.
+- **`ui/crosshairs_table.py`** — shared crosshair row shaping; `/decision` parity with cockpit (signal chips, delta bars, tax trio).
+- **`/tax`, `/precommit`, `/search`, `/ask`** — template layer + format filters; tax lots via `tax_control_lots` retrieval, metrics via MetaKV store read.
+- **Position Story** — Refresh campaign launcher (`judge-lifecycle`); stale campaign amber badge (>7d since `computed_at`); `desk.js` widened to `[data-routine-id]`.
+- **Cockpit** — portfolio sparkline from `Daily_Snapshots` (dropped SPY bars retrieve); crosshairs link to full Decision View.
+- **`/rotations`** — 302 redirect to `/judgment/rotations`; sidebar sub-nav renamed.
+- **`PM_UI_RELOAD`** — optional uvicorn reload for `pm ui serve`.
+- **Tests:** `test_header_cache.py`, `test_delta_bar.py`, `test_ui_decision_parity.py`, extended sparkline test.
+
+## [2026-08-28] — Desk Phase 2 fixups (audit)
+
+- **`desk.css`** — second sticky column offset (`.sticky-col + .sticky-col { left: 2.5rem; }`) for `/decision` rank+ticker scroll.
+- **`tests/test_header_cache.py`** — manifest + `last_run.json` mtime invalidation; lock state live on cache hit.
+- **`tax.html`** — `Disallowed Loss` in `tax_money_cols` (`|money` + `class="num"`).
+- **`tests/test_ui_tax_page.py`** — regression on formatted lot cells.
+
+## [2026-08-28] — Desk redesign Phases 1–3 (visual system + page polish)
+
+- **`ui/static/tokens.css` + `desk.css`** — design tokens, signal chips, delta bars, stat tiles, ladder chart, exit chips.
+- **Jinja partials** — `stat_tile`, `sparkline`, `signal_chip`, `delta_bar`, `empty_state`, `meta_line`, `ladder_chart`.
+- **Cockpit** — SPY sparkline on total-value tile; crosshairs use chip + delta bar; wash badges.
+- **`/positions`** — polarity Day%/Unrealized, weight bar vs ceiling, sticky ticker column, signal chips.
+- **`/position/{ticker}`** — campaign hero (Δ scaling), holding-period ladder, token-styled price chart.
+- **`/judgment`** — JSON sidecar table (span, TWR, Δ scale); lifecycle deduped to newest per ticker.
+- **`/runs`** — duration hints, elapsed timer on launch, exit-code chips.
+- **Header** — 60s Schwab token cache; verify-streak hover hint.
+- **Charts** — `chart.svg.j2` + `chart_enhance.js` restyled to desk tokens (no library).
+
+## [2026-08-28] — Desk redesign Phase 0 (function before CSS)
+
+- **`ui/judgment_artifacts.py`** — glob `*lifecycle_*.md` (timestamp-prefixed names); ticker parse from `lifecycle_<TICKER>.md` suffix.
+- **`/judgment/lifecycle`** — lists all lifecycle artifacts; reads JSON sidecars when present (no regex on markdown headers).
+- **`/position/{ticker}`** — removed inline `retrieve_campaign()`; reads newest artifact only; empty state links to Runs.
+- **`ui/format.py`** — Jinja filters (`pct`, `money`, `money_range`, `days`, `hash8`, `dt`, `dist_pct`); cockpit crosshairs + position campaign block wired.
+- **Cockpit** — SIGNAL populated; trim distance formatted; KPI tiles omit empty chrome; tax trio columns in sqlite `decision_view` shadow; horizontal scroll on wide tables.
+- **`tasks/health.desk_schwab_token_summary()`** — single Schwab token signal for desk header + Command Center.
+- **`core/judgment/artifacts.py`** — JSON sidecars beside markdown on `pm judge` write; **`registry.py`** campaign freshness; **`increment.py`** morning bounded recompute for yesterday's fill tickers.
+- **Tests:** `test_judgment_page_glob.py`, `test_ui_no_inline_judgment.py`.
+
+## [2026-08-28] — Desk UI launch amendment (broker vs commentary test)
+
+- **`CLAUDE.md`** — Desk UI launch policy: UI may write regenerable computed surfaces + Bill's authored input; broker-derived mutations and authoritative promotion stay CLI-only.
+- **Five approved `--live` routines** in `ui/routines.py`: `store-backup-live`, `corpus-index-live`, `ingest-precommitments-live`, `refresh-dashboard-live`, `tax-refresh-live`.
+- **Graded confirmations:** write banner + `ui_runs` row before all runs; typed routine-id only on dashboard + tax refresh.
+- **`pm journal ingest-precommitments --live`** — standalone CLI for Precommitments tab ingest.
+- **Explicitly not in launcher:** `morning`, `journal promote`, `store sync-from-sheets`, `journal reconcile --backlog-only` (revisit after staging writer fix).
+
+## [2026-08-28] — Desk Cockpit (local morning landing + Tier 0 launcher)
+
+- **`/` cockpit** — KPI strip, crosshairs top 5 with tax trio, pending precommit firings, evidence accrual, `logs/last_run.json` panel (exit 3 = skipped lock, not failure).
+- **Shell** — dark sidebar (Portfolio_Manager.bat vocabulary), header freshness strip, collapsible console dock.
+- **`ui/routines.py`** — frozen Tier 0 registry; `POST /run/{routine_id}` + SSE stream; `ui_runs` SQLite history; `shell=False`; one run at a time; pipeline lock respected.
+- **Pages** — `/positions`, `/precommit`, `/judgment` (artifacts on disk only), `/runs`.
+- **Charts** — same-week fill aggregation + localhost `chart_enhance.js` (SVG unchanged offline).
+- **`morning_auto.bat`** — writes `logs/last_run.json` on exit 0/1/3; opens `http://127.0.0.1:8765/` on exit 0 only (no HTTP probe).
+- **Tier 1/2 routines NOT built** — amendment table in prompt handoff; Phase 6a gate unchanged.
+
+## [2026-08-28] — Judgment Engine polish (artifact framing)
+
+- **Unit A** — included/excluded **date spans** in rotations artifact header + file meta (`included_span` / `excluded_span`).
+- **Unit B** — **denominator note** on campaign economic return vs single-entry/TWR; Δ dollars authoritative over pp delta. DWR degeneracy suppression unchanged.
+
+## [2026-08-28] — Judgment Engine (Instrument prompt 10)
+
+- **`pm judge rotations`** — Unit A read-only aggregates over frozen `Rotation_Review` (N/excluded-N inline, superseded counted, splits by type/bet/provenance).
+- **`pm judge lifecycle --ticker X` / `--all`** — Unit B campaigns via `core/retrieval` (DWR/TWR, single-entry + VTI/SPY counterfactuals).
+- **`pm judge calibration`** — Unit C scaffold; blank quadrant with accrual counter; no partial table below gate.
+- **Position Story** — lifecycle summary block (read-only).
+- **Phase 3 correction:** A+B shipped now; C waits on firings + six-month gate.
+
+## [2026-08-28] — Surface Delivery (tax on Sheet, UI logon task, Precommitments tab, citation anchors)
+
+- **Decision_View** — appended `Days_To_LT`, `Wash_Window`, `Est_Tax_Low (ESTIMATE)`, `Est_Tax_High (ESTIMATE)` (trim-side rows only); amber CF on open wash / ≤30d; pending precommit rows with `PRECOMMIT_PENDING`.
+- **0_DASHBOARD** — crosshairs top-5 rationale appends compact tax cell (`77d→LT · wash open · est $0–1,038`).
+- **`scripts/install_ui_service.ps1`** — logon task `PortfolioUI` runs `pythonw manager.py ui serve` (no console).
+- **`Precommitments` tab** — manual authority; morning ingest (`tasks/ingest_precommitments.py`) append-and-mark only; `declared_at` from `Date_Declared`.
+- **Corpus indexer** — chunks original file bytes (not frontmatter-stripped body) so `line_start` matches on-disk lines.
+
+## [2026-08-28] — Grounded Analyst (Instrument prompt 6)
+
+- **`pm ask "..."`** — deterministic `QuestionPlan` → `retrieve()` → one Gemini narrate → citation validation. `--dry-run` prints plan + `RetrievalSet` with no model call. Refuses empty plans (no bare LLM).
+- **`core/analyst/`** — `plan.py`, `narrate.py`, `validate.py`, `run.py`. Corpus queries use extracted phrases + ticker fallbacks (not raw NL question). Short tickers (≤3 chars) require case-sensitive match (fixes `HAS` false positive).
+- **`GET|POST /ask`** — UI form; `UI_WRITE_ROUTE_ALLOWLIST = {("POST", "/ask")}`.
+- **Gate question (ET Lake Charles):** indexed corpus has **no** "Lake Charles" hits; thesis cites generic LNG/export-terminal exposure with checkable `[thesis:…]` tokens. Reporting conflict in `state.md`/`CHANGELOG` is outside FTS — honest missing-evidence answer.
+
+## [2026-08-28] — Corpus Search (Instrument prompt 5)
+
+- **`GET /search`** — FTS corpus search with facet rail (plain form GETs, bookmarkable URLs, JS-off). Provenance badges on every hit; doctrine sorts first; BM25 score shown.
+- **`GET /doc/{doc_id}`** — read-only document reader with chunk anchor/highlight.
+- **`core/retrieval/api.py`:** `retrieve_corpus_search()` — UI path; logs `corpus_search` rows.
+- **`core/corpus/search.py`:** `search_ranked()`, `snippet_html()`, FTS query sanitization; no learning ranker (docstring).
+- CLI `pm corpus search` uses `search_ranked` for parity with UI.
+
+## [2026-08-28] — Position Story (Instrument prompt 4) + scheduler ops
+
+- **`GET /position/{ticker}`** — read-only campaign page: price/fill SVG chart (`ChartSpec` → one Jinja partial), cost-basis curve, lots, signal lane with accrual gate banner, thesis, rotations, corpus hits. One `retrieve()` per render (`caller=ui`, `label=position_story:{ticker}`).
+- **`UI_WRITE_ROUTE_ALLOWLIST`** — empty frozenset; tests assert set equality with mutating routes.
+- **Charting closed:** inline SVG only (two-render-path argument); no zoom/hover v1.
+- **`morning_auto.bat`:** lock contention → exit **3** (distinct from pipeline failure **1**).
+- **DailyWake:** disable via `scripts/disable_dailywake.bat` (elevated `schtasks`); do not delete — MorningAutoDirect is the sole trigger.
+
 ## [2026-08-27] — Prompt 9 3d bound + doctrine; journal CLI commit
 
 - `cost_basis_method` in `vault/doctrine.md`: Tax Lot Optimizer, uniform, `effective_date: unknown`.

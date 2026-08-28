@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Document — {{ doc.path }}{% endblock %}
+{% block content %}
+<p><a href="javascript:history.back()">← Back to search</a></p>
+<h2>{{ doc.title or doc.path }}</h2>
+<p class="note">
+  [{{ doc.source_type }}] · hash {{ retrieval_hash[:12] }}…
+  {% if anchor_chunk %}· anchored chunk L{{ anchor_chunk.line_start }}–{{ anchor_chunk.line_end }}{% endif %}
+</p>
+<pre class="doc-reader" id="line-{{ anchor_line }}">{% for line in lines %}<span class="{{ line.class }}" id="line-{{ line.n }}"><span class="ln">{{ line.n }}</span>{{ line.text }}
+</span>{% endfor %}</pre>
+<style>
+.doc-reader { background: #fff; border: 1px solid var(--line); padding: 0.75rem; overflow-x: auto; font-size: 0.85rem; line-height: 1.35; }
+.doc-reader .ln { display: inline-block; width: 4em; color: #9aa5b1; user-select: none; }
+.doc-reader .highlight { background: #fff8cc; display: block; }
+</style>
+{% endblock %}

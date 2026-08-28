@@ -182,6 +182,42 @@ def format_level(trigger_type: str, value: Optional[float]) -> str:
     return _fmt_metric(trigger_type, value)
 
 
+def is_trim_side_crosshair(item: CrosshairItem) -> bool:
+    """Trim-side signals only — tax facts are noise on add/dislocation rows."""
+    return (
+        item.reason_code == REASON_NEAR_TRIM
+        or item.override_tag == "HOLD_TAX"
+        or item.doctrine_downgraded
+    )
+
+
+def format_wash_window_column(item: CrosshairItem) -> str:
+    if not is_trim_side_crosshair(item):
+        return ""
+    if item.wash_window_open and item.wash_disallow_through:
+        return f"OPEN through {item.wash_disallow_through}"
+    if item.wash_window_open:
+        return "OPEN"
+    return ""
+
+
+def format_tax_compact(item: CrosshairItem) -> str:
+    """Compact tax cell for 0_DASHBOARD crosshairs top-5 (~40 chars)."""
+    if not is_trim_side_crosshair(item):
+        return ""
+    parts: list[str] = []
+    if item.days_to_lt is not None:
+        parts.append(f"{item.days_to_lt}d→LT")
+    if item.wash_window_open:
+        parts.append("wash open")
+    if item.est_tax_cost_low is not None or item.est_tax_cost_high is not None:
+        lo = item.est_tax_cost_low if item.est_tax_cost_low is not None else 0.0
+        hi = item.est_tax_cost_high if item.est_tax_cost_high is not None else lo
+        parts.append(f"est ${lo:,.0f}–{hi:,.0f}")
+    text = " · ".join(parts)
+    return text if len(text) <= 40 else text[:37] + "..."
+
+
 def resolve_typed_metric(trigger_type: str, hrow: dict, vdata: dict) -> dict:
     """
     Current reading, trim/add levels (already declared-type per

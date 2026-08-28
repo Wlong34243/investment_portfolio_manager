@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Command Center{% endblock %}
 {% block content %}
-<div class="kpis" hx-get="/api/status" hx-trigger="every 60s" hx-swap="none">
+<div class="kpis">
   <div class="kpi"><div class="label">Backend</div><div class="value">{{ snap.backend }}</div></div>
   <div class="kpi"><div class="label">Positions</div><div class="value">{{ snap.position_count }}</div></div>
   <div class="kpi"><div class="label">Market Value</div><div class="value">${{ "{:,.0f}".format(snap.total_market_value) }}</div></div>
@@ -15,7 +15,7 @@
   <tbody>
   {% for r in top %}
     <tr>
-      <td>{{ r.ticker }}</td>
+      <td><a href="/position/{{ r.ticker }}">{{ r.ticker }}</a></td>
       <td>${{ "{:,.0f}".format(r.mv) }}</td>
       <td>{% if r.wt is not none %}{{ "{:.2f}".format(r.wt) }}{% if r.wt < 1.5 %}{% endif %}{% else %}—{% endif %}</td>
     </tr>

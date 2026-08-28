@@ -1,0 +1,17 @@
+{% if ladder_lots %}
+<div class="ladder-chart">
+  {% for lot in ladder_lots %}
+  <div class="ladder-row">
+    <span class="ladder-label">{{ lot.open_date|dt }}</span>
+    <div class="ladder-track">
+      <span class="ladder-fill" style="width: {{ lot.fill_pct }}%"></span>
+      <span class="ladder-lt" style="left: 100%"></span>
+      <span class="ladder-today" style="left: {{ lot.fill_pct }}%"></span>
+    </div>
+    <span class="ladder-days">{{ lot.days_to_lt|days }}</span>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<p class="note">No open lots.</p>
+{% endif %}

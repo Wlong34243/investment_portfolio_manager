@@ -1,0 +1,12 @@
+{% set v = value if value is not none else 0 %}
+{% set width = value|delta_bar_width %}
+<span class="delta-bar" title="{{ v|dist_pct }}">
+  <span class="delta-bar-track">
+    {% if v < 0 %}
+    <span class="delta-bar-fill trim" style="width: {{ width }}%"></span>
+    {% elif v > 0 %}
+    <span class="delta-bar-fill add" style="width: {{ width }}%"></span>
+    {% endif %}
+  </span>
+  <span class="delta-bar-label">{{ v|dist_pct }}</span>
+</span>

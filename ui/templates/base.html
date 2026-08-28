@@ -3,15 +3,21 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>{% block title %}Portfolio Command Center{% endblock %}</title>
+  <title>{% block title %}Portfolio Desk{% endblock %}</title>
+  <link rel="stylesheet" href="/static/tokens.css" />
+  <link rel="stylesheet" href="/static/desk.css" />
   <style>
     :root {
-      --bg: #f4f6f8;
-      --ink: #1a2332;
-      --muted: #5c6b7a;
-      --line: #d5dde5;
-      --accent: #1f4e79;
-      --card: #ffffff;
+      --bg: var(--surface-0, #141517);
+      --surface: var(--surface-1, #1a1c1f);
+      --surface2: var(--surface-2, #22252a);
+      --ink: var(--ink-1, #e8eaed);
+      --muted: var(--ink-2, #9aa0a8);
+      --line: var(--grid, #2a2d33);
+      --accent: var(--accent, #3987e5);
+      --amber: var(--warn, #c98500);
+      --gain: var(--gain, #199e70);
+      --loss: var(--loss, #e66767);
     }
     * { box-sizing: border-box; }
     body {
@@ -20,69 +26,181 @@
       background: var(--bg);
       color: var(--ink);
       line-height: 1.45;
+      font-variant-numeric: tabular-nums;
+      font-size: 13px;
     }
-    header {
-      background: var(--accent);
-      color: #fff;
-      padding: 1rem 1.5rem;
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .shell { display: flex; min-height: 100vh; }
+    .sidebar {
+      width: 200px;
+      flex-shrink: 0;
+      background: var(--surface);
+      border-right: 1px solid var(--line);
+      padding: 0.75rem 0;
+      font-size: 0.85rem;
     }
-    header h1 { margin: 0; font-size: 1.25rem; font-weight: 600; }
-    header p { margin: 0.25rem 0 0; opacity: 0.85; font-size: 0.9rem; }
-    nav {
-      display: flex;
-      gap: 0.75rem;
-      padding: 0.75rem 1.5rem;
-      background: var(--card);
-      border-bottom: 1px solid var(--line);
-    }
-    nav a {
-      color: var(--accent);
-      text-decoration: none;
-      font-weight: 600;
+    .sidebar .brand {
+      padding: 0.5rem 1rem 1rem;
+      font-weight: 650;
       font-size: 0.95rem;
+      color: var(--ink);
     }
-    nav a.active { text-decoration: underline; }
-    main { padding: 1.25rem 1.5rem 2.5rem; max-width: 1100px; margin: 0 auto; }
+    .sidebar .group {
+      color: var(--muted);
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 0.75rem 1rem 0.25rem;
+    }
+    .sidebar a {
+      display: block;
+      padding: 0.35rem 1rem;
+      color: var(--muted);
+      font-weight: 500;
+    }
+    .sidebar a.active, .sidebar a:hover {
+      color: var(--ink);
+      background: var(--surface2);
+      text-decoration: none;
+    }
+    .sidebar a.sub { padding-left: 1.5rem; font-size: 0.82rem; }
+    .main-col { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+    .header-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem 1.25rem;
+      padding: 0.5rem 1rem;
+      background: var(--surface2);
+      border-bottom: 1px solid var(--line);
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+    .header-strip.stale { background: #3a3520; color: var(--amber); }
+    .header-strip span strong { color: var(--ink); font-weight: 600; }
+    .content { flex: 1; padding: 1rem 1.25rem 0.5rem; overflow: auto; max-width: 1200px; }
+    .console-dock {
+      border-top: 1px solid var(--line);
+      background: #0a0e12;
+    }
+    .console-dock summary {
+      cursor: pointer;
+      padding: 0.4rem 1rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+      user-select: none;
+    }
+    .console-body {
+      height: 180px;
+      overflow: auto;
+      padding: 0.5rem 1rem;
+      font-family: Consolas, monospace;
+      font-size: 0.78rem;
+      color: #b8c5d0;
+      white-space: pre-wrap;
+    }
     .kpis {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-      gap: 0.75rem;
-      margin-bottom: 1.25rem;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 0.6rem;
+      margin-bottom: 1rem;
     }
     .kpi {
-      background: var(--card);
+      background: var(--surface);
       border: 1px solid var(--line);
-      padding: 0.85rem 1rem;
+      padding: 0.65rem 0.85rem;
     }
-    .kpi .label { color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; }
-    .kpi .value { font-size: 1.25rem; font-weight: 650; margin-top: 0.2rem; }
+    .kpi .label { color: var(--muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    .kpi .value { font-size: 1.15rem; font-weight: 650; margin-top: 0.15rem; text-align: right; }
+    .kpi .note { font-size: 0.68rem; color: var(--muted); margin-top: 0.2rem; }
     table {
       width: 100%;
       border-collapse: collapse;
-      background: var(--card);
+      background: var(--surface);
       border: 1px solid var(--line);
-      font-size: 0.92rem;
+      font-size: 0.88rem;
     }
-    th, td { padding: 0.55rem 0.7rem; border-bottom: 1px solid var(--line); text-align: left; }
-    th { background: #eef2f6; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); }
-    .note { color: var(--muted); font-size: 0.85rem; margin-top: 1rem; }
-    h2 { margin: 0 0 0.75rem; font-size: 1.1rem; }
+    th, td { padding: 0.45rem 0.6rem; border-bottom: 1px solid var(--line); }
+    th { background: var(--surface2); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); text-align: left; }
+    td.num, th.num { text-align: right; }
+    .note { color: var(--muted); font-size: 0.82rem; margin-top: 0.75rem; }
+    h2 { margin: 0 0 0.65rem; font-size: 1.05rem; font-weight: 600; }
+    h3 { margin: 1.25rem 0 0.45rem; font-size: 0.95rem; }
+    section { margin-bottom: 1.1rem; }
+    .meta { display: flex; flex-wrap: wrap; gap: 0.6rem 1rem; font-size: 0.88rem; }
+    .banner { background: #3a3520; border: 1px solid var(--amber); padding: 0.55rem 0.75rem; font-size: 0.85rem; color: var(--amber); margin-bottom: 0.75rem; }
+    .tag { font-size: 0.72rem; padding: 0.1rem 0.35rem; border-radius: 3px; margin-left: 0.3rem; }
+    .tag-warn { background: #3a3520; color: var(--amber); }
+    .tag-model { background: var(--surface2); color: var(--muted); }
+    .chart-wrap { overflow-x: auto; border: 1px solid var(--line); background: var(--surface); padding: 0.25rem; }
+    .empty { color: var(--muted); font-style: italic; padding: 0.75rem; background: var(--surface); border: 1px solid var(--line); }
+    .run-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.6rem; }
+    .run-card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      padding: 0.65rem;
+      font-size: 0.82rem;
+    }
+    .run-card button {
+      margin-top: 0.4rem;
+      background: var(--accent);
+      color: #0a0e12;
+      border: none;
+      padding: 0.3rem 0.6rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.78rem;
+    }
+    .run-card .warn { color: var(--amber); font-size: 0.72rem; margin-top: 0.25rem; }
+    .pos-loss { color: var(--loss); }
+    .pos-gain { color: var(--gain); }
+    .judgment-md { background: var(--surface); border: 1px solid var(--line); padding: 0.75rem; font-size: 0.85rem; max-height: 480px; overflow: auto; }
   </style>
-  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  {% block head %}{% endblock %}
 </head>
 <body>
-  <header>
-    <h1>Investment Portfolio — Monitoring Cockpit</h1>
-    <p>Static / Drive-published · phone-readable · CLI owns writes</p>
-  </header>
-  <nav>
-    <a href="/" class="{% if page == 'home' %}active{% endif %}">Home</a>
-    <a href="/decision" class="{% if page == 'decision' %}active{% endif %}">Decision</a>
-    <a href="/tax" class="{% if page == 'tax' %}active{% endif %}">Tax</a>
-    <a href="/rotations" class="{% if page == 'rotations' %}active{% endif %}">Rotations</a>
-  </nav>
-  <main>
-    {% block content %}{% endblock %}
-  </main>
+  <div class="shell">
+    <nav class="sidebar">
+      <div class="brand">Portfolio Desk</div>
+      <div class="group">Cockpit</div>
+      <a href="/" class="{% if page == 'cockpit' %}active{% endif %}">Today</a>
+      <div class="group">Positions</div>
+      <a href="/positions" class="{% if page == 'positions' %}active{% endif %}">All held</a>
+      <div class="group">Decide</div>
+      <a href="/decision" class="{% if page == 'decision' %}active{% endif %}">Crosshairs</a>
+      <a href="/tax" class="{% if page == 'tax' %}active{% endif %} sub">Tax</a>
+      <a href="/precommit" class="{% if page == 'precommit' %}active{% endif %} sub">Pre-commit</a>
+      <div class="group">Search</div>
+      <a href="/search" class="{% if page == 'search' %}active{% endif %}">Corpus</a>
+      <a href="/ask" class="{% if page == 'ask' %}active{% endif %} sub">Ask</a>
+      <div class="group">Review</div>
+      <a href="/judgment" class="{% if page == 'judgment' %}active{% endif %}">Judgment</a>
+      <a href="/judgment/rotations" class="{% if page == 'judgment_rotations' %}active{% endif %} sub">Rotations summary</a>
+      <a href="/judgment/lifecycle" class="{% if page == 'judgment_lifecycle' %}active{% endif %} sub">Lifecycle index</a>
+      <div class="group">System</div>
+      <a href="/runs" class="{% if page == 'runs' %}active{% endif %}">Runs</a>
+    </nav>
+    <div class="main-col">
+      {% if header %}
+      <div class="header-strip{% if header.bundle_stale %} stale{% endif %}">
+        <span>Bundle <strong>{{ header.bundle_hash_short }}</strong></span>
+        <span>Generated <strong>{{ header.generated_at[:19] if header.generated_at else 'n/a' }}</strong></span>
+        <span>Schwab <strong>{{ header.schwab_token }}</strong></span>
+        <span>Accrual <strong>day {{ header.accrual_day }} of {{ header.accrual_total }}</strong></span>
+        <span>Verify streak <strong title="{{ header.verify_streak_hint or '' }}">{{ header.verify_streak }}</strong></span>
+        <span>Lock <strong>{{ header.lock_detail }}</strong></span>
+      </div>
+      {% endif %}
+      <main class="content">
+        {% block content %}{% endblock %}
+      </main>
+      <details class="console-dock" id="console-dock">
+        <summary>Console — routine output</summary>
+        <div class="console-body" id="console-output">(empty — launch a routine from Runs)</div>
+      </details>
+    </div>
+  </div>
+  <script src="/static/desk.js"></script>
+  {% block scripts %}{% endblock %}
 </body>
 </html>

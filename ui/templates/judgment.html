@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Judgment{% endblock %}
+{% block content %}
+<h2>Judgment artifacts</h2>
+<p class="meta-line">Reads disk only — <a href="/runs">Runs</a> to refresh.</p>
+
+{% if section == 'rotations' or section == 'overview' %}
+<section>
+  <h3>Unit A — Rotations</h3>
+  {% if rotations %}
+    {% set meta = rotations.meta or {} %}
+    <p class="meta-line">
+      {% if meta.included_n is defined %}N={{ meta.included_n }}{% endif %}
+      {% if meta.excluded_n is defined %} · excluded={{ meta.excluded_n }}{% endif %}
+      {% if meta.included_date_min %} · {{ meta.included_date_min }}–{{ meta.included_date_max }}{% endif %}
+      {% if meta.excluded_date_min %} · excluded span {{ meta.excluded_date_min }}–{{ meta.excluded_date_max }}{% endif %}
+    </p>
+    <p class="note"><code>{{ rotations.path }}</code></p>
+  {% else %}
+  {% set message = "No rotations artifact — run judge rotations from Runs." %}
+  {% set action_url = "/runs" %}
+  {% set action_label = "Open Runs" %}
+  {% include "partials/empty_state.html" %}
+  {% endif %}
+</section>
+{% endif %}
+
+{% if section == 'lifecycle' or section == 'overview' %}
+<section>
+  <h3>Unit B — Lifecycle ({{ lifecycle_count }} tickers)</h3>
+  {% if lifecycle_index %}
+  <div class="table-scroll">
+  <table class="data-table">
+    <thead><tr><th>Ticker</th><th class="num">Legs</th><th>Span</th><th class="num">Single-entry</th><th class="num">TWR</th><th class="num">Δ scale</th><th>Computed</th></tr></thead>
+    <tbody>
+    {% for item in lifecycle_index %}
+      <tr>
+        <td><a href="/position/{{ item.ticker }}">{{ item.ticker }}</a></td>
+        <td class="num">{{ item.legs }}</td>
+        <td>{{ item.span or '—' }}</td>
+        <td class="num">{% if item.single_entry is not none %}{{ item.single_entry|pct }}{% else %}—{% endif %}</td>
+        <td class="num">{% if item.twr is not none %}{{ item.twr|pct }}{% else %}—{% endif %}</td>
+        <td class="num">{% if item.scaling_delta is not none %}{{ item.scaling_delta|pct }}{% else %}—{% endif %}</td>
+        <td>{% if item.computed_at %}{{ item.computed_at|dt }}{% else %}—{% endif %}
+          {% if item.missing_sidecar %}<span class="tag tag-warn" title="Run: pm judge lifecycle --missing-json">no JSON</span>{% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  {% set message = "No lifecycle artifacts on disk — run Judgment lifecycle from Runs." %}
+  {% set action_url = "/runs" %}
+  {% set action_label = "Open Runs" %}
+  {% include "partials/empty_state.html" %}
+  {% endif %}
+</section>
+{% endif %}
+
+{% if section == 'overview' or section == 'calibration' %}
+<section>
+  <h3>Unit C — Calibration</h3>
+  {% if calibration %}
+    {% if calibration_meta.accrual_day is defined %}
+    <p class="meta-line">Accrual day {{ calibration_meta.accrual_day }} of {{ calibration_meta.accrual_total or 10 }} — gate {% if calibration_meta.gate_met %}met{% else %}not met{% endif %}</p>
+    {% endif %}
+    <p class="note"><code>{{ calibration.path }}</code></p>
+  {% else %}
+  {% set message = "No calibration artifact." %}
+  {% include "partials/empty_state.html" %}
+  {% endif %}
+</section>
+{% endif %}
+{% endblock %}

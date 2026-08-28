@@ -704,6 +704,27 @@ def journal_precommit(
         console.print("[bold black on yellow] DRY RUN — wrote nothing. Re-run with --live. [/]")
 
 
+@journal_app.command("ingest-precommitments")
+def journal_ingest_precommitments(
+    live: bool = typer.Option(False, "--live", help="Write SQLite + mark Precommitments tab."),
+):
+    """Ingest Precommitments tab → SQLite (append-and-mark only; Bill writes the tab)."""
+    from tasks.ingest_precommitments import ingest_precommitments_from_sheet
+
+    ing = ingest_precommitments_from_sheet(live=live)
+    mode = "LIVE" if live else "DRY RUN"
+    console.print(
+        f"[bold]{mode}[/] precommit ingest: ingested={ing.get('ingested')} "
+        f"skipped={ing.get('skipped')}"
+    )
+    for flag in ing.get("flags") or []:
+        console.print(f"[yellow]Band flag: {flag}[/]")
+    for err in ing.get("errors") or []:
+        console.print(f"[yellow]{err}[/]")
+    if not live:
+        console.print("[bold black on yellow] DRY RUN — wrote nothing. Re-run with --live. [/]")
+
+
 @journal_app.command("rotation")
 def journal_rotation(
     sold: str = typer.Option(..., "--sold", help="Comma-separated list of sell tickers."),
@@ -799,7 +820,7 @@ def _acquire_pipeline_lock():
                 f"{age_hours * 60:.0f}m old). Refusing to start a second one -- if that "
                 f"run is dead, delete {_PIPELINE_LOCK_PATH} and retry.[/]"
             )
-            raise typer.Exit(code=1)
+            raise typer.Exit(code=3)
         console.print(
             f"[yellow]Stale {_PIPELINE_LOCK_PATH} ({age_hours:.1f}h old) -- treating the "
             "prior run as dead and taking over.[/]"
@@ -887,6 +908,124 @@ def health(
     """
     code, _results = run_health_report(verbose=verbose)
     raise typer.Exit(code=code)
+
+
+@app.command("ask")
+def ask_question(
+    question: str = typer.Argument(..., help="Natural-language portfolio question."),
+    since: Optional[str] = typer.Option(None, "--since", help="YYYY-MM-DD lower bound for corpus/tables."),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Plan + retrieve only; no Gemini call."),
+):
+    """Grounded Q&A: retrieve evidence set → narrate with citations → validate."""
+    from core.analyst.run import run_ask, write_report
+
+    since_d = date.fromisoformat(since) if since else None
+    result = run_ask(question, since=since_d, dry_run=dry_run)
+    text = write_report(result, dry_run=dry_run)
+    if isinstance(text, Path):
+        console.print(f"[green]Wrote[/] {text}")
+        console.print(text.read_text(encoding="utf-8")[:2000])
+    else:
+        console.print(text)
+    if result.get("status") == "REFUSED":
+        raise typer.Exit(code=1)
+    if result.get("status") == "VALIDATION_FAILED":
+        raise typer.Exit(code=2)
+
+
+judge_app = typer.Typer(help="Judgment Engine — deterministic retrospective (no LLM).")
+app.add_typer(judge_app, name="judge")
+
+
+@judge_app.command("rotations")
+def judge_rotations():
+    """Unit A — rotation quality aggregates over frozen Rotation_Review."""
+    from core.judgment.run import run_rotations, write_judgment_report
+
+    body, meta, agg = run_rotations()
+    path = write_judgment_report(body, meta, slug="rotations", rotation_agg=agg)
+    console.print(f"[green]Wrote[/] {path}")
+    console.print(body[:3000])
+
+
+@judge_app.command("lifecycle")
+def judge_lifecycle(
+    ticker: Optional[str] = typer.Option(None, "--ticker", "-t", help="Single ticker campaign."),
+    all_tickers: bool = typer.Option(False, "--all", help="Summary for every held ticker."),
+    missing_json: bool = typer.Option(False, "--missing-json", help="Recompute tickers whose newest .md lacks a .json sidecar."),
+    live: bool = typer.Option(False, "--live", help="Required with --missing-json to write artifacts."),
+):
+    """Unit B — position lifecycle campaign measurement."""
+    from core.judgment.run import run_lifecycle, write_judgment_report
+
+    if missing_json:
+        if ticker or all_tickers:
+            console.print("[red]--missing-json is mutually exclusive with --ticker and --all[/]")
+            raise typer.Exit(code=1)
+        from ui.judgment_artifacts import list_lifecycle_missing_json
+
+        rows = list_lifecycle_missing_json()
+        table = Table(title="Lifecycle sidecar backfill", show_header=True)
+        table.add_column("Ticker")
+        table.add_column("Action")
+        table.add_column("MD path")
+        for row in rows:
+            table.add_row(row["ticker"], row["action"], row["path"])
+        console.print(table)
+        to_run = [r for r in rows if r["action"] == "run"]
+        if not to_run:
+            console.print("[green]All lifecycle artifacts have JSON sidecars.[/]")
+            raise typer.Exit(code=0)
+        if not live:
+            console.print(
+                "[yellow]Dry run — re-run with --live to recompute "
+                f"{len(to_run)} ticker(s). ~2–3 min/ticker.[/]"
+            )
+            raise typer.Exit(code=0)
+        est_min = int(len(to_run) * 2.5)
+        console.print(
+            f"[yellow]--missing-json --live runs ~2–3 min/ticker (~{est_min} min for {len(to_run)}). "
+            "Do not pipe stdout — closing the pipe kills the run before the artifact writes.[/]"
+        )
+        for row in to_run:
+            t = row["ticker"]
+            console.print(f"[cyan]Recomputing {t}…[/]")
+            body, meta, camp, _ = run_lifecycle(ticker=t, all_tickers=False)
+            path = write_judgment_report(body, meta, slug=f"lifecycle_{t.lower()}", campaign=camp)
+            console.print(f"[green]Wrote[/] {path}")
+        raise typer.Exit(code=0)
+
+    if not ticker and not all_tickers:
+        console.print("[red]Specify --ticker, --all, or --missing-json[/]")
+        raise typer.Exit(code=1)
+    if all_tickers:
+        from core.judgment.lifecycle import list_held_tickers
+
+        n = len(list_held_tickers())
+        est_min = int(n * 2.5)
+        console.print(
+            f"[yellow]--all runs ~2–3 min/ticker (~{est_min} min for {n} positions). "
+            "Do not pipe stdout — closing the pipe kills the run before the artifact writes.[/]"
+        )
+    body, meta, camp, _ = run_lifecycle(ticker=ticker, all_tickers=all_tickers)
+    if ticker:
+        slug = f"lifecycle_{ticker.lower()}"
+    else:
+        slug = "lifecycle_all"
+    path = write_judgment_report(body, meta, slug=slug, campaign=camp)
+    console.print(f"[green]Wrote[/] {path}")
+    console.print(body[:3000])
+
+
+@judge_app.command("calibration")
+def judge_calibration():
+    """Unit C — calibration table scaffold (gates; blank quadrant visible)."""
+    from core.judgment.run import run_calibration, write_judgment_report
+
+    body, meta = run_calibration()
+    path = write_judgment_report(body, meta, slug="calibration")
+    console.print(f"[green]Wrote[/] {path}")
+    console.print(body[:3000])
 
 
 @app.command()
@@ -1702,11 +1841,11 @@ def corpus_search_cmd(
     limit: int = typer.Option(10, "--limit"),
 ):
     """Search the corpus; each hit is path:line with a snippet."""
-    from core.corpus.search import format_hit, search
+    from core.corpus.search import format_hit, search_ranked
 
     since_d = date.fromisoformat(since) if since else None
     until_d = date.fromisoformat(until) if until else None
-    hits = search(
+    hits = search_ranked(
         query,
         tickers=ticker,
         source_types=source_type,
@@ -1767,7 +1906,8 @@ def ui_serve(
         "(`pm store publish-cockpit --live --publish`), not this localhost server."
     )
     console.print(f"[cyan]Serving UI at http://{host}:{port}[/]  (Ctrl+C to stop)")
-    uvicorn.run("ui.app:app", host=host, port=port, reload=False)
+    reload = os.getenv("PM_UI_RELOAD", "").lower() in ("1", "true", "yes")
+    uvicorn.run("ui.app:app", host=host, port=port, reload=reload)
 
 
 # --- EXPORT GROUP ---
@@ -2493,6 +2633,22 @@ def morning(
                 mode = "LIVE" if live else "DRY RUN"
                 console.print(f"[dim]Evidence capture ({mode}): {ev.get('results')}[/]")
                 console.print(format_evidence_status(ev.get("status")))
+            # Pre-commitment sheet ingest (append-and-mark) before firing detection.
+            try:
+                from tasks.ingest_precommitments import ingest_precommitments_from_sheet
+
+                ing = ingest_precommitments_from_sheet(live=live)
+                mode = "LIVE" if live else "DRY RUN"
+                console.print(
+                    f"[dim]Precommit ingest ({mode}): ingested={ing.get('ingested')} "
+                    f"skipped={ing.get('skipped')}[/]"
+                )
+                for flag in ing.get("flags") or []:
+                    console.print(f"[yellow]Precommit band flag: {flag}[/]")
+                for err in ing.get("errors") or []:
+                    console.print(f"[yellow]Precommit ingest: {err}[/]")
+            except Exception as e:
+                console.print(f"[yellow]Precommit ingest failed (non-fatal): {e}[/]")
             # Pre-commitment firings read signal_events — must run after evidence capture.
             try:
                 from core.journal import precommit as pc
@@ -2511,6 +2667,18 @@ def morning(
                     )
             except Exception as e:
                 console.print(f"[yellow]Precommit detect failed (non-fatal): {e}[/]")
+            # Bounded lifecycle refresh: yesterday's fill tickers only.
+            try:
+                from core.judgment.increment import recompute_campaigns_for_yesterday
+
+                inc = recompute_campaigns_for_yesterday(live=live)
+                if inc.get("tickers"):
+                    console.print(
+                        f"[dim]Lifecycle increment ({'LIVE' if live else 'DRY RUN'}): "
+                        f"recomputed {inc['tickers']} (fills on {inc.get('date')})[/]"
+                    )
+            except Exception as e:
+                console.print(f"[yellow]Lifecycle increment failed (non-fatal): {e}[/]")
         except Exception as e:
             console.print(f"[yellow]Evidence capture failed (non-fatal): {e}[/]")
         if not skip_tax:

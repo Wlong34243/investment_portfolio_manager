@@ -12,7 +12,7 @@ For current build state, read `state.md` (lowercase — the file is `state.md`, 
 
 A headless Python CLI portfolio operating system for Bill's Schwab investment accounts. Google Sheets is the authoritative user-facing surface and system of record.
 
-**Scale (verified 2026-08-09, bundle `ai_briefing_2026-08-08_090515`):** **$604,977.60**, **39 positions** (plus `CASH_MANUAL`), **39 active thesis files** in `vault/theses/` (39 archived). Do not cite "~$596K / 35 positions" — that is a 2026-08-01 figure. Do not cite "~$550K / 50+ positions" — that is March 2026 and has been wrong for months.
+**Scale (verified 2026-08-28, bundle `ai_briefing_2026-08-28_080750`, composite hash `8b3a29284ad2…`):** **$604,274.32**, **39 positions** (plus `CASH_MANUAL`), **39 active thesis files** in `vault/theses/` (41 archived). Do not cite "$604,977.60 / 39" — that is the 2026-08-09 figure, now superseded by the line above. Do not cite "~$596K / 35 positions" — that is a 2026-08-01 figure. Do not cite "~$550K / 50+ positions" — that is March 2026 and has been wrong for months.
 
 ⚠️ **That figure is three of six accounts, not the whole book.** `config.py` scopes the portfolio to suffixes `...6499`, `...8767`, `...5119`. Three accounts — `...4151`, `...0217`, `...9753` — are excluded (`prompts/schwab_account_scope_fix_2026-08-03.md`). Bill holds positions in the excluded accounts too; VST, for example, is 165 shares in total against 155 in scope. **Do not describe the bundle total as Bill's net worth or total invested assets.** See Open Questions.
 
@@ -31,6 +31,25 @@ The product should feel like a portfolio control system, not an agent showcase. 
 ### Retrieval layer (Hard Rule 2 made mechanical)
 
 Ledger and corpus reads for UI/agents go through `core/retrieval/`. The model names a **template id** and supplies **value params** — never SQL, never a WHERE-clause string. Python opens the DB with a read-only URI (`mode=ro` + `PRAGMA query_only=ON`), unpacks blob tables via `core/store/serialize.payloads_to_df` (no `json_extract`), and returns a hash-stamped `RetrievalSet` (`core.bundle._sha256_canonical`). Every call writes one `retrieval_log` row via the write engine. **Do not let any component query the ledger outside `core/retrieval`.**
+
+### Grounded Analyst (prompt 6)
+
+Question → `core/analyst/plan.py` (deterministic, no LLM) → `retrieve()` → one `ask_gemini()` over `RetrievalSet.to_prompt_context()` → `validate.py` citation backstop. Empty plan refuses without calling the model. Output: `agent_outputs/analyst/` only. `pm ask "..."` / `GET|POST /ask`. **Hard Rule 5 is transport-agnostic** — sandbox writes via CLI or HTTP are the same class; `POST /ask` is allowlisted in `UI_WRITE_ROUTE_ALLOWLIST`.
+
+### Desk UI launch policy (2026-08-28 amendment)
+
+**CLI owns broker-derived mutations; the UI may author Bill's own commentary.**
+
+The desk launcher (`ui/routines.py`, `POST /run/{routine_id}`) may run routines that write **regenerable computed surfaces** or **Bill's own authored input**. Broker-derived mutations (Schwab sync, morning pipeline) and **promotion to authoritative surfaces** (`Trade_Log`, `Holdings_Current`, staging promotion) stay **CLI-only**.
+
+| UI may launch | Stays CLI-only |
+|---|---|
+| Regenerable computed tabs (`0_DASHBOARD`, `Decision_View`, `Valuation_Card`, `Tax_Control`) | `manager.py morning --live` (broker sync + scheduled path) |
+| Local regenerable indexes (`corpus index`, additive `store backup`) | `store sync-from-sheets --live` (mirror overwrite — not trusted for one-click yet) |
+| Bill's Precommitments tab → SQLite ingest | `journal promote` (authoritative `Trade_Log`) |
+| Tier 0 read-only / sandbox (`agent_outputs/`, probes, dry-run reconcile) | `journal reconcile --backlog-only --live` until staging writer fixed |
+
+**Confirmations (graded, not one ceremony):** every UI-launched run gets a **write banner** and a **`ui_runs` row before execution**. **Typed routine-id confirmation** only on `refresh-dashboard-live` and `tax-refresh-live` (clear-and-rebuild tabs you read). New routines are judged against the sentence above — not against today's nine-row precedent.
 
 ---
 
@@ -75,6 +94,8 @@ These live in `PROMPT_PAYLOAD` inside `tasks/export_ai_briefing.py` and are enfo
 ### Ninth rule — rotation attribution is evidence, not a scorecard
 
 `Rotation_Review` now holds benchmarked attribution. **The aggregate describes a documented subset, not Bill's investing.** Excluded rows are non-random — they skew old and wide — so medians describe well-reconciled rotations only. The sample is one regime with heavily overlapping windows, so effective N is far below nominal N. Do not build a recommendation on it.
+
+**The same caveat governs Judgment Engine Unit B (lifecycle campaigns):** counterfactuals and scaling comparisons are measurements in one regime, not verdicts on discipline.
 
 ---
 
@@ -175,6 +196,8 @@ Evidence tables are append-only and `--live`-gated (resolves audit A8 *for these
 | `core/store/evidence.py` | Append-only evidence writers (`signal_events` / `bars_daily` / `fundamentals_snapshot`); SQLite-only; `--live`-gated |
 | `core/corpus/` | FTS5 corpus index + search (registry / chunker / index / search); `pm corpus` |
 | `core/retrieval/` | Read-only template API (`conn` / `queries` / `api` / `log`); twelve frozen templates; `RetrievalSet` + `retrieval_log` |
+| `core/analyst/` | Grounded Q&A — `plan` / `narrate` / `validate` / `run`; `pm ask`; `agent_outputs/analyst/` |
+| `core/judgment/` | Judgment Engine — rotation aggregates (A), lifecycle (B), calibration scaffold (C); `pm judge` |
 | `core/journal/precommit.py` | Pre-commitment declare / fire / respond; **only path that produces `declared_before`** |
 | `core/tax/` | Pre-trade tax surface: wash (3a), LT ladder (3b); ESTIMATE-labelled; no local lot-relief record |
 | `state.md` | Current build state — **read first** |
@@ -238,9 +261,14 @@ Evidence tables are append-only and `--live`-gated (resolves audit A8 *for these
 | `utils/agents/idea_generator.py` | Idea Generator agent |
 | `utils/agents/podcast_analyst.py` | Gemini allocation extractor |
 | `utils/agents/valuation_drift.py` | Valuation Drift Monitor — fundamentals drift vs. Option A (first-run snapshot-forward) baseline. Python measures from the bundle `fundamentals` block; LLM narrates only, never recommends. `pm agent valuation-drift`; local markdown to `agent_outputs/valuation_drift/`, no Sheets writes. |
-| `ui/app.py` | Local read-mostly FastAPI Command Center (`pm ui serve`, debug-only). Reads via `PortfolioStore`; CLI still owns all mutations. Product monitoring surface is `pm store publish-cockpit --live --publish` (static HTML to Drive), not this localhost server. |
+| `ui/app.py` | Local FastAPI desk (`pm ui serve` / logon task `PortfolioUI` at `127.0.0.1:8765`): **cockpit** `/`, `/positions`, `/decision`, `/tax`, `/precommit`, `/judgment`, `/runs`, **`/position/{ticker}`**, **`/search`**, **`/doc/{id}`**, **`/ask`**. Ledger reads via `core/retrieval`. `UI_WRITE_ROUTE_ALLOWLIST` = `{("POST", "/ask"), ("POST", "/run/{routine_id}")}` — exact set equality. Inline SVG charts (`ui/charts.py`). |
+| `ui/header_context.py` | Header strip: 60s cache on retrieval body; invalidate on `logs/last_run.json` + newest manifest mtime (missing file = `None` sentinel, TTL-only expiry); **pipeline lock always read live** outside cache. |
+| `ui/routines.py` | Frozen routine registry — browser posts registry id + typed args; server builds argv with `shell=False`. Launch policy in **Desk UI launch policy** above; five `--live` routines approved 2026-08-28. |
+| `ui/corpus_search.py` | Corpus Search assembly (`/search`, `/doc/{id}`) — `retrieve_corpus_search()` only; provenance badges on every hit (model output is a claim, not a datum). |
 | `prompts/` | Sequenced build prompts |
-| `agent_outputs/` | `ideas/`, `dislocation_scan/`, `ai_briefing_analysis/`, `rotation_attribution/`, `trade_log_staging/`, `valuation_drift/` |
+| `agent_outputs/` | `ideas/`, `dislocation_scan/`, `ai_briefing_analysis/`, `rotation_attribution/`, `trade_log_staging/`, `valuation_drift/`, `analyst/`, `judgment/` |
+
+**Local UI** runs as a logon scheduled task (`scripts/install_ui_service.ps1` → `PortfolioUI`); `http://127.0.0.1:8765` without a terminal.
 
 ---
 
@@ -254,7 +282,7 @@ firing joined to a fill; every other reconcile path is `reconstructed_after`.
 
 **Coverage is poor and the raw numbers were wrong until 2026-08-09.** `_frontmatter_field()`'s regex used `\s*` around the value, which matches newlines — so a blank field captured the *next line's key* as a truthy value, silently counting AMZN, ES, ETN, PWR, SKHY and SNOW as covered. Fixed to same-line matching.
 
-**Corrected coverage (verified 2026-08-20):** 39/39 have a trim level, 38/39 have an add level, **0/39 have neither.** ET is the sole holdout on the add level — documented in `ET_thesis.md` as a deliberate hold/reinvest choice, not a coverage gap.
+**Corrected coverage (verified 2026-08-28, manifest `ai_briefing_2026-08-28_080750`):** 38/39 have a trim level, 37/39 have an add level, **1/39 have neither** (BTC). The delta from the 2026-08-20 figures (39/39, 38/39, 0/39) is **not a regression** — it is BTC's 2026-08-27 scaffold (`vault/theses/BTC_thesis.md`), a newly-detected position with no trigger levels yet set, deliberately left `[BILL]` rather than invented. ET remains the pre-existing holdout on the add level only — documented in `ET_thesis.md` as a deliberate hold/reinvest choice, not a coverage gap.
 
 **Do not build any trigger that reads a sell-side price target.** Consensus targets ratchet — analysts revise up after price rises, so a trim pegged to consensus rises with the stock and structurally cannot fire. `VST_thesis.md`'s `price_trim_above: consensus_price_target` is the live proof; it has never been actionable.
 
@@ -285,6 +313,8 @@ Two distinct paths. Do not merge them.
 - **Consecutive daily aggregates repeat each other.** The electrician-shortage segment appeared in both the 08-06 and 08-07 digests. Count a theme once across the run, not once per file.
 
 **Digest-supplied position weights are not computed from the bundle and have been badly wrong** — the 08-02 edition cited JPIE at 4.7% against an actual 0.83%. Never take a weight from a digest; read it from the bundle.
+
+**Corpus Search (`/search`, prompt 5)** surfaces digests, summaries, and transcripts with provenance badges — *your writing* / *third-party* / *model output*. The badge is the trust signal: `podcast_summary` and `agent_output` hits are claims, not data.
 
 **Verification sidecars are one chain per `source_sha256`.** A digest whose sha already has a sidecar in `data/podcast_summaries/verification/` is not re-verified from scratch. A same-day or later re-check writes a **delta** sidecar (`<digest_basename>_VERIFIED_<YYYY-MM-DD>.md`) that names the prior file explicitly and records only new or corrected claims — the pattern the 2026-08-12 base + 2026-08-13 delta pair already follows. Do not emit a second full pass against an unchanged sha (the 2026-08-10 / 2026-08-11 pair did this; the 08-11 file is archived). Never edit the digest's own `VERIFICATION: PENDING (manual)` footer — that exact string is the Spotify ingestion collision guard (`state.md`, 2026-08-01).
 
@@ -319,11 +349,12 @@ Risk management is small-step scaling in and out, not binary entries/exits. **Th
 
 Recorded so they are not rediscovered.
 
-- **`DailyWake` scheduled task has never successfully fired** *(diagnosed 2026-08-07)*. This is why STEP 4b missed four consecutive digests and `logs/morning_auto.log` has not been written since 2026-07-27. **The morning pipeline is effectively manual-only.** Fix is a Windows Task Scheduler change.
+- ~~**The scheduler now fires — it fires into an already-running morning**~~ **SUPERSEDED 2026-08-28 PM — `DailyWake` disabled.** History, for context: `logs/morning_auto.log` was silent from 2026-07-27 until 2026-08-28, when both `DailyWake` (07:47:03) and `MorningAutoDirect` (07:50:00, the task that actually invokes `morning_auto.bat`) fired as scheduled the same morning; `MorningAutoDirect` hit `logs/pipeline.lock` already held by a hand-started `pm morning` run from 07:41:37 and refused to start a second one — a lock-contention no-op, not a pipeline gap (the hand-started run completed cleanly and produced the `08:07` bundle). Rather than stagger the two tasks, the decision (`state.md` 2026-08-28) was to **disable `DailyWake` outright** (`scripts/disable_dailywake.bat`, `schtasks /change /tn "DailyWake" /disable` — ran and confirmed `Status: Disabled` same day; **did not require elevation** in practice, despite the script's own comment hedging that it might). `DailyWake` is disabled, not deleted, in case its v3 wrapper is diagnosed later. **`MorningAutoDirect` is now the sole morning trigger, weekdays ~7:50.** Whether it can complete end-to-end on its own (nothing else holding the lock) has not yet been observed — that's the thing to check on the next scheduled firing, not whether `DailyWake` interferes.
 - **pandas ≥3.0 string-dtype inference silently zeroed every currency and percent cell** read through `read_gsheet_robust()` *(found and fixed 2026-08-08)*. A `dtype == object` check missed the new dedicated string dtype, skipping the `$`/`%`/`,` strip. **This is a bug class, not a one-off** — any new `pd.to_numeric()` on raw Sheet strings will reproduce it. Route reads through `coerce_sheet_numeric_series()` / `read_gsheet_robust()`; do not add a local stripper. Residuals in `build_tax_control` + `pipeline.py` were routed through the shared sanitizer on 2026-08-09 (Tax_Control YTD figures moved upward after the fix — a real correction).
 - **`derive_rotations` emits nested supersets** when re-run against an open cluster window — five rows existed for the single 2026-08-03 basket, each fingerprinting differently so dedup could not catch them. Attribution reads around it; the deriver is unfixed.
 - **`Trade_Log_Staging.Status` vocabulary is collision-prone.** `journal promote` acts on `approve`/`approved` and *writes* `promoted` + `Promoted_At`. Hand-typing `promoted` with a blank `Promoted_At` still makes a row invisible to promote. Schema-ensure and staging marks are gated behind `--live` as of 2026-08-09 (batched update).
-- **Two Schwab-token health signals can disagree** — `tasks/health.py` and `build_command_center._schwab_token_status()` are independent and were observed reporting different states in the same session.
+- ~~**Two Schwab-token health signals can disagree**~~ **FIXED 2026-08-28** — desk header and Command Center both call `tasks/health.desk_schwab_token_summary()` (single source).
+- **`PortfolioUI` logon task registers fine but the process dies silently under `pythonw.exe`** *(found 2026-08-28)*. `scripts/install_ui_service.ps1` runs `pythonw.exe manager.py ui serve` specifically to avoid a console window at logon. Starting the task (`Start-ScheduledTask -TaskName PortfolioUI`) launches the process, but it exits within ~10 seconds with no error anywhere — Task Scheduler shows no failure, there's no log file, the process just isn't there on the next `Get-Process` check. The identical command via `python.exe` (console attached) serves immediately and stays up. Strong signal this is the classic `pythonw` failure mode: under `pythonw`, `sys.stdout`/`sys.stderr` are `None`, not just discarded, so the first `print()`/`console.print()`/stdlib `logging` call anywhere in the startup path throws and kills the process. Not root-caused to the exact call site. **Until fixed, the logon task will not actually keep the UI running unattended** — verify with a live `python.exe` instance (as done for this session) or expect to find it down after a real logon.
 - **`SCHWAB_PRIMARY_ACCOUNT_SUFFIXES` empty fails closed** unless `SCHWAB_FORCE_UNSCOPED=1` (built 2026-08-20). Tax_Control fails loudly if suffixes empty or Account masks unparseable. Chase/RE funding accounts are out of scope.
 - ~~**Chase Realized_GL import guesses ST/LT `term` from G/L magnitude**~~ **FIXED 2026-08-20** — `parse_chase_realized_gl()` now derives `term` from `holding_days` (`>365` → Long Term); falls back to Chase ST/LT columns only when dates are unusable.
 - ~~**`sync-realized-gl --merge` can silently delete real lots**~~ **FIXED 2026-08-20** — merge refuses when the file has fewer lots for an account than the sheet unless `--force-partial-merge` is passed.
@@ -364,6 +395,7 @@ Recorded so they are not rediscovered.
 - Do not build a trigger that reads a sell-side price target
 - Do not take a position weight from a podcast digest — read it from the bundle
 - Do not write to `0_DASHBOARD` outside `build_command_center.py`'s grid construction; it is clear-and-rebuild and anything else is erased on the next run
+- Do not clear-and-rebuild `Precommitments` — Bill is the writer on that tab; pipeline append-and-mark only
 - Do not re-sync the live `Transactions` tab unfiltered — it undoes the 2026-08-03 account scope fix
 - Do not add new vendors before extending `utils/fmp_client.py`
 - Do not duplicate the `SAFETY_PREAMBLE` in agent prompts

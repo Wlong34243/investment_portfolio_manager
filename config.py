@@ -178,9 +178,24 @@ TAB_ROTATION_REVIEW   = "Rotation_Review"
 TAB_TAX_CONTROL = "Tax_Control"
 TAB_VALUATION_CARD = "Valuation_Card"   # computed; was string literal in builders
 TAB_DECISION_VIEW = "Decision_View"     # computed; was string literal in builders
+TAB_PRECOMMITMENTS = "Precommitments"   # manual authority; append-and-mark ingest only
 
-# ---------------------------------------------------------------------------
-# PortfolioStore (SQLite shadow ledger + read primary)
+PRECOMMITMENTS_COLUMNS = [
+    "Date_Declared",
+    "Ticker",
+    "Trigger_Type",
+    "Side",
+    "Level",
+    "Intended_Action",
+    "Note",
+    "Ingested_At",
+    "Precommit_ID",
+    "Status",
+]
+
+# Judgment Engine (prompt 10) — minimum N for aggregate cells
+JUDGE_MIN_N = 12
+
 # ---------------------------------------------------------------------------
 # sheets = Sheets only (legacy)
 # dual   = write Sheets + SQLite on --live; read ONLY from STORE_PRIMARY

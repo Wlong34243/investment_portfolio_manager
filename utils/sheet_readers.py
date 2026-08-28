@@ -135,6 +135,11 @@ def read_gsheet_robust(ws: gspread.Worksheet) -> pd.DataFrame:
         # See prompts/typed_trigger_crosshairs_2026-08-24.md.
         'trigger',
         'data_source', 'source',
+        # Trade_Log_Staging IDs / stamps — UUID and ISO strings become 0.0
+        # under coerce (found 2026-08-27 via Stage_ID uniformly 0.0).
+        'stage_id', 'stage id', 'promoted_at', 'promoted at',
+        'proposed_bet', 'rationale_provenance', 'rationale_evidence',
+        'trade_log_id',
     ]
     
     for col in df.columns:
@@ -282,6 +287,24 @@ def get_trade_log() -> pd.DataFrame:
         return ensure_trade_log_columns(read_gsheet_robust(ws))
     except Exception:
         return pd.DataFrame()
+
+
+@lru_cache(maxsize=8)
+def get_trade_log_staging() -> pd.DataFrame:
+    """
+    Reads Trade_Log_Staging from Sheets.
+
+    Do not use SQLite trade_log_staging for reconcile — mirror is empty
+    (dual-write gap as of 2026-08-27); Sheets is authoritative.
+    """
+    try:
+        client = get_gspread_client()
+        spreadsheet = client.open_by_key(config.PORTFOLIO_SHEET_ID)
+        ws = spreadsheet.worksheet(config.TAB_TRADE_LOG_STAGING)
+        return read_gsheet_robust(ws)
+    except Exception:
+        return pd.DataFrame()
+
 
 def smoke_test() -> bool:
     """Verify connectivity."""

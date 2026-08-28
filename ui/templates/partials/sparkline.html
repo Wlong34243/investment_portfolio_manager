@@ -1,0 +1,13 @@
+{% if sparkline and sparkline.values|length > 1 %}
+{% set w = 64 %}
+{% set h = 22 %}
+{% set lo = sparkline.lo %}
+{% set hi = sparkline.hi %}
+{% set span = hi - lo if hi != lo else 1 %}
+{% set n = sparkline.values|length %}
+{% set step = w / (n - 1) %}
+<svg class="sparkline" width="{{ w }}" height="{{ h }}" viewBox="0 0 {{ w }} {{ h }}" aria-hidden="true">
+  <polyline fill="none" stroke="var(--accent)" stroke-width="1.5"
+    points="{% for v in sparkline.values %}{{ loop.index0 * step }},{{ h - 2 - ((v - lo) / span) * (h - 4) }} {% endfor %}"/>
+</svg>
+{% endif %}

@@ -1,0 +1,6 @@
+<div class="empty-state">
+  {{ message }}
+  {% if action_url and action_label %}
+    — <a href="{{ action_url }}">{{ action_label }}</a>
+  {% endif %}
+</div>

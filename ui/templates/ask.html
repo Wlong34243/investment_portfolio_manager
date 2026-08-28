@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Ask Analyst{% endblock %}
+{% block content %}
+<h2>Ask — grounded Q&amp;A</h2>
+<p class="banner">Sandbox only — output writes to <code>agent_outputs/analyst/</code>; never authoritative.</p>
+<p class="meta-line">One question → retrieval plan → fixed evidence set → cited answer.</p>
+
+<form method="post" action="/ask">
+  <label for="question">Question</label><br/>
+  <textarea id="question" name="question" rows="3" cols="80">{{ question }}</textarea><br/>
+  <button type="submit">Ask</button>
+</form>
+
+{% if answer %}
+<section class="answer">
+  {% if status %}<p><strong>Status:</strong> {{ status }}</p>{% endif %}
+  <pre>{{ answer }}</pre>
+</section>
+{% endif %}
+
+<style>
+textarea { width: 100%; max-width: 720px; font-family: inherit; }
+.answer pre { white-space: pre-wrap; background: var(--surface); border: 1px solid var(--line); padding: 1rem; }
+</style>
+{% endblock %}

@@ -2,31 +2,44 @@
 {% block title %}Decision View{% endblock %}
 {% block content %}
 <h2>Decision / Crosshairs</h2>
-{% if header %}<p class="note">{{ header }}</p>{% endif %}
-{% if items %}
-<table>
+<p class="meta-line">
+  Retrieval {{ retrieval_hash|hash8 }}
+  · <a href="/">Top 5 on Cockpit →</a>
+</p>
+{% if decision_header %}<p class="meta-line">{{ decision_header }}</p>{% endif %}
+{% if rows %}
+<div class="table-scroll">
+<table class="data-table">
   <thead>
     <tr>
-      <th>Ticker</th><th>Reason</th><th>MV</th><th>Wt</th><th>Price</th>
-      <th>Trim</th><th>Add</th><th>Rationale</th>
+      <th class="sticky-col">#</th>
+      <th class="sticky-col">Ticker</th>
+      <th>Signal</th>
+      <th class="num">Distance</th>
+      <th class="num">Days LT</th>
+      <th>Wash</th>
+      <th class="num">Est. tax</th>
     </tr>
   </thead>
   <tbody>
-  {% for i in items %}
+  {% for row in rows %}
     <tr>
-      <td>{{ i.get('ticker', i.get('Ticker', '')) }}</td>
-      <td>{{ i.get('reason_code', i.get('Reason', '')) }}</td>
-      <td>{{ i.get('mv', i.get('MV', '')) }}</td>
-      <td>{{ i.get('wt', i.get('Weight', '')) }}</td>
-      <td>{{ i.get('price', i.get('Price', '')) }}</td>
-      <td>{{ i.get('trim', '') }}</td>
-      <td>{{ i.get('add', '') }}</td>
-      <td>{{ i.get('rationale', i.get('Rationale', '')) }}</td>
+      <td class="sticky-col num">{{ row.rank }}</td>
+      <td class="sticky-col"><a href="/position/{{ row.ticker }}">{{ row.ticker }}</a></td>
+      <td>{% set signal = row.signal %}{% include "partials/signal_chip.html" %}</td>
+      <td class="num">{% set value = row.dist_val %}{% include "partials/delta_bar.html" %}</td>
+      <td class="num">{% if row.trim_side %}{{ row.days_to_lt|days }}{% endif %}</td>
+      <td>{% if row.trim_side and row.wash_window %}<span class="wash-badge">{{ row.wash_window }}</span>{% endif %}</td>
+      <td class="num">{% if row.trim_side %}{{ row.est_tax_display }}{% endif %}</td>
     </tr>
   {% endfor %}
   </tbody>
 </table>
+</div>
 {% else %}
-<p class="note">No Decision_View rows in store. Refresh dashboard with <code>--live</code>.</p>
+{% set message = "No Decision_View rows in store — refresh dashboard with --live." %}
+{% set action_url = "/runs" %}
+{% set action_label = "Open Runs" %}
+{% include "partials/empty_state.html" %}
 {% endif %}
 {% endblock %}

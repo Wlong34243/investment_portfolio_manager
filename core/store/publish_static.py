@@ -22,6 +22,13 @@ def _env() -> Environment:
     )
 
 
+def render_chart_spec_static(spec) -> str:
+    """Shared ChartSpec → SVG path for static mirror parity (prompt 4 checklist 14b)."""
+    from ui.charts import render_chart_svg
+
+    return render_chart_svg(spec)
+
+
 def render_static_cockpit(*, live: bool = False) -> dict[str, Any]:
     """
     Write static HTML pages from PortfolioStore into agent_outputs/command_center/.

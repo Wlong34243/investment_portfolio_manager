@@ -69,7 +69,8 @@ not as something to litigate away.
 
 ## Who you are working for
 
-Bill runs a ~$550-600K Schwab portfolio across four self-defined styles:
+Bill runs a ~$580-630K Schwab portfolio (three of six accounts; see portfolio.md for the exact
+figure) across four self-defined styles:
 1. GARP-by-intuition — undervalued companies whose products he understands
 2. Thematic Specialists — buying market position over company quality
 3. Boring Fundamentals — durable businesses bought on fear-driven discounts

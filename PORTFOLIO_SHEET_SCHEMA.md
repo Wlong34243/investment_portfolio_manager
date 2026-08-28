@@ -36,11 +36,11 @@ This matrix defines which system component is authorized to write to each tab.
 | Role | Tabs | Notes |
 | :--- | :--- | :--- |
 | **Authoritative** | Holdings_Current, Transactions, Trade_Log, Realized_GL | Broker/manual truth; dual-written to SQLite on `--live` |
-| **Manual** | Target_Allocation, Config, Disagreements, Decision_Log | Humans only; agents never write Target_Allocation |
+| **Manual** | Target_Allocation, Config, Disagreements, Decision_Log, **Precommitments** | Humans only; agents never write Target_Allocation |
 | **Computed** | 0_DASHBOARD, Valuation_Card, Decision_View, Tax_Control, Rotation_Review, Trade_Log_Staging, Risk/Income/History/Snapshots | Rebuildable; SQLite shadows Tax/Decision/Rotation/Holdings |
 | **Sandbox** | Agent_Outputs*, AI_Suggested_Allocation | Non-authoritative |
 
-Local ledger: `data/portfolio_store.db` via `core/store`. **Phase 1 spine** = transactions + realized_gl + tax_control (holdings is cache-only). Backup: `pm store backup`. Monitoring: static HTML → Drive (`pm store publish-cockpit`), not localhost. Sheets remains phone cockpit for Tax/CC until publish is trusted.
+Local ledger: `data/portfolio_store.db` via `core/store`. **Phase 1 spine** = transactions + realized_gl + tax_control (holdings is cache-only). Local-only tables (not Sheet mirrors): `retrieval_log`, `ui_runs` (desk Tier 0 launcher history), evidence append-only tables. Backup: `pm store backup`. Monitoring: static HTML → Drive (`pm store publish-cockpit`), not localhost. Sheets remains phone cockpit for Tax/CC until publish is trusted.
 
 ---
 
@@ -114,24 +114,39 @@ Layout:
 ---
 
 ### Decision_View
-**Purpose:** High-level dashboard combining holdings and signals.
-**Authority:** Pipeline (`manager.py dashboard refresh`)
+**Purpose:** Full ranked Crosshairs list + pending precommitment firings.
+**Authority:** Pipeline (`tasks/build_decision_view.py` — clear-and-rebuild)
 
-| Column | Header | Type | Example | Notes |
-| :--- | :--- | :--- | :--- | :--- |
-| A | Ticker | String | `UNH` | |
-| B | Weight % | Float | | |
-| C | Market Value | Float | | |
-| D | Unreal G/L % | Float | | |
-| E | Daily Chg % | Float | | |
-| F | Price | Float | | |
-| G | Trim Target | Float | | From thesis |
-| H | Add Target | Float | | From thesis |
-| I | Fwd P/E | Float | | |
-| J | 52w Pos % | Float | | |
-| K | Disc from High %| Float | | |
-| L | Valuation Signal| String | | |
-| M | Top Rationale | String | | |
+| Column | Header | Notes |
+| :--- | :--- | :--- |
+| A–J | (Crosshairs) | Ticker, Reason, MV, Wt%, Price, Trim, Add, distances, Rationale |
+| K | Days_To_LT | Trim-side rows only (`NEAR_TRIM`, `HOLD_TAX`) |
+| L | Wash_Window | `OPEN through YYYY-MM-DD` or blank |
+| M | Est_Tax_Low (ESTIMATE) | Prompt 9 labelled bound — not authoritative |
+| N | Est_Tax_High (ESTIMATE) | Prompt 9 labelled bound — not authoritative |
+
+Amber conditional formatting: non-blank wash window; `Days_To_LT` ≤ 30.
+
+---
+
+### Precommitments
+**Purpose:** Declare a thesis-band intention before it fires — typed on phone, ingested by morning.
+**Authority:** **Manual** (Bill writes A–G). Pipeline **append-and-mark only** on H–J — **never clear-and-rebuild.**
+
+| Col | Header | Writer |
+| :--- | :--- | :--- |
+| A | Date_Declared | Bill → becomes `declared_at` |
+| B | Ticker | Bill |
+| C | Trigger_Type | Bill |
+| D | Side | Bill (`trim` / `add`) |
+| E | Level | Bill |
+| F | Intended_Action | Bill |
+| G | Note | Bill |
+| H | Ingested_At | Pipeline |
+| I | Precommit_ID | Pipeline |
+| J | Status | Pipeline (`open` / `fired` / `closed_*`) |
+
+Rows with blank `Ingested_At` are ingested by `tasks/ingest_precommitments.py` immediately before precommit firing detection in `pm morning`. Blank `Date_Declared` → skip and report (no date substitution).
 
 ---
 
