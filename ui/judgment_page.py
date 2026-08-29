@@ -5,11 +5,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from ui.judgment_artifacts import (
-    list_lifecycle_artifacts,
-    load_artifact_bundle,
-    newest_artifact,
-)
+from core.judgment.lifecycle_index import list_lifecycle_artifacts
+
+from ui.judgment_artifacts import load_artifact_bundle, newest_artifact
 
 
 def assemble_judgment(section: str | None = None) -> dict[str, Any]:

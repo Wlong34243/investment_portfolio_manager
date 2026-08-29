@@ -21,6 +21,7 @@ UI_APPROVED_LIVE_IDS = frozenset({
     "ingest-precommitments-live",
     "refresh-dashboard-live",
     "tax-refresh-live",
+    "judge-lifecycle-missing-json-live",
 })
 
 
@@ -119,8 +120,20 @@ _reg(_routine(
     "Judgment — backfill missing sidecars (dry run)",
     ("manager.py", "judge", "lifecycle", "--missing-json"),
     0,
-    "Lists lifecycle artifacts with no JSON sidecar. Recompute is CLI-only (--live).",
+    "Lists lifecycle artifacts with no JSON sidecar. Live recompute: Backfill missing sidecars (live) on Runs.",
     timeout_sec=120,
+    group="REVIEW",
+))
+_reg(_routine(
+    "judge-lifecycle-missing-json-live",
+    "Judgment — backfill missing sidecars (live)",
+    ("manager.py", "judge", "lifecycle", "--missing-json", "--live"),
+    1,
+    "Recompute lifecycle campaigns missing JSON sidecars.",
+    timeout_sec=7200,
+    long_run_warning="Runs ~2–3 min per ticker. Do not close the console dock.",
+    writes_banner="Writes: agent_outputs/judgment/*.md + .json; SQLite judgment_campaign registry",
+    confirm_name=True,
     group="REVIEW",
 ))
 _reg(_routine(

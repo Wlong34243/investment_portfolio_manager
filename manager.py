@@ -28,6 +28,23 @@ _ROOT = Path(__file__).resolve().parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
+# Under pythonw.exe (no console attached — used by the PortfolioUI logon
+# task specifically to avoid a console window), sys.stdout/sys.stderr are
+# None, not just discarded. The first print()/logging call/rich Console
+# write anywhere downstream throws AttributeError and kills the process
+# with no trace anywhere (CLAUDE.md Known Issues, 2026-08-28). Redirect to
+# a log file before anything else runs so a pythonw-launched process can
+# both run unattended and leave evidence if it crashes.
+if sys.stdout is None or sys.stderr is None:
+    _log_dir = _ROOT / "logs"
+    _log_dir.mkdir(parents=True, exist_ok=True)
+    _pyw_log = open(
+        _log_dir / "pythonw_stdio.log", "a", buffering=1,
+        encoding="utf-8", errors="replace",
+    )
+    sys.stdout = _pyw_log
+    sys.stderr = _pyw_log
+
 # Windows consoles default to cp1252; unencodable chars (arrows, emoji) must
 # degrade to '?' rather than crash the command mid-output.
 for _stream in (sys.stdout, sys.stderr):
@@ -962,7 +979,7 @@ def judge_lifecycle(
         if ticker or all_tickers:
             console.print("[red]--missing-json is mutually exclusive with --ticker and --all[/]")
             raise typer.Exit(code=1)
-        from ui.judgment_artifacts import list_lifecycle_missing_json
+        from core.judgment.lifecycle_index import list_lifecycle_missing_json
 
         rows = list_lifecycle_missing_json()
         table = Table(title="Lifecycle sidecar backfill", show_header=True)

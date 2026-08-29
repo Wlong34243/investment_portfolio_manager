@@ -42,7 +42,7 @@
         <td class="num">{% if item.twr is not none %}{{ item.twr|pct }}{% else %}—{% endif %}</td>
         <td class="num">{% if item.scaling_delta is not none %}{{ item.scaling_delta|pct }}{% else %}—{% endif %}</td>
         <td>{% if item.computed_at %}{{ item.computed_at|dt }}{% else %}—{% endif %}
-          {% if item.missing_sidecar %}<span class="tag tag-warn" title="Run: pm judge lifecycle --missing-json">no JSON</span>{% endif %}
+          {% if item.missing_sidecar %}<span class="tag tag-warn" title="Runs → Backfill missing sidecars (live) — or: pm judge lifecycle --missing-json --live">no JSON</span>{% endif %}
         </td>
       </tr>
     {% endfor %}

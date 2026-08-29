@@ -1,5 +1,28 @@
 # CHANGELOG — Investment Portfolio Manager
 
+## [2026-08-29] — Lifecycle index refactor + live sidecar backfill launcher
+
+- **`core/judgment/lifecycle_index.py`** — disk index (`parse_lifecycle_ticker`, `list_lifecycle_artifacts`, `list_lifecycle_missing_json`); single `OUTPUT_DIR` from `core/judgment/artifacts`.
+- **`manager.py`** — `--missing-json` imports from core (no `ui/` dependency).
+- **`judge-lifecycle-missing-json-live`** — Tier 1 routine with typed confirmation; sixth `UI_APPROVED_LIVE_IDS` member; dry-run sibling unchanged.
+- **Tests:** `test_manager_no_ui_judgment_import.py`; glob fixtures monkeypatch `core.judgment.artifacts.OUTPUT_DIR`.
+
+## [2026-08-28] — Fix: PortfolioUI logon task dying silently under pythonw
+
+- **Root cause:** under `pythonw.exe` (used by `scripts/install_ui_service.ps1` specifically to
+  avoid a console window at logon), `sys.stdout`/`sys.stderr` are `None`, not just discarded —
+  the first `print()` / `console.print()` / logging call anywhere in the startup path throws
+  `AttributeError` and kills the process with no trace anywhere (no Task Scheduler failure, no
+  log file). `python.exe` (console attached) worked fine, which is what made this diagnosable.
+- **Fix (`manager.py`, top of file, before the cp1252-reconfigure block):** when
+  `sys.stdout is None or sys.stderr is None`, redirect both to `logs/pythonw_stdio.log`
+  (line-buffered, UTF-8, `errors="replace"`) before any other import runs. Global fix — applies
+  to any pythonw-launched command, not just `ui serve`.
+- **Verified both ways:** direct `pythonw.exe manager.py ui serve` (process survived past 5s,
+  `curl` returned 200, log populated with the startup banner + uvicorn INFO lines) and through
+  the real `Start-ScheduledTask -TaskName PortfolioUI` path (`/runs` returned 200).
+- `CLAUDE.md` Known Issues entry updated from open to `FIXED 2026-08-28`.
+
 ## [2026-08-28] — New positions: BTC, CF
 
 - **New position: BTC** (Grayscale Bitcoin Mini Trust ETF, not spot custody), entered between

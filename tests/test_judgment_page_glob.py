@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from ui.judgment_artifacts import list_lifecycle_artifacts, parse_lifecycle_ticker
+from core.judgment.lifecycle_index import list_lifecycle_artifacts, parse_lifecycle_ticker
 
 
 def test_lifecycle_glob_matches_timestamp_prefix():
@@ -26,9 +26,9 @@ def test_list_lifecycle_artifacts_from_fixture(tmp_path, monkeypatch):
     (out / "2026-08-28_1405_lifecycle_unh.json").write_text(
         '{"ticker":"UNH","legs":23,"single_entry_return_pct":0.1}', encoding="utf-8"
     )
-    import ui.judgment_artifacts as ja
+    import core.judgment.artifacts as art
 
-    monkeypatch.setattr(ja, "OUTPUT_DIR", out)
+    monkeypatch.setattr(art, "OUTPUT_DIR", out)
     items = list_lifecycle_artifacts()
     assert len(items) == 1
     assert items[0]["ticker"] == "UNH"
@@ -42,9 +42,9 @@ def test_list_lifecycle_dedupes_ticker(tmp_path, monkeypatch):
     new = out / "2026-08-28_1405_lifecycle_unh.md"
     old.write_text("**legs:** 20\n", encoding="utf-8")
     new.write_text("**legs:** 23\n", encoding="utf-8")
-    import ui.judgment_artifacts as ja
+    import core.judgment.artifacts as art
 
-    monkeypatch.setattr(ja, "OUTPUT_DIR", out)
+    monkeypatch.setattr(art, "OUTPUT_DIR", out)
     items = list_lifecycle_artifacts()
     assert len(items) == 1
     assert items[0]["ticker"] == "UNH"
