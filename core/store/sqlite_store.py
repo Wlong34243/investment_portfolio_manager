@@ -9,6 +9,8 @@ from typing import Any, Optional, Type
 import pandas as pd
 from sqlalchemy import delete, select
 
+import config
+from core.store.column_normalize import normalize_dataframe_columns
 from core.store.models import (
     DecisionViewRow,
     HoldingsCurrentRow,
@@ -54,11 +56,16 @@ class SqlitePortfolioStore:
             rotation_review_count=coerce_count(self.get_rotation_review()),
         )
 
-    def _load_table(self, model: Type) -> pd.DataFrame:
+    def _load_table(
+        self, model: Type, canonical_columns: Optional[list[str]] = None
+    ) -> pd.DataFrame:
         with get_session() as session:
             rows = session.scalars(select(model)).all()
             payloads = [r.payload_json for r in rows]
-        return payloads_to_df(payloads)
+        df = payloads_to_df(payloads)
+        if canonical_columns is not None:
+            df = normalize_dataframe_columns(df, canonical_columns)
+        return df
 
     def _replace_table(self, model: Type, df: pd.DataFrame, *, live: bool) -> None:
         if not live:
@@ -89,22 +96,22 @@ class SqlitePortfolioStore:
         logger.info("sqlite replaced %s with %d rows", model.__tablename__, len(payloads))
 
     def get_holdings_current(self) -> pd.DataFrame:
-        return self._load_table(HoldingsCurrentRow)
+        return self._load_table(HoldingsCurrentRow, config.POSITION_COLUMNS)
 
     def get_transactions(self) -> pd.DataFrame:
-        return self._load_table(TransactionRow)
+        return self._load_table(TransactionRow, config.TRANSACTION_COLUMNS)
 
     def get_trade_log(self) -> pd.DataFrame:
-        return self._load_table(TradeLogRow)
+        return self._load_table(TradeLogRow, config.TRADE_LOG_COLUMNS)
 
     def get_realized_gl(self) -> pd.DataFrame:
-        return self._load_table(RealizedGLRow)
+        return self._load_table(RealizedGLRow, config.GL_COLUMNS)
 
     def get_rotation_review(self) -> pd.DataFrame:
-        return self._load_table(RotationReviewRow)
+        return self._load_table(RotationReviewRow, config.ROTATION_REVIEW_COLUMNS)
 
     def get_tax_control_lots(self) -> pd.DataFrame:
-        return self._load_table(TaxControlLotRow)
+        return self._load_table(TaxControlLotRow, config.TAX_CONTROL_LOTS_COLUMNS)
 
     def get_tax_control_metrics(self) -> dict[str, Any]:
         with get_session() as session:
