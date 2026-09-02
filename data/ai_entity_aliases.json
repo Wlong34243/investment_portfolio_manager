@@ -1,0 +1,8 @@
+{
+  "_comment": "Hand-maintained. Supplements data/ticker_aliases.json for the AI track only.",
+  "tickers": {
+    "ARM": ["Arm", "Arm Holdings"],
+    "SKHY": ["SK Hynix", "Hynix"]
+  },
+  "unlisted": []
+}

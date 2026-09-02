@@ -202,6 +202,8 @@ SOURCES: list[SourceSpec] = [
     # a source_type that indexes zero files and silently returns no hits.
     SourceSpec("transcript", "data/podcast_transcripts/*", _read_plain, False, False),
     SourceSpec("podcast_summary", "data/podcast_summaries/*.md", _read_plain, False, True),
+    SourceSpec("ai_brief", "data/ai_briefs/*.md", _read_markdown, False, True),
+    SourceSpec("ai_transcript", "data/podcast_transcripts/ai/*.txt", _read_plain, False, False),
     # Prompt glob said *.md under spotify_digests; live tree keeps allocation-*.txt
     # corpus copies there and writes PROVENANCE onto the podcast_summaries Spotify_*.md.
     # Index both: raw digest text + provenance-stamped summary (distinct paths).
@@ -213,6 +215,7 @@ SOURCES: list[SourceSpec] = [
         False,
         False,
     ),
+    SourceSpec("ai_dispatch", "data/ai_dispatches/ai-dispatch-*.txt", _read_plain, False, False),
     SourceSpec("moment", "data/moments/*.moments.json", _read_moment, False, False),
     SourceSpec("agent_output", "agent_outputs/**/*.md", _read_markdown, False, True),
 ]

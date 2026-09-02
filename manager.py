@@ -111,6 +111,9 @@ app.add_typer(export_app, name="export")
 podcast_app = typer.Typer(help="Podcast transcript collection and optional AI analysis.")
 app.add_typer(podcast_app, name="podcast")
 
+ai_app = typer.Typer(help="AI-track thematic index.")
+app.add_typer(ai_app, name="ai")
+
 publish_app = typer.Typer(help="Publish small, stable output to a Drive-synced folder for reading on other devices.")
 app.add_typer(publish_app, name="publish")
 
@@ -1571,7 +1574,21 @@ def ingest_podcasts_cmd(
     purge: bool = typer.Option(False, "--purge"),
 ):
     """Ingest podcast transcripts."""
-    podcast_batch(analyze=analyze, live=live)
+    # batch now exits non-zero when every channel failed (or the transcript endpoint
+    # is blocked). Surface that loudly but do NOT abort the surrounding morning
+    # pipeline -- STEP 4 failing has never been fatal here, and making it fatal is
+    # Bill's call, not a side-effect of the exit-code fix.
+    try:
+        podcast_batch(analyze=analyze, live=live, track="finance")
+    except typer.Exit as e:
+        code = getattr(e, "exit_code", 0) or 0
+        if code == 3:
+            console.print(
+                "[bold red]STEP 4 ABORTED:[/] YouTube is rate-limiting this IP. "
+                "No transcripts fetched. Do not retry immediately — retries extend the block."
+            )
+        elif code != 0:
+            console.print(f"[bold red]STEP 4 FAILED (exit {code}):[/] no podcasts ingested this run.")
     if purge:
         from utils.hygiene import purge_obsolete_data, print_purge_report
         report = purge_obsolete_data(dry_run=not live)
@@ -2241,77 +2258,112 @@ def podcast_fetch(video_id: str = typer.Argument(...), source_name: str = "Manua
     console.print("[green]Done.[/]")
 
 
+@podcast_app.command("ai-brief")
+def podcast_ai_brief(
+    video_id: str = typer.Argument(..., help="YouTube video ID"),
+    source_name: str = typer.Option("Unknown AI Channel", "--source-name"),
+    live: bool = typer.Option(False, "--live", help="Write brief files. Default: dry run."),
+    min_words: Optional[int] = typer.Option(None, "--min-words"),
+):
+    """Generate an AI-track research brief from a YouTube video (no Sheets)."""
+    import subprocess
+
+    cmd = [
+        sys.executable,
+        str(Path(__file__).parent / "tasks" / "ai_track_sync.py"),
+        video_id,
+        "--source-name",
+        source_name,
+    ]
+    if live:
+        cmd.append("--live")
+    if min_words is not None:
+        cmd.extend(["--min-words", str(min_words)])
+    raise typer.Exit(subprocess.call(cmd))
+
+
+@podcast_app.command("ai-verify")
+def podcast_ai_verify(
+    brief: Path = typer.Argument(..., help="Path to .md brief under data/ai_briefs/"),
+    scaffold: bool = typer.Option(False, "--scaffold", help="Emit empty verification sidecar"),
+    live: bool = typer.Option(False, "--live", help="Write sidecar file"),
+):
+    """Scaffold a manual verification sidecar for an AI brief (claims table from JSON)."""
+    from datetime import date
+
+    brief = brief.resolve()
+    json_path = brief.with_suffix(".json")
+    if not json_path.exists():
+        console.print(f"[red]Missing sidecar:[/] {json_path}")
+        raise typer.Exit(1)
+    data = json.loads(json_path.read_text(encoding="utf-8"))
+    sha = ""
+    m = re.search(r"transcript_sha256:\s*([a-f0-9]{64})", brief.read_text(encoding="utf-8"))
+    if m:
+        sha = m.group(1)
+    today = date.today().isoformat()
+    out_dir = brief.parent / "verification"
+    out_path = out_dir / f"{brief.stem}_VERIFIED_{today}.md"
+    lines = [
+        f"# Verification sidecar — {brief.name}",
+        "",
+        f"**transcript_sha256:** {sha or 'unknown'}",
+        f"**Date:** {today}",
+        "",
+        "## Claims to verify",
+        "",
+        "| # | Claim | Type | Verified | Notes |",
+        "|---|---|---|---|---|",
+    ]
+    for i, c in enumerate(data.get("claims") or [], 1):
+        if isinstance(c, dict):
+            lines.append(
+                f"| {i} | {c.get('claim', '')} | {c.get('claim_type', '')} | | |"
+            )
+    lines.append("")
+    body = "\n".join(lines)
+    if scaffold and not live:
+        console.print(body)
+        console.print("\n[yellow]DRY RUN — use --live to write sidecar.[/]")
+        return
+    if live:
+        out_dir.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(body, encoding="utf-8")
+        console.print(f"[green]Wrote[/] {out_path}")
+    else:
+        console.print("Use --scaffold to preview; add --live to write.")
+
+
 @podcast_app.command("batch")
 def podcast_batch(
-    analyze: bool = typer.Option(False, "--analyze", help="Run Gemini macro analysis after fetching."),
-    live: bool = typer.Option(False, "--live", help="Save dedup log and run Sheet writes. Default: DRY RUN."),
+    analyze: bool = typer.Option(False, "--analyze", help="Deprecated; ignored. Batch runs full sync scripts."),
+    live: bool = typer.Option(False, "--live", help="Save dedup log and enable downstream writes."),
+    track: str = typer.Option("all", "--track", help="finance | ai | all"),
+    max_per_channel: int = typer.Option(1, "--max-per-channel"),
+    since: Optional[str] = typer.Option(None, "--since", help="YYYY-MM-DD"),
+    channel: Optional[List[str]] = typer.Option(None, "--channel", help="Registry name filter (repeatable)"),
 ):
-    """Fetch latest episode transcripts for all tracked podcast channels."""
-    from tasks.batch_podcast_sync import (
-        get_latest_video, load_processed_videos, save_processed_videos,
-        PODCAST_CHANNELS,
-    )
-    from tasks.podcast_fetcher import fetch_transcript_to_file
+    """Batch sync: finance (allocation) and/or ai (research brief) tracks via RSS."""
+    import subprocess
 
-    mode = "LIVE" if live else "DRY RUN"
-    console.print(f"[bold cyan]Batch Podcast Sync — {mode}[/]")
-
-    processed = load_processed_videos()
-    counts = {"fetched": 0, "skipped": 0, "failed": 0}
-
-    for channel_name, cfg in PODCAST_CHANNELS.items():
-        channel_id = cfg["channel_id"]
-        title_filter = cfg.get("title_filter")
-        console.print(f"\nChecking [cyan]{channel_name}[/]...")
-        video_id, title = get_latest_video(channel_id, title_filter=title_filter)
-
-        if video_id is None:
-            console.print(f"  [red]Could not fetch latest video[/]")
-            counts["failed"] += 1
-            continue
-
-        console.print(f"  Latest: [dim]{title}[/] ({video_id})")
-
-        if video_id in processed:
-            console.print(f"  [yellow]SKIP[/] — already processed on {processed[video_id]['processed_at'][:10]}")
-            counts["skipped"] += 1
-            continue
-
-        try:
-            save_path = fetch_transcript_to_file(video_id, source_name=f"{channel_name}: {title}")
-            word_count = len(save_path.read_text(encoding="utf-8").split())
-            console.print(f"  [green]Fetched[/] {word_count:,} words -> {save_path.name}")
-            processed[video_id] = {
-                "channel": channel_name,
-                "title": title,
-                "processed_at": datetime.now().isoformat(),
-            }
-            counts["fetched"] += 1
-        except Exception as e:
-            console.print(f"  [red]FAILED:[/] {e}")
-            counts["failed"] += 1
-            continue
-
-        if analyze:
-            try:
-                from utils.agents.podcast_analyst import analyze_podcast
-                text = save_path.read_text(encoding="utf-8")
-                result = analyze_podcast(text, source_name=f"{channel_name}: {title}")
-                if result:
-                    console.print(f"  [dim]Analysis: {result.get('executive_summary', '')[:80]}[/]")
-            except Exception as e:
-                console.print(f"  [yellow]Analysis failed:[/] {e}")
-
+    if analyze:
+        console.print("[yellow]--analyze is deprecated; batch always delegates to sync scripts.[/]")
+    cmd = [
+        sys.executable,
+        str(Path(__file__).parent / "tasks" / "batch_podcast_sync.py"),
+        "--track",
+        track,
+        "--max-per-channel",
+        str(max_per_channel),
+    ]
+    if since:
+        cmd.extend(["--since", since])
+    if channel:
+        for c in channel:
+            cmd.extend(["--channel", c])
     if live:
-        save_processed_videos(processed)
-        console.print("\n[dim]Dedup log saved.[/]")
-    else:
-        console.print("\n[bold yellow]DRY RUN — dedup log not saved. Use --live to persist.[/]")
-
-    console.print(
-        f"\n[bold]Done:[/] {counts['fetched']} fetched, "
-        f"{counts['skipped']} skipped, {counts['failed']} failed"
-    )
+        cmd.append("--live")
+    raise typer.Exit(subprocess.call(cmd))
 
 
 @podcast_app.command("ingest-spotify")
@@ -2327,6 +2379,19 @@ def podcast_ingest_spotify(
         seed_spotify_ledger(live=live)
     else:
         ingest_spotify_digests(days=days, live=live)
+
+
+@podcast_app.command("ingest-ai-dispatch")
+def podcast_ingest_ai_dispatch(
+    days: int = typer.Option(None, "--days", help="Window in days. Default: config.SPOTIFY_DIGEST_WINDOW_DAYS."),
+    live: bool = typer.Option(False, "--live", help="Write brief + corpus copy + ledger. Default: DRY RUN."),
+):
+    """Ingest Spotify Studio ai-dispatch-*.txt into data/ai_briefs/ (AI track, no allocation)."""
+    from tasks.ingest_ai_dispatch import main as ingest_ai_dispatch
+
+    result = ingest_ai_dispatch(days=days, live=live)
+    if result["failed"] and not result["ingested"]:
+        raise typer.Exit(1)
 
 
 @podcast_app.command("bundle")
@@ -2396,6 +2461,11 @@ def _morning_summary(
 def morning(
     live: bool = typer.Option(False, "--live", help="Write to Google Sheets. Without this, runs as a dry-run preview."),
     skip_health: bool = typer.Option(False, "--skip-health", help="Skip the upfront health check (not recommended)."),
+    no_prompt: bool = typer.Option(
+        False,
+        "--no-prompt",
+        help="Never prompt for Schwab reauth on critical health failure (unattended runs).",
+    ),
     skip_transactions: bool = typer.Option(False, "--skip-transactions", help="Skip transaction sync."),
     skip_podcasts: bool = typer.Option(False, "--skip-podcasts", help="Skip the podcast batch sync step."),
     skip_tax: bool = typer.Option(False, "--skip-tax", help="Skip the Tax_Control refresh."),
@@ -2434,23 +2504,22 @@ def morning(
     if not skip_health:
         console.print("\n[bold cyan]STEP 0 - Health Check[/]")
         code, health_results = run_health_report()
-        from tasks.health import write_failure_sentinel, clear_failure_sentinel
+        from tasks.health import (
+            clear_failure_sentinel,
+            is_noninteractive_health_gate,
+            handle_unattended_critical_failure,
+            REAUTH_REMEDIATION,
+        )
 
         # Determine worst status from the report
         if code == 1:
             step_results.append(("Health", "fail"))
             console.print(Panel("[bold red]Cannot proceed — Critical health failures detected.[/]", style="red"))
-            if not sys.stdin.isatty():
-                # Unattended run (Task Scheduler / cron): never block on an
-                # interactive prompt. Fail fast with a clear log line instead
-                # -- and, unlike before, leave a sentinel on disk so the next
-                # run (or anything reading exports/) knows a gap happened
-                # instead of everyone finding out by reading the log by hand.
-                sentinel_path = write_failure_sentinel(health_results)
+            if is_noninteractive_health_gate(no_prompt=no_prompt):
+                sentinel_path = handle_unattended_critical_failure(health_results)
                 console.print(
                     "[red]UNATTENDED RUN: critical health failure — skipping interactive "
-                    "reauth prompt. Fix manually: `python manager.py login` or "
-                    "schwab_emergency_reauth.bat, then re-run morning.[/]\n"
+                    f"reauth prompt. Remediation: {REAUTH_REMEDIATION}[/]\n"
                     f"[red]Wrote {sentinel_path} — cleared automatically on the next run "
                     "that passes health.[/]"
                 )
@@ -2522,7 +2591,7 @@ def morning(
         console.print("\n[bold cyan]STEP 4 - Batch Podcast Sync...[/]")
         try:
             script_path = Path(__file__).parent / "tasks" / "batch_podcast_sync.py"
-            cmd = [sys.executable, str(script_path)]
+            cmd = [sys.executable, str(script_path), "--track", "finance"]
             if live:
                 cmd.append("--live")
             # 600s, not 180s: each new episode found costs a transcript
@@ -2577,6 +2646,25 @@ def morning(
             step_results.append(("Spotify Digests", "warn"))
     else:
         step_results.append(("Spotify Digests", "skip"))
+
+    # 5b-ii. AI dispatch ingestion (STEP 4d). Local file, one Gemini call, no
+    #        network fetch -- unaffected by YouTube transcript IP blocks. Non-fatal.
+    if not skip_podcasts:
+        console.print("\n[bold cyan]STEP 4d - AI Dispatch...[/]")
+        try:
+            from tasks.ingest_ai_dispatch import main as ingest_ai_dispatch
+            ai_disp = ingest_ai_dispatch(live=live)
+            n_new = len(ai_disp["ingested"])
+            label = f"AI Dispatch ({n_new} new)"
+            if ai_disp.get("warn") or ai_disp["failed"]:
+                step_results.append((label, "warn"))
+            else:
+                step_results.append((label, "pass"))
+        except Exception as e:
+            console.print(f"[yellow]AI dispatch ingestion error: {e}[/]")
+            step_results.append(("AI Dispatch", "warn"))
+    else:
+        step_results.append(("AI Dispatch", "skip"))
 
     # 5c. Extract High-Signal Moments (cached, position-independent; skips
     #     transcripts already processed, so a normal morning only pays for
@@ -3208,6 +3296,38 @@ def agent_valuation_drift(
     path = write_drift_report(output)
     console.print(f"[bold green]Report written:[/] {path}")
     console.print(f"positions={len(output.positions)} bundle_hash={output.bundle_hash[:12]}…")
+
+
+@agent_app.command("ai-watch")
+def agent_ai_watch(
+    days: int = typer.Option(7, "--days"),
+    live: bool = typer.Option(False, "--live", help="Write report to agent_outputs/ai_watch/"),
+):
+    """Cross-source AI capability watch over recent briefs (sandbox; no Sheets)."""
+    from utils.agents.ai_watch import run
+
+    path = run(days=days, live=live)
+    if live and path:
+        console.print(f"[green]Report:[/] {path}")
+
+
+@ai_app.command("index")
+def ai_index(
+    days: Optional[int] = typer.Option(None, "--days", help="Window by brief filename date"),
+    live: bool = typer.Option(False, "--live", help="Write data/ai_thematic_index.json"),
+    allow_empty: bool = typer.Option(
+        False, "--allow-empty", help="Persist an index even when zero briefs were found."
+    ),
+):
+    """Rebuild deterministic AI thematic index from brief JSON sidecars."""
+    from utils.build_ai_index import build_index, write_index
+
+    index = build_index(days=days)
+    path = write_index(index, live=live, allow_empty=allow_empty)
+    if path:
+        console.print(f"[green]Index written:[/] {path}")
+        rollup = index.get("rollup") or {}
+        console.print(f"briefs={rollup.get('brief_count')} unmatched={len(rollup.get('unmatched_entities') or {})}")
 
 
 if __name__ == "__main__":

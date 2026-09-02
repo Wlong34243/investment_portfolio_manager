@@ -204,7 +204,7 @@ def search_ranked(
 
 
 def provenance_badge(hit: CorpusHit) -> Literal["your_writing", "model_output", "third_party"]:
-    if hit.is_model_output or hit.source_type in ("podcast_summary", "agent_output"):
+    if hit.is_model_output or hit.source_type in ("podcast_summary", "agent_output", "ai_brief"):
         return "model_output"
     if hit.is_bills_writing or hit.source_type in (
         "thesis",

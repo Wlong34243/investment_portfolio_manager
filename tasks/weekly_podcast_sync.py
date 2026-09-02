@@ -28,6 +28,12 @@ def main():
                         help="Podcast name + episode identifier (e.g. 'Forward Guidance EP 412')")
     parser.add_argument("--live", action="store_true",
                         help="Enable Sheet writes. Without this flag, always runs in dry-run mode.")
+    parser.add_argument(
+        "--min-words",
+        type=int,
+        default=None,
+        help="Skip if transcript shorter than this (optional; finance path has no default floor)",
+    )
     args = parser.parse_args()
 
     strategy = None
@@ -57,10 +63,18 @@ def main():
             full_text = " ".join([seg.text for seg in transcript_segments])
         except Exception as e:
             print(f"ERROR: Could not download transcript for {args.video_id}: {e}")
+            from tasks.podcast_fetcher import EXIT_TRANSCRIPT_BLOCKED, is_transcript_block
+
+            if is_transcript_block(e):
+                print("BLOCKED: YouTube is rate-limiting this IP. Stop and wait; do not retry.")
+                sys.exit(EXIT_TRANSCRIPT_BLOCKED)
             sys.exit(1)
 
         word_count = len(full_text.split())
         print(f"Transcript loaded: {word_count} words")
+        if args.min_words is not None and word_count < args.min_words:
+            print(f"SKIPPED: transcript too short ({word_count} words; floor {args.min_words})")
+            sys.exit(0)
         if word_count > 12000:
             print("WARNING: Transcript exceeds 12,000 words. Gemini can handle it but results may "
                   "lose focus on earlier segments.")

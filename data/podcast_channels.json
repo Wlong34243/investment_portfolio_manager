@@ -1,0 +1,259 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-08-31T14:31:58",
+  "channels": [
+    {
+      "name": "Forward Guidance",
+      "channel_id": "UCkrwgzhIBKccuDsi_SvZtnQ",
+      "handle": null,
+      "track": "finance",
+      "enabled": true,
+      "title_filter": null,
+      "min_words": null,
+      "added": "2026-04-01",
+      "notes": "migrated from PODCAST_CHANNELS dict"
+    },
+    {
+      "name": "The Compound",
+      "channel_id": "UCBRpqrzuuqE8TZcWw75JSdw",
+      "handle": null,
+      "track": "finance",
+      "enabled": true,
+      "title_filter": null,
+      "min_words": null,
+      "added": "2026-04-01",
+      "notes": "migrated from PODCAST_CHANNELS dict"
+    },
+    {
+      "name": "BG2 Pod",
+      "channel_id": "UC-yRDvpR99LUc5l7i7jLzew",
+      "handle": null,
+      "track": "finance",
+      "enabled": true,
+      "title_filter": null,
+      "min_words": null,
+      "added": "2026-04-01",
+      "notes": "migrated from PODCAST_CHANNELS dict"
+    },
+    {
+      "name": "Capital Allocators",
+      "channel_id": "UCbzQ_YWf9RsBP9ATbmv5kxQ",
+      "handle": null,
+      "track": "finance",
+      "enabled": true,
+      "title_filter": null,
+      "min_words": null,
+      "added": "2026-04-01",
+      "notes": "migrated from PODCAST_CHANNELS dict"
+    },
+    {
+      "name": "Chat With Traders",
+      "channel_id": "UCdnzT5Tl6pAkATOiDsPhqcg",
+      "handle": null,
+      "track": "finance",
+      "enabled": true,
+      "title_filter": null,
+      "min_words": null,
+      "added": "2026-04-01",
+      "notes": "migrated from PODCAST_CHANNELS dict"
+    },
+    {
+      "name": "On The Tape",
+      "channel_id": "UCe8y7CzcjhMPTzem-Zn6sqA",
+      "handle": null,
+      "track": "finance",
+      "enabled": true,
+      "title_filter": null,
+      "min_words": null,
+      "added": "2026-04-01",
+      "notes": "migrated from PODCAST_CHANNELS dict"
+    },
+    {
+      "name": "CNBC Television",
+      "channel_id": "UCrp_UI8XtuYfpiqluWLD7Lw",
+      "handle": null,
+      "track": "finance",
+      "enabled": true,
+      "title_filter": null,
+      "min_words": null,
+      "added": "2026-04-01",
+      "notes": "migrated from PODCAST_CHANNELS dict"
+    },
+    {
+      "name": "Top Traders Unplugged",
+      "channel_id": "UCt-_RaV_mFlyXDmhYnIm0Ug",
+      "handle": null,
+      "track": "finance",
+      "enabled": true,
+      "title_filter": null,
+      "min_words": null,
+      "added": "2026-04-01",
+      "notes": "migrated from PODCAST_CHANNELS dict"
+    },
+    {
+      "name": "Invest Like The Best",
+      "channel_id": "UCpQBb0fToph3jrDulwz1iUQ",
+      "handle": null,
+      "track": "finance",
+      "enabled": true,
+      "title_filter": null,
+      "min_words": null,
+      "added": "2026-04-01",
+      "notes": "migrated from PODCAST_CHANNELS dict"
+    },
+    {
+      "name": "On Investing",
+      "channel_id": "UCToe3dspZyw2L_JY-JmP3Mw",
+      "handle": null,
+      "track": "finance",
+      "enabled": true,
+      "title_filter": "On Investing",
+      "min_words": null,
+      "added": "2026-04-01",
+      "notes": "migrated from PODCAST_CHANNELS dict"
+    },
+    {
+      "name": "Excess Returns Clips",
+      "channel_id": "UCr5lgfnWV8bp23qWQGHZRlg",
+      "handle": null,
+      "track": "finance",
+      "enabled": true,
+      "title_filter": null,
+      "min_words": null,
+      "added": "2026-08-31",
+      "notes": "clips channel \u2014 candidate for min_words"
+    },
+    {
+      "name": "Goldman Sachs",
+      "channel_id": "UCyz6-taovlaOkPsPtK4KNEg",
+      "handle": "@GoldmanSachs",
+      "track": "finance",
+      "enabled": true,
+      "title_filter": null,
+      "min_words": null,
+      "added": "2026-08-31",
+      "notes": "high upload volume; candidate for title_filter"
+    },
+    {
+      "name": "Moonshots Highlights",
+      "channel_id": "UCCpNQKYvrnWQNjZprabMJlw",
+      "handle": "@MoonshotsHighlights",
+      "track": "finance",
+      "enabled": true,
+      "title_filter": null,
+      "min_words": null,
+      "added": "2026-08-31",
+      "notes": "highlights channel \u2014 candidate for min_words"
+    },
+    {
+      "name": "Fundstrat",
+      "channel_id": "UCQxFhbPxp6VtAMGEF8OWG5g",
+      "handle": "@fundstratcapital",
+      "track": "finance",
+      "enabled": true,
+      "title_filter": null,
+      "min_words": null,
+      "added": "2026-08-31",
+      "notes": "verify feed title and recent episodes"
+    },
+    {
+      "name": "Google DeepMind",
+      "channel_id": "UCP7jMXSY2xbc3KCAE0MHQ-A",
+      "handle": "@googledeepmind",
+      "track": "ai",
+      "enabled": true,
+      "title_filter": null,
+      "min_words": null,
+      "added": "2026-08-31",
+      "notes": null
+    },
+    {
+      "name": "IBM Technology",
+      "channel_id": "UC8cc4pVKVHG7A9fbNsRNrLQ",
+      "handle": "@IBMTechnology",
+      "track": "ai",
+      "enabled": true,
+      "title_filter": null,
+      "min_words": null,
+      "added": "2026-08-31",
+      "notes": null
+    },
+    {
+      "name": "OpenAI",
+      "channel_id": "UCXZCJLdBC09xxGZ6gcdrc6A",
+      "handle": "@OpenAI",
+      "track": "ai",
+      "enabled": true,
+      "title_filter": null,
+      "min_words": null,
+      "added": "2026-08-31",
+      "notes": null
+    },
+    {
+      "name": "Two Minute Papers",
+      "channel_id": "UCbfYPyITQ-7l4upoX8nvctg",
+      "handle": "@TwoMinutePapers",
+      "track": "ai",
+      "enabled": true,
+      "title_filter": null,
+      "min_words": null,
+      "added": "2026-08-31",
+      "notes": "legacy user/keeroyz also resolves"
+    },
+    {
+      "name": "Yannic Kilcher",
+      "channel_id": "UCZHmQk67mSJgfCCTn7xBfew",
+      "handle": null,
+      "track": "ai",
+      "enabled": true,
+      "title_filter": null,
+      "min_words": null,
+      "added": "2026-08-31",
+      "notes": null
+    },
+    {
+      "name": "AI Explained",
+      "channel_id": "UCNJ1Ymd5yFuUPtn21xtRbbw",
+      "handle": null,
+      "track": "ai",
+      "enabled": true,
+      "title_filter": null,
+      "min_words": null,
+      "added": "2026-08-31",
+      "notes": null
+    },
+    {
+      "name": "Matthew Berman",
+      "channel_id": "UCuar6bhYQon68ppqmU-wYXA",
+      "handle": null,
+      "track": "ai",
+      "enabled": true,
+      "title_filter": null,
+      "min_words": null,
+      "added": "2026-08-31",
+      "notes": null
+    },
+    {
+      "name": "David Shapiro",
+      "channel_id": "UCvKRFNawVcuz4b9ihUTApCg",
+      "handle": "@DaveShap",
+      "track": "ai",
+      "enabled": true,
+      "title_filter": null,
+      "min_words": null,
+      "added": "2026-08-31",
+      "notes": "handle may be renamed"
+    },
+    {
+      "name": "Fireship",
+      "channel_id": "UC2Xd-TjJByJyK2w1zNwY0zQ",
+      "handle": "@Fireship",
+      "track": "ai",
+      "enabled": true,
+      "title_filter": null,
+      "min_words": null,
+      "added": "2026-08-31",
+      "notes": "mostly non-AI dev content; title_filter candidate if signal-to-noise poor"
+    }
+  ]
+}

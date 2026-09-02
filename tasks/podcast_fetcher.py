@@ -12,6 +12,26 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 TRANSCRIPTS_DIR = Path(__file__).parent.parent / "data" / "podcast_transcripts"
 
+# Exit code reserved for "YouTube is rate-limiting this IP". Distinct from 1 so a
+# batch orchestrator can tell a global condition from a per-video failure.
+EXIT_TRANSCRIPT_BLOCKED = 3
+
+_BLOCK_MARKERS = ("requestblocked", "ipblocked", "toomanyrequests")
+
+
+def is_transcript_block(exc: BaseException) -> bool:
+    """True when the exception is YouTube rate-limiting/blocking this IP.
+
+    Matches on the exception class name first (the library raises RequestBlocked /
+    IpBlocked) and falls back to the message, because the class names have moved
+    between versions of youtube-transcript-api.
+    """
+    name = type(exc).__name__.lower()
+    if any(m in name for m in _BLOCK_MARKERS):
+        return True
+    msg = str(exc).lower()
+    return "blocking requests from your ip" in msg or "too many requests" in msg
+
 
 def fetch_transcript_to_file(video_id: str, source_name: str = None, out_dir: Path = None) -> Path:
     """
