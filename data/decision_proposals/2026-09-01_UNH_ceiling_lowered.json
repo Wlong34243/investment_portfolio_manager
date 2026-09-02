@@ -1,0 +1,32 @@
+{
+  "id": "2026-09-01_UNH_ceiling_lowered",
+  "decided_on": null,
+  "decided_on_status": "unknown",
+  "scope": "position",
+  "tickers": [
+    "UNH"
+  ],
+  "assertion": "lowered from 7 \u2014 defensive but I no longer want it at 6%+ weight",
+  "conditions": {
+    "operator": "all",
+    "legs": [
+      {
+        "metric": "weight",
+        "comparator": "gte",
+        "value": 5.0
+      }
+    ]
+  },
+  "unencodable_conditions": [],
+  "overrides": [],
+  "falsifier": "",
+  "supersedes": null,
+  "provenance": "extracted",
+  "source_ref": "vault/theses/UNH_thesis.md#L20",
+  "status": "proposed",
+  "proposed_restatement": "The size ceiling was lowered from 7% to 5%; UNH is defensive but no longer wanted above 6% weight.",
+  "restatement": null,
+  "restatement_author": null,
+  "ratified_on": null,
+  "rejection_reason": null
+}

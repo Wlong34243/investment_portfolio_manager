@@ -1,0 +1,362 @@
+[
+  {
+    "id": "2026-08-14_GLD_size_and_role",
+    "decided_on": "2026-08-14",
+    "decided_on_status": "known",
+    "scope": "position",
+    "tickers": [
+      "GLD"
+    ],
+    "assertion": "Size-and-role (build toward 3–5%; do not trim on price up alone) wins over the 400 print. 400 remains an evaluate-if-momentum flag, not a close-out.",
+    "proposed_restatement": "The 400 print is a flag to look, not a trim rule. Size and the position's hedge role govern; price rising alone is not a reason to trim.",
+    "conditions": {
+      "operator": "all",
+      "legs": [
+        {
+          "metric": "price",
+          "comparator": "gte",
+          "value": 400
+        }
+      ]
+    },
+    "unencodable_conditions": [
+      "build toward 3-5% target weight (no target_allocation field exists)",
+      "hedge role through equity stress"
+    ],
+    "overrides": [
+      "price_trim_above"
+    ],
+    "source_ref": "vault/theses/GLD_thesis.md#L73",
+    "falsifier": null,
+    "supersedes": null,
+    "provenance": "extracted",
+    "status": "proposed",
+    "ratified_on": null
+  },
+  {
+    "id": "2026-09-01_XOM_harvest_conjunction",
+    "decided_on": null,
+    "decided_on_status": "unknown",
+    "scope": "position",
+    "tickers": [
+      "XOM"
+    ],
+    "assertion": "harvest if multiple + oil both rich",
+    "proposed_restatement": "Harvest only when the multiple and oil are both rich. Price through 140 alone is not sufficient.",
+    "conditions": {
+      "operator": "all",
+      "legs": [
+        {
+          "metric": "price",
+          "comparator": "gte",
+          "value": 140
+        },
+        {
+          "metric": "fwd_pe",
+          "comparator": "gte",
+          "value": 14
+        }
+      ]
+    },
+    "unencodable_conditions": [
+      "oil rich"
+    ],
+    "overrides": [
+      "price_trim_above"
+    ],
+    "source_ref": "vault/theses/XOM_thesis.md#L16",
+    "falsifier": null,
+    "supersedes": null,
+    "provenance": "extracted",
+    "status": "proposed",
+    "ratified_on": null
+  },
+  {
+    "id": "2026-09-01_META_trim_conjunction",
+    "decided_on": null,
+    "decided_on_status": "unknown",
+    "scope": "position",
+    "tickers": [
+      "META"
+    ],
+    "assertion": "trim if multiple rich AND RL spend re-accelerates",
+    "proposed_restatement": "Trim only when the multiple is rich AND Reality Labs spend re-accelerates. Multiple alone is not sufficient.",
+    "conditions": {
+      "operator": "all",
+      "legs": [
+        {
+          "metric": "fwd_pe",
+          "comparator": "gte",
+          "value": 28
+        }
+      ]
+    },
+    "unencodable_conditions": [
+      "RL spend re-accelerates"
+    ],
+    "overrides": [
+      "fwd_pe_trim_above"
+    ],
+    "source_ref": "vault/theses/META_thesis.md#L13",
+    "falsifier": null,
+    "supersedes": null,
+    "provenance": "extracted",
+    "status": "proposed",
+    "ratified_on": null
+  },
+  {
+    "id": "2026-09-01_VRT_add_conjunction",
+    "decided_on": null,
+    "decided_on_status": "unknown",
+    "scope": "position",
+    "tickers": [
+      "VRT"
+    ],
+    "assertion": "add on 20%+ drawdowns from highs absent structural news",
+    "proposed_restatement": "Add on 20%+ drawdowns only when the drawdown is not driven by structural news.",
+    "conditions": {
+      "operator": "all",
+      "legs": [
+        {
+          "metric": "discount_from_52w_high",
+          "comparator": "gte",
+          "value": 0.2
+        }
+      ]
+    },
+    "unencodable_conditions": [
+      "absent structural news"
+    ],
+    "overrides": [
+      "discount_from_52w_high_add"
+    ],
+    "source_ref": "vault/theses/VRT_thesis.md#L17",
+    "falsifier": null,
+    "supersedes": null,
+    "provenance": "extracted",
+    "status": "proposed",
+    "ratified_on": null
+  },
+  {
+    "id": "2026-09-01_GOOG_level_raised_not_trimmed",
+    "decided_on": null,
+    "decided_on_status": "unknown",
+    "scope": "position",
+    "tickers": [
+      "GOOG"
+    ],
+    "assertion": "raised from $395 — ecosystem + optionality thesis intact",
+    "proposed_restatement": "On approach to 395 the level was raised to 450 rather than trimming, because the ecosystem and optionality thesis was intact. The trim level moved; no trim occurred.",
+    "conditions": {
+      "operator": "all",
+      "legs": [
+        {
+          "metric": "price",
+          "comparator": "gte",
+          "value": 450
+        }
+      ]
+    },
+    "source_ref": "vault/theses/GOOG_thesis.md#L16",
+    "unencodable_conditions": [],
+    "overrides": [],
+    "falsifier": null,
+    "supersedes": null,
+    "provenance": "extracted",
+    "status": "proposed",
+    "ratified_on": null
+  },
+  {
+    "id": "2026-09-01_UNH_trim_multiple_lowered",
+    "decided_on": null,
+    "decided_on_status": "unknown",
+    "scope": "position",
+    "tickers": [
+      "UNH"
+    ],
+    "assertion": "lowered from 20 — taking off risk earlier into strength",
+    "proposed_restatement": "The trim multiple was lowered from 20 to 18 to take risk off earlier into strength.",
+    "conditions": {
+      "operator": "all",
+      "legs": [
+        {
+          "metric": "fwd_pe",
+          "comparator": "gte",
+          "value": 18
+        }
+      ]
+    },
+    "source_ref": "vault/theses/UNH_thesis.md#L13",
+    "unencodable_conditions": [],
+    "overrides": [],
+    "falsifier": null,
+    "supersedes": null,
+    "provenance": "extracted",
+    "status": "proposed",
+    "ratified_on": null
+  },
+  {
+    "id": "2026-09-01_UNH_ceiling_lowered",
+    "decided_on": null,
+    "decided_on_status": "unknown",
+    "scope": "position",
+    "tickers": [
+      "UNH"
+    ],
+    "assertion": "lowered from 7 — defensive but I no longer want it at 6%+ weight",
+    "proposed_restatement": "The size ceiling was lowered from 7% to 5%; UNH is defensive but no longer wanted above 6% weight.",
+    "conditions": {
+      "operator": "all",
+      "legs": [
+        {
+          "metric": "weight",
+          "comparator": "gte",
+          "value": 5.0
+        }
+      ]
+    },
+    "source_ref": "vault/theses/UNH_thesis.md#L20",
+    "unencodable_conditions": [],
+    "overrides": [],
+    "falsifier": null,
+    "supersedes": null,
+    "provenance": "extracted",
+    "status": "proposed",
+    "ratified_on": null
+  },
+  {
+    "id": "2026-09-01_AMZN_ceiling_only_deferral",
+    "decided_on": null,
+    "decided_on_status": "unknown",
+    "scope": "position",
+    "tickers": [
+      "AMZN"
+    ],
+    "assertion": "trigger_type: ceiling_only, not trailing_pe.",
+    "proposed_restatement": "AMZN carries no valuation band; the style ceiling governs. Recorded reason is a data-quality limitation, not a judgement that no meaningful level exists.",
+    "conditions": {
+      "operator": "all",
+      "legs": []
+    },
+    "unencodable_conditions": [
+      "deferral is conditional on data quality; revisit condition is not machine-evaluable"
+    ],
+    "overrides": [
+      "trigger_type"
+    ],
+    "source_ref": "vault/theses/AMZN_thesis.md#L49",
+    "falsifier": null,
+    "supersedes": null,
+    "provenance": "extracted",
+    "status": "proposed",
+    "ratified_on": null
+  },
+  {
+    "id": "2026-09-01_LLY_ceiling_only_deferral",
+    "decided_on": null,
+    "decided_on_status": "unknown",
+    "scope": "position",
+    "tickers": [
+      "LLY"
+    ],
+    "assertion": "trigger_type: ceiling_only, not trailing_pe.",
+    "proposed_restatement": "LLY carries no valuation band; the style ceiling governs. Recorded reason is a data-quality limitation, not a judgement that no meaningful level exists.",
+    "conditions": {
+      "operator": "all",
+      "legs": []
+    },
+    "unencodable_conditions": [
+      "deferral is conditional on data quality; revisit condition is not machine-evaluable"
+    ],
+    "overrides": [
+      "trigger_type"
+    ],
+    "source_ref": "vault/theses/LLY_thesis.md#L49",
+    "falsifier": null,
+    "supersedes": null,
+    "provenance": "extracted",
+    "status": "proposed",
+    "ratified_on": null
+  },
+  {
+    "id": "2026-09-01_APO_ceiling_only_deferral",
+    "decided_on": null,
+    "decided_on_status": "unknown",
+    "scope": "position",
+    "tickers": [
+      "APO"
+    ],
+    "assertion": "trigger_type: ceiling_only, not trailing_pe.",
+    "proposed_restatement": "APO carries no valuation band; the style ceiling governs. Recorded reason is a data-quality limitation, not a judgement that no meaningful level exists.",
+    "conditions": {
+      "operator": "all",
+      "legs": []
+    },
+    "unencodable_conditions": [
+      "deferral is conditional on data quality; revisit condition is not machine-evaluable"
+    ],
+    "overrides": [
+      "trigger_type"
+    ],
+    "source_ref": "vault/theses/APO_thesis.md#L89",
+    "falsifier": null,
+    "supersedes": null,
+    "provenance": "extracted",
+    "status": "proposed",
+    "ratified_on": null
+  },
+  {
+    "id": "2026-09-01_MU_ceiling_only_deferral",
+    "decided_on": null,
+    "decided_on_status": "unknown",
+    "scope": "position",
+    "tickers": [
+      "MU"
+    ],
+    "assertion": "trigger_type: ceiling_only, not price_to_book.",
+    "proposed_restatement": "MU carries no valuation band; the style ceiling governs. Recorded reason is a data-quality limitation, not a judgement that no meaningful level exists.",
+    "conditions": {
+      "operator": "all",
+      "legs": []
+    },
+    "unencodable_conditions": [
+      "deferral is conditional on data quality; revisit condition is not machine-evaluable"
+    ],
+    "overrides": [
+      "trigger_type"
+    ],
+    "source_ref": "vault/theses/MU_thesis.md#L235",
+    "falsifier": null,
+    "supersedes": null,
+    "provenance": "extracted",
+    "status": "proposed",
+    "ratified_on": null
+  },
+  {
+    "id": "2026-09-01_COF_ceiling_only_deferral",
+    "decided_on": null,
+    "decided_on_status": "unknown",
+    "scope": "position",
+    "tickers": [
+      "COF"
+    ],
+    "assertion": "trigger_type: ceiling_only.",
+    "proposed_restatement": "COF carries no valuation band; the style ceiling governs. Recorded reason is a data-quality limitation, not a judgement that no meaningful level exists.",
+    "conditions": {
+      "operator": "all",
+      "legs": []
+    },
+    "unencodable_conditions": [
+      "deferral is conditional on data quality; revisit condition is not machine-evaluable"
+    ],
+    "overrides": [
+      "trigger_type"
+    ],
+    "source_ref": "vault/theses/COF_thesis.md#L56",
+    "falsifier": null,
+    "supersedes": null,
+    "provenance": "extracted",
+    "status": "proposed",
+    "ratified_on": null
+  }
+]

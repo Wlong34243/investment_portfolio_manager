@@ -1,0 +1,36 @@
+{
+  "id": "2026-09-01_META_trim_conjunction",
+  "decided_on": null,
+  "decided_on_status": "unknown",
+  "scope": "position",
+  "tickers": [
+    "META"
+  ],
+  "assertion": "trim if multiple rich AND RL spend re-accelerates",
+  "conditions": {
+    "operator": "all",
+    "legs": [
+      {
+        "metric": "fwd_pe",
+        "comparator": "gte",
+        "value": 28
+      }
+    ]
+  },
+  "unencodable_conditions": [
+    "RL spend re-accelerates"
+  ],
+  "overrides": [
+    "fwd_pe_trim_above"
+  ],
+  "falsifier": "",
+  "supersedes": null,
+  "provenance": "extracted",
+  "source_ref": "vault/theses/META_thesis.md#L13",
+  "status": "proposed",
+  "proposed_restatement": "Trim only when the multiple is rich AND Reality Labs spend re-accelerates. Multiple alone is not sufficient.",
+  "restatement": null,
+  "restatement_author": null,
+  "ratified_on": null,
+  "rejection_reason": null
+}

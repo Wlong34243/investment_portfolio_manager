@@ -1,0 +1,36 @@
+{
+  "id": "2026-09-01_VRT_add_conjunction",
+  "decided_on": null,
+  "decided_on_status": "unknown",
+  "scope": "position",
+  "tickers": [
+    "VRT"
+  ],
+  "assertion": "add on 20%+ drawdowns from highs absent structural news",
+  "conditions": {
+    "operator": "all",
+    "legs": [
+      {
+        "metric": "discount_from_52w_high",
+        "comparator": "gte",
+        "value": 0.2
+      }
+    ]
+  },
+  "unencodable_conditions": [
+    "absent structural news"
+  ],
+  "overrides": [
+    "discount_from_52w_high_add"
+  ],
+  "falsifier": "",
+  "supersedes": null,
+  "provenance": "extracted",
+  "source_ref": "vault/theses/VRT_thesis.md#L17",
+  "status": "proposed",
+  "proposed_restatement": "Add on 20%+ drawdowns only when the drawdown is not driven by structural news.",
+  "restatement": null,
+  "restatement_author": null,
+  "ratified_on": null,
+  "rejection_reason": null
+}

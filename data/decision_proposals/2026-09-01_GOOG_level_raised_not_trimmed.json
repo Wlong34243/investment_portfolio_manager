@@ -1,0 +1,32 @@
+{
+  "id": "2026-09-01_GOOG_level_raised_not_trimmed",
+  "decided_on": null,
+  "decided_on_status": "unknown",
+  "scope": "position",
+  "tickers": [
+    "GOOG"
+  ],
+  "assertion": "raised from $395 \u2014 ecosystem + optionality thesis intact",
+  "conditions": {
+    "operator": "all",
+    "legs": [
+      {
+        "metric": "price",
+        "comparator": "gte",
+        "value": 450
+      }
+    ]
+  },
+  "unencodable_conditions": [],
+  "overrides": [],
+  "falsifier": "",
+  "supersedes": null,
+  "provenance": "extracted",
+  "source_ref": "vault/theses/GOOG_thesis.md#L16",
+  "status": "proposed",
+  "proposed_restatement": "On approach to 395 the level was raised to 450 rather than trimming, because the ecosystem and optionality thesis was intact. The trim level moved; no trim occurred.",
+  "restatement": null,
+  "restatement_author": null,
+  "ratified_on": null,
+  "rejection_reason": null
+}

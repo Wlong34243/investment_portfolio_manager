@@ -1,0 +1,37 @@
+{
+  "id": "2026-08-14_GLD_size_and_role",
+  "decided_on": "2026-08-14",
+  "decided_on_status": "known",
+  "scope": "position",
+  "tickers": [
+    "GLD"
+  ],
+  "assertion": "Size-and-role (build toward 3\u20135%; do not trim on price up alone) wins over the 400 print. 400 remains an evaluate-if-momentum flag, not a close-out.",
+  "conditions": {
+    "operator": "all",
+    "legs": [
+      {
+        "metric": "price",
+        "comparator": "gte",
+        "value": 400
+      }
+    ]
+  },
+  "unencodable_conditions": [
+    "build toward 3-5% target weight (no target_allocation field exists)",
+    "hedge role through equity stress"
+  ],
+  "overrides": [
+    "price_trim_above"
+  ],
+  "falsifier": "",
+  "supersedes": null,
+  "provenance": "extracted",
+  "source_ref": "vault/theses/GLD_thesis.md#L73",
+  "status": "proposed",
+  "proposed_restatement": "The 400 print is a flag to look, not a trim rule. Size and the position's hedge role govern; price rising alone is not a reason to trim.",
+  "restatement": null,
+  "restatement_author": null,
+  "ratified_on": null,
+  "rejection_reason": null
+}

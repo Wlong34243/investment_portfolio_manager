@@ -1,0 +1,25 @@
+[
+  {
+    "id": "2026-09-01_XOM_harvest_conjunction",
+    "decided_on": null,
+    "decided_on_status": "unknown",
+    "scope": "position",
+    "tickers": ["XOM"],
+    "assertion": "harvest if multiple + oil both rich",
+    "conditions": {
+      "operator": "all",
+      "legs": [
+        {"metric": "price", "comparator": "gte", "value": 140.0},
+        {"metric": "fwd_pe", "comparator": "gte", "value": 14}
+      ]
+    },
+    "unencodable_conditions": ["oil price rich"],
+    "overrides": ["price_trim_above"],
+    "falsifier": "",
+    "supersedes": null,
+    "provenance": "extracted",
+    "source_ref": "vault/theses/XOM_thesis.md#L16",
+    "status": "proposed",
+    "proposed_restatement": "Harvest only if multiple and oil are both rich — not on price alone."
+  }
+]

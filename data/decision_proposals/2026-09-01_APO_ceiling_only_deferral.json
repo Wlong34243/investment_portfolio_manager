@@ -1,0 +1,30 @@
+{
+  "id": "2026-09-01_APO_ceiling_only_deferral",
+  "decided_on": null,
+  "decided_on_status": "unknown",
+  "scope": "position",
+  "tickers": [
+    "APO"
+  ],
+  "assertion": "trigger_type: ceiling_only, not trailing_pe.",
+  "conditions": {
+    "operator": "all",
+    "legs": []
+  },
+  "unencodable_conditions": [
+    "deferral is conditional on data quality; revisit condition is not machine-evaluable"
+  ],
+  "overrides": [
+    "trigger_type"
+  ],
+  "falsifier": "",
+  "supersedes": null,
+  "provenance": "extracted",
+  "source_ref": "vault/theses/APO_thesis.md#L89",
+  "status": "proposed",
+  "proposed_restatement": "APO carries no valuation band; the style ceiling governs. Recorded reason is a data-quality limitation, not a judgement that no meaningful level exists.",
+  "restatement": null,
+  "restatement_author": null,
+  "ratified_on": null,
+  "rejection_reason": null
+}

@@ -1,0 +1,32 @@
+{
+  "id": "2026-09-01_UNH_trim_multiple_lowered",
+  "decided_on": null,
+  "decided_on_status": "unknown",
+  "scope": "position",
+  "tickers": [
+    "UNH"
+  ],
+  "assertion": "lowered from 20 \u2014 taking off risk earlier into strength",
+  "conditions": {
+    "operator": "all",
+    "legs": [
+      {
+        "metric": "fwd_pe",
+        "comparator": "gte",
+        "value": 18
+      }
+    ]
+  },
+  "unencodable_conditions": [],
+  "overrides": [],
+  "falsifier": "",
+  "supersedes": null,
+  "provenance": "extracted",
+  "source_ref": "vault/theses/UNH_thesis.md#L13",
+  "status": "proposed",
+  "proposed_restatement": "The trim multiple was lowered from 20 to 18 to take risk off earlier into strength.",
+  "restatement": null,
+  "restatement_author": null,
+  "ratified_on": null,
+  "rejection_reason": null
+}
