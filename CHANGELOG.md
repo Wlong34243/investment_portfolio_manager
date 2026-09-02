@@ -1,5 +1,217 @@
 # CHANGELOG — Investment Portfolio Manager
 
+## [2026-09-02] — Gemini model switch to 3.1 Pro Preview
+
+- **`GEMINI_MODEL`** default → `gemini-3.1-pro-preview`; `.env` updated to match.
+- **`GEMINI_VERTEX_LOCATION`** (default `global`) — Gemini client uses this instead of `GCP_LOCATION` for Vertex routing (3.x preview requires global endpoint).
+- **`utils/gemini_client.py`** — docstring corrected: ADC/Vertex is Path 1; API key is Path 2 fallback only.
+- **`state.md`** — documents Gemini 2.5 Pro retirement **2026-10-16** and rollback path.
+
+---
+
+## [2026-09-01 PM] — Decision Capture Amendment A (schema + verbatim assertion)
+
+**Blocking fixes before first Cowork drop file:**
+
+- **`decided_on_status: known | unknown`** — `decided_on` nullable; extractor may only set `known` when
+  date is adjacent to quoted prose; assertion card prompts at ratification when `unknown`.
+- **Verbatim `assertion`** — `core/decisions/source_text.py` rejects non-substrings of `source_ref`;
+  model paraphrase in `proposed_restatement` (shown in card, discarded on Confirm); Correct stores
+  `restatement` + `restatement_author: bill` without replacing verbatim source text.
+- **Ingest `--file`** — single-file path for smoke tests; fixture `data/fixtures/decision-proposals-sample.json`
+  (XOM verbatim, not design-doc GLD).
+- **Gatherer noise logged** in `state.md` (A3) — bare `+` in comment lists; deliberate over-production.
+
+**Post-handoff fixes (same day):**
+- Gatherer `review_log_*` / `ceiling_only_temporary` line numbers now file-absolute (offset-based).
+- Validator error names the cited `#L` line; wrong-line refs fail even when assertion exists elsewhere.
+- First live ingest: `data/decision-proposals-2026-09-01.json` → 12 quarantine records.
+
+---
+
+## [2026-09-01 PM] — Decision Capture v1 (record + gatherer + assertion cards)
+
+**Architecture:** [`docs/architecture/07_decision_as_first_class_record.md`](docs/architecture/07_decision_as_first_class_record.md)
+
+**Record layer (`core/decisions/`):**
+- Schema with required `unencodable_conditions`; validate; store with quarantine (`data/decision_proposals/`)
+  vs binding (`vault/decisions/`) split. Binding writes require `ratification=True`.
+
+**Ingest:** `tasks/ingest_decision_proposals.py` — drop file from Studio dir, sha256 ledger, `--live` gate,
+forces `status: proposed` / `provenance: extracted`, whole-file reject on any invalid record.
+
+**Gatherer:** `tasks/gather_decision_candidates.py` — deterministic read-only scan; tripwire tickers
+XOM, GOOG, AMZN.
+
+**Desk:** `ui/assertion_cards.py` — cockpit **"Is this what we're saying? (N)"** above why-cards;
+`POST /decision/ratify` (Confirm/Correct/Reject); `last_ratified` on thesis frontmatter only.
+
+**Lint:** check 5 repointed to `last_ratified` (NEVER RATIFIED for all 41 today); `last_reviewed`
+commented as last-synced in `write_thesis_updates.py`.
+
+Trigger derivation from decisions (doc step 4) **not built**.
+
+## [2026-09-01 PM] — Crosshairs defect fix round 1 (D1–D5)
+
+**D1 — Weight unit:** `holdings_weight_fraction_to_pct_points()` — Holdings_Current col Q is a
+fraction; `*_pct` thesis fields are percentage points. Headroom term was a silent no-op (GLD
+headroom printed 0.00).
+
+**D2 — Tests:** `tests/test_build_crosshairs.py` rebuilt with sheet-fraction fixtures; GLD headroom
+0.14 pinned; guard test asserts fraction before / pct points after normalization.
+
+**D3 — Sign-off table:** `scripts/generate_trim_signoff_table.py` derives from `produce_crosshairs()`
+— deleted parallel `_trim_level()`; sorted by `rank_score`; `not in band` when outside NEAR_TRIM.
+
+**D4 — Display:** unrealized rationale string uses pct points (`-1.7%` not `-0.0%`); sign-off
+weight/unrealized columns normalized.
+
+**D5 — Ninth failure:** `tests/test_ui_position_readonly.py::test_ui_write_routes_match_allowlist_exactly`
+ — hardcoded allowlist missing `/why/*` routes added in why-cards build; test updated.
+
+Gate 1 still closed — no `trim_trigger_role` thesis writes.
+
+## [2026-09-01] — Crosshairs signal correctness + why-cards desk UI
+
+**Crosshairs (`tasks/build_crosshairs.py`):**
+- `trim_trigger_role` machinery: `_trim_trigger_role`, `_apply_trim_roles` — informational trims
+  re-rank to doctrine bucket without dropping rows; doctrine `HOLD_TAX` wins.
+- NEAR_TRIM rank modifiers: `W_CEILING_HEADROOM` + `W_UNREALIZED_LOSS` (headroom from
+  `Weight` / `style_size_ceiling_pct`, loss from `Unrealized G/L %`); appended to rationale.
+- Wiring order: doctrine → trim roles → add suspensions.
+
+**Undocumented-changes detector (`tasks/detect_undocumented_changes.py`):**
+- `_review_log_dates()` bounds at first `<!-- region:` **or** next H2 — fixes 506→95 false review
+  dates when Review Log is last H2 before `transaction_log` region. `MATERIAL_RESIZE_NO_REVIEW` can
+  fire again.
+
+**Thesis tooling:**
+- `tasks/lint_theses.py` check 7 — directive prose below read-line vs frontmatter keys.
+- `ThesisManager.append_review_log_entry()` in `utils/thesis_utils.py`.
+
+**Desk why-cards (`ui/why_cards.py`):**
+- Lane A: cockpit **Open questions (N)** from newest briefing manifest → `POST /why/position` →
+  Review Log (not Trade_Log).
+- Lane B: `/judgment/rotations` backlog cards → `POST /why/rotation` → Trade_Log batch write with
+  fingerprint guard + `Rationale_Provenance = reconstructed_after`.
+- Allowlist extended; `ui_runs` row before each write; write banners in templates.
+
+**Tests:** `tests/test_build_crosshairs.py`, `tests/test_detect_undocumented_changes.py`,
+`tests/test_why_cards.py`.
+
+**Sign-off pending:** Prompt 1 Step 2 — `trim_trigger_role: informational` thesis writes await Bill
+per-row approval (`scripts/generate_trim_signoff_table.py`).
+
+## [2026-08-31 PM] — AI Dispatch acceptance (STEP 4d) + validator fix
+
+**Acceptance gate passed** (`prompts/ai_dispatch_acceptance_2026-08-31.md`):
+
+- First live ingest: `ai-dispatch-2026-08-31.txt` (2376 words) →
+  `data/ai_briefs/2026-08-31_AI_Dispatch_New_methods_for_model_evaluation_memory_and_agentic_harnesses.md`
+  + `.json`; ledger at `data/ai_dispatches/.ingested.json`; corpus copy in `data/ai_dispatches/`.
+- Idempotency confirmed: second `--live` skipped via sha256, zero Gemini calls.
+- `pm morning` dry run: **`OK AI Dispatch (0 new)`** in step table (STEP 4d wired correctly).
+- Downstream: `corpus index --live` indexed `ai_brief` + `ai_dispatch`; `pm ai index --live` wrote
+  `ingestion_state: "ok"`, `brief_count: 1`.
+
+**Validator fix during acceptance:** `validate_brief()` rule 2 falsely rejected the dispatch brief
+(`long` near uppercase `AI`). `NON_TICKER_TOKENS` + non-trading `long`/`short` phrase exemptions in
+`utils/agents/ai_research_analyst.py`; test added in `tests/test_ai_research_analyst.py`.
+
+**GO for unattended `morning_auto.bat`.** YouTube AI-track backfill remains blocked separately.
+
+## [2026-08-31 PM] — YouTube transcript IP block + resilience fixes
+
+**Incident.** Roughly 40–60 unthrottled transcript requests in one afternoon — dual-track build
+testing across nine AI channels, compounded by a plan-line double-fetch that downloaded every
+transcript twice (once to count words, once in the child process) even on dry runs — triggered
+`IpBlocked` on Bill's **residential** IP. Not the cloud/Azure block class documented on 2026-08-20;
+the same machine and library fetched 11 transcripts successfully earlier the same day. Consequences:
+`data/ai_briefs/` never populated, 0 AI dedup entries, and a premature `pm ai index --live` wrote an
+empty `data/ai_thematic_index.json` (`brief_count: 0`, all 9 channels in `quiet_channels`) that read
+as "quiet week" rather than "ingestion dead".
+
+**Six mitigations shipped same day:**
+
+- **`tasks/podcast_fetcher.py`** — `is_transcript_block()` matches `IpBlocked` / `RequestBlocked` /
+  `TooManyRequests` by class name, with a message-text fallback (class names have moved between
+  library versions). `EXIT_TRANSCRIPT_BLOCKED = 3`.
+- **`tasks/weekly_podcast_sync.py`, `tasks/ai_track_sync.py`** — exit **3** on a global block; every
+  other transcript failure still exits 1.
+- **`tasks/batch_podcast_sync.py`** — circuit breaker: first child exit 3 aborts the entire walk;
+  unwalked channels are reported in a new `Aborted (not walked)` summary bucket. A block is a global
+  condition, so continuing would fire one more blocked request per remaining channel.
+- **`tasks/batch_podcast_sync.py`** — honest exit codes: **3** when blocked, **1** when nothing
+  processed and at least one channel failed. `main()` previously had no `sys.exit` at all.
+- **`tasks/batch_podcast_sync.py`** — `_transcript_word_count()` reads cached transcripts only and
+  never touches the network. Halves the request count of every run.
+- **`config.py` + `_throttle()`** — `TRANSCRIPT_FETCH_DELAY_SEC = 4.0`,
+  `TRANSCRIPT_FETCH_JITTER_SEC = 2.0` between transcript subprocess calls. The RSS feed walk is a
+  different endpoint and is deliberately **not** throttled.
+
+**Behavior change.** `pm podcast batch` no longer exits 0 on total failure — this closes the
+"green but 0 episodes" class from the 2026-08-20 GitHub Actions entry for local runs too.
+`manager.py ingest_podcasts_cmd` catches the non-zero exit, prints **STEP 4 ABORTED / STEP 4 FAILED**,
+and **continues** rather than aborting the morning pipeline; making STEP 4 fatal is an open decision
+for Bill, not a side-effect of this fix. Morning STEP 4 shells the batch script directly, so the log
+shows `ABORTED` but not the red banner — documented as-is, follow-up not scheduled.
+
+**`utils/build_ai_index.py` + `ui/ai_index_context.py`** — `write_index()` refuses to persist a
+zero-brief index (`--allow-empty` overrides); new top-level `ingestion_state` field; the cockpit
+panel renders three distinct states (`not_built` / `no_briefs` / real data) instead of two, so an
+empty or pre-`ingestion_state` index reads as "check ingestion", never as "quiet week".
+
+**Operational.** Do not retry in a loop — each attempt is another request against a blocked IP and
+extends the window. Check once every few hours. If the block persists at 07:45, `morning_auto.bat`
+now makes **one** transcript attempt and aborts rather than fourteen; optionally disable
+`MorningAutoDirect` until a manual fetch succeeds.
+
+**Recovery sequence** once the block clears: single-video smoke test →
+`pm podcast batch --track ai --max-per-channel 1` dry run → `--live` → index → ai-watch. Full
+`--max-per-channel 3` backfill waits until the smoke test passes.
+
+**Proxy decision — DEFERRED, not declined.** `WebshareProxyConfig` (rotating residential) and
+`GenericProxyConfig` are documented in the youtube-transcript-api README; cookie auth is noted there
+as currently broken upstream. Deferred until a throttled 23-channel walk has been observed under the
+fixed code — killing the double-fetch and adding the throttle cuts request volume by more than half,
+and buying a proxy before measuring that is the wrong order.
+
+## [2026-08-31] — AI thematic index + AI Watch (Prompts 4–5)
+
+- **`core/corpus/sources.py`** — `ai_brief`, `ai_transcript` source types.
+- **`utils/agents/ai_watch.py`** + **`pm agent ai-watch`** — sandbox cross-source report.
+- **`pm podcast ai-verify --scaffold`** — verification sidecar template.
+- **`utils/build_ai_index.py`** + **`pm ai index`** + cockpit panel + **`ai-index-live`** desk routine.
+- **`data/ai_entity_aliases.json`** — hand supplement for ARM/SKHY.
+- **Tests:** `tests/test_build_ai_index.py`.
+
+## [2026-08-31] — Dual-track batch sync (Prompt 3)
+
+- **`tasks/batch_podcast_sync.py`** — registry walk, `--track`, `--max-per-channel`, `--since`, destination fork.
+- **`pm podcast batch`** delegates to batch script; morning + `pm ingest podcasts` pass `--track finance`.
+- **`weekly_podcast_sync.py`** — optional `--min-words`.
+
+## [2026-08-31] — AI-track research analyst (Prompt 2)
+
+- **`utils/agents/ai_research_analyst.py`** — mechanism-only brief schema + `validate_brief()`.
+- **`tasks/ai_track_sync.py`** — transcript → brief; writes `data/ai_briefs/` and `data/podcast_transcripts/ai/`.
+- **`pm podcast ai-brief`** CLI command.
+- **Tests:** `tests/test_ai_research_analyst.py`.
+
+## [2026-08-31] — Dual-track podcast channel registry (Prompt 1)
+
+- **`data/podcast_channels.json`** — 23 channels (14 finance, 9 ai); migrated 10 existing names/IDs byte-identical.
+- **`scripts/resolve_youtube_channels.py`** — one-shot handle/ID resolver with Atom feed verification.
+- **`utils/channel_registry.py`** — `load_channels()`, `channels_as_legacy_dict()`; strict validation.
+- **`tasks/batch_podcast_sync.py`** — shim reads finance track from registry; dedup writes gain `track`.
+- **Tests:** `tests/test_channel_registry.py`.
+
+## [2026-08-29] — Position Story weight fix + BTC thesis correction
+
+- **`ui/format.py`** — `weight_to_pct_points()` shared helper; `position_story.py` + `positions_page.py` use it (fixes +0.0% weight and inflated headroom on `/position/{ticker}`).
+- **`vault/theses/BTC_thesis.md`** — Bill-authored store-of-value thesis; Feb 2026 exit + Aug 2026 re-entry documented; Motley Fool draft archived to superseded Research Inputs. Backup: `vault/theses/archive/BTC_thesis.md.bak.2026-08-29`.
+- **Tests:** `tests/test_position_story_weight.py`.
+
 ## [2026-08-29] — Lifecycle index refactor + live sidecar backfill launcher
 
 - **`core/judgment/lifecycle_index.py`** — disk index (`parse_lifecycle_ticker`, `list_lifecycle_artifacts`, `list_lifecycle_missing_json`); single `OUTPUT_DIR` from `core/judgment/artifacts`.

@@ -1,13 +1,178 @@
 # Investment Portfolio Manager — Current State
 
-**Last updated:** 2026-08-28
+**Last updated:** 2026-09-01
 **Maintainer:** Bill (sole user)
 
 This is the "where are we" document. Open this at the start of any coding session.
 
 ---
 
-## What's Working Today
+## Decision Capture v1 (2026-09-01 PM)
+
+**Built:** `core/decisions/`, `tasks/ingest_decision_proposals.py`, `tasks/gather_decision_candidates.py`,
+cockpit assertion cards (`ui/assertion_cards.py`, `POST /decision/ratify`).
+
+**Amendment A (2026-09-01, blocking before first drop):** `decided_on_status: known|unknown` with nullable
+`decided_on`; verbatim `assertion` enforced as source substring; model paraphrase in `proposed_restatement`
+(discarded on Confirm); Correct writes `restatement` + `restatement_author: bill` without replacing
+verbatim assertion. Ingest `--file` + fixture at `data/fixtures/decision-proposals-sample.json`.
+
+**Gatherer noise (A3, deliberate):** `_CONJUNCTION_RE` matches bare `+` in reason-list comments
+(e.g. XOM `# cyclical + geopolitical + ESG/reg risk`), so ~5–7 of ~22 candidates are false positives.
+Over-produce at gather, filter at Cowork, gate at desk — not tightened pre-first-drop.
+
+**Gatherer line numbers (fixed 2026-09-01):** `review_log_directive` and `ceiling_only_temporary` now emit
+file-absolute line numbers (were chunk-relative — e.g. AMZN `#L3` pointed at `style: GARP` instead of L49).
+Validator checks assertion on the named `#L` line, not merely somewhere in the file.
+
+**Flow:** Cowork drop file → ingest → quarantine → desk ratify → `vault/decisions/` + `last_ratified`.
+Gatherer stdout is Cowork input — Python gathers, LLM reasons.
+
+**Not built:** trigger derivation from decisions (doc 07 step 4).
+
+**Lint check 5:** now reports NEVER RATIFIED via absent `last_ratified` (41/41 expected today).
+
+**Quarantine (2026-09-01):** 12 proposals ingested from `data/decision-proposals-2026-09-01.json`; `vault/decisions/`
+empty until desk ratification. Restart desk server after ingest — uvicorn does not hot-reload new modules.
+
+**Delivery gap (pattern, 2026-09-01):** Decision capture fixes reasoning with nowhere to *live*; a sibling failure is
+correct output with nowhere to *arrive*. Three instances today: `detect_undocumented_changes` → manifest nothing read;
+`_review_log_dates` region boundary; ranker dry-run → Sheet/cockpit unchanged. Operator rule: **`--live` on every
+write surface** + **restart desk** after new UI modules. Step 4 (trigger derivation from decisions) should close one
+gap rather than add another read path nothing consumes.
+
+**Open (2026-09-01, do not lose):** Gate 2 why-cards dry run (next briefing export); Round 2 Crosshairs (`dist_trim` on
+NEAR_ADD, crossed-vs-approaching buries XOM); conjunctive triggers (XOM/META/VRT confirmed); missing `target_allocation`;
+`FMP_Data_Available: False` all 41 tickers.
+
+**Morning unattended health (2026-09-02):** Task Scheduler hung on Schwab reauth prompt because stdout was redirected but
+stdin remained a TTY. `tasks/health.py` now treats `MORNING_NONINTERACTIVE=1` (set in `morning_auto.bat`), `--no-prompt`,
+or non-TTY stdin as fail-fast: writes `logs/HEALTH_FAILURE.flag`, logs remediation to `logs/morning_auto.log`, releases
+`logs/pipeline.lock`, exits 1.
+
+**EQT frontmatter (2026-09-02):** Unresolved gap — not deliberate BTC/CF exclusion. Review Log entry added; blank-field
+sign-off: `python scripts/generate_eqt_frontmatter_signoff.py` (stdout only; Bill fills style/trigger_type).
+
+---
+
+**Crosshairs ranking fixes shipped** (`tasks/build_crosshairs.py`):
+- `trim_trigger_role` (binding default) + `_apply_trim_roles` — informational trims stay on
+  Decision_View, re-ranked past CC top 5; doctrine downgrades still win.
+- Headroom + unrealized-loss rank modifiers on NEAR_TRIM only; **D1 fix (2026-09-01 PM):**
+  `holdings_weight_fraction_to_pct_points()` — Weight col Q is fraction, not pct points.
+  GLD headroom now 0.14; GLD dropped from rank #1 to #5 in live Crosshairs.
+- Sign-off table derives from `produce_crosshairs()` — not a parallel ranker.
+- **Step 2 gate open:** no thesis `trim_trigger_role: informational` writes yet — run
+  `python scripts/generate_trim_signoff_table.py` and approve per row.
+
+**Resize detector repaired** (`tasks/detect_undocumented_changes.py`):
+- `_review_log_dates` no longer swallows `transaction_log` bullets — **506 → 95** parsed dates.
+- Re-baseline manifest `undocumented_changes.findings` on next `export_ai_briefing --live`.
+
+**Desk why-cards** (`ui/why_cards.py`, cockpit + `/judgment/rotations`):
+- Lane A: manifest findings → Review Log via `POST /why/position`.
+- Lane B: unreconciled Trade_Log clusters → `POST /why/rotation` (fingerprint verify,
+  `reconstructed_after`).
+- Allowlist: `/why/position`, `/why/rotation`; `ui_runs` + write banners.
+
+---
+
+## Dual-track podcast registry (2026-08-31, Prompt 1)
+
+- **`data/podcast_channels.json`** — 23 channels (14 finance + 9 ai). All 13 new inputs resolved (including `@DaveShap` → David Shapiro, Fundstrat → Fundstrat Capital). Fireship feed title resolves as **Beyond Fireship** (`UC2Xd-TjJByJyK2w1zNwY0zQ`).
+- **`scripts/resolve_youtube_channels.py`** — resolver table captured at build time; re-run for new channels.
+- Finance shim: `PODCAST_CHANNELS` = 14 enabled finance rows. AI rows in registry but not processed until Prompt 3 batch fork.
+- Dedup: new writes include `"track"`; 217 historical rows unchanged (missing key = finance).
+
+## Dual-track batch + AI analyst (2026-08-31, Prompts 2–3)
+
+- **`tasks/ai_track_sync.py`**, **`pm podcast ai-brief`**, **`utils/agents/ai_research_analyst.py`** shipped.
+- **`tasks/batch_podcast_sync.py`** registry-driven; `--track finance|ai|all`, `--max-per-channel`, `--since`.
+- Morning STEP 4 and `pm ingest podcasts` pass **`--track finance`** only.
+
+## AI Watch + thematic index (2026-08-31, Prompts 4–5)
+
+- Corpus: `ai_brief`, `ai_transcript` source types.
+- **`pm agent ai-watch`**, **`pm podcast ai-verify --scaffold`**, **`pm ai index --live`**, cockpit AI panel, **`ai-index-live`** routine.
+
+## AI Dispatch ingestion (2026-08-31, STEP 4d — acceptance passed)
+
+- **`tasks/ingest_ai_dispatch.py`** — reads `ai-dispatch-YYYY-MM-DD.txt` from
+  `config.SPOTIFY_STUDIO_TRANSCRIPTS_DIR` (same Studio folder as STEP 4b); routes through
+  `analyze_ai_research()` / `validate_brief()`; sha256 ledger at `data/ai_dispatches/.ingested.json`.
+  No YouTube fetch — **unaffected by transcript IP blocks.**
+- **`pm podcast ingest-ai-dispatch [--live]`** CLI; morning **STEP 4d** inside `pm morning` (non-fatal).
+- **First live brief (2026-08-31):** `data/ai_briefs/2026-08-31_AI_Dispatch_New_methods_for_model_evaluation_memory_and_agentic_harnesses.md`
+  from Studio file `ai-dispatch-2026-08-31.txt`. Ledger idempotency verified — second `--live` skips
+  with zero Gemini calls.
+- **`data/ai_thematic_index.json`** now `ingestion_state: "ok"`, `brief_count: 1` (cockpit leaves
+  `no_briefs` state).
+- **Acceptance:** `prompts/ai_dispatch_acceptance_2026-08-31.md`. **GO** for unattended 07:45 run.
+- **Validator fix:** rule 2 no longer flags `long`/`short` in AI-technical context or near acronyms
+  like `AI` (`utils/agents/ai_research_analyst.py`).
+
+## YouTube transcript IP block (2026-08-31)
+
+**Superseded the earlier "blocked in agent/Cursor shell" reading — that diagnosis was wrong.**
+
+- **Cause:** cumulative transcript requests from a single afternoon of dual-track testing — agent
+  shell *and* local PowerShell — against code that had **no throttle** and a **double-fetch** bug
+  (`_transcript_word_count()` downloaded each transcript purely to print a word count, then the child
+  process downloaded it again; fired on dry runs too). Roughly 40–60 requests. Not a bug in the
+  track fork, and **not** the cloud-provider block class: the same machine, IP and library fetched
+  11 transcripts successfully earlier the same day, with the last success at 10:40 EDT and the first
+  failure at 13:09 EDT.
+- **Symptom:** `IpBlocked` — "YouTube is blocking requests from your IP". Confirmed still active at
+  17:30 UTC on a single-video control fetch.
+- **State on disk:** `data/ai_briefs/` has **1** dispatch brief (2026-08-31); YouTube AI-track path
+  still never completed (`data/podcast_transcripts/ai/` absent; **0** dedup entries with
+  `"track": "ai"`). Dispatch ingestion is the live AI-brief path until the YouTube block clears.
+- **Misleading artifact (resolved):** `data/ai_thematic_index.json` was empty/stale from a premature
+  `pm ai index --live`; now `ingestion_state: "ok"`, `brief_count: 1` after dispatch acceptance.
+- **Do not run fetch loops to test whether the block has cleared.** Each attempt is another request
+  and extends the window. Check once every few hours, not in a loop.
+- **RSS is not blocked.** The Atom feed walk succeeded in the same failed run (it resolved Two Minute
+  Papers to `wMl6c_r0ubw` before the transcript call failed). The two endpoints block independently —
+  the earlier note claiming three channels failed at RSS was misread.
+
+### Mitigations shipped same day (2026-08-31 PM)
+
+- `tasks/podcast_fetcher.py` — `is_transcript_block()` (class-name match on `IpBlocked` /
+  `RequestBlocked` / `TooManyRequests`, message fallback) and `EXIT_TRANSCRIPT_BLOCKED = 3`.
+- `tasks/weekly_podcast_sync.py`, `tasks/ai_track_sync.py` — exit **3** on a global block; other
+  transcript failures still exit 1.
+- `tasks/batch_podcast_sync.py` — **circuit breaker**: first exit 3 aborts the walk; remaining
+  channels logged under `Aborted (not walked)`.
+- `tasks/batch_podcast_sync.py` — **non-zero exits**: 3 when blocked, 1 when nothing processed and a
+  channel failed. `main()` previously had no `sys.exit`.
+- `tasks/batch_podcast_sync.py` — `_transcript_word_count()` reads cached transcripts only; **no
+  network**. Halves every run's request count.
+- `config.py` + `_throttle()` — `TRANSCRIPT_FETCH_DELAY_SEC = 4.0` + `TRANSCRIPT_FETCH_JITTER_SEC =
+  2.0` between transcript subprocess calls. RSS walk deliberately unthrottled.
+- `utils/build_ai_index.py` — refuses to write a zero-brief index (`--allow-empty` overrides); adds
+  `ingestion_state`. `ui/ai_index_context.py` — three cockpit states, not two.
+
+`manager.py ingest_podcasts_cmd` surfaces exit 3 as **STEP 4 ABORTED** and continues; morning STEP 4
+shells the batch script directly, so its log shows `ABORTED` without the red banner. As-is; parity is
+an unscheduled follow-up.
+
+### Recovery procedure (when the block clears)
+
+```powershell
+cd C:\Dev\Investment_Portfolio
+python manager.py podcast fetch LBiNcdGNgrg          # control: does any transcript work?
+python tasks/ai_track_sync.py LBiNcdGNgrg --source-name "Two Minute Papers: smoke" --live
+dir data\ai_briefs
+python manager.py podcast batch --track ai --max-per-channel 1 --since 2026-08-01
+python manager.py podcast batch --track ai --max-per-channel 1 --since 2026-08-01 --live
+python manager.py ai index --live
+python manager.py agent ai-watch --days 7 --live
+```
+
+Full `--max-per-channel 3` backfill waits until the smoke test passes. Nine requests at ~5s apart is
+enough to prove the pipeline without re-spending the budget that caused the block.
+
+---
 
 ### Instrument — evidence + corpus + ledger relocate (2026-08-27)
 - **`SQLITE_DB_PATH=C:\Users\wlong\AppData\Local\Investment_Portfolio\portfolio_store.db`** (`.env` only; literal path). Live ledger is off Drive sync. Pre-move `pm store backup --live` landed Drive copy at `G:\My Drive\Portfolio_Analysis\db_backups\portfolio_store_20260827T130624Z.db` (23.6 MB incl. FTS). Post-move: `pm store status` + `pm corpus status` → **848 docs / 10,666 chunks** unchanged; Drive-tree guard **silent**.
@@ -56,6 +221,8 @@ Driven by `prompts/schwab_account_scope_fix_2026-08-03.md`, following the discov
   - **Desk redesign Phase 0–3 (2026-08-28):** function fixes + visual system shipped — see `CHANGELOG.md`. Lifecycle index dedupes to newest per ticker; header token probe cached 60s; full page polish per `prompts/desk_redesign_2026-08-28.md`.
   - **Desk redesign Phase 2 (2026-08-28):** `/decision`, `/tax`, `/precommit`, `/search`, `/ask` on template layer; shared `ui/crosshairs_table.py`; portfolio sparkline from `Daily_Snapshots`; Position Story refresh launcher + stale badge; **`pm judge lifecycle --missing-json`** (dry-run default, `--live` to backfill JSON sidecars); header cache 60s TTL + manifest/`last_run.json` mtime keys, lock state always live; `/rotations` → `/judgment/rotations`. Prompt: `prompts/desk_redesign_phase2_2026-08-28.md`.
   - **Lifecycle follow-on (2026-08-29):** index moved to `core/judgment/lifecycle_index.py`; **`judge-lifecycle-missing-json-live`** on Runs (typed confirmation, sandbox writes only). Prompt: `prompts/desk_lifecycle_followon_2026-08-29.md`.
+  - **Position Story weight fix (2026-08-29):** `/position/{ticker}` weight/headroom normalized via `weight_to_pct_points()` — parity with `/positions`. Prompt: `prompts/position_story_weight_fix_2026-08-29.md`.
+  - **BTC thesis (2026-08-29):** Bill-authored store-of-value voice; Feb 2026 exit + Aug re-entry in Known Facts / transaction_log; Motley Fool draft superseded.
   - **Local Command Center UI** (`ui/app.py`, FastAPI + Jinja) reads via `PortfolioStore` + retrieval layer; CLI still owns Sheet mutations. Logon task `PortfolioUI` (`scripts/install_ui_service.ps1`); `pm ui serve` for debug.
   - **Realized_GL import now handles two sources**: Schwab Lot Details CSV (existing) and Chase `realizedGainOrLoss.xls` (actually an HTML table export) via `utils.gl_parser.parse_realized_gl_auto()` / `detect_realized_gl_parser()`. `manager.py sync realized-gl` gained `--merge` (complete-account union; refuses shrink unless `--force-partial-merge`) and `--replace` (clear + rewrite, archives prior sheet content to a local timestamped CSV first). Default remains append-only. Chase `term` is derived from `holding_days`, not G/L column magnitude.
   - **2026-08-20 code audit of this batch** (PortfolioStore + valuation-drift + local UI + Realized_GL + thesis frontmatter) — three findings fixed same day: Chase ST/LT from `holding_days`; `--merge` completeness guard; Tax_Control single-fetch cache on `SheetsPortfolioStore`. Also removed inert `pm store verify --rel-tol` and the dead `if acct_type: pass` no-op. Positives already in tree: `GEMINI_DEBUG`-gated logging + truncated-output retry; non-fatal SQLite shadow-writes; `get_frontmatter_safe()` for duplicate YAML keys.
@@ -200,8 +367,22 @@ Driven by `prompts/build_basket_attribution_2026-08-08.md`. The basket (multi-ti
 - Verified dry-run 2026-08-08: Trade_Log `63.5` (2026-04-20) reconciles and computes 30d residual; staging May 7 nested pair + Aug 3 five-row nest (widest `ca3bedba…`, Both_Sides `IFRA, QQQM`) detected correctly. No Sheet writes without `--live`.
 
 ### Automation
-- GitHub Actions: podcast pipeline Friday 5pm EST cron + `workflow_dispatch` — **currently non-functional**: YouTube blocks transcript requests from Azure cloud runner IPs. The workflow reports green but processes 0 episodes. Last successful automated run: June 2, 2026.
-- **Podcast ingestion workaround**: run `pm agent ideas` (or `pm ingest podcasts --live`) locally. Local machine IPs are not blocked by YouTube.
+- GitHub Actions: podcast pipeline Friday 5pm EST cron + `workflow_dispatch` — **currently non-functional**: YouTube blocks transcript requests from Azure cloud runner IPs. The workflow reports green but processes 0 episodes. Last successful automated run: June 2, 2026. **2026-08-31:** a local residential rate-limit block (`IpBlocked`) is now also on record —
+  same exception family, different cause and duration. Local batch runs no longer report green on
+  total failure (exit 1/3). **Proxy integration (`WebshareProxyConfig` / `GenericProxyConfig`) is an
+  open decision — deferred, not declined**, pending observation of a throttled 23-channel walk under
+  the fixed code. Cookie auth is broken upstream per the library README.
+- **Podcast ingestion locally**: run `pm agent ideas` (or `pm ingest podcasts --live`) from the PC.
+  **Correction (2026-08-31): residential IPs are not immune.** A burst of ~40–60 unthrottled
+  transcript requests in one afternoon triggered `IpBlocked` on this machine. That is a
+  *rate-limit* class and it clears; the Azure/GitHub Actions block is a separate, permanent
+  cloud-IP-range class. Mitigations (throttle, double-fetch removal, circuit breaker) shipped
+  the same day — see the YouTube transcript IP block section above.
+- **Batch exit codes (2026-08-31)**: `pm podcast batch` exits **3** when the transcript endpoint
+  is blocking and **1** when nothing processed and a channel failed. It no longer exits 0 on
+  total failure. If the block is active at 07:45, `morning_auto.bat` makes one transcript
+  attempt and aborts rather than fourteen; optionally disable `MorningAutoDirect` until a
+  manual fetch succeeds, then re-enable.
 - GCP Cloud Scheduler + Cloud Function: Schwab token refresh every 25 min during market hours
 - GCP project: `re-property-manager-487122` (shared with RE Property Manager)
 
@@ -368,17 +549,19 @@ Also deferred: hidden Typer aliases (`trade`, `sync`, `tax`, `dashboard`) kept f
 
 | | |
 |---|---|
-| **Portfolio size** | $593,201.73 across 36 positions (bundle `80262d14c656`, 2026-07-27) — IBM not yet included, pending sync |
-| **Cash** | **Not captured in this export.** `CASH_MANUAL` ($1,755.56 / 0.30%) does not represent the cash position — cash is held outside what the bundle sees. Draw no liquidity conclusions from bundle data. |
+| **Portfolio size** | $595,650.77 across 42 positions (context bundle `f165f5711a07`, 2026-09-02T12:57:19Z) |
+| **Cash** | `CASH_MANUAL` ($3,205.13 / 0.54%) does not represent the full cash position — cash held outside the three in-scope Schwab accounts is not captured. Draw no liquidity conclusions from bundle data. |
 | **Primary data path** | Schwab API (read-only) |
 | **Fallback data path** | Schwab CSV |
 | **Execution model** | Local CLI (`python manager.py`) |
 | **Authoritative frontend** | Google Sheets |
 | **Sheet ID** | `1DuY68xVvyHq-0dyb7XUQgcoK7fqcVS0fv7UoGdTnfxA` |
 | **GCP Project** | `re-property-manager-487122` |
-| **Gemini model** | `gemini-2.5-pro` (API key primary; ADC/Vertex AI fallback on `re-property-manager-487122`) |
+| **Gemini model** | `gemini-3.1-pro-preview` (Vertex ADC, `GEMINI_VERTEX_LOCATION=global`; no API key on this machine) |
 | **Repo** | `Wlong34243/investment-portfolio-manager` |
 | **Reserve account** | Schwab `...8895` — tracked separately in RE Property Manager |
+
+**Gemini 2.5 Pro retirement:** scheduled shutdown **2026-10-16** (use 16th, not 20th — Vertex docs conflict). Cutover to `gemini-3.1-pro-preview` verified **2026-09-02** (Vertex ADC, `GEMINI_VERTEX_LOCATION=global`; all six structured-output schemas + plain-text probe OK). Rollback: `GEMINI_MODEL=gemini-2.5-pro` + `GEMINI_VERTEX_LOCATION=us-central1`.
 
 ---
 

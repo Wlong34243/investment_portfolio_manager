@@ -44,6 +44,17 @@ Local ledger: `data/portfolio_store.db` via `core/store`. **Phase 1 spine** = tr
 
 ---
 
+---
+
+## Thesis frontmatter (vault/theses/*_thesis.md)
+
+| Key | Written by | Meaning |
+| :--- | :--- | :--- |
+| `last_reviewed` | Morning thesis sync (`write_thesis_updates`) | **Last synced** from Sheets — not Bill's last review |
+| `last_ratified` | Desk ratification only (`POST /decision/ratify`) | Last date Bill confirmed a decision record for this ticker |
+
+---
+
 ## Tab Definitions
 
 ### 0_DASHBOARD (Command Center)

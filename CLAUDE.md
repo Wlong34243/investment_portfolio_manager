@@ -12,7 +12,7 @@ For current build state, read `state.md` (lowercase — the file is `state.md`, 
 
 A headless Python CLI portfolio operating system for Bill's Schwab investment accounts. Google Sheets is the authoritative user-facing surface and system of record.
 
-**Scale (verified 2026-08-28, bundle `ai_briefing_2026-08-28_080750`, composite hash `8b3a29284ad2…`):** **$604,274.32**, **39 positions** (plus `CASH_MANUAL`), **39 active thesis files** in `vault/theses/` (41 archived). Do not cite "$604,977.60 / 39" — that is the 2026-08-09 figure, now superseded by the line above. Do not cite "~$596K / 35 positions" — that is a 2026-08-01 figure. Do not cite "~$550K / 50+ positions" — that is March 2026 and has been wrong for months.
+**Scale (verified 2026-09-01, bundle `ai_briefing_2026-09-01_082404`, composite hash `c932e2d2ffbc…`):** **$596,303.81**, **41 positions** (plus `CASH_MANUAL`), **41 active thesis files** in `vault/theses/` (41 archived). Do not cite "$600,705.08 / 40" — that is the 2026-08-31 figure, now superseded by the line above the same way that line superseded the 2026-08-28 figure. Do not cite "$604,274.32 / 39" — that is the 2026-08-28 figure. Do not cite "~$596K / 35 positions" — that is a 2026-08-01 figure. Do not cite "~$550K / 50+ positions" — that is March 2026 and has been wrong for months.
 
 ⚠️ **That figure is three of six accounts, not the whole book.** `config.py` scopes the portfolio to suffixes `...6499`, `...8767`, `...5119`. Three accounts — `...4151`, `...0217`, `...9753` — are excluded (`prompts/schwab_account_scope_fix_2026-08-03.md`). Bill holds positions in the excluded accounts too; VST, for example, is 165 shares in total against 155 in scope. **Do not describe the bundle total as Bill's net worth or total invested assets.** See Open Questions.
 
@@ -47,6 +47,8 @@ The desk launcher (`ui/routines.py`, `POST /run/{routine_id}`) may run routines 
 | Regenerable computed tabs (`0_DASHBOARD`, `Decision_View`, `Valuation_Card`, `Tax_Control`) | `manager.py morning --live` (broker sync + scheduled path) |
 | Local regenerable indexes (`corpus index`, additive `store backup`) | `store sync-from-sheets --live` (mirror overwrite — not trusted for one-click yet) |
 | Bill's Precommitments tab → SQLite ingest | `journal promote` (authoritative `Trade_Log`) |
+| Bill's own authored rationale on an already-executed fill — `POST /why/position` (thesis Review Log) and `POST /why/rotation` (`Trade_Log.Implicit_Bet` / `Thesis_Brief` / rationale columns), written directly, no staging hop | Staging → `Trade_Log` promotion (`journal promote`) |
+| Decision assertion cards — `POST /decision/ratify` (proposal → `vault/decisions/`; sets `last_ratified` on thesis) | Trigger derivation from decisions (doc 07 step 4 — not built) |
 | Tier 0 read-only / sandbox (`agent_outputs/`, probes, dry-run reconcile) | `journal reconcile --backlog-only --live` until staging writer fixed |
 
 **Confirmations (graded, not one ceremony):** every UI-launched run gets a **write banner** and a **`ui_runs` row before execution**. **Typed routine-id confirmation** on `refresh-dashboard-live`, `tax-refresh-live`, and `judge-lifecycle-missing-json-live` (clear-and-rebuild tabs you read, or batch sandbox recompute). New routines are judged against the sentence above — not against today's registry precedent.
@@ -117,6 +119,14 @@ Implementation work is codified as sequenced markdown prompt files in `prompts/`
 
 ### Audit-before-build
 Read existing files before generating new prompts. Never assume infrastructure exists based on filenames or project memory — verify.
+
+### Sheet-fed test fixtures (2026-09-01)
+A fixture for a sheet-fed numeric value must match a **real row's shape and units** — not the units
+the ranker wished the sheet used. Every new numeric term needs one **pinned known-value assertion**
+(e.g. GLD headroom 0.14 from Weight fraction 0.011 × 100 / ceiling 8.0). A test whose fixture uses
+percentage points while production reads fractions will pass while the feature is dead. Gatherer
+tripwires (e.g. XOM/GOOG/AMZN in `gather_decision_candidates`) must fail on zero candidates, not
+pass silently.
 
 ### Step 0 verification gate
 Every prompt file starts with a Step 0 confirming actual file state before writing code. If Step 0 finds a discrepancy, STOP and report rather than adapting silently.
@@ -219,7 +229,13 @@ Evidence tables are append-only and `--live`-gated (resolves audit A8 *for these
 |---|---|
 | `tasks/health.py` | Health checks; owns `logs/HEALTH_FAILURE.flag` |
 | `tasks/sync_transactions.py` | Schwab transaction/position sync |
-| `tasks/batch_podcast_sync.py` | STEP 4 — RSS → transcript → Gemini summary |
+| `tasks/batch_podcast_sync.py` | STEP 4 — registry-driven RSS; forks to `weekly_podcast_sync.py` (finance) or `ai_track_sync.py` (ai) |
+| `tasks/ai_track_sync.py` | AI-track transcript → research brief → `data/ai_briefs/` |
+| `utils/agents/ai_research_analyst.py` | AI brief schema + `validate_brief()` (mechanism-only, no allocation) |
+| `utils/agents/ai_watch.py` | Cross-source AI Watch sandbox agent → `agent_outputs/ai_watch/` |
+| `utils/build_ai_index.py` | Deterministic AI thematic index compiler → `data/ai_thematic_index.json` |
+| `utils/channel_registry.py` | Load/validate podcast channel registry (`track`: finance \| ai) |
+| `data/ai_entity_aliases.json` | Hand-maintained alias supplement for AI index matching |
 | `tasks/ingest_spotify_digests.py` | **STEP 4b — Spotify Studio digest ingestion. BUILT and live** (shipped 2026-08-01, first live multi-file run 2026-08-07). Two collision guards; sha256 ledger at `data/spotify_digests/.ingested.json` |
 | `tasks/build_valuation_card.py` | Valuation_Card build; sources `Trim Target` / `Add Target` from thesis triggers |
 | `tasks/build_command_center.py` | **Builds the `0_DASHBOARD` tab.** "Command Center" is the content; `0_DASHBOARD` is the tab. Clear-and-rebuild in one `batch_update`. Embeds Crosshairs top 5. |
@@ -261,7 +277,12 @@ Evidence tables are append-only and `--live`-gated (resolves audit A8 *for these
 | `utils/agents/idea_generator.py` | Idea Generator agent |
 | `utils/agents/podcast_analyst.py` | Gemini allocation extractor |
 | `utils/agents/valuation_drift.py` | Valuation Drift Monitor — fundamentals drift vs. Option A (first-run snapshot-forward) baseline. Python measures from the bundle `fundamentals` block; LLM narrates only, never recommends. `pm agent valuation-drift`; local markdown to `agent_outputs/valuation_drift/`, no Sheets writes. |
-| `ui/app.py` | Local FastAPI desk (`pm ui serve` / logon task `PortfolioUI` at `127.0.0.1:8765`): **cockpit** `/`, `/positions`, `/decision`, `/tax`, `/precommit`, `/judgment`, `/runs`, **`/position/{ticker}`**, **`/search`**, **`/doc/{id}`**, **`/ask`**. Ledger reads via `core/retrieval`. `UI_WRITE_ROUTE_ALLOWLIST` = `{("POST", "/ask"), ("POST", "/run/{routine_id}")}` — exact set equality. Inline SVG charts (`ui/charts.py`). |
+| `ui/app.py` | Local FastAPI desk (`pm ui serve` / logon task `PortfolioUI` at `127.0.0.1:8765`): **cockpit** `/`, `/positions`, `/decision`, `/tax`, `/precommit`, `/judgment`, `/runs`, **`/position/{ticker}`**, **`/search`**, **`/doc/{id}`**, **`/ask`**. Ledger reads via `core/retrieval`. `UI_WRITE_ROUTE_ALLOWLIST` = `{("POST", "/ask"), ("POST", "/run/{routine_id}"), ("POST", "/why/position"), ("POST", "/why/rotation"), ("POST", "/decision/ratify")}` — exact set equality. Inline SVG charts (`ui/charts.py`). |
+| `ui/why_cards.py` | Why-cards Lane A (manifest findings → cockpit Review Log) + Lane B (unreconciled clusters → Trade_Log `Implicit_Bet`); `ui_runs` row before each write. |
+| `ui/assertion_cards.py` | Decision assertion cards — loads `data/decision_proposals/`, desk `POST /decision/ratify` → `vault/decisions/` + `last_ratified`. |
+| `core/decisions/` | Decision record schema, validate, store (quarantine vs binding split). |
+| `tasks/gather_decision_candidates.py` | Read-only gatherer for Cowork — stdout JSON of prose the schema cannot hold. |
+| `tasks/ingest_decision_proposals.py` | Drop-file ingest → `data/decision_proposals/` (sha256 ledger, `--live` gate). |
 | `ui/header_context.py` | Header strip: 60s cache on retrieval body; invalidate on `logs/last_run.json` + newest manifest mtime (missing file = `None` sentinel, TTL-only expiry); **pipeline lock always read live** outside cache. |
 | `ui/routines.py` | Frozen routine registry — browser posts registry id + typed args; server builds argv with `shell=False`. Launch policy in **Desk UI launch policy** above; six `--live` routines approved (2026-08-29 adds sandbox sidecar backfill). |
 | `ui/corpus_search.py` | Corpus Search assembly (`/search`, `/doc/{id}`) — `retrieve_corpus_search()` only; provenance badges on every hit (model output is a claim, not a datum). |
@@ -282,7 +303,7 @@ firing joined to a fill; every other reconcile path is `reconstructed_after`.
 
 **Coverage is poor and the raw numbers were wrong until 2026-08-09.** `_frontmatter_field()`'s regex used `\s*` around the value, which matches newlines — so a blank field captured the *next line's key* as a truthy value, silently counting AMZN, ES, ETN, PWR, SKHY and SNOW as covered. Fixed to same-line matching.
 
-**Corrected coverage (verified 2026-08-28, manifest `ai_briefing_2026-08-28_080750`):** 38/39 have a trim level, 37/39 have an add level, **1/39 have neither** (BTC). The delta from the 2026-08-20 figures (39/39, 38/39, 0/39) is **not a regression** — it is BTC's 2026-08-27 scaffold (`vault/theses/BTC_thesis.md`), a newly-detected position with no trigger levels yet set, deliberately left `[BILL]` rather than invented. ET remains the pre-existing holdout on the add level only — documented in `ET_thesis.md` as a deliberate hold/reinvest choice, not a coverage gap.
+**Corrected coverage (verified 2026-09-01, manifest `ai_briefing_2026-09-01_082404`):** 38/41 have a trim level, 37/41 have an add level. No-trim holdouts are **BTC, CF, and EQT** — CF was initiated 2026-08-28 (`vault/theses/CF_thesis.md`); like BTC, style and trigger_type are deliberately `[BILL]` and it is excluded from the Style Size Ceiling Check by design, not a coverage regression. **EQT** was initiated 2026-08-31 (`vault/theses/EQT_thesis.md`); as of 2026-09-02 its blank `style`, `framework_preference`, `trigger_type`, `entry_price`, `price_add_below`, `price_trim_above` and `style_size_ceiling_pct: 0.0` now carry the same explicit inline `[BILL]` marking convention as `BTC_thesis.md` — folded into the deliberate BTC/CF/EQT holdout group, not a coverage regression. Values are still unassigned; Bill has not yet set style or trigger type for EQT. ET remains the pre-existing holdout on the add level only (alongside EQT, BTC, and CF) — documented in `ET_thesis.md` as a deliberate hold/reinvest choice, not a coverage gap.
 
 **Do not build any trigger that reads a sell-side price target.** Consensus targets ratchet — analysts revise up after price rises, so a trim pegged to consensus rises with the stock and structurally cannot fire. `VST_thesis.md`'s `price_trim_above: consensus_price_target` is the live proof; it has never been actionable.
 
@@ -300,23 +321,25 @@ Optional thesis frontmatter `pattern:` (`turnaround_reversion` / `debasement_hed
 
 ## Podcast & Third-Party Source Ingestion
 
-Two distinct paths. Do not merge them.
+**Podcast and digest ingestion is automated. Verification is not — and verification is the point.** Two paths, both running inside the morning pipeline. Do not merge them.
 
-**Path 1 — YouTube transcripts (automated).** `tasks/batch_podcast_sync.py`, STEP 4.
+- *YouTube* — `tasks/batch_podcast_sync.py` (STEP 4, finance only) reads the Atom feed for channels in `data/podcast_channels.json`, dedups against `data/processed_videos.json`, and shells to `weekly_podcast_sync.py` (finance → `data/podcast_summaries/` + Sheets) or `ai_track_sync.py` (ai → `data/ai_briefs/`, no Sheets). AI track is **not** in the morning pipeline — run `pm podcast batch --track ai` on its own cadence. Adding a source means editing the registry file.
+- *AI track (Path 3)* — `tasks/ai_track_sync.py` + `utils/agents/ai_research_analyst.py`. Briefs use `AI_BRIEF_VERIFICATION: PENDING (manual)` (distinct from Spotify's marker). Corpus-only; never enters `podcasts.md` or the composite bundle.
+- *Spotify Studio aggregates* — `tasks/ingest_spotify_digests.py` (STEP 4b) globs `allocation-YYYY-MM-DD.txt` from `config.SPOTIFY_STUDIO_TRANSCRIPTS_DIR` (`%LOCALAPPDATA%\Studio by Spotify Labs\.studio\artifacts\transcripts`), dedups by sha256, and writes a corpus copy plus a ledger entry. Also automatic; Bill does not paste digests either.
 
-**Path 2 — Spotify Studio aggregate digests (automated as of 2026-08-01).** Standing decision, 2026-07-26: the aggregate is ingested **as a single first-class source in its own voice**, NOT decomposed into constituent episodes. Rationale on record — decomposition made one digest appear as three agreeing sources.
-
-`tasks/ingest_spotify_digests.py` globs `allocation-YYYY-MM-DD.txt` from `config.SPOTIFY_STUDIO_TRANSCRIPTS_DIR` (`%LOCALAPPDATA%\Studio by Spotify Labs\.studio\artifacts\transcripts`), dedups by sha256, and writes a corpus copy plus a ledger entry.
+The standing decision on aggregates is unchanged: a Spotify aggregate is ingested as a single first-class source **in its own voice** — never decomposed into constituent episodes, never re-summarized. Decomposition once made one digest look like three agreeing sources.
 
 **Corpus risks, both observed:**
 - An aggregate discusses episodes that are *also* independently ingested in the same window. Count each theme once.
 - **Consecutive daily aggregates repeat each other.** The electrician-shortage segment appeared in both the 08-06 and 08-07 digests. Count a theme once across the run, not once per file.
 
-**Digest-supplied position weights are not computed from the bundle and have been badly wrong** — the 08-02 edition cited JPIE at 4.7% against an actual 0.83%. Never take a weight from a digest; read it from the bundle.
+The ingester writes the PROVENANCE stamp and a `VERIFICATION: PENDING (manual)` footer itself. **Never edit that footer string in place** — it is the Spotify ingestion collision guard (`state.md`, 2026-08-01).
+
+**The verification pass is Bill's** — web search plus the current position set, landing as a sidecar in `data/podcast_summaries/verification/`, one chain per `source_sha256`. A digest whose sha already has a sidecar is not re-verified from scratch: a re-check writes a dated **delta** sidecar (`<digest_basename>_VERIFIED_<YYYY-MM-DD>.md`) naming the prior file explicitly and recording only new or corrected claims — the pattern the 2026-08-12 base + 2026-08-13 delta pair follows. Do not emit a second full pass against an unchanged sha (the 2026-08-10 / 2026-08-11 pair did this; the 08-11 file is archived). It has caught wrong capex figures, an inverted earnings framing, a misattributed FOMC meeting, and JPIE cited at 4.7% against an actual 0.83%.
 
 **Corpus Search (`/search`, prompt 5)** surfaces digests, summaries, and transcripts with provenance badges — *your writing* / *third-party* / *model output*. The badge is the trust signal: `podcast_summary` and `agent_output` hits are claims, not data.
 
-**Verification sidecars are one chain per `source_sha256`.** A digest whose sha already has a sidecar in `data/podcast_summaries/verification/` is not re-verified from scratch. A same-day or later re-check writes a **delta** sidecar (`<digest_basename>_VERIFIED_<YYYY-MM-DD>.md`) that names the prior file explicitly and records only new or corrected claims — the pattern the 2026-08-12 base + 2026-08-13 delta pair already follows. Do not emit a second full pass against an unchanged sha (the 2026-08-10 / 2026-08-11 pair did this; the 08-11 file is archived). Never edit the digest's own `VERIFICATION: PENDING (manual)` footer — that exact string is the Spotify ingestion collision guard (`state.md`, 2026-08-01).
+Treat every figure in a summary or digest as a claim, not a datum. Model output reaches the hash-stamped bundle as `podcasts.md` with no promotion gate, which lends it an authority it has not earned. Never take a position weight from a digest — read it from the bundle.
 
 ---
 
