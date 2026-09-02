@@ -39,6 +39,15 @@ def assemble_judgment(section: str | None = None) -> dict[str, Any]:
     if calibration and calibration.get("sidecar"):
         calibration["meta"] = calibration["sidecar"]
 
+    rotation_why_cards: list[dict[str, Any]] = []
+    if section in ("rotations", "overview"):
+        try:
+            from ui.why_cards import load_rotation_cards
+
+            rotation_why_cards = load_rotation_cards()
+        except Exception:
+            rotation_why_cards = []
+
     cal_meta = (calibration or {}).get("meta") or {}
 
     return {
@@ -49,4 +58,6 @@ def assemble_judgment(section: str | None = None) -> dict[str, Any]:
         "lifecycle_all": lifecycle_all,
         "lifecycle_index": lifecycle_index,
         "lifecycle_count": len(lifecycle_index),
+        "rotation_why_cards": rotation_why_cards,
+        "rotation_why_count": len(rotation_why_cards),
     }

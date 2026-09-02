@@ -7,6 +7,24 @@
 {% if section == 'rotations' or section == 'overview' %}
 <section>
   <h3>Unit A — Rotations</h3>
+  {% if rotation_why_count %}
+  <h4>Why-cards backlog ({{ rotation_why_count }})</h4>
+  <p class="banner">Writes Trade_Log directly (Implicit_Bet / rationale columns). Fingerprint verified before write.</p>
+  {% for card in rotation_why_cards %}
+  <div class="why-card" style="margin-bottom:1rem;padding:0.75rem;border:1px solid var(--border,#333);border-radius:4px">
+    <p><strong>{{ card.fill_date }}</strong> — sell {{ card.sell_tickers|join(', ') }} → buy {{ card.buy_tickers|join(', ') }}</p>
+    <p class="meta-line">Trade_Log_ID: {{ card.trade_log_id }}</p>
+    <p><em>{{ card.question }}</em></p>
+    <form method="post" action="/why/rotation" onsubmit="return submitWhyRotation(this, event)">
+      <label>Implicit bet<br><textarea name="implicit_bet" rows="2" style="width:100%" required></textarea></label>
+      <label>Thesis brief (optional)<br><textarea name="thesis_brief" rows="2" style="width:100%"></textarea></label>
+      <input type="hidden" name="trade_log_id" value="{{ card.trade_log_id }}">
+      <input type="hidden" name="fingerprint" value="{{ card.fingerprint }}">
+      <button type="submit" style="margin-top:0.4rem">Save to Trade_Log</button>
+    </form>
+  </div>
+  {% endfor %}
+  {% endif %}
   {% if rotations %}
     {% set meta = rotations.meta or {} %}
     <p class="meta-line">
@@ -71,5 +89,25 @@
   {% include "partials/empty_state.html" %}
   {% endif %}
 </section>
+{% endif %}
+{% if rotation_why_count %}
+<script>
+async function submitWhyRotation(form, ev) {
+  ev.preventDefault();
+  const fd = new FormData(form);
+  const body = {
+    trade_log_id: fd.get('trade_log_id'),
+    fingerprint: fd.get('fingerprint'),
+    implicit_bet: fd.get('implicit_bet'),
+    thesis_brief: fd.get('thesis_brief') || '',
+    live: true
+  };
+  const r = await fetch('/why/rotation', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
+  const data = await r.json();
+  if (data.ok) { form.closest('.why-card').style.opacity = '0.5'; form.querySelector('button').disabled = true; form.querySelector('button').textContent = 'Saved'; }
+  else { alert(data.error || 'Write failed'); }
+  return false;
+}
+</script>
 {% endif %}
 {% endblock %}

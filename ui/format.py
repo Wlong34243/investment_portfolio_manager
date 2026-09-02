@@ -102,6 +102,16 @@ def fmt_polarity_class(val: Any) -> str:
     return "pos-gain" if v > 0 else "pos-loss"
 
 
+def weight_to_pct_points(wt: Any) -> Optional[float]:
+    """Store/retrieval weight → percentage points (3.6 not 0.036). Same heuristic as positions_page."""
+    v = _f(wt)
+    if v is None:
+        return None
+    if v < 1.5:
+        return v * 100.0 if v <= 1.0 else v
+    return v
+
+
 def fmt_pct_points(val: Any) -> str:
     """Percent value already in points (6.5 means 6.5%)."""
     return fmt_pct(val, fractional=False)

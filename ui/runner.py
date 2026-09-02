@@ -102,6 +102,14 @@ def _finish_run(run_id: int, exit_code: int, artifact: str | None) -> None:
             session.commit()
 
 
+def insert_desk_write_run(route_id: str, args: dict[str, Any]) -> int:
+    """Insert ui_runs row for inline desk writes (why-cards, etc.)."""
+    safe_args = {k: str(v) for k, v in args.items()}
+    run_id = _insert_run(route_id, safe_args)
+    _finish_run(run_id, 0, None)
+    return run_id
+
+
 def list_ui_runs(limit: int = 50) -> list[dict[str, Any]]:
     get_engine()
     from sqlalchemy import select

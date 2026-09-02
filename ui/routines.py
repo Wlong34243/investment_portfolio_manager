@@ -299,6 +299,16 @@ _reg(_routine(
     group="DESK",
 ))
 _reg(_routine(
+    "ai-index-live",
+    "AI thematic index",
+    ("manager.py", "ai", "index", "--live"),
+    1,
+    "Regenerable computed cache from local AI brief JSON sidecars (no Gemini, no broker).",
+    writes_banner="Writes: data/ai_thematic_index.json (disposable cache)",
+    timeout_sec=120,
+    group="DESK",
+))
+_reg(_routine(
     "ingest-precommitments-live",
     "Ingest precommitments",
     ("manager.py", "journal", "ingest-precommitments", "--live"),
@@ -420,6 +430,7 @@ DURATION_HINTS: dict[str, str] = {
     "refresh-dashboard-live": "~2 min",
     "tax-refresh-live": "~3 min",
     "store-backup-live": "~30 sec",
+    "ai-index-live": "~30 sec",
 }
 
 

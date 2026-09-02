@@ -26,4 +26,7 @@ def test_ui_write_routes_match_allowlist_exactly():
     assert found == {
         ("POST", "/ask"),
         ("POST", "/run/{routine_id}"),
+        ("POST", "/why/position"),
+        ("POST", "/why/rotation"),
+        ("POST", "/decision/ratify"),
     }

@@ -14,6 +14,7 @@ from core.store.evidence import EVIDENCE_GATE_DAYS, evidence_status
 
 CAMPAIGN_STALE_DAYS = 7
 from ui.charts import build_chart_spec, render_chart_svg
+from ui.format import weight_to_pct_points
 from utils.thesis_reader import (
     THESES_DIR,
     get_pattern,
@@ -242,7 +243,7 @@ def assemble_position_story(ticker: str) -> tuple[dict[str, Any], RetrievalSet]:
     style = thesis_row.get("style") or thesis_meta.get("style")
     is_ballast = t in BALLAST_TICKERS
     ceiling = None if is_ballast else _style_ceiling(style, thesis_row.get("ceiling"))
-    weight = _safe_float(holdings_row.get("weight"))
+    weight = weight_to_pct_points(_safe_float(holdings_row.get("weight")))
     headroom = (ceiling - weight) if ceiling is not None and weight is not None else None
 
     transactions = tables.get("position_transactions", [])

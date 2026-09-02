@@ -6,6 +6,7 @@ from datetime import date
 from typing import Any
 
 from core.retrieval.api import TemplateCall, retrieve
+from ui.format import weight_to_pct_points
 from ui.position_story import BALLAST_TICKERS
 
 OPEN_SIGNAL_TYPES = frozenset(
@@ -49,9 +50,7 @@ def assemble_positions() -> dict[str, Any]:
         ticker = str(h.get("ticker") or h.get("Ticker") or "").upper()
         if not ticker or ticker == "CASH_MANUAL":
             continue
-        wt = _safe_float(h.get("weight") or h.get("Weight") or h.get("Weight %"))
-        if wt is not None and wt < 1.5:
-            wt = wt * 100 if wt <= 1.0 else wt
+        wt = weight_to_pct_points(_safe_float(h.get("weight") or h.get("Weight") or h.get("Weight %")))
         day_raw = h.get("Day Change %") or h.get("day_change_pct") or ""
         unreal_raw = h.get("Unrealized G/L") or h.get("unrealized") or ""
         day_f = _safe_float(str(day_raw).replace("%", "").replace(",", "").strip())
