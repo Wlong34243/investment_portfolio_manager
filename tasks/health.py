@@ -820,3 +820,68 @@ def read_failure_sentinel() -> dict | None:
         return json.loads(HEALTH_SENTINEL_PATH.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return None
+
+
+# ---------------------------------------------------------------------------
+# Unattended / non-interactive health gate
+#
+# Task Scheduler runs morning_auto.bat with stdout redirected to
+# logs/morning_auto.log but stdin may still be a TTY — so stdin.isatty()
+# alone is insufficient. MORNING_NONINTERACTIVE=1 (set in the batch file)
+# and --no-prompt on `pm morning` force fail-fast with sentinel + lock release.
+# ---------------------------------------------------------------------------
+
+MORNING_AUTO_LOG = Path("logs") / "morning_auto.log"
+PIPELINE_LOCK_PATH = Path("logs") / "pipeline.lock"
+REAUTH_REMEDIATION = "run schwab_emergency_reauth.bat"
+
+
+def is_noninteractive_health_gate(*, no_prompt: bool = False) -> bool:
+    """True when the health gate must not block on an interactive reauth prompt."""
+    if no_prompt:
+        return True
+    env = os.environ.get("MORNING_NONINTERACTIVE", "").strip().lower()
+    if env in ("1", "true", "yes", "on"):
+        return True
+    if not sys.stdin.isatty():
+        return True
+    return False
+
+
+def append_morning_auto_log(message: str) -> None:
+    """Append one line to logs/morning_auto.log (unattended runs)."""
+    MORNING_AUTO_LOG.parent.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with MORNING_AUTO_LOG.open("a", encoding="utf-8") as fh:
+        fh.write(f"[{stamp}] {message}\n")
+
+
+def release_pipeline_lock() -> bool:
+    """Remove logs/pipeline.lock if present. Returns True if a lock was cleared."""
+    try:
+        if PIPELINE_LOCK_PATH.is_file():
+            PIPELINE_LOCK_PATH.unlink()
+            return True
+    except OSError as exc:
+        logger.warning("Could not release pipeline lock: %s", exc)
+    return False
+
+
+def handle_unattended_critical_failure(results: list[CheckResult]) -> Path:
+    """
+    Non-interactive critical health failure: write sentinel, log remediation,
+    release pipeline lock. Caller should exit non-zero after this returns.
+    """
+    sentinel_path = write_failure_sentinel(results)
+    failing = [r for r in results if r.level == CRITICAL and r.status == FAIL]
+    names = ", ".join(r.name for r in failing) or "unknown"
+    line = (
+        f"UNATTENDED RUN: critical health failure ({names}) — skipping interactive "
+        f"reauth prompt. Remediation: {REAUTH_REMEDIATION}"
+    )
+    logger.error(line)
+    append_morning_auto_log(line)
+    append_morning_auto_log(f"Wrote {sentinel_path}")
+    if release_pipeline_lock():
+        append_morning_auto_log(f"Released {PIPELINE_LOCK_PATH}")
+    return sentinel_path

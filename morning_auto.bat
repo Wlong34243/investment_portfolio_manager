@@ -31,6 +31,8 @@ if exist .venv\Scripts\activate.bat (call .venv\Scripts\activate.bat) else (
 if exist venv\Scripts\activate.bat (call venv\Scripts\activate.bat) else (
 if exist env\Scripts\activate.bat call env\Scripts\activate.bat))
 
+set "MORNING_NONINTERACTIVE=1"
+
 echo [%date% %time%] ===== morning_auto start ===== >> "%LOG%"
 
 :: Lock contention → exit 3 (distinct from pipeline failure exit 1).
