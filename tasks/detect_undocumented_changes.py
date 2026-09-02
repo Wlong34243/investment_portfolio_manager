@@ -132,10 +132,15 @@ def _review_log_dates(text: str) -> list[str]:
     if idx < 0:
         return []
     chunk = body[idx + len("## Review Log"):]
-    # Stop at next markdown H2 (do not bleed into transaction_log regions).
-    nxt = re.search(r"\n## ", chunk)
-    if nxt:
-        chunk = chunk[: nxt.start()]
+    # Stop at next markdown H2 or first region marker (whichever comes first).
+    stop = len(chunk)
+    nxt_h2 = re.search(r"\n## ", chunk)
+    nxt_region = re.search(r"\n<!-- region:", chunk)
+    if nxt_h2:
+        stop = min(stop, nxt_h2.start())
+    if nxt_region:
+        stop = min(stop, nxt_region.start())
+    chunk = chunk[:stop]
     dates: list[str] = []
     for line in chunk.splitlines():
         m = _REVIEW_DATE_RE.match(line)

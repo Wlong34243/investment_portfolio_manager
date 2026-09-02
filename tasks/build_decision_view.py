@@ -75,6 +75,12 @@ def _pad(row: list, n: int = len(_DEC_COLS)) -> list:
     return (row + [""] * n)[:n]
 
 
+def _fmt_dry_cell(value) -> str:
+    if value is None or value == "":
+        return "—"
+    return str(value)
+
+
 def _print_dry_run(header: str, items: list) -> None:
     from rich.console import Console
     from rich.table import Table
@@ -86,6 +92,7 @@ def _print_dry_run(header: str, items: list) -> None:
     for col in _DEC_COLS:
         table.add_column(col, overflow="fold")
     for item in items:
+        tax = _tax_row_values(item)
         table.add_row(
             item.ticker, item.reason_code,
             f"${item.mv:,.0f}" if item.mv is not None else "—",
@@ -96,9 +103,10 @@ def _print_dry_run(header: str, items: list) -> None:
             f"{item.dist_trim * 100:+.1f}%" if item.dist_trim is not None else "—",
             f"{item.dist_add * 100:+.1f}%" if item.dist_add is not None else "—",
             item.rationale,
-            *[_tax_row_values(item)[0], _tax_row_values(item)[1],
-              _tax_row_values(item)[2] if _tax_row_values(item)[2] != "" else "—",
-              _tax_row_values(item)[3] if _tax_row_values(item)[3] != "" else "—"],
+            _fmt_dry_cell(tax[0]),
+            _fmt_dry_cell(tax[1]),
+            _fmt_dry_cell(tax[2]),
+            _fmt_dry_cell(tax[3]),
         )
     pending = _pending_precommit_rows()
     if pending:

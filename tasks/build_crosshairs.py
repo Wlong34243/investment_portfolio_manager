@@ -30,6 +30,10 @@ from utils.level_coverage import compute_level_coverage, TRIGGER_TYPE_FIELDS, DE
 NEAR_BAND_PCT = 0.20  # include NEAR_* when |dist| <= 20% or already through level
 TOP_N_DASHBOARD = 5
 
+# NEAR_TRIM rank modifiers (first values; correct from observed output — do not tune pre-ship)
+W_CEILING_HEADROOM = 0.05
+W_UNREALIZED_LOSS = 0.05
+
 REASON_NEAR_TRIM = "NEAR_TRIM"
 REASON_NEAR_ADD = "NEAR_ADD"
 REASON_DISLOCATION = "DISLOCATION"
@@ -86,9 +90,7 @@ class CrosshairItem:
     dist_add: Optional[float] = None
     rationale: str = ""
     trigger_type: str = "price"
-    # override_tag: HOLD_TAX (doctrine) or ADD_SUSPENDED (thesis frontmatter) — not
-    # doctrine-only; name is deliberate. doctrine_downgraded is True ONLY when the
-    # tag came from a doctrine.md constraint with action: downgrade_informational.
+    # override_tag: HOLD_TAX (doctrine), ADD_SUSPENDED (thesis), TRIM_INFORMATIONAL (thesis trim role)
     override_tag: Optional[str] = None
     doctrine_reason: str = ""
     doctrine_downgraded: bool = False
@@ -136,6 +138,34 @@ def _safe_float(val) -> Optional[float]:
 def _safe_float_nonzero(val) -> Optional[float]:
     f = _safe_float(val)
     return f if f else None
+
+
+def holdings_weight_fraction_to_pct_points(raw) -> Optional[float]:
+    """Holdings_Current.Weight (col Q) → percentage points for *_pct comparisons.
+
+    The sheet stores portfolio weight as a fraction (0.0115 = 1.15%).
+    Thesis ``style_size_ceiling_pct`` and similar fields are percentage points
+    (8.0 = 8%). Always multiply by 100 — no runtime unit guess.
+
+    See PORTFOLIO_SHEET_SCHEMA.md Holdings_Current col Q.
+    """
+    v = _safe_float(raw)
+    if v is None:
+        return None
+    return v * 100.0
+
+
+def holdings_unrealized_pct_fraction_to_pct_points(raw) -> Optional[float]:
+    """Holdings_Current ``Unrealized G/L %`` (col K) → percentage points for display.
+
+    After ``read_gsheet_robust`` the cell round-trips as a fraction (-0.017 = -1.7%).
+    Penalty comparison uses the raw fraction (sign is scale-invariant); this helper
+    is for rationale strings and sign-off columns only.
+    """
+    v = _safe_float(raw)
+    if v is None:
+        return None
+    return v * 100.0
 
 
 def resolve_trigger_type(
@@ -378,6 +408,11 @@ def _near_candidates(
         # never a second row from a secondary/unused band on the same thesis.
         candidates.sort(key=lambda c: c[1])
         reason, score, primary = candidates[0]
+        if reason == REASON_NEAR_TRIM:
+            mod, rank_suffix = _trim_rank_modifiers(ticker, hrow)
+            score += mod
+            if rank_suffix:
+                primary = primary + rank_suffix
         rationale = primary
         if len(candidates) > 1:
             rationale = primary + " | also " + candidates[1][2]
@@ -560,6 +595,61 @@ def _add_triggers_suspended(ticker: str) -> bool:
     return False
 
 
+def _trim_trigger_role(ticker: str) -> str:
+    """Return trim_trigger_role from nested frontmatter triggers; default binding."""
+    from utils.thesis_reader import THESES_DIR, load_frontmatter
+
+    path = THESES_DIR / f"{ticker}_thesis.md"
+    if not path.is_file():
+        return "binding"
+    try:
+        fm = load_frontmatter(path.read_text(encoding="utf-8"))
+    except Exception:
+        return "binding"
+    triggers = fm.get("triggers") if isinstance(fm.get("triggers"), dict) else {}
+    role = triggers.get("trim_trigger_role")
+    if role is None:
+        return "binding"
+    s = str(role).strip().lower()
+    if s == "informational":
+        return "informational"
+    return "binding"
+
+
+def _style_size_ceiling_pct(ticker: str) -> Optional[float]:
+    from utils.thesis_reader import THESES_DIR, load_frontmatter
+
+    path = THESES_DIR / f"{ticker}_thesis.md"
+    if not path.is_file():
+        return None
+    try:
+        fm = load_frontmatter(path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    triggers = fm.get("triggers") if isinstance(fm.get("triggers"), dict) else {}
+    return _safe_float(triggers.get("style_size_ceiling_pct"))
+
+
+def _trim_rank_modifiers(ticker: str, hrow: dict) -> tuple[float, str]:
+    """Rank penalty + rationale suffix for NEAR_TRIM only. Never changes dist_trim."""
+    penalty = 0.0
+    parts: list[str] = []
+    wt = holdings_weight_fraction_to_pct_points(hrow.get("Weight"))
+    ceiling = _style_size_ceiling_pct(ticker)
+    if wt is not None and ceiling is not None and ceiling > 0:
+        headroom = min(wt / ceiling, 1.0)
+        penalty += W_CEILING_HEADROOM * (1.0 - headroom)
+        parts.append(f"headroom {headroom:.2f}")
+    unreal_frac = _safe_float(hrow.get("Unrealized G/L %"))
+    if unreal_frac is not None and unreal_frac < 0:
+        penalty += W_UNREALIZED_LOSS
+        unreal_display = holdings_unrealized_pct_fraction_to_pct_points(unreal_frac)
+        if unreal_display is not None:
+            parts.append(f"unrealized {unreal_display:.1f}%")
+    suffix = f" | rank: {', '.join(parts)}" if parts else ""
+    return penalty, suffix
+
+
 def _apply_doctrine_downgrades(items: list[CrosshairItem]) -> list[CrosshairItem]:
     """
     After merge: if a ticker has NEAR_TRIM in play (primary or merged extra) and
@@ -645,6 +735,43 @@ def _apply_add_suspensions(items: list[CrosshairItem]) -> list[CrosshairItem]:
             "rank_score": _BUCKET_DOCTRINE_HOLD + dist_for_rank,
             "override_tag": "ADD_SUSPENDED",
             "doctrine_reason": "add_triggers_suspended in thesis frontmatter",
+            "doctrine_downgraded": False,
+            "rationale": rationale,
+        }))
+    out.sort(key=lambda x: (x.rank_score, x.ticker))
+    return out
+
+
+def _apply_trim_roles(items: list[CrosshairItem]) -> list[CrosshairItem]:
+    """
+    Policy (b): trim_trigger_role: informational keeps NEAR_TRIM on Decision_View
+    but re-ranks into the doctrine HOLD bucket (>=400). Never drops rows.
+    Doctrine downgrade wins — no-op when rank_score >= _BUCKET_DOCTRINE_HOLD.
+    """
+    out: list[CrosshairItem] = []
+    for item in items:
+        near_trim_in_play = (
+            item.reason_code == REASON_NEAR_TRIM
+            or "NEAR_TRIM:" in (item.rationale or "")
+            or "->Trim " in (item.rationale or "")
+        )
+        if not near_trim_in_play or _trim_trigger_role(item.ticker) != "informational":
+            out.append(item)
+            continue
+        if item.rank_score >= _BUCKET_DOCTRINE_HOLD:
+            out.append(item)
+            continue
+        if item.reason_code != REASON_NEAR_TRIM:
+            out.append(item)
+            continue
+        dist_for_rank = abs(item.dist_trim) if item.dist_trim is not None else 0.0
+        rationale = item.rationale or ""
+        if "trim_trigger_role: informational" not in rationale:
+            rationale = rationale + " | trim_trigger_role: informational"
+        out.append(CrosshairItem(**{
+            **item.to_dict(),
+            "rank_score": _BUCKET_DOCTRINE_HOLD + dist_for_rank,
+            "override_tag": "TRIM_INFORMATIONAL",
             "doctrine_downgraded": False,
             "rationale": rationale,
         }))
@@ -741,7 +868,9 @@ def produce_crosshairs(
     disloc = _dislocation_candidates(dislocation_payload, held, val_map, level_coverage=level_coverage)
     missing = _missing_level_candidates(level_coverage, held, val_map)
     items = _apply_add_suspensions(
-        _apply_doctrine_downgrades(_merge_by_ticker([near, disloc, missing]))
+        _apply_trim_roles(
+            _apply_doctrine_downgrades(_merge_by_ticker([near, disloc, missing]))
+        )
     )
     items = _annotate_tax_surface(items)
 
