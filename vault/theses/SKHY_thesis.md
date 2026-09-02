@@ -3,9 +3,9 @@ ticker: SKHY
 style: THEME
 framework_preference: thematic_specialist_v1
 entry_date: 2026-07-29
-last_reviewed: '2026-08-21'
-current_allocation: 1.06%
-cost_basis: 5284.48
+last_reviewed: '2026-09-02'
+current_allocation: 1.02%
+cost_basis: 5284.4800000007
 time_horizon: TBD - see open items
 triggers:
   trigger_type: ceiling_only
@@ -186,14 +186,14 @@ priority: low — seed position, recently opened, no action contemplated.
 - 2026-08-09: trigger_type: ceiling_only. Cyclicality re-examined and corrected: SKHY is SK hynix -- a memory maker, the same cycle as MU -- so the cyclical override class applies regardless of this file's own prose (checking for the word "cyclical" in the thesis text, rather than what the business is, was the wrong test). price_to_book not computed: yfinance's fundamentals for this ticker mix KRW-denominated equity with USD price/shares, producing nonsensical book-value-per-share figures (hundreds of thousands per share) -- a currency-handling bug, not a thin-history problem, and not worth fixing since the 3.0% THEME ceiling binds at 0.86% weight long before a valuation trigger would matter. See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
-**Current Allocation:** 1.06%
+**Current Allocation:** 1.02%
 **Cost Basis:** $5,284.48
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** THEME
 **Size Ceiling:** 3.00%
-**Drift:** -1.94%
+**Drift:** -1.98%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -209,5 +209,5 @@ No realized G/L history.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-21 08:45: Auto-sync allocation 1.06%, drift -1.94%
+2026-09-02 11:36: Auto-sync allocation 1.02%, drift -1.98%
 <!-- endregion:change_log -->

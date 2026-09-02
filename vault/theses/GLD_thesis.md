@@ -3,9 +3,9 @@ ticker: GLD
 style: ETF
 framework_preference: macro_hedge_v1
 entry_date: 2026-05-03
-last_reviewed: '2026-08-21'
-current_allocation: 1.12%
-cost_basis: 6537.43
+last_reviewed: '2026-09-02'
+current_allocation: 1.14%
+cost_basis: 6957.990000000001
 time_horizon: 3 to 5 years
 triggers:
   trigger_type: price
@@ -14,6 +14,7 @@ triggers:
   fwd_pe_historical_median:
   price_add_below: 220              # add on meaningful pullback if macro hedge thesis intact
   price_trim_above: 400             # evaluate-if-momentum only; does not override size-and-role (see Scaling State)
+  trim_trigger_role: informational   # approved 2026-09-01: size-and-role governs; 400 is evaluate-if-momentum only
   discount_from_52w_high_add: 0.15  # add on 15% pullback; gold drawdowns tend to be buy opportunities
   revenue_growth_floor_pct:
   operating_margin_floor_pct:
@@ -72,17 +73,18 @@ priority: low -- add opportunistically on pullbacks, not on momentum
 - 2026-08-14: Named the governing rule at ~$401 / 1.05% weight. Size-and-role (build toward 3–5%; do not trim on price up alone) wins over the 400 print. 400 remains an evaluate-if-momentum flag, not a close-out. Core Thesis unchanged.
 
 <!-- region:position_state -->
-**Current Allocation:** 1.12%
-**Cost Basis:** $6,537.43
+**Current Allocation:** 1.14%
+**Cost Basis:** $6,957.99
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** ETF
 **Size Ceiling:** 8.00%
-**Drift:** -6.88%
+**Drift:** -6.86%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
+- 2026-08-21: Buy 1.0 @ $420.56
 - 2026-07-21: Sell -1.0 @ $373.18
 - 2026-06-25: Buy 6.0 @ $368.33
 - 2026-06-02: Sell -5.0 @ $413.39
@@ -95,5 +97,5 @@ Total Realized G/L: $0.00 over 3 closed lots. Total Proceeds: $2,440.07.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-21 08:45: Auto-sync allocation 1.12%, drift -6.88%
+2026-09-02 11:36: Auto-sync allocation 1.14%, drift -6.86%
 <!-- endregion:change_log -->

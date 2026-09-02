@@ -3,13 +3,13 @@ ticker: AVGO
 style: GARP
 framework_preference:
 entry_date:
-last_reviewed: '2026-08-21'
+last_reviewed: '2026-09-02'
 triggers:
   trigger_type: ceiling_only
   # price_trim_above: 195.00  # superseded 2026-08-09, non-primary/stale -- see Review Log
   style_size_ceiling_pct: 9.0
-cost_basis: 12002.91
-current_allocation: 2.15%
+cost_basis: 12002.9100000005
+current_allocation: 2.16%
 ---
 # AVGO — Investment Thesis
 
@@ -32,6 +32,7 @@ Cost basis: $278.97 (Post-Split). At entry, AVGO was trading at a reasonable mul
 - **M&A Indigestion & Debt:** The VMware acquisition was expensive and added significant debt. If integration falters or if drastic price hikes cause a mass exodus of enterprise customers to alternatives, the math breaks down.
 - **Customer Concentration:** Apple represents a massive chunk of Broadcom’s wireless revenue. Apple’s ongoing efforts to design custom in-house Wi-Fi/Bluetooth chips is a persistent, long-term threat.
 - **Cyclical Semi Exposure:** While AI is booming, Broadcom's legacy broadband and enterprise storage semiconductor segments are highly cyclical and susceptible to global macroeconomic slowdowns.
+- **AI vendor-financing / guarantee exposure (added 2026-08-31).** Broadcom is negotiating $70-80B in debt (~$45B senior / ~$35B subordinated) to finance AI customers including Anthropic, announced 2026-08-21. The structure is not a straight loan to Broadcom: it backstops special-purpose-vehicle debt that finances AI compute racks leased by customers like Anthropic and OpenAI — a residual-value guarantee, not a balance-sheet loan. That means a financed customer's slowdown or default transmits directly to Broadcom's own credit risk, not just to a counterparty's. Broadcom's 5-year CDS widened materially through August on the news; BofA estimates the guarantee exposure could reach $370B by 2029 if the platform scales as planned. This is a materially different risk than the M&A/debt risk already named above — that's Broadcom borrowing for its own acquisitions; this is Broadcom underwriting *other companies'* AI capex. `[BILL]` — whether this changes the thesis, or is an acceptable extension of "Broadcom is the plumbing of the AI boom," is not resolved here.
 
 ## Scaling State
 next_step: hold
@@ -45,18 +46,19 @@ priority: medium
 - Apple successfully replaces Broadcom components in the iPhone, blowing a massive hole in the wireless segment revenue.
 
 ## Review Log
+- 2026-08-31: Added Key Risks bullet on AI vendor-financing / guarantee exposure — Broadcom negotiating $70-80B debt (~$45B senior / ~$35B subordinated) to finance AI customers including Anthropic, announced 2026-08-21; 5-yr CDS widened through August; BofA estimates guarantee exposure could reach $370B by 2029. Sources: [Broadcom (AVGO) Nears $70B Debt Financing Deal, Sources Say](https://finance.yahoo.com/technology/ai/articles/broadcom-avgo-nears-70b-debt-164236440.html), [Broadcom seeks up to $80 billion in debt for AI chip deal](https://finance.yahoo.com/technology/ai/articles/broadcom-seeks-80-billion-debt-171925920.html) (both Yahoo Finance). Accept/reject judgment on whether this changes the thesis is `[BILL]` — not resolved here. No triggers, style, or ceiling changed.
 - 2026-04: Initiated. Thesis intact. Monitoring VMware subscription transition progress, Custom ASIC revenue growth, and debt paydown pace.
 - 2026-08-09: trigger_type: ceiling_only, not trailing_pe. Commented out stale price_trim_above: 195.00 -- fires permanently against a $427.76 spot price and would have kept parsing as a dead trigger. trailing_pe band rejected: FY2024 diluted EPS of $1.23 (VMware acquisition amortization/costs) blows the computed historical max to 198.83, a GAAP artifact, not a real valuation reading. Revisit once that period rolls out of the trailing window. See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
-**Current Allocation:** 2.15%
+**Current Allocation:** 2.16%
 **Cost Basis:** $12,002.91
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** GARP
 **Size Ceiling:** 9.00%
-**Drift:** -6.85%
+**Drift:** -6.84%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -71,5 +73,5 @@ Total Realized G/L: $1,208.26 over 1 closed lots. Total Proceeds: $2,095.31.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-21 08:45: Auto-sync allocation 2.15%, drift -6.85%
+2026-09-02 11:36: Auto-sync allocation 2.16%, drift -6.84%
 <!-- endregion:change_log -->

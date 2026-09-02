@@ -3,9 +3,9 @@ ticker: BBJP
 style: ETF
 framework_preference:
 entry_date:
-last_reviewed: '2026-08-21'
-cost_basis: 14319.37
-current_allocation: 2.47%
+last_reviewed: '2026-09-02'
+cost_basis: 14319.3699999935
+current_allocation: 2.52%
 triggers:
   trigger_type: ceiling_only
   style_size_ceiling_pct: 8.0
@@ -49,14 +49,14 @@ priority: low
 - 2026-08-17: BOJ held its policy rate at 1.0% on 2026-07-31 (highest since Sept 1995, 8-1 vote, one dissent favoring 1.25%), flagging core inflation likely "clearly above" 2% in H2 FY2026. Yen intervention reported the same week, reportedly with US coordination. PM Takaichi's government reported to support a near-term hike, expected Sept/Oct 2026. Instantiates the existing "Bank of Japan Policy Error" and "Yen Reversal" risk categories with a live, dated event — Bull Case unchanged. Sources: CNBC, Axios, Japan Times, Bloomberg, OMFIF (2026-07-31 to 2026-08-13 reporting, compiled in 2026-08-17 AI briefing §6).
 
 <!-- region:position_state -->
-**Current Allocation:** 2.47%
+**Current Allocation:** 2.52%
 **Cost Basis:** $14,319.37
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** ETF
 **Size Ceiling:** 8.00%
-**Drift:** -5.53%
+**Drift:** -5.48%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -81,9 +81,9 @@ priority: low
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
-Total Realized G/L: $19.22 over 5 closed lots. Total Proceeds: $12,223.33.
+Total Realized G/L: $23.24 over 7 closed lots. Total Proceeds: $13,016.26.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-21 08:45: Auto-sync allocation 2.47%, drift -5.53%
+2026-09-02 11:36: Auto-sync allocation 2.52%, drift -5.48%
 <!-- endregion:change_log -->

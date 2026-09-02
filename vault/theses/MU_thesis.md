@@ -3,9 +3,9 @@ ticker: MU
 style: GARP
 framework_preference:
 entry_date: '2026-08-07'
-last_reviewed: '2026-08-21'
-cost_basis: 7845.41
-current_allocation: 1.48%
+last_reviewed: '2026-09-02'
+cost_basis: 7845.4099999998
+current_allocation: 1.41%
 triggers:
   trigger_type: ceiling_only
   entry_price: 875.65               # 5 sh, average cost
@@ -235,14 +235,14 @@ priority: **[BILL]** — not stated at entry.
 - 2026-08-09: trigger_type: ceiling_only, not price_to_book. Cyclical override considered (this thesis itself calls forward P/E "a peak-cycle artifact of scarcity, not a structural moat") but the P/B band computed from FY2022-2025 annual book value (n=4, range 1.05-3.79) isn't usable either: live current P/B 9.84 is 2.6x the historical max, and MU's book value is itself inflated by the same boom earnings that inflate the multiple (quarterly operating income flowing straight into retained equity) -- P/B hasn't escaped cycle contamination, just moved it somewhere less dangerous than P/E. Reference only, not a live trigger; revisit once more history accumulates. Computed 2026-08-09: FY2022-2025 P/B min/p25/median/p75/max = 1.05/1.38/2.10/2.54/3.79, live current 9.84 @ $877.57. See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
-**Current Allocation:** 1.48%
+**Current Allocation:** 1.41%
 **Cost Basis:** $7,845.41
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** GARP
 **Size Ceiling:** 9.00%
-**Drift:** -7.52%
+**Drift:** -7.59%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -255,5 +255,5 @@ No realized G/L history.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-21 08:45: Auto-sync allocation 1.48%, drift -7.52%
+2026-09-02 11:36: Auto-sync allocation 1.41%, drift -7.59%
 <!-- endregion:change_log -->

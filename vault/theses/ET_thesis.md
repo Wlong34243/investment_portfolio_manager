@@ -3,14 +3,14 @@ ticker: ET
 style: THEME
 framework_preference:
 entry_date:
-last_reviewed: '2026-08-21'
+last_reviewed: '2026-09-02'
 triggers:
   trigger_type: price
   price_trim_above: 22.00           # NOT changed to $24.33 (consensus target) 2026-08-19, see Review Log
   # price_add_below intentionally unset -- Scaling State is "hold / reinvest distributions," not accumulation, so no add level applies
   style_size_ceiling_pct: 3.0
-cost_basis: 6550.93
-current_allocation: 1.36%
+cost_basis: 6550.930000005068
+current_allocation: 1.38%
 ---
 # ET — Investment Thesis
 
@@ -54,14 +54,14 @@ priority: low
 - 2026-08-19 (Bill requested, not actioned as stated): Bill asked to raise price_trim_above to $24.33, the sell-side consensus target. Not made, same reasoning as UNH's 2026-08-19 entry and VST's retired consensus_price_target trigger (2026-08-09): a trim pegged to a consensus figure ratchets up with the stock and structurally tends not to fire. price_trim_above stays at 22.00. If Bill wants the level moved, it needs a level he sets directly rather than one sourced from analyst coverage — flagged for him to specify.
 
 <!-- region:position_state -->
-**Current Allocation:** 1.36%
+**Current Allocation:** 1.38%
 **Cost Basis:** $6,550.93
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** THEME
 **Size Ceiling:** 3.00%
-**Drift:** -1.64%
+**Drift:** -1.62%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -81,5 +81,5 @@ Total Realized G/L: $-237.83 over 6 closed lots. Total Proceeds: $2,930.72.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-21 08:45: Auto-sync allocation 1.36%, drift -1.64%
+2026-09-02 11:36: Auto-sync allocation 1.38%, drift -1.62%
 <!-- endregion:change_log -->

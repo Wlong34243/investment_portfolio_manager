@@ -3,9 +3,9 @@ ticker: GILD
 style: FUND
 framework_preference: lynch_garp_v1
 entry_date: 2026-05-03
-last_reviewed: '2026-08-21'
-current_allocation: 1.53%
-cost_basis: 8445.97
+last_reviewed: '2026-09-02'
+current_allocation: 1.61%
+cost_basis: 8445.969999999
 time_horizon: 3 to 5 years
 triggers:
   trigger_type: price
@@ -67,14 +67,14 @@ priority: low -- this is a slow-moving income-plus-optionality position
 - 2026-08-09: trigger_type set explicit: price (kept over the FUND default of discount_from_high -- existing 90/140 band is real and working; discarding it for a theoretical improvement would have been a net loss, not a fix. fwd_pe band (12/20) retained as secondary, non-primary data. See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
-**Current Allocation:** 1.53%
+**Current Allocation:** 1.61%
 **Cost Basis:** $8,445.97
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** FUND
 **Size Ceiling:** 5.00%
-**Drift:** -3.47%
+**Drift:** -3.39%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -95,5 +95,5 @@ Total Realized G/L: $76.28 over 3 closed lots. Total Proceeds: $4,005.21.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-21 08:45: Auto-sync allocation 1.53%, drift -3.47%
+2026-09-02 11:36: Auto-sync allocation 1.61%, drift -3.39%
 <!-- endregion:change_log -->

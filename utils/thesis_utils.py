@@ -158,6 +158,33 @@ class ThesisManager:
         fm["triggers"] = nested
         return self.update_frontmatter({"triggers": nested})
 
+    def append_review_log_entry(self, date_str: str, text: str) -> str:
+        """Append a bullet under ## Review Log without touching regions or frontmatter."""
+        entry = f"- {date_str}: {text.strip()}"
+        marker = "## Review Log"
+        idx = self.raw_content.find(marker)
+        if idx < 0:
+            if not self.raw_content.endswith("\n"):
+                self.raw_content += "\n"
+            self.raw_content += f"\n{marker}\n\n{entry}\n"
+            return self.raw_content
+        after = idx + len(marker)
+        chunk = self.raw_content[after:]
+        stop = len(chunk)
+        nxt_h2 = re.search(r"\n## ", chunk)
+        nxt_region = re.search(r"\n<!-- region:", chunk)
+        if nxt_h2:
+            stop = min(stop, nxt_h2.start())
+        if nxt_region:
+            stop = min(stop, nxt_region.start())
+        insert_at = after + stop
+        prefix = self.raw_content[:insert_at].rstrip()
+        suffix = self.raw_content[insert_at:]
+        if not prefix.endswith("\n"):
+            prefix += "\n"
+        self.raw_content = prefix + entry + "\n" + suffix.lstrip("\n")
+        return self.raw_content
+
     def save(self, backup: bool = False):
         if backup:
             # Fix: replace colons with dashes for Windows filename compatibility

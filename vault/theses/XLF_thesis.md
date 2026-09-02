@@ -3,9 +3,9 @@ ticker: XLF
 style: ETF
 framework_preference:
 entry_date:
-last_reviewed: '2026-08-21'
-cost_basis: 8192.79
-current_allocation: 1.38%
+last_reviewed: '2026-09-02'
+cost_basis: 2533.29
+current_allocation: 0.44%
 triggers:
   trigger_type: ceiling_only
   style_size_ceiling_pct: 8.0
@@ -44,22 +44,31 @@ priority: low
 - Punitive federal regulations are passed that effectively treat major banks as public utilities, capping their ROE permanently.
 
 ## Review Log
+- 2026-08-31: **Trimmed to fund EQT — rotation, not a standalone reduction.** Bill's
+  own statement: "bought [EQT] today selling xlf." Live position dropped from this
+  morning's synced $8,192.79 cost basis (1.40%, 09:32 sync) to $2,533.29 (45 shares
+  remaining) same day — a real, material trim, not noise. Exact shares sold / proceeds
+  not available: neither the Sheets `Transactions` tab nor a live 3-day Schwab
+  transaction pull shows the trade yet (broker activity-feed lag). See
+  `EQT_thesis.md` for the destination leg. `next_step` (currently "hold / reinvest
+  dividends") not updated — `[BILL]`.
 - 2026-04: Initiated. Thesis intact. Monitoring the 2-year/10-year Treasury yield curve, consumer credit card delinquency rates, and M&A volume.
 - 2026-08-09: trigger_type set explicit: ceiling_only (sector basket). See prompts/trigger_types_2026-08-09.md.
 - 2026-08-19 (Bill): Role clarified for the 2026-08-07 COF→XLF leg: "XLF was just another place I could park a bit while the banks enjoy improving profitability." Sector-level parking for proceeds not routed to MU that same day, not a standalone high-conviction add. See COF_thesis.md 2026-08-19 entry.
 
 <!-- region:position_state -->
-**Current Allocation:** 1.38%
-**Cost Basis:** $8,192.79
+**Current Allocation:** 0.44%
+**Cost Basis:** $2,533.29
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** ETF
 **Size Ceiling:** 8.00%
-**Drift:** -6.62%
+**Drift:** -7.56%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
+- 2026-08-31: Sell -100.0 @ $57.78
 - 2026-08-07: Buy 15.0 @ $57.57
 - 2026-07-17: Buy 120.0 @ $56.59
 - 2026-06-30: Sell -100.0 @ $53.78
@@ -80,5 +89,5 @@ Total Realized G/L: $-37.32 over 16 closed lots. Total Proceeds: $16,496.18.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-21 08:45: Auto-sync allocation 1.38%, drift -6.62%
+2026-09-02 11:36: Auto-sync allocation 0.44%, drift -7.56%
 <!-- endregion:change_log -->

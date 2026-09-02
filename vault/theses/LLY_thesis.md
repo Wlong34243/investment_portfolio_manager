@@ -3,9 +3,9 @@ ticker: LLY
 style: GARP
 framework_preference:
 entry_date:
-last_reviewed: '2026-08-21'
-cost_basis: 17426.29
-current_allocation: 3.09%
+last_reviewed: '2026-09-02'
+cost_basis: 17426.2900000005
+current_allocation: 2.95%
 triggers:
   trigger_type: ceiling_only
   style_size_ceiling_pct: 9.0
@@ -49,14 +49,14 @@ priority: medium
 - 2026-08-09: trigger_type: ceiling_only, not trailing_pe. The annual step-function method (hold each FY's EPS constant until the next annual report) breaks down for fast EPS growth (5.80->11.71->22.95, FY2023-2025): for most of each year the denominator holds the prior, lower EPS, systematically inflating the historical band, so live current trailing P/E (39.8) sits below the entire computed historical range (46.2-163.5) -- band and live reading aren't measuring comparable things. Revisit with true rolling-TTM data. See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
-**Current Allocation:** 3.09%
+**Current Allocation:** 2.95%
 **Cost Basis:** $17,426.29
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** GARP
 **Size Ceiling:** 9.00%
-**Drift:** -5.91%
+**Drift:** -6.05%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -73,5 +73,5 @@ Total Realized G/L: $25.78 over 1 closed lots. Total Proceeds: $4,207.42.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-21 08:45: Auto-sync allocation 3.09%, drift -5.91%
+2026-09-02 11:36: Auto-sync allocation 2.95%, drift -6.05%
 <!-- endregion:change_log -->

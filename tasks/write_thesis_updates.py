@@ -105,6 +105,7 @@ def write_thesis_updates(
             old_content = mgr.raw_content
             
             # 1. Update Frontmatter
+            # last_reviewed = last synced from Sheets (morning thesis sync), NOT last reviewed by Bill.
             fm_updates = {
                 "last_reviewed": p.last_reviewed,
                 "cost_basis": p.cost_basis,

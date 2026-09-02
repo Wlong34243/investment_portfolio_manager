@@ -3,13 +3,13 @@ ticker: COF
 style: GARP
 framework_preference:
 entry_date:
-last_reviewed: '2026-08-21'
+last_reviewed: '2026-09-02'
 triggers:
   trigger_type: ceiling_only
   # price_trim_above: 175.00  # superseded 2026-08-09, non-primary/stale -- see Review Log
   style_size_ceiling_pct: 9.0
-cost_basis: 16832.94
-current_allocation: 2.84%
+cost_basis: 16832.939999999
+current_allocation: 2.95%
 pattern:
   name: accumulate_on_decline
   established: '2026-08-24'
@@ -59,14 +59,14 @@ priority: low
 - 2026-08-19 (Bill): Confirms the XLF leg's role directly: "XLF was just another place I could park a bit while the banks enjoy improving profitability" — not a replacement thesis for COF, a sector-level parking spot for the proceeds not routed to MU. See XLF_thesis.md 2026-08-19 entry for the mirrored note.
 
 <!-- region:position_state -->
-**Current Allocation:** 2.84%
+**Current Allocation:** 2.95%
 **Cost Basis:** $16,832.94
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** GARP
 **Size Ceiling:** 9.00%
-**Drift:** -6.16%
+**Drift:** -6.05%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -92,5 +92,5 @@ Total Realized G/L: $-1,463.27 over 16 closed lots. Total Proceeds: $15,855.29.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-21 08:45: Auto-sync allocation 2.84%, drift -6.16%
+2026-09-02 11:36: Auto-sync allocation 2.95%, drift -6.05%
 <!-- endregion:change_log -->

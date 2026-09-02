@@ -3,9 +3,9 @@ ticker: CF
 style:
 framework_preference:
 entry_date: '2026-08-28'
-last_reviewed: '2026-08-28'
-cost_basis: 3131.63
-current_allocation: 0.52%
+last_reviewed: '2026-09-02'
+cost_basis: 6991.57999999998
+current_allocation: 1.26%
 triggers:
   trigger_type:
   entry_price: 125.00
@@ -14,7 +14,7 @@ triggers:
   price_trim_above:
   fwd_pe_add_below:
   fwd_pe_trim_above:
-  style_size_ceiling_pct:
+  style_size_ceiling_pct: 0.0
 ---
 # CF (CF Industries) — Investment Thesis
 
@@ -25,19 +25,21 @@ levels are `[BILL]` — none were specified and none are inferred here.
 
 ## Known Facts (sourced, not judgment)
 
-- **Position:** 25.0 shares, single lot, cost basis $3,131.63 ($125.265/share) — matches Bill's
-  stated entry of "$125."
-- **Live (Schwab positions fetch, 2026-08-28, same-day — Holdings_Current/Sheet not yet synced
-  to this trade):** price $125.34, market value $3,133.38, unrealized +$1.76 (~+0.06%).
+- **Position (per context bundle `f165f5711a07…`, 2026-09-02 12:57 UTC):** 55.0 shares,
+  cost basis $6,991.58 (unit cost $127.12), market value $7,420.60 at $134.92/share.
+  Weight 1.25% of that bundle's $595,650.77 total. Up from the original 25.0-share /
+  $3,131.63 seed entered 2026-08-28 — two subsequent adds (10 sh @ $127.72 and
+  10 sh @ $127.67, both 2026-08-31) plus a further 10 sh @ $130.61 (2026-09-01), the
+  last of which was funded as part of the same-day EMXC trim (95→45 sh) that also
+  funded EQT/RRC/NOW adds; see Review Log below and `EMXC_thesis.md` for the funding
+  leg (not updated here — out of scope for this task).
+- **Live (Schwab positions fetch, 2026-08-28, superseded by the bundle line above):**
+  price $125.34, market value $3,133.38, unrealized +$1.76 (~+0.06%) at original entry.
 - **Account:** Schwab tax-lot hash `84045119` → suffix `...5119`, inside
   `SCHWAB_PRIMARY_ACCOUNT_SUFFIXES`. In scope. **Taxable.**
 - **Acquisition date: not recorded** by Schwab for this lot (same gap seen on BTC/PWR at entry).
-- **Dividend yield (live quote):** 1.91% — consistent with the $0.60/quarter payout Bill cites
-  below (~$2.40/yr against $125.34).
-- **Approximate weight:** 0.52%, computed as $3,133.38 against the last known bundle total
-  ($604,274.32, 2026-08-28 08:07 bundle `8b3a29284ad2…`) plus this position. **Unofficial** —
-  the authoritative weight is whatever the next `pm morning` / `pm snapshot` sync writes to
-  Holdings_Current; do not cite this figure past the next sync.
+- **Dividend yield (live quote):** 1.91% at entry — consistent with the $0.60/quarter payout Bill
+  cites below (~$2.40/yr against $125.34).
 
 ## Style
 
@@ -115,23 +117,36 @@ factors to watch, not thresholds Bill has set.
   what's noted inline. Live position facts (25 sh @ $125.265, account `...5119`, taxable)
   verified against a fresh Schwab positions/tax-lots fetch, since Holdings_Current had not yet
   synced to this trade. Style, trigger_type, and all trigger levels left `[BILL]` — none given.
+- 2026-09-02: Known Facts position line refreshed from stale 25.0 sh / $3,131.63 to
+  55.0 sh / $6,991.58 (unit cost $127.12), per context bundle `f165f5711a07…`
+  (2026-09-02T12:57:19Z). Three adds since seed: 10 sh @ $127.72 and 10 sh @ $127.67
+  (both 2026-08-31), 10 sh @ $130.61 (2026-09-01) — the last funded as part of the
+  same-day EMXC trim (95→45 sh) alongside EQT/RRC/NOW adds. Rationale for the adds is
+  not on record — `[BILL]`. Sourced strictly from the 2026-09-02 bundle, not Sheets or
+  the 2026-09-01 export.
 
 <!-- region:position_state -->
-**Current Allocation:** 0.52% (approximate — pending next sync, see Known Facts)
-**Cost Basis:** $3,131.63
+**Current Allocation:** 1.26%
+**Cost Basis:** $6,991.58
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** None
 **Size Ceiling:** 0.00%
-**Drift:** +0.52%
+**Drift:** +0.00%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
-No transaction log available — Schwab lot record carries no acquisition date and the Sheets
-`Transactions` tab was not queried in this pass. Populate on next `write_thesis_updates.py` sync.
+- 2026-09-01: Buy 10.0 @ $130.61
+- 2026-08-31: Buy 10.0 @ $127.72
+- 2026-08-31: Buy 10.0 @ $127.67
+- 2026-08-28: Buy 25.0 @ $125.27
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
 No realized G/L history.
 <!-- endregion:realized_gl -->
+
+<!-- region:change_log -->
+2026-09-02 11:36: Auto-sync allocation 1.26%, drift +0.00%
+<!-- endregion:change_log -->

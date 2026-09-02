@@ -3,9 +3,9 @@ ticker: META
 style: GARP
 framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: '2026-08-21'
-current_allocation: 1.29%
-cost_basis: 8852.82
+last_reviewed: '2026-09-02'
+current_allocation: 1.41%
+cost_basis: 8852.820000000003
 time_horizon: 3 to 5+ years
 triggers:
   trigger_type: fwd_pe
@@ -116,14 +116,14 @@ pending. [CONFIRM]
 - 2026-08-09: trigger_type set explicit: fwd_pe (GARP default; existing 18/28 band retained as primary). Commented out price_trim_above: 841.00 -- non-primary once fwd_pe was confirmed primary, and left live it would have kept parsing as a dead trigger. See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
-**Current Allocation:** 1.29%
+**Current Allocation:** 1.41%
 **Cost Basis:** $8,852.82
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** GARP
 **Size Ceiling:** 4.00%
-**Drift:** -2.71%
+**Drift:** -2.59%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -146,5 +146,5 @@ Total Realized G/L: $2,758.15 over 9 closed lots. Total Proceeds: $5,498.04.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-21 08:45: Auto-sync allocation 1.29%, drift -2.71%
+2026-09-02 11:36: Auto-sync allocation 1.41%, drift -2.59%
 <!-- endregion:change_log -->

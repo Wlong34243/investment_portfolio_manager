@@ -3,9 +3,9 @@ ticker: PWR
 style: THEME
 framework_preference: AI Power Infrastructure & Electrification
 entry_date: '2026-08-04'
-last_reviewed: '2026-08-21'
-cost_basis: 8975.27
-current_allocation: 1.44%
+last_reviewed: '2026-09-02'
+cost_basis: 10189.67
+current_allocation: 1.52%
 triggers:
   trigger_type: ceiling_only
   entry_price:
@@ -50,15 +50,16 @@ priority: Medium-High
 - **2026-08-07 — calibration note (added, not Bill's original text):** the $500B tech-capex threshold in Key Risks checks out as a genuine level, with a caveat on what it implies. Big Four 2026 planned capex is roughly $630B (some counts $690-725B), against $388B actual in 2025. $500B sits 20-30% below plan but still ~29% above 2025 actual — so the trigger fires on a sharp deceleration in growth, not on an absolute decline. Sources: [Data Center Richness](https://datacenterrichness.substack.com/p/hyperscalers-plan-630-billion-in), [CNBC](https://www.cnbc.com/2026/02/06/google-microsoft-meta-amazon-ai-cash.html), [Futurum](https://futurumgroup.com/insights/ai-capex-2026-the-690b-infrastructure-sprint/). Threshold itself not changed.
 - 2026-08-09: trigger_type set explicit: ceiling_only (THEME default; blank triggers scaffold, no anchor argued). See prompts/trigger_types_2026-08-09.md.
 <!-- region:position_state -->
-**Current Allocation:** 1.44%
-**Cost Basis:** $8,975.27
+**Current Allocation:** 1.52%
+**Cost Basis:** $10,189.67
 <!-- endregion:position_state -->
 <!-- region:sizing -->
 **Style:** THEME
 **Size Ceiling:** 3.00%
-**Drift:** -1.56%
+**Drift:** -1.48%
 <!-- endregion:sizing -->
 <!-- region:transaction_log -->
+- 2026-08-31: Buy 2.0 @ $607.20
 - 2026-08-05: Buy 3.0 @ $691.89
 - 2026-08-04: Buy 5.0 @ $692.67
 - 2026-08-04: Buy 5.0 @ $687.25
@@ -67,5 +68,5 @@ priority: Medium-High
 No realized G/L history.
 <!-- endregion:realized_gl -->
 <!-- region:change_log -->
-2026-08-21 08:45: Auto-sync allocation 1.44%, drift -1.56%
+2026-09-02 11:36: Auto-sync allocation 1.52%, drift -1.48%
 <!-- endregion:change_log -->

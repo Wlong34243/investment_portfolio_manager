@@ -3,9 +3,9 @@ ticker: GOOG
 style: GARP
 framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: '2026-08-21'
-current_allocation: 5.75%
-cost_basis: 26733.42
+last_reviewed: '2026-09-02'
+current_allocation: 5.64%
+cost_basis: 26733.419999996368
 time_horizon: 3 to 5 years
 triggers:
   trigger_type: fwd_pe
@@ -90,18 +90,18 @@ priority: very low
 - 2026-08-09: trigger_type set explicit: fwd_pe (GARP default; existing 20/32 band retained as primary). See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
-**Current Allocation:** 5.75%
+**Current Allocation:** 5.64%
 **Cost Basis:** $26,733.42
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** GARP
 **Size Ceiling:** 9.00%
-**Drift:** -3.25%
+**Drift:** -3.36%
 <!-- endregion:sizing -->
 
 <!-- region:change_log -->
-2026-08-21 08:45: Auto-sync allocation 5.75%, drift -3.25%
+2026-09-02 11:36: Auto-sync allocation 5.64%, drift -3.36%
 <!-- endregion:change_log -->
 
 <!-- region:transaction_log -->

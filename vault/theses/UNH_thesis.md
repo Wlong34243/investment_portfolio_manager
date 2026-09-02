@@ -3,9 +3,9 @@ ticker: UNH
 style: GARP
 framework_preference: lynch_garp_v1, psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: '2026-08-21'
-current_allocation: 3.53%
-cost_basis: 19723.77
+last_reviewed: '2026-09-02'
+current_allocation: 3.68%
+cost_basis: 19723.770000000004
 time_horizon: 1 to 3 years
 triggers:
   trigger_type: fwd_pe
@@ -98,14 +98,14 @@ priority: medium
 - 2026-08-19 (Bill requested, not actioned as stated): Bill asked to raise price_trim_above to $475.00 — the lowest analyst target on the Street. Not made: this repo's own trigger-design record (see VST_thesis.md, 2026-08-09 entry, and prompts/trigger_types_2026-08-09.md "why not analyst price targets") retired VST's consensus-target trim for the same structural reason a lowest-target trim would have here — sell-side targets ratchet upward as price rises, so a trigger pegged to one tends to recede rather than fire. price_trim_above stays at 380 (the fwd_pe 14/18 band remains primary regardless). If Bill wants the trim level moved, it needs a level he sets directly rather than one sourced from analyst coverage — flagged for him to specify.
 
 <!-- region:position_state -->
-**Current Allocation:** 3.53%
+**Current Allocation:** 3.68%
 **Cost Basis:** $19,723.77
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** GARP
 **Size Ceiling:** 5.00%
-**Drift:** -1.47%
+**Drift:** -1.32%
 <!-- endregion:sizing -->
 
 <!-- region:wash_sale_watch -->
@@ -113,7 +113,7 @@ priority: medium
 <!-- endregion:wash_sale_watch -->
 
 <!-- region:change_log -->
-2026-08-21 08:45: Auto-sync allocation 3.53%, drift -1.47%
+2026-09-02 11:36: Auto-sync allocation 3.68%, drift -1.32%
 <!-- endregion:change_log -->
 
 <!-- region:transaction_log -->
@@ -141,5 +141,5 @@ priority: medium
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
-Total Realized G/L: $5,229.07 over 37 closed lots. Total Proceeds: $44,151.20.
+Total Realized G/L: $8,826.58 over 49 closed lots. Total Proceeds: $62,852.19.
 <!-- endregion:realized_gl -->

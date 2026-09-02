@@ -3,15 +3,15 @@ ticker: VST
 style: THEME
 framework_preference: Thesis-first, scale-in
 entry_date: 2026-05-03
-last_reviewed: '2026-08-21'
+last_reviewed: '2026-09-02'
 triggers:
   trigger_type: ceiling_only
   entry_price: 159.00
   seed_position_weight: 0.64%
   # price_trim_above: consensus_price_target  # superseded 2026-08-09, non-primary/stale -- see Review Log
   style_size_ceiling_pct: 3.0
-cost_basis: 23564.63
-current_allocation: 3.62%
+cost_basis: 23564.6299999935
+current_allocation: 3.64%
 ---
 # VST — Investment Thesis
 
@@ -73,14 +73,14 @@ priority: medium
 - 2026-08-24: Standing rationale for this breach acceptance moved to `vault/doctrine.md` (`no_withdrawal_need`, established 2026-08-19). Text unchanged; single-sourced.
 
 <!-- region:position_state -->
-**Current Allocation:** 3.62%
+**Current Allocation:** 3.64%
 **Cost Basis:** $23,564.63
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** THEME
 **Size Ceiling:** 3.00%
-**Drift:** +0.62%
+**Drift:** +0.64%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -106,5 +106,5 @@ No realized G/L history.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-21 08:45: Auto-sync allocation 3.62%, drift +0.62%
+2026-09-02 11:36: Auto-sync allocation 3.64%, drift +0.64%
 <!-- endregion:change_log -->

@@ -3,9 +3,9 @@ ticker: AAPL
 style: GARP
 framework_preference:
 entry_date:
-last_reviewed: '2026-08-21'
-cost_basis: 9924.61
-current_allocation: 1.56%
+last_reviewed: '2026-09-02'
+cost_basis: 9924.609999999
+current_allocation: 1.63%
 triggers:
   trigger_type: trailing_pe
   trailing_pe_trim_above: 36.06
@@ -52,14 +52,14 @@ priority: low
 - 2026-08-14: Scaling State `accumulate` replaced with `trim` (Bill). The 2026-08-10 Sell -14 @ $305.70 is the first trim leg, not a file error. Core Thesis unchanged.
 
 <!-- region:position_state -->
-**Current Allocation:** 1.56%
+**Current Allocation:** 1.63%
 **Cost Basis:** $9,924.61
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** GARP
 **Size Ceiling:** 9.00%
-**Drift:** -7.44%
+**Drift:** -7.37%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -77,5 +77,5 @@ Total Realized G/L: $0.00 over 2 closed lots. Total Proceeds: $4,279.71.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-21 08:45: Auto-sync allocation 1.56%, drift -7.44%
+2026-09-02 11:36: Auto-sync allocation 1.63%, drift -7.37%
 <!-- endregion:change_log -->

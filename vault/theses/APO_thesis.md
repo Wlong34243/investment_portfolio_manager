@@ -3,9 +3,9 @@ ticker: APO
 style: GARP
 framework_preference:
 entry_date:
-last_reviewed: '2026-08-21'
-cost_basis: 7673.8
-current_allocation: 1.41%
+last_reviewed: '2026-09-02'
+cost_basis: 7673.799999999
+current_allocation: 1.46%
 triggers:
   trigger_type: ceiling_only
   style_size_ceiling_pct: 9.0
@@ -89,14 +89,14 @@ priority: medium
 - 2026-08-09: trigger_type: ceiling_only, not trailing_pe. Same step-function lag bug as LLY/AMZN, mirrored: APO's EPS *declined* FY2023-2025 (8.49->7.33->5.54), so the step-function holds the prior, higher EPS too long, understating the historical band (min/p25/median/p75/max = 10.4/13.0/17.2/19.1/25.9) -- live current trailing P/E (45.5) sits entirely above it. Caught via the same inside-range sanity check that flagged LLY/AMZN. Revisit with true rolling-TTM data. See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
-**Current Allocation:** 1.41%
+**Current Allocation:** 1.46%
 **Cost Basis:** $7,673.80
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** GARP
 **Size Ceiling:** 9.00%
-**Drift:** -7.59%
+**Drift:** -7.54%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -113,5 +113,5 @@ Total Realized G/L: $242.78 over 3 closed lots. Total Proceeds: $5,175.88.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-21 08:45: Auto-sync allocation 1.41%, drift -7.59%
+2026-09-02 11:36: Auto-sync allocation 1.46%, drift -7.54%
 <!-- endregion:change_log -->

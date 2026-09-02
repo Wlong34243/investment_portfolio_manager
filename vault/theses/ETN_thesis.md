@@ -3,9 +3,9 @@ ticker: ETN
 style: THEME
 framework_preference: lynch_garp_v1, joys_of_compounding, psychology_of_money
 entry_date: 2026-04-20
-last_reviewed: '2026-08-21'
-current_allocation: 1.54%
-cost_basis: 7589.55
+last_reviewed: '2026-09-02'
+current_allocation: 1.45%
+cost_basis: 7589.549999999
 time_horizon: 3 to 5 years
 triggers:
   trigger_type: ceiling_only
@@ -54,14 +54,14 @@ next_step: [BILL]
 priority: [BILL]
 
 <!-- region:position_state -->
-**Current Allocation:** 1.54%
+**Current Allocation:** 1.45%
 **Cost Basis:** $7,589.55
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** THEME
 **Size Ceiling:** 3.00%
-**Drift:** -1.46%
+**Drift:** -1.55%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -72,9 +72,9 @@ priority: [BILL]
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
-Total Realized G/L: $1,156.72 over 1 closed lots. Total Proceeds: $4,036.72.
+Total Realized G/L: $1,813.93 over 2 closed lots. Total Proceeds: $7,031.93.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-21 08:45: Auto-sync allocation 1.54%, drift -1.46%
+2026-09-02 11:36: Auto-sync allocation 1.45%, drift -1.55%
 <!-- endregion:change_log -->

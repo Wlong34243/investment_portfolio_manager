@@ -3,9 +3,9 @@ ticker: MELI
 style: THEME
 framework_preference:
 entry_date:
-last_reviewed: '2026-08-21'
+last_reviewed: '2026-09-02'
 cost_basis: 15441.85
-current_allocation: 2.89%
+current_allocation: 3.02%
 triggers:
   trigger_type: ceiling_only
   style_size_ceiling_pct: 3.0
@@ -49,14 +49,14 @@ priority: medium
 - 2026-08-17: MercadoLibre plans R$57B (~$10.9B) in Brazil investment for 2026, +50% YoY, and $3.4B in Argentina, +30% YoY — disclosed around the 2026-08-05 Q2 report. Not a contradiction of the market-position thesis (heavier investment reads as bullish for platform dominance, if anything); recorded because the file otherwise hasn't incorporated the print. Bull Case unchanged. Sources: Rio Times, Yahoo Finance (2026-08-17 AI briefing §6).
 
 <!-- region:position_state -->
-**Current Allocation:** 2.89%
+**Current Allocation:** 3.02%
 **Cost Basis:** $15,441.85
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** THEME
 **Size Ceiling:** 3.00%
-**Drift:** -0.11%
+**Drift:** +0.02%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -74,5 +74,5 @@ Total Realized G/L: $208.80 over 1 closed lots. Total Proceeds: $1,840.41.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-21 08:45: Auto-sync allocation 2.89%, drift -0.11%
+2026-09-02 11:36: Auto-sync allocation 3.02%, drift +0.02%
 <!-- endregion:change_log -->

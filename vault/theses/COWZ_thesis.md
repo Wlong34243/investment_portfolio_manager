@@ -3,9 +3,9 @@ ticker: COWZ
 style: ETF
 framework_preference:
 entry_date:
-last_reviewed: '2026-08-21'
-cost_basis: 14782.02
-current_allocation: 2.67%
+last_reviewed: '2026-09-02'
+cost_basis: 16588.149999994002
+current_allocation: 3.03%
 triggers:
   trigger_type: ceiling_only
   style_size_ceiling_pct: 8.0
@@ -46,17 +46,18 @@ priority: low
 - 2026-08-09: trigger_type set explicit: ceiling_only (ballast, FCF-yield basket). See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
-**Current Allocation:** 2.67%
-**Cost Basis:** $14,782.02
+**Current Allocation:** 3.03%
+**Cost Basis:** $16,588.15
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** ETF
 **Size Ceiling:** 8.00%
-**Drift:** -5.33%
+**Drift:** -4.97%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
+- 2026-08-21: Buy 25.0 @ $72.25
 - 2026-08-06: Buy 50.0 @ $67.96
 - 2026-07-09: Sell -75.0 @ $63.58
 - 2026-06-16: Buy 30.0 @ $63.77
@@ -73,5 +74,5 @@ Total Realized G/L: $-3.31 over 2 closed lots. Total Proceeds: $4,768.02.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-21 08:45: Auto-sync allocation 2.67%, drift -5.33%
+2026-09-02 11:36: Auto-sync allocation 3.03%, drift -4.97%
 <!-- endregion:change_log -->

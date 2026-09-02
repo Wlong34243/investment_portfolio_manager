@@ -3,7 +3,7 @@ ticker: BTC
 style:
 framework_preference: macro_hedge_v1
 entry_date:
-last_reviewed: '2026-08-28'
+last_reviewed: '2026-09-02'
 cost_basis: 1049.85
 current_allocation: 0.17%
 time_horizon:
@@ -15,22 +15,22 @@ triggers:
   price_add_below:             # [BILL] — must be set on the SHARE, not on bitcoin. See Instrument note.
   price_trim_above:            # [BILL] — same.
   discount_from_52w_high_add:  # [BILL]
-  style_size_ceiling_pct:      # [BILL] — blocked on the style key below.
+  style_size_ceiling_pct: 0.0  # [BILL] — blocked on the style key below.
 ---
 # BTC — Investment Thesis
 
-**STATUS: DRAFTED 2026-08-28 from Bill-supplied source material, with every factual claim
-independently verified this session.** Supersedes the 2026-08-27 scaffold (backed up to
-`BTC_thesis.md.bak.2026-08-28T08-40-00`).
+**STATUS: Bill-authored thesis recorded 2026-08-29.** Supersedes the 2026-08-28 Motley Fool
+redraft for **Core Thesis voice** (store-of-value / digital monetary commodity, not regulatory
+event optionality). Pre-edit file archived to
+`vault/theses/archive/BTC_thesis.md.bak.2026-08-29`.
 
-**What changed:** Bill supplied the research input behind this position — a Motley Fool
-article dated 2026-08-27 on the post-Clarity-Act sentiment shift. The descriptive and risk
-sections below are drafted from that source **as corrected against primary reporting**.
+**History correction (2026-08-29):** Position Story surfaced a **2026-02-06 Sell, −10 shares
+@ $30.60** in scoped Transactions — not reflected in prior drafts. Current 30-share lot (Aug
+2026 entry) is a **re-entry** after a full exit ~6.5 months earlier, not a first-time exposure.
+Motive for the February sale is **not recorded** here.
 
-**What has NOT changed:** Bill has not stated his own thesis, his style tag, his ceiling, his
-levels, or his exit conditions. Those remain `[BILL]`. The source is an article, not Bill's
-reasoning, and this file does not pretend otherwise. **Do not read the drafted sections as
-Bill's stated intent.**
+**Still `[BILL]`:** style key, `style_size_ceiling_pct`, price levels, scaling, rotation priority,
+exit conditions.
 
 ---
 
@@ -52,213 +52,154 @@ Derived arithmetic at that ratio, **not a target and not a forecast**:
 | — | $100,000 → ≈ **$43.70/share** |
 
 The ratio **declines over time** as the 0.15% fee is paid in bitcoin, so this mapping drifts
-and must be re-derived, not cached. Every price figure in the source article below is a
-**bitcoin** price. Any `price_add_below` / `price_trim_above` written into the frontmatter
-must be a **share** price. Writing $100,000 into a trigger field would never fire.
+and must be re-derived, not cached. Every price figure in third-party research below that cites
+**bitcoin** prices must be converted before writing **share** trigger levels.
 
 ## Known Facts (sourced, not judgment)
 
-- **Size:** 30.0 shares, single lot, avg cost $34.995/share, cost basis $1,049.85.
-- **Current** (bundle `8b3a29284ad2…`, 2026-08-28 12:07 UTC): price $35.22, MV $1,056.60,
-  weight **0.17%**, unrealized **+$6.75 / +0.64%**.
-- **52-week context** (Valuation_Card, 2026-08-28 07:57): low $25.65, high $55.96,
-  52w position **32.0%**, **36.8%** off the high.
-- **Account:** Schwab hash `30498767` → suffix `...8767`, inside
-  `SCHWAB_PRIMARY_ACCOUNT_SUFFIXES`. In scope. **Taxable.**
-- **Acquisition date: still not recorded.** Position first appears in bundle `55874cf2a62f`
-  (2026-08-26 12:17 UTC), absent from `6bacf63dd536` (2026-08-25 12:48 UTC). That brackets
-  entry to a ~24h window but is not a fill record. `[BILL]` or a `Transactions` tab query.
-- **Timing note, offered as context and not as causation:** that entry window falls six days
-  after the 2026-08-19 White House crypto event described below. Bill has not stated a link
-  and none is inferred here.
+- **Instrument:** Grayscale Bitcoin Mini Trust ETF (`BTC`), not spot custody.
+- **Current lot:** 30.0 shares, avg cost $34.995/share, cost basis $1,049.85 (Aug 2026 entry window).
+- **Current** (bundle `8b3a29284ad2…`, 2026-08-28): price $35.22, MV $1,056.60, weight **0.17%**,
+  unrealized **+$6.75 / +0.64%**.
+- **52-week context** (Valuation_Card, 2026-08-28): low $25.65, high $55.96, 52w position **32.0%**,
+  **36.8%** off the high.
+- **Account:** Schwab suffix `...8767`, inside `SCHWAB_PRIMARY_ACCOUNT_SUFFIXES`. Taxable.
+- **Prior exposure (Transactions, scoped accounts):** **2026-02-06 Sell, −10 shares @ $30.60.**
+  With the current 30-share Aug 2026 lot as the only open position, the ledger implies a **prior
+  position was fully closed in February 2026** before this re-entry. Earlier buy dates for the
+  closed lot are not recorded in this file — query `Transactions` if needed.
+- **Re-entry window:** Position absent from bundle `6bacf63dd536` (2026-08-25); present in
+  `55874cf2a62f` (2026-08-26) — brackets Aug buy to ~24h, not a substitute for fill records.
 
 ## Style
 
-`[BILL]` — **still unassigned, and still the blocking decision.** BTC remains excluded from
-the Style Size Ceiling Check for want of a style tag, and `style_size_ceiling_pct` cannot be
-set until this is.
+`[BILL]` — **still unassigned.** BTC remains excluded from the Style Size Ceiling Check until
+Bill assigns a style key. GLD precedent (`ETF`, `trigger_type: price`) is the obvious candidate
+for a non-earnings monetary proxy; not applied here without Bill's call.
 
-The 2026-08-27 scaffold's caution stands: whether any of the four keys should apply to a
-spot-bitcoin proxy is itself a decision, not a formality. **The available precedent is GLD** —
-also a non-earnings hard-asset proxy, also `trigger_type: price` by argued exception, tagged
-`ETF` with an 8.0% ceiling and governed by a size-and-role rule rather than by its own price
-band. That is the obvious candidate. It is not applied here because Bill has not said so, and
-because an 8.0% ceiling on a 0.17% position governs nothing either way for now.
+## Core Thesis
 
-## Core Thesis (DRAFTED FROM SOURCE — not Bill's words)
+**Bitcoin is a high-volatility, non-yielding monetary asset whose long-run upside depends on broader adoption as a globally liquid, credibly scarce store of value—while its downside depends on that adoption stalling, regulation becoming hostile, or demand proving mainly speculative.**
 
-*What the supplied source supports, stated no more strongly than the source states it.*
+The investable version is not "BTC replaces all money." It is: **a relatively small but growing share of global savings, collateral, and reserve assets may seek exposure to an asset with a fixed issuance schedule, portable self-custody, and no central issuer.** Bitcoin's original design was peer-to-peer electronic cash, but the strongest contemporary investment case is closer to "digital monetary commodity" or "digital gold." [bitcoin](https://bitcoin.org/bitcoin.pdf)
 
-A starter-size, policy-optionality position in a liquid, low-fee bitcoin proxy, entered
-during a sentiment shift driven by U.S. regulatory developments rather than by anything
-intrinsic to bitcoin.
+## The bull case
 
-**The source's own argument is cautionary, and it is reproduced here rather than inverted.**
-Its central claim is that *nothing fundamental changed*: no blockchain upgrade, no halving
-event approaching, and bitcoin treasury companies still cutting back their purchase
-appetite. On its telling the entire move is sentiment and risk appetite, with the possible
-passage of the Clarity Act as the primary catalyst — and it closes by asking whether that is
-already priced in, and advising that expectations be kept in check.
+1. **Credible scarcity**
+   - Bitcoin's protocol targets a maximum supply of 21 million BTC and reduces issuance over time through halvings.
+   - Unlike fiat currencies, bank deposits, or most financial assets, issuance is not governed by a central bank, corporation, or commodity producer responding to price.
+   - The key distinction is not merely that supply is limited; it is that the rules are broadly visible, rule-based, and expensive for the network's economic participants to change.
 
-A thesis written from this material honestly is therefore an **event-driven regulatory
-optionality** thesis at deliberately small size, not a store-of-value or debasement thesis.
-Those would be different arguments requiring different evidence, and the source makes
-neither. `pattern:` is deliberately left unset for that reason — `debasement_hedge` would be
-imported from GLD, not derived from anything here.
+2. **A monetary asset suited to the internet**
+   - BTC can be transferred globally, settled without a traditional banking intermediary, divided into very small units, and held directly by its owner.
+   - It combines some attributes of gold—scarcity and no issuer—with native digital transferability and verifiability.
+   - This makes it potentially useful for cross-border savings, capital mobility, collateral, and reserve diversification, especially where local money or banking systems are weak.
 
-## Bull Case (as the source frames it, with verified specifics)
+3. **Network effects and liquidity**
+   - Bitcoin has the longest operating history, largest recognition, deepest liquidity, and broadest infrastructure among cryptoassets.
+   - The investment thesis strengthens as more holders, custodians, exchanges, payment rails, derivatives markets, miners, regulated investment products, and corporate or sovereign allocators participate.
+   - A store-of-value asset does not need universal adoption. It only needs a meaningful and persistent share of global wealth to choose it as a savings vehicle. Fidelity frames this as Bitcoin's "aspirational store of value" case. [fidelitydigitalassets](https://www.fidelitydigitalassets.com/research-and-insights/bitcoin-investment-thesis-bitcoin-aspirational-store-value-system)
 
-- **Regulatory clarity is the stated catalyst.** The Digital Asset Market Clarity Act would
-  establish market-structure regulation split between the SEC and CFTC, removing the
-  regulatory grey areas around holding and trading digital assets for institutions.
-- **Explicit executive backing.** At a 2026-08-19 White House crypto event with SEC Chair
-  Paul Atkins, CFTC Chair Michael Selig, and the CEOs of Coinbase, Kraken, Robinhood, Ripple
-  and Chainlink, Trump pressed Congress to pass the Act, calling it "very, very powerful
-  structured legislation."
-  ([CoinDesk](https://www.coindesk.com/policy/2026/08/19/trump-pushes-congress-to-move-on-clarity-act-during-white-house-crypto-event))
-- **Flows turned.** US spot bitcoin ETFs took in **$1.92B** in the week ending 2026-08-24 —
-  the strongest week since October 2025, led by IBIT at $1.33B across five straight days.
-  ([Cointelegraph](https://cointelegraph.com/markets/bitcoin-etf-inflows-billion-strongest-week-october))
-- **Price responded.** Bitcoin rose more than 20% over that week, from roughly $63,000 to
-  briefly above $79,000.
-  ([Yahoo Finance](https://finance.yahoo.com/markets/crypto/articles/bitcoins-14-775-weekly-surge-043931784.html))
-- **A dateable catalyst exists**, which the source article does not mention: the Senate has
-  set a **cloture vote for 2026-09-15**.
+4. **Asymmetric portfolio exposure**
+   - If BTC remains a niche speculative asset, it can decline severely.
+   - If it becomes a recognized reserve-style asset alongside gold, sovereign debt, and other stores of value, its market capitalization could rise substantially from a lower base.
+   - That creates a potential asymmetric payoff—but only for an allocation small enough that a major drawdown does not impair the overall portfolio.
 
-## Key Risks
+5. **Macro optionality**
+   - BTC may benefit when investors worry about currency debasement, capital controls, banking fragility, geopolitical fragmentation, or the long-run credibility of sovereign debt and monetary policy.
+   - It should not be described as a reliable short-term inflation hedge: its trading behavior is often dominated by liquidity, risk appetite, leverage, and market positioning. The macro case is better thought of as a **long-duration hedge against monetary-system uncertainty**, not a month-to-month CPI trade.
 
-**The three corrections below are the most important content in this file.** Each is a place
-where the supplied source is weaker than it reads, and all three cut against the position.
+## The bear case
 
-1. **The Strategic Bitcoin Reserve is not a new buyer, and is not new.** The source says
-   Trump "hinted that the U.S. government might start accumulating Bitcoin for the Strategic
-   Bitcoin Reserve." The Reserve was in fact **established by executive order on 2025-03-06**
-   — roughly 17 months before the event described — with an initial tranche of ~200,000 BTC
-   drawn **entirely from criminal and civil forfeitures** (Silk Road, Bitfinex recovery, and
-   smaller actions). The EO does direct Treasury and Commerce to develop *budget-neutral*
-   acquisition strategies, but that language is also 17 months old, and reporting at the
-   18-month mark describes **no authority to buy**. Purchases at scale would require separate
-   legislation — Senator Lummis's BITCOIN Act, which would direct 200,000 BTC/year for five
-   years, has not passed. **Read plainly: there is no announced government bid.** The source's
-   framing implies incremental demand that the underlying policy does not contain.
-   ([The Block](https://www.theblock.co/learn/407371/what-is-the-u-s-strategic-bitcoin-reserve),
-   [Crypto Impact Hub](https://cryptoimpacthub.com/strategic-bitcoin-reserve-reality-check-2026/))
+| Risk | Why it matters | What would validate it |
+|---|---|---|
+| No intrinsic cash flow | BTC produces no earnings, dividends, coupon, or contractual claim on assets | Investors continue valuing it primarily as a trade rather than a durable monetary asset |
+| Extreme volatility | Large drawdowns can force selling, undermine institutional use, and make adoption psychologically difficult | Volatility stays persistently too high for reserve or collateral use |
+| Store-of-value competition | Gold, short-duration government debt, stablecoins, other crypto networks, and future digital money compete for savings demand | BTC's share of crypto and alternative-store-of-value demand erodes |
+| Regulatory and custody risk | Access often relies on exchanges, ETFs, banks, miners, and custodians even if the protocol itself is decentralized | Major jurisdictions restrict ownership, on/off-ramps, custody, mining, or institutional distribution |
+| Security-budget transition | Over time Bitcoin relies increasingly on transaction fees rather than new issuance to pay miners | Hashrate/security weaken materially, or fee economics fail to support robust network security |
+| Concentration and leverage | Whales, ETF flows, derivatives liquidations, and leverage can amplify price moves | Market structure remains dominated by reflexive flows rather than organic adoption |
+| Narrative failure | "Digital gold" is not guaranteed; money is a social and institutional convention | Adoption fails to expand through multiple economic cycles |
 
-2. **The Clarity Act is priced as unlikely to pass, not as priced in.** The source asks
-   rhetorically whether passage is "already priced in." The better-specified answer is that
-   prediction markets put passage **below 20%**, down from a high of 58%, with year-end odds
-   around **17.5–18%**. The 2026-09-15 vote is a **cloture vote on the motion to proceed** —
-   it needs 60 votes merely to open debate, and does not pass the bill. Republicans need
-   Democratic votes that are not currently there. Brian Armstrong (Coinbase) predicting
-   passage is an interested party, not evidence.
-   **The asymmetry runs the other way from the article's framing:** the catalyst is not
-   over-priced, it is improbable — which is a different risk (event failure) than the one the
-   source describes (exhausted upside).
-   ([DeFi Rate](https://defirate.com/clarity-act-fact-sheet/),
-   [Motley Fool](https://www.fool.com/investing/2026/08/22/senators-plan-a-clarity-act-vote-on-sept-15/))
+The central bear rebuttal is simple: **scarcity alone does not create value.** Beanie Babies were scarce; value requires durable demand. BTC's long-term value must be supported by increasing willingness to hold it, accept it, custody it, or use it as collateral.
 
-3. **One good week does not reverse the year.** The $1.92B weekly inflow is real and is
-   correctly reported. But **US spot bitcoin ETFs remain roughly −$2.91B in net outflows for
-   2026**. The "best week since October 2025" framing is true and simultaneously flattering:
-   it is a strong week inside a bad year, and the source omits the denominator.
-   ([Decrypt](https://decrypt.co/376683/bitcoin-etfs-draw-2-8b-in-eight-day-streak-as-btc-tests-80k))
+## What would prove it right
 
-**Further risks, on the source's own terms:**
+Judged against observable milestones, not price targets alone:
 
-4. **The source concedes the thesis is sentiment.** No blockchain upgrade, no halving
-   approaching, treasury companies reducing purchase appetite. A position whose stated
-   catalyst is a sub-20% legislative event and whose acknowledged driver is risk appetite is
-   exposed to a sentiment reversal with no fundamental floor to fall back on.
-5. **Attribution error in the move.** The source attributes the full ~20% gain to the
-   2026-08-19 event. Bitcoin rose ~5% on the day of the meeting and ~12% over two days; the
-   20% is the cumulative week 08-17 to 08-24. Some of the move is not event-attributable.
-6. **September is a volatility cluster,** not a single event: the CLARITY cloture vote and an
-   FOMC decision land in the same month.
-7. **Structural drag.** 0.15%/yr, paid in bitcoin, permanently reducing BTC-per-share. Small,
-   but it is the one certainty in this file.
-8. **Taxable account, single lot, no acquisition date on record.** Holding period is
-   therefore unverified. Under Schwab's **Tax Lot Optimizer** (doctrine `cost_basis_method`,
-   established 2026-08-27 — **not FIFO**), a single-lot position offers no lot selection
-   anyway. At +$6.75 unrealized the tax consequence of any action is immaterial today; the
-   missing acquisition date matters for the ST/LT boundary, not for lot choice.
+- A rising share of long-term, non-speculative ownership rather than leverage-driven trading.
+- Deepening global liquidity and resilient trading across venues and jurisdictions.
+- Continued security: strong hashrate, distributed mining, and no material protocol compromise.
+- Growing institutional infrastructure: qualified custody, derivatives, accounting clarity, lending/collateral acceptance, and regulated access.
+- Measurable adoption in savings, treasury management, remittances, and cross-border settlement.
+- BTC retaining its relative dominance as the primary non-sovereign monetary cryptoasset.
+- Resilience through severe risk-off periods, political pressure, and market drawdowns.
+
+A healthy thesis does **not** require BTC to become a daily medium of exchange everywhere. It requires it to become sufficiently trusted as a monetary reserve asset for a persistent minority of global capital.
+
+## What breaks the thesis
+
+Invalidation criteria:
+
+- A credible technical or cryptographic failure that compromises ownership, issuance rules, or settlement finality.
+- Sustained loss of liquidity, security, or developer/miner participation.
+- Structural regulatory restrictions across major capital markets that materially reduce legal access and institutional ownership.
+- A superior competing asset meaningfully captures the "neutral, scarce digital reserve asset" role.
+- The market repeatedly fails to show durable demand beyond liquidity cycles and speculative leverage.
+- Political consensus changes the 21 million cap or other core monetary rules in a way that damages confidence in Bitcoin's credibility.
+
+## Practical conclusion
+
+> **BTC is a venture-style position in the monetization of a decentralized digital commodity.** Its core advantage is credible scarcity combined with global, bearer-style digital transferability. Its value rises if more investors and institutions treat it as a long-term reserve asset; it falls if that social consensus, access, security, or relative dominance weakens. Because BTC has no cash flows and can suffer very large drawdowns, position sizing and custody discipline matter more than conviction alone.
+
+The most defensible portfolio framing: **small, deliberate, long-horizon exposure; no leverage; explicit rebalancing rules; and a willingness to own zero if invalidation criteria are met.** The case is inherently probabilistic, not a certainty or a guaranteed hedge.
 
 ## What I Watch
 
-`[BILL]` to confirm or replace. Candidates implied by the source, offered as a starting list:
-
-- The 2026-09-15 cloture vote outcome, and whether it is a cloture failure or a
-  postponement — those are different signals.
-- Whether any **statutory purchase authority** advances (BITCOIN Act or equivalent). This is
-  the item that would change risk 1 from "no bid" to "bid."
-- Spot-ETF net flows on a **cumulative 2026** basis, not weekly. Weekly prints are noise at
-  this position size.
-- BTC-per-share ratio drift, since every level in this file depends on it.
+`[BILL]` to confirm or replace. The milestone list under **What would prove it right** is the
+starting watchlist from Bill's 2026-08-29 thesis. Instrument-specific: BTC-per-share ratio drift
+(since every share-price level depends on it).
 
 ## Scaling State
 next_step: `[BILL]`
-
-**Unset by design.** The size-and-role question — is this a 0.17% option premium on a
-regulatory event, or a starter position building toward a real weight like GLD's stated 3–5%
-path? — is exactly the judgment the source cannot supply and Bill has not stated. It also
-determines the ceiling. Nothing here should be read as a build path.
 
 ## Rotation Priority
 priority: `[BILL]`
 
 ## Exit Conditions
-`[BILL]` — none written. Note for whenever these are set: an event-driven position with a
-dated catalyst usually wants an exit condition keyed to **the event resolving**, not to a
-price level, or the catalyst passes and the position silently becomes a permanent
-unexamined holding. Flagging the shape of the question, not answering it.
+`[BILL]` — none written. Bill's invalidation criteria above define what would break the thesis;
+operational exit rules (size, timing, share-price bands) remain unset.
 
-## Research Inputs
+## Research Inputs (superseded 2026-08-29)
 
-**Primary source:** Motley Fool, 2026-08-27, on the post-Clarity-Act sentiment shift —
-supplied by Bill 2026-08-28. Third-party opinion, treated per house rule as a **claim, not a
-datum**. Verification below.
+*The 2026-08-28 Motley Fool redraft (regulatory-event / Clarity Act framing) is archived here
+for audit trail only. It does **not** state Bill's current thesis voice. Pre-edit file:
+`vault/theses/archive/BTC_thesis.md.bak.2026-08-29`.*
+
+**Primary source (superseded):** Motley Fool, 2026-08-27 — verification table from 2026-08-28 pass:
 
 | # | Source claim | Verdict | Correction |
 |---|---|---|---|
 | 1 | White House crypto event 2026-08-19; Trump backed the Clarity Act | **CONFIRMED** | Attendees and quote verified. |
-| 2 | Trump "hinted the U.S. might start accumulating Bitcoin for the Strategic Bitcoin Reserve" | **CONTRADICTED** | Reserve established by EO 2025-03-06; ~200,000 BTC all from forfeitures; no purchase authority 18 months in. No announced government bid. |
-| 3 | "Quick gain of 20% in the price of Bitcoin" caused by the event | **OVERSTATED** | ~20% is the week 08-17→08-24 (~$63K → >$79K). Event day ~+5%; two days ~+12%. |
-| 4 | Spot bitcoin ETFs recorded their best week since October 2025 | **CONFIRMED (context omitted)** | $1.92B, correct. But 2026 net flows remain ≈ **−$2.91B**. |
-| 5 | Primary catalyst is possible passage of the Clarity Act; "isn't that already priced in?" | **CONFIRMED as catalyst / MISFRAMED as risk** | Passage priced **below 20%** (from 58%); year-end ≈17.5–18%. 09-15 is a **cloture** vote needing 60 to open debate. Risk is event failure, not exhausted upside. |
-| 6 | No blockchain upgrade, no halving approaching, treasury companies cutting purchases | **UNVERIFIED** | Not independently checked this pass. Directionally consistent with the sentiment framing; treat as the author's characterisation. |
-| 7 | Kalshi odds for bitcoin ≥$100K: 5% by Oct, 16% pre-Nov, 18% pre-Dec, 30% by Jan 2027; year-end 45% <$80K / 30% $80–100K / 25% >$100K | **RECORDED, NOT VERIFIED** | Third-party prediction-market prices as quoted by the author on 2026-08-27. Internally consistent (45+30+25=100). **Not verified against Kalshi and not re-checkable at this date.** Recorded as what one market priced on one day — **not a forecast, not a target, and explicitly not eligible to become a trigger level.** These decay within days. |
-
-**House rule applied:** no figure in this table may be promoted into a trigger, a target, or
-a sizing decision. Per `CLAUDE.md`, a trigger must never read a third-party price target or
-forecast — the `VST_thesis.md` `consensus_price_target` failure is the standing proof, and
-prediction-market quotes are the same species of number.
+| 2 | Trump "hinted the U.S. might start accumulating Bitcoin for the Strategic Bitcoin Reserve" | **CONTRADICTED** | Reserve established by EO 2025-03-06; forfeiture-sourced; no purchase authority 18 months in. |
+| 3 | "Quick gain of 20% in the price of Bitcoin" caused by the event | **OVERSTATED** | ~20% is the week 08-17→08-24; event day ~+5%. |
+| 4 | Spot bitcoin ETFs best week since October 2025 | **CONFIRMED (context omitted)** | $1.92B week; 2026 net flows still ≈ **−$2.91B**. |
+| 5 | Clarity Act "already priced in?" | **MISFRAMED** | Passage priced below 20%; 09-15 is cloture only. |
+| 6 | No blockchain upgrade, no halving, treasury companies cutting purchases | **UNVERIFIED** | Author characterisation only. |
+| 7 | Kalshi odds (various) | **RECORDED, NOT VERIFIED** | Not eligible for trigger levels. |
 
 ## Review Log
 
-- **2026-08-28: Drafted from Bill-supplied source; scaffold superseded.** Pre-edit file backed
-  up to `BTC_thesis.md.bak.2026-08-28T08-40-00` (10 `[BILL]` markers, scaffold header) per
-  archive-before-overwrite. Verified all seven source claims against primary reporting before
-  writing: **1 contradicted** (Strategic Bitcoin Reserve — the source implies a government bid
-  that does not exist; Reserve predates the event by 17 months and is forfeiture-sourced with
-  no purchase authority), **1 overstated** (20% attributed to the event day; it is a weekly
-  figure), **1 confirmed-but-context-omitted** (ETF week strong, 2026 still ≈−$2.91B net),
-  **1 misframed** (Clarity Act priced below 20% to pass — the risk is event failure, not
-  "already priced in"), 2 confirmed, 1 recorded-unverified (Kalshi). Set
-  `trigger_type: price` by the same argued exception as GLD and JPIE — bitcoin has no
-  earnings, so `fwd_pe` / `trailing_pe` / PEG are impossible and a price band is the only
-  option available (`prompts/trigger_types_2026-08-09.md`). Set
-  `framework_preference: macro_hedge_v1` to match the only comparable non-earnings asset in
-  the vault. Added the BTC-per-share mapping because the source discusses bitcoin at
-  $79K–$100K while the instrument trades near $35 — a level written from the source without
-  that conversion could never fire. **Left `[BILL]`:** style key, `style_size_ceiling_pct`,
-  both price levels, `discount_from_52w_high_add`, `entry_date`, `time_horizon`, scaling
-  next_step, rotation priority, and exit conditions. `pattern:` deliberately left unset —
-  `debasement_hedge` would be imported from GLD, not derived from this source, which makes a
-  regulatory-event argument and not a store-of-value one. No price target, forecast, or
-  buy/sell recommendation is expressed anywhere in this file.
-- 2026-08-27: Scaffold file created. Position first appears in bundle `55874cf2a62f`
-  (2026-08-26 12:17 UTC), absent from `6bacf63dd536` (2026-08-25 12:48 UTC); flagged by
-  `detect_undocumented_changes.py` as `NEW_POSITION_NO_THESIS` and by `level_coverage` as
-  `no_thesis` / `no_trim_level` / `no_add_level` / `stale_review`. No prose invented.
+- **2026-08-29: Bill-authored thesis + history correction.** Archived prior file to
+  `vault/theses/archive/BTC_thesis.md.bak.2026-08-29`. **Voice:** replaced Motley Fool
+  regulatory-optionality draft with Bill's store-of-value / digital monetary commodity thesis
+  (2026-08-29). **History:** added 2026-02-06 Sell −10 @ $30.60 from scoped Transactions;
+  reframed Aug 2026 entry as re-entry after full February exit — not first-time exposure.
+  Motley Fool material moved to **Research Inputs (superseded)**; verification table retained.
+  **`[BILL]` unchanged:** style, ceiling, price levels, scaling, rotation, exit rules.
+- **2026-08-28: Drafted from Bill-supplied Motley Fool source; scaffold superseded.** See
+  archived `BTC_thesis.md.bak.2026-08-28T08-40-00`. Superseded for thesis voice by 2026-08-29 entry.
+- **2026-08-27: Scaffold file created** — `NEW_POSITION_NO_THESIS` flag; no prose invented.
 
 <!-- region:position_state -->
 **Current Allocation:** 0.17%
@@ -268,13 +209,18 @@ prediction-market quotes are the same species of number.
 <!-- region:sizing -->
 **Style:** None
 **Size Ceiling:** 0.00%
-**Drift:** +0.17%
+**Drift:** +0.00%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
-No transaction log available — Schwab lot record carries no acquisition date and the Sheets `Transactions` tab was not queried in this pass. Populate on next `write_thesis_updates.py` sync.
+- 2026-08-25: Buy 30.0 @ $34.99
+- 2026-02-06: Sell -10.0 @ $30.60
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
-No realized G/L history.
+Total Realized G/L: $-185.56 over 1 closed lots. Total Proceeds: $306.00.
 <!-- endregion:realized_gl -->
+
+<!-- region:change_log -->
+2026-09-02 11:36: Auto-sync allocation 0.17%, drift +0.00%
+<!-- endregion:change_log -->

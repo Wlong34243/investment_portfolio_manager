@@ -3,9 +3,9 @@ ticker: NOW
 style: GARP
 framework_preference:
 entry_date:
-last_reviewed: '2026-08-21'
-cost_basis: 2735.4
-current_allocation: 0.65%
+last_reviewed: '2026-09-02'
+cost_basis: 4198.3
+current_allocation: 0.93%
 triggers:
   trigger_type: ceiling_only
   style_size_ceiling_pct: 9.0
@@ -63,17 +63,18 @@ Funding source of choice for higher-conviction ideas. The 2026-06-25 sell alread
 - 2026-08-09: trigger_type: ceiling_only, not trailing_pe. Band computed from FY2022-2025 annual EPS (n=4, range 76.4-171.1) but live current trailing P/E sits 2% off the historical min -- an add-below-p25 trigger (92.8) would fire immediately and stay fired. Reference only. Computed 2026-08-09: trailing P/E min/p25/median/p75/max = 76.4/92.8/119.4/135.9/171.1, live current 78.1 @ $124.88. See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
-**Current Allocation:** 0.65%
-**Cost Basis:** $2,735.40
+**Current Allocation:** 0.93%
+**Cost Basis:** $4,198.30
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** GARP
 **Size Ceiling:** 9.00%
-**Drift:** -8.35%
+**Drift:** -8.07%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
+- 2026-09-01: Buy 10.0 @ $146.29
 - 2026-07-31: Sell -35.0 @ $109.43
 - 2026-06-25: Sell -100.0 @ $90.61
 - 2026-06-02: Buy 4.0 @ $128.90
@@ -93,14 +94,13 @@ Funding source of choice for higher-conviction ideas. The 2026-06-25 sell alread
 - 2026-04-21: Buy 9.0 @ $100.33
 - 2026-04-21: Buy 10.0 @ $100.61
 - 2026-04-21: Buy 1.0 @ $100.33
-- 2026-04-20: Buy 10.0 @ $99.27
-(showing 20 most recent of 27)
+(showing 20 most recent of 28)
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
-Total Realized G/L: $154.96 over 18 closed lots. Total Proceeds: $21,718.36.
+Total Realized G/L: $251.41 over 22 closed lots. Total Proceeds: $26,130.98.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-21 08:45: Auto-sync allocation 0.65%, drift -8.35%
+2026-09-02 11:36: Auto-sync allocation 0.93%, drift -8.07%
 <!-- endregion:change_log -->

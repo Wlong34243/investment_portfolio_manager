@@ -3,9 +3,9 @@ ticker: JEPI
 style: ETF
 framework_preference:
 entry_date:
-last_reviewed: '2026-08-21'
-cost_basis: 25923.0
-current_allocation: 4.43%
+last_reviewed: '2026-09-02'
+cost_basis: 18840.120000004
+current_allocation: 3.21%
 triggers:
   trigger_type: ceiling_only
   style_size_ceiling_pct: 8.0
@@ -46,17 +46,19 @@ priority: low
 - 2026-08-09: trigger_type set explicit: ceiling_only (income/ballast; no clean valuation anchor for a covered-call overlay fund). See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
-**Current Allocation:** 4.43%
-**Cost Basis:** $25,923.00
+**Current Allocation:** 3.21%
+**Cost Basis:** $18,840.12
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** ETF
 **Size Ceiling:** 8.00%
-**Drift:** -3.57%
+**Drift:** -4.79%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
+- 2026-08-31: Sell -75.0 @ $57.55
+- 2026-08-28: Sell -50.0 @ $57.79
 - 2026-08-06: Sell -50.0 @ $57.60
 - 2026-08-05: Sell -150.0 @ $57.43
 - 2026-08-04: Sell -100.0 @ $57.25
@@ -75,15 +77,13 @@ priority: low
 - 2026-06-29: Buy 90.0 @ $56.34
 - 2026-06-24: Buy 20.0 @ $56.05
 - 2026-06-18: Buy 25.0 @ $56.19
-- 2026-06-16: Buy 100.0 @ $56.58
-- 2026-06-16: Buy 70.0 @ $56.67
-(showing 20 most recent of 25)
+(showing 20 most recent of 27)
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
-Total Realized G/L: $293.55 over 9 closed lots. Total Proceeds: $20,762.79.
+Total Realized G/L: $1,385.76 over 23 closed lots. Total Proceeds: $166,451.03.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-21 08:45: Auto-sync allocation 4.43%, drift -3.57%
+2026-09-02 11:36: Auto-sync allocation 3.21%, drift -4.79%
 <!-- endregion:change_log -->

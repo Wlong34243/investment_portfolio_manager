@@ -15,7 +15,7 @@ Checks (per file):
                              (extract_section() matches on a prefix).
   4. Unresolved [BILL] placeholders -- informational, not a failure. They
                              are deliberate: Bill's decisions, not ours.
-  5. Stale review dates   -- last_reviewed older than 90 days.
+  5. Stale ratification     -- last_ratified absent or older than 90 days.
   6. Unparseable frontmatter under ruamel -- same loader as ThesisManager /
                              vault sync. Catches duplicate YAML keys that the
                              flat-line parser silently misses (NOW 2026-08-11).
@@ -52,6 +52,20 @@ _WEIGHT_CLAIM_RE = re.compile(
     re.IGNORECASE,
 )
 
+_DIRECTIVE_PHRASES = [
+    (re.compile(r"will not trim", re.I), "trim_trigger_role"),
+    (re.compile(r"won't trim", re.I), "trim_trigger_role"),
+    (re.compile(r"do not trim", re.I), "trim_trigger_role"),
+    (re.compile(r"will not add", re.I), "add_triggers_suspended"),
+    (re.compile(r"do not add", re.I), "add_triggers_suspended"),
+    (re.compile(r"governing rule", re.I), "trim_trigger_role"),
+    (re.compile(r"does not override", re.I), "trim_trigger_role"),
+    (re.compile(r"stand down", re.I), "trim_trigger_role"),
+    (re.compile(r"not a sale candidate", re.I), "trim_trigger_role"),
+    (re.compile(r"not a trim candidate", re.I), "trim_trigger_role"),
+]
+# Shared with tasks/gather_decision_candidates.py — import, do not duplicate.
+DIRECTIVE_PHRASE_PATTERNS = _DIRECTIVE_PHRASES
 _COMBINED_HEADER_RE = re.compile(
     r"^##\s+(Scaling State\s*(?:&|and)\s*(?:Rotation\s+)?Priority.*|"
     r"Rotation Priority\s*(?:&|and)\s*Scaling State.*)$",
@@ -162,21 +176,23 @@ def lint_file(path):
     # 4. Unresolved [BILL] placeholders (informational)
     bill_count = len(re.findall(r"\[BILL\]", body))
 
-    # 5. Stale review date
-    stale_review = None
-    last_reviewed = fm.get("last_reviewed")
-    if last_reviewed:
+    # 5. Ratification staleness (last_ratified — written only by desk ratification)
+    stale_ratify = None
+    last_ratified = fm.get("last_ratified")
+    if not last_ratified:
+        findings.append("NEVER RATIFIED: last_ratified absent")
+    else:
         try:
-            dt = datetime.strptime(last_reviewed[:10], "%Y-%m-%d")
+            dt = datetime.strptime(str(last_ratified)[:10], "%Y-%m-%d")
             age_days = (datetime.now() - dt).days
             if age_days > STALENESS_DAYS:
-                stale_review = age_days
+                stale_ratify = age_days
         except ValueError:
-            pass
-    if stale_review is not None:
+            findings.append("NEVER RATIFIED: last_ratified unparseable")
+    if stale_ratify is not None:
         findings.append(
-            "STALE REVIEW: last_reviewed is %d days old (> %d day threshold)"
-            % (stale_review, STALENESS_DAYS)
+            "STALE RATIFICATION: last_ratified is %d days old (> %d day threshold)"
+            % (stale_ratify, STALENESS_DAYS)
         )
 
     # 6. Frontmatter must parse under the same ruamel path as vault sync
@@ -188,6 +204,39 @@ def lint_file(path):
             findings.append("UNPARSEABLE FRONTMATTER: %s" % fm_err)
     except Exception as e:
         findings.append("UNPARSEABLE FRONTMATTER: %s" % e)
+
+    # 7. Directive prose below the read-line (outside regions)
+    region_spans = [
+        (m.start(), m.end())
+        for m in re.finditer(r"<!--\s*region:.*?endregion:.*?-->", body, re.DOTALL)
+    ]
+
+    def _outside_regions(pos: int) -> bool:
+        return not any(start <= pos < end for start, end in region_spans)
+
+    triggers_fm = fm.get("triggers") if isinstance(fm.get("triggers"), dict) else {}
+    for line_idx, line in enumerate(body.splitlines()):
+        pos_in_body = sum(len(l) + 1 for l in body.splitlines()[:line_idx])
+        if not _outside_regions(pos_in_body):
+            continue
+        for pat, implied_key in _DIRECTIVE_PHRASES:
+            m = pat.search(line)
+            if not m:
+                continue
+            if implied_key == "trim_trigger_role":
+                cur = triggers_fm.get("trim_trigger_role")
+            else:
+                cur = triggers_fm.get("add_triggers_suspended")
+            cur_disp = cur if cur is not None else "ABSENT"
+            quote_words = line.strip().split()
+            quote = " ".join(quote_words[:15])
+            if len(quote_words) > 15:
+                quote += "…"
+            findings.append(
+                "DIRECTIVE PROSE (line %d): phrase %r — %r implies %s=%s"
+                % (_file_line(pos_in_body), m.group(0), quote, implied_key, cur_disp)
+            )
+            break
 
     return {
         "ticker": ticker,

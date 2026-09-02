@@ -3,9 +3,9 @@ ticker: XBI
 style: ETF
 framework_preference:
 entry_date:
-last_reviewed: '2026-08-21'
-cost_basis: 16757.49
-current_allocation: 3.90%
+last_reviewed: '2026-09-02'
+cost_basis: 16757.490000000602
+current_allocation: 3.87%
 triggers:
   trigger_type: ceiling_only
   style_size_ceiling_pct: 8.0
@@ -48,14 +48,14 @@ priority: medium (due to high volatility, requires occasional rebalancing)
 - 2026-08-09: trigger_type set explicit: ceiling_only (~100-holding sector basket; no clean single-name-style valuation anchor). See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
-**Current Allocation:** 3.90%
+**Current Allocation:** 3.87%
 **Cost Basis:** $16,757.49
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** ETF
 **Size Ceiling:** 8.00%
-**Drift:** -4.10%
+**Drift:** -4.13%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -74,9 +74,9 @@ priority: medium (due to high volatility, requires occasional rebalancing)
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
-Total Realized G/L: $2,473.23 over 8 closed lots. Total Proceeds: $13,004.62.
+Total Realized G/L: $2,917.50 over 11 closed lots. Total Proceeds: $16,941.89.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-21 08:45: Auto-sync allocation 3.90%, drift -4.10%
+2026-09-02 11:36: Auto-sync allocation 3.87%, drift -4.13%
 <!-- endregion:change_log -->

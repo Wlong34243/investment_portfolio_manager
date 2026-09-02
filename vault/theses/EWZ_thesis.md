@@ -3,9 +3,9 @@ ticker: EWZ
 style: ETF
 framework_preference:
 entry_date:
-last_reviewed: '2026-08-21'
-cost_basis: 11967.41
-current_allocation: 1.81%
+last_reviewed: '2026-09-02'
+cost_basis: 11967.410000004
+current_allocation: 2.00%
 triggers:
   trigger_type: ceiling_only
   style_size_ceiling_pct: 8.0
@@ -51,14 +51,14 @@ priority: medium (requires monitoring of global FX and commodity trends)
 - 2026-08-21: **Documentation-currency correction, not a thesis-direction change.** The entry above described Brazil as "weighing a reported US trade investigation that could bring tariffs" — that was already out of date when it was written. USTR's Section 301 investigation concluded and the US imposed a 25% tariff on most Brazilian goods, effective mid/late July 2026. See the updated Key Risks / Political Interference note for exemption detail (~1,600 categories, including petroleum/coffee/beef/orange juice/civil aircraft) and the open, unsourced question of how much that exemption list blunts the hit to EWZ's top holdings. Bull Case and Core Thesis unchanged. Sources: CNBC, USTR, Federal Register.
 
 <!-- region:position_state -->
-**Current Allocation:** 1.81%
+**Current Allocation:** 2.00%
 **Cost Basis:** $11,967.41
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** ETF
 **Size Ceiling:** 8.00%
-**Drift:** -6.19%
+**Drift:** -6.00%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -90,5 +90,5 @@ Total Realized G/L: $145.37 over 9 closed lots. Total Proceeds: $10,169.92.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-21 08:45: Auto-sync allocation 1.81%, drift -6.19%
+2026-09-02 11:36: Auto-sync allocation 2.00%, drift -6.00%
 <!-- endregion:change_log -->

@@ -3,9 +3,9 @@ ticker: QQQM
 style: ETF
 framework_preference:
 entry_date:
-last_reviewed: '2026-08-21'
-cost_basis: 60871.26
-current_allocation: 10.61%
+last_reviewed: '2026-09-02'
+cost_basis: 60871.260000005
+current_allocation: 10.54%
 triggers:
   trigger_type: ceiling_only
   style_size_ceiling_pct: 8.0
@@ -51,14 +51,14 @@ priority: very low (core foundational holding)
 - 2026-08-24: Standing rationale for this breach acceptance moved to `vault/doctrine.md` (`no_withdrawal_need`, established 2026-08-19). Text unchanged; single-sourced.
 
 <!-- region:position_state -->
-**Current Allocation:** 10.61%
+**Current Allocation:** 10.54%
 **Cost Basis:** $60,871.26
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** ETF
 **Size Ceiling:** 8.00%
-**Drift:** +2.61%
+**Drift:** +2.54%
 <!-- endregion:sizing -->
 
 <!-- region:transaction_log -->
@@ -86,9 +86,9 @@ priority: very low (core foundational holding)
 <!-- endregion:transaction_log -->
 
 <!-- region:realized_gl -->
-Total Realized G/L: $220.45 over 34 closed lots. Total Proceeds: $43,098.08.
+Total Realized G/L: $1,609.90 over 42 closed lots. Total Proceeds: $58,418.41.
 <!-- endregion:realized_gl -->
 
 <!-- region:change_log -->
-2026-08-21 08:45: Auto-sync allocation 10.61%, drift +2.61%
+2026-09-02 11:36: Auto-sync allocation 10.54%, drift +2.54%
 <!-- endregion:change_log -->

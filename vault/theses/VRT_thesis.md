@@ -3,9 +3,9 @@ ticker: VRT
 style: THEME
 framework_preference: thematic_specialist_v1, lynch_garp_v1
 entry_date: 2026-05
-last_reviewed: '2026-08-21'
-current_allocation: 3.05%
-cost_basis: 19854.97
+last_reviewed: '2026-09-02'
+current_allocation: 2.92%
+cost_basis: 19854.970000001602
 time_horizon: 2 to 4 years
 triggers:
   trigger_type: fwd_pe
@@ -133,18 +133,18 @@ Tax posture if rotated: unrealized loss is roughly -$1,200 at $271.00 against a 
 - 2026-08-09: trigger_type set explicit: fwd_pe (argued exception to the THEME default of ceiling_only -- existing 28/50 band is a genuine, fully-populated anchor). See prompts/trigger_types_2026-08-09.md.
 
 <!-- region:position_state -->
-**Current Allocation:** 3.05%
+**Current Allocation:** 2.92%
 **Cost Basis:** $19,854.97
 <!-- endregion:position_state -->
 
 <!-- region:sizing -->
 **Style:** THEME
 **Size Ceiling:** 3.00%
-**Drift:** +0.05%
+**Drift:** -0.08%
 <!-- endregion:sizing -->
 
 <!-- region:change_log -->
-2026-08-21 08:45: Auto-sync allocation 3.05%, drift +0.05%
+2026-09-02 11:36: Auto-sync allocation 2.92%, drift -0.08%
 <!-- endregion:change_log -->
 
 <!-- region:transaction_log -->
