@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 from collections import defaultdict
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 from fastapi import FastAPI, Query, Request
 from fastapi.responses import HTMLResponse, StreamingResponse
@@ -38,6 +38,9 @@ templates.env.filters["delta_bar_width"] = desk_fmt.delta_bar_width
 UI_WRITE_ROUTE_ALLOWLIST: frozenset[tuple[str, str]] = frozenset({
     ("POST", "/ask"),
     ("POST", "/run/{routine_id}"),
+    ("POST", "/why/position"),
+    ("POST", "/why/rotation"),
+    ("POST", "/decision/ratify"),
 })
 
 app = FastAPI(title="Investment Portfolio — Local Command Center", docs_url=None, redoc_url=None)
@@ -278,6 +281,84 @@ def ask_submit(request: Request, question: str = ""):
         status=result.get("status"),
     )
     return _render(request, "ask.html", ctx)
+
+
+class WhyPositionRequest(BaseModel):
+    ticker: str
+    answer: str
+    live: bool = True
+
+
+class WhyRotationRequest(BaseModel):
+    trade_log_id: str
+    fingerprint: str
+    implicit_bet: str
+    thesis_brief: str = ""
+    live: bool = True
+
+
+@app.post("/why/position")
+def why_position(body: WhyPositionRequest) -> dict[str, Any]:
+    from ui.runner import insert_desk_write_run
+    from ui.why_cards import write_position_answer
+
+    args = {"ticker": body.ticker.strip().upper(), "live": str(body.live)}
+    run_id = insert_desk_write_run("why-position", args)
+    result = write_position_answer(body.ticker, body.answer, live=body.live)
+    result["run_id"] = run_id
+    return result
+
+
+@app.post("/why/rotation")
+def why_rotation(body: WhyRotationRequest) -> dict[str, Any]:
+    from ui.runner import insert_desk_write_run
+    from ui.why_cards import write_rotation_answer
+
+    args = {
+        "trade_log_id": body.trade_log_id,
+        "fingerprint": body.fingerprint[:16] + "…",
+        "live": str(body.live),
+    }
+    run_id = insert_desk_write_run("why-rotation", args)
+    result = write_rotation_answer(
+        body.trade_log_id,
+        body.fingerprint,
+        body.implicit_bet,
+        body.thesis_brief,
+        live=body.live,
+    )
+    result["run_id"] = run_id
+    return result
+
+
+class DecisionRatifyRequest(BaseModel):
+    decision_id: str
+    action: str  # confirm | correct | reject
+    text: str = ""
+    decided_on: Optional[str] = None
+    live: bool = True
+
+
+@app.post("/decision/ratify")
+def decision_ratify(body: DecisionRatifyRequest) -> dict[str, Any]:
+    from ui.runner import insert_desk_write_run
+    from ui.assertion_cards import ratify_proposal
+
+    args = {
+        "decision_id": body.decision_id,
+        "action": body.action,
+        "live": str(body.live),
+    }
+    run_id = insert_desk_write_run("decision-ratify", args)
+    result = ratify_proposal(
+        body.decision_id,
+        body.action,
+        body.text,
+        body.decided_on,
+        live=body.live,
+    )
+    result["run_id"] = run_id
+    return result
 
 
 @app.get("/api/status")

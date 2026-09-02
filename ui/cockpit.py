@@ -178,9 +178,21 @@ def assemble_cockpit() -> dict[str, Any]:
         if tile.get("sparkline_key") == "portfolio_sparkline":
             tile["sparkline"] = portfolio_sparkline
     crosshairs = [crosshair_row(r, rank=i + 1) for i, r in enumerate(decision[:5])]
+    crosshair_tickers = {
+        str(r.get("Ticker") or r.get("ticker") or "").upper()
+        for r in decision
+        if (r.get("Ticker") or r.get("ticker"))
+    }
 
     ev = evidence_status()
     last_run = read_last_run()
+
+    from ui.ai_index_context import cockpit_ai_panel
+    from ui.why_cards import load_position_findings
+    from ui.assertion_cards import load_proposed_assertions, sort_assertions
+
+    open_questions = load_position_findings()
+    assertion_cards = sort_assertions(load_proposed_assertions(), crosshair_tickers)
 
     return {
         "kpis": kpis,
@@ -198,6 +210,11 @@ def assemble_cockpit() -> dict[str, Any]:
             "gate_remaining": ev.get("gate_remaining"),
         },
         "last_run": last_run,
+        "ai_index": cockpit_ai_panel(),
         "retrieval_hash": rs.retrieval_hash,
         "cash_scope_note": "Cash % is three of six Schwab accounts in scope — not net worth.",
+        "open_questions": open_questions,
+        "open_questions_count": len(open_questions),
+        "assertion_cards": assertion_cards,
+        "assertion_cards_count": len(assertion_cards),
     }

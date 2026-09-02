@@ -71,6 +71,96 @@
   {% endif %}
 </section>
 
+{% if assertion_cards_count %}
+<section>
+  <h3>Is this what we're saying? ({{ assertion_cards_count }})</h3>
+  <p class="banner">Ratifying writes vault/decisions/ and sets last_ratified on affected theses. Each submit logs a ui_runs row.</p>
+  {% for card in assertion_cards %}
+  <div class="assertion-card" style="margin-bottom:1rem;padding:0.75rem;border:1px solid var(--border,#333);border-radius:4px">
+    {% if card.signal_implicated %}<span class="tag tag-warn">In today's Crosshairs</span>{% endif %}
+    <p><strong>{{ card.tickers|join(', ') }}</strong> <span class="tag">{{ card.id }}</span></p>
+    {% if card.decided_on_status == 'unknown' %}
+    <p class="meta-line note">Record id date ({{ card.id[:10] }}) is extraction date — not decided_on. Supply the real decision date below.</p>
+    {% endif %}
+    <p><strong>Source (verbatim):</strong> {{ card.assertion }}</p>
+    {% if card.proposed_restatement %}
+    <p class="note"><strong>Model restatement (not binding):</strong> {{ card.proposed_restatement }}</p>
+    {% endif %}
+    <p class="meta-line">Conditions: {{ card.conditions_plain }}</p>
+    {% if card.decided_on_status == 'unknown' %}
+    <label>When did you decide this?<br><input type="date" id="decided-on-{{ card.id }}" required></label>
+    {% elif card.decided_on %}
+    <p class="meta-line">Decided: {{ card.decided_on }}</p>
+    {% endif %}
+    {% if card.unencodable_conditions %}
+    <p class="note"><strong>Not evaluated:</strong> {{ card.unencodable_conditions|join('; ') }}</p>
+    {% endif %}
+    {% if card.overrides %}<p class="meta-line">Overrides: {{ card.overrides|join(', ') }}</p>{% endif %}
+    {% if card.falsifier %}<p class="meta-line">Falsifier: {{ card.falsifier }}</p>{% endif %}
+    {% if card.source_ref %}<p class="meta-line"><a href="/doc/{{ card.source_ref }}">{{ card.source_ref }}</a></p>{% endif %}
+    <div style="margin-top:0.5rem">
+      <button type="button" onclick="ratifyDecision('{{ card.id }}', 'confirm', this)">Confirm</button>
+      <button type="button" onclick="ratifyDecision('{{ card.id }}', 'reject', this)" style="margin-left:0.4rem">Reject</button>
+    </div>
+    <label>Your restatement (optional — does not replace verbatim source)<br><textarea id="correct-{{ card.id }}" rows="2" style="width:100%">{{ card.proposed_restatement or '' }}</textarea></label>
+    <button type="button" onclick="ratifyDecision('{{ card.id }}', 'correct', this)" style="margin-top:0.4rem">Correct &amp; ratify</button>
+  </div>
+  {% endfor %}
+</section>
+<script>
+async function ratifyDecision(id, action, btn) {
+  const card = btn.closest('.assertion-card');
+  let text = '';
+  if (action === 'correct') {
+    text = document.getElementById('correct-' + id).value;
+  } else if (action === 'reject') {
+    text = prompt('Rejection reason (optional):') || '';
+  }
+  const body = { decision_id: id, action, text, live: true };
+  const dateEl = document.getElementById('decided-on-' + id);
+  if (dateEl && dateEl.value) {
+    body.decided_on = dateEl.value;
+  }
+  const r = await fetch('/decision/ratify', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
+  const data = await r.json();
+  if (data.ok) { card.style.opacity = '0.5'; card.querySelectorAll('button').forEach(b => b.disabled = true); }
+  else { alert(data.error || JSON.stringify(data.errors || data)); }
+}
+</script>
+{% endif %}
+
+{% if open_questions_count %}
+<section>
+  <h3>Open questions ({{ open_questions_count }})</h3>
+  <p class="banner">Writes thesis Review Log only — not Trade_Log. Each submit logs a ui_runs row.</p>
+  {% for f in open_questions %}
+  <div class="why-card" style="margin-bottom:1rem;padding:0.75rem;border:1px solid var(--border,#333);border-radius:4px">
+    <p><strong><a href="/position/{{ f.ticker }}">{{ f.ticker }}</a></strong>
+      <span class="tag">{{ f.code }}</span></p>
+    <p class="meta-line">{{ f.detail }}</p>
+    <p><em>{{ f.question }}</em></p>
+    <form method="post" action="/why/position" onsubmit="return submitWhyPosition(this, event)">
+      <textarea name="answer" rows="3" style="width:100%" required placeholder="Your answer (Review Log)"></textarea>
+      <input type="hidden" name="ticker" value="{{ f.ticker }}">
+      <button type="submit" style="margin-top:0.4rem">Save to Review Log</button>
+    </form>
+  </div>
+  {% endfor %}
+</section>
+<script>
+async function submitWhyPosition(form, ev) {
+  ev.preventDefault();
+  const fd = new FormData(form);
+  const body = { ticker: fd.get('ticker'), answer: fd.get('answer'), live: true };
+  const r = await fetch('/why/position', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
+  const data = await r.json();
+  if (data.ok) { form.closest('.why-card').style.opacity = '0.5'; form.querySelector('button').disabled = true; form.querySelector('button').textContent = 'Saved'; }
+  else { alert(data.error || 'Write failed'); }
+  return false;
+}
+</script>
+{% endif %}
+
 <section>
   <h3>Pending pre-commitment firings</h3>
   {% if pending_precommits %}
@@ -104,6 +194,24 @@
     {% if evidence.first_accrual %}<span>First accrual: <strong>{{ evidence.first_accrual|dt }}</strong></span>{% endif %}
     {% if not evidence.gate_met %}<span>Gate clears after <strong>{{ evidence.gate_remaining }}</strong> more clean day(s)</span>{% endif %}
   </p>
+</section>
+
+<section>
+  <h3>AI thematic index <span class="badge badge-model">model output</span></h3>
+  {% if ai_index.available %}
+  <p class="meta-line">{{ ai_index.evidence }}</p>
+  {% if ai_index.catalyst %}
+  <p><strong>Catalyst:</strong> {{ ai_index.catalyst.headline }} <span class="meta">({{ ai_index.catalyst.date }})</span></p>
+  {% endif %}
+  <p class="meta-line">
+    <strong>Exposed:</strong> {{ ai_index.mentions_exposed }}<br>
+    <strong>Listed, unheld:</strong> {{ ai_index.mentions_listed_unheld }}<br>
+    <strong>Unlisted:</strong> {{ ai_index.mentions_unlisted }}<br>
+    <strong>Quiet channels:</strong> {{ ai_index.quiet }}
+  </p>
+  {% else %}
+  <p class="note meta-line">{{ ai_index.message }}</p>
+  {% endif %}
 </section>
 
 <section>
