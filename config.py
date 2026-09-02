@@ -96,11 +96,12 @@ THESIS_TXN_LOG_LIMIT = int(os.getenv("THESIS_TXN_LOG_LIMIT", "20"))
 # ---------------------------------------------------------------------------
 # AI Model Configuration
 # ---------------------------------------------------------------------------
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-pro")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.1-pro-preview")
+GEMINI_VERTEX_LOCATION = os.getenv("GEMINI_VERTEX_LOCATION", "global")
 GEMINI_MAX_TOKENS = int(os.getenv("GEMINI_MAX_TOKENS", "2000"))  # default for lightweight agents
 
 # Per-agent token budgets — overrides for agents that return large structured JSON.
-# Gemini 2.5 Flash output cap is 65,536 tokens; these are well within bounds.
+# Gemini 3.x Pro output cap is 65,536 tokens; these are well within bounds.
 # Root cause of "EOF while parsing" errors: output truncated at the global 2000-token default.
 GEMINI_MAX_TOKENS_PODCAST       = 8000    # full-episode transcripts (10k+ words) → structured JSON with 8–12 sectors
 
@@ -672,6 +673,14 @@ EXPORT_SCENARIOS = {
 PURGE_DEFAULT_DAYS_PODCASTS = 30
 PURGE_DEFAULT_DAYS_BUNDLES   = 30
 PURGE_DEFAULT_DAYS_EXPORTS   = 7
+
+# --- YouTube transcript fetch throttle (2026-08-31) ---
+# youtube-transcript-api shares one IP across every channel in a batch walk. An
+# unthrottled 23-channel run fires 23 back-to-back transcript requests and YouTube
+# rate-limits the IP (RequestBlocked). Sleep between requests; the RSS feed walk is
+# a different endpoint and is deliberately NOT throttled.
+TRANSCRIPT_FETCH_DELAY_SEC = 4.0
+TRANSCRIPT_FETCH_JITTER_SEC = 2.0
 
 # --- Spotify Studio digest ingestion (STEP 4b) ---
 SPOTIFY_STUDIO_TRANSCRIPTS_DIR = os.getenv(

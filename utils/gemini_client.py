@@ -37,8 +37,25 @@ T = TypeVar('T', bound=BaseModel)
 
 SAFETY_PREAMBLE = "You must NEVER recommend executing specific trades. You provide analysis and considerations only. All buy/sell decisions are the investor's."
 
-# One retry budget when structured output is truncated (FinishReason.MAX_TOKENS).
-_MAX_TOKENS_RETRY = 4000
+# One retry when structured output is truncated (FinishReason.MAX_TOKENS).
+#
+# This used to be a flat 4000, guarded by `max_tokens < _MAX_TOKENS_RETRY`, which
+# made the retry DEAD for exactly the callers most likely to truncate: both podcast
+# analysts pass GEMINI_MAX_TOKENS_PODCAST (8000), and 8000 is not < 4000, so a
+# truncated brief simply returned None. The budget is now proportional -- doubled,
+# with 4000 as a floor and a hard ceiling -- so the 2000-token default still retries
+# at exactly 4000 (byte-identical to the old behaviour) while an 8000 caller retries
+# at 16000. Found 2026-08-31.
+_MAX_TOKENS_RETRY = 4000        # floor, and the retry budget for the 2000 default
+_MAX_TOKENS_RETRY_FACTOR = 2
+_MAX_TOKENS_RETRY_CEILING = 32000
+
+
+def _retry_budget(max_tokens: int) -> int:
+    """Retry budget for a truncated structured response, or 0 if no retry is worth it."""
+    budget = min(max(_MAX_TOKENS_RETRY, max_tokens * _MAX_TOKENS_RETRY_FACTOR),
+                 _MAX_TOKENS_RETRY_CEILING)
+    return budget if budget > max_tokens else 0
 
 
 def _gemini_debug_enabled() -> bool:
@@ -87,19 +104,17 @@ def _build_genai_client():
     """
     Two-path credential resolver.
 
-    Path 1 — API key / AI Studio (Streamlit Cloud, local CLI default):
-      Uses GEMINI_API_KEY from env var or Streamlit secrets. This is the
-      primary path for Gemini Developer API models (like gemini-2.5-pro).
+    Path 1 — ADC / Vertex AI (primary on local CLI):
+      genai.Client(vertexai=True, ...) with GEMINI_VERTEX_LOCATION (default global
+      for Gemini 3.x preview models). Project: re-property-manager-487122.
 
-    Path 2 — ADC / Vertex AI:
-      genai.Client(vertexai=True, ...) lets the SDK discover ADC automatically.
-      Falls back to this if API key is not present. Model strings must use
-      Vertex AI naming convention.
+    Path 2 — API key / AI Studio (Streamlit Cloud fallback only):
+      Uses GEMINI_API_KEY when ADC is absent.
     """
     project_id = getattr(config, 'GCP_PROJECT_ID', 're-property-manager-487122')
-    location = getattr(config, 'GCP_LOCATION', 'us-central1')
+    location = getattr(config, 'GEMINI_VERTEX_LOCATION', 'global')
 
-    # Path 1: ADC — SDK discovers credentials automatically (Preferred for local CLI)
+    # Path 1: ADC — SDK discovers credentials automatically
     try:
         google.auth.default()  # raises DefaultCredentialsError if ADC absent
         return genai.Client(
@@ -112,7 +127,7 @@ def _build_genai_client():
     except Exception:
         pass
 
-    # Path 2: API key from environment (Fallback for Streamlit Cloud)
+    # Path 2: API key from environment (Streamlit Cloud / no ADC)
     api_key = os.environ.get('GEMINI_API_KEY')
     if api_key:
         return genai.Client(api_key=api_key)
@@ -138,7 +153,7 @@ def ask_gemini(prompt: str, system_instruction: str = None, json_mode: bool = Fa
     if not client:
         return "" if not response_schema else None
         
-    model_name = getattr(config, 'GEMINI_MODEL', 'gemini-2.5-pro')
+    model_name = getattr(config, 'GEMINI_MODEL', 'gemini-3.1-pro-preview')
     
     full_system_instruction = SAFETY_PREAMBLE
     if system_instruction:
@@ -185,20 +200,27 @@ def ask_gemini(prompt: str, system_instruction: str = None, json_mode: bool = Fa
             truncated = _is_max_tokens_finish(response)
             parsed = None if truncated else _parse_schema_response(response, response_schema)
             # Truncation or parse failure: one retry at a higher budget (once).
-            if parsed is None and max_tokens < _MAX_TOKENS_RETRY:
+            retry_budget = _retry_budget(max_tokens)
+            if parsed is None and retry_budget:
                 logging.info(
                     "Gemini structured output incomplete (finish=%s, max_tokens=%d); "
                     "retrying once with max_tokens=%d",
-                    _finish_reason_name(response), max_tokens, _MAX_TOKENS_RETRY,
+                    _finish_reason_name(response), max_tokens, retry_budget,
                 )
-                response, generation_config = _one_call(_MAX_TOKENS_RETRY)
+                response, generation_config = _one_call(retry_budget)
                 if _is_max_tokens_finish(response):
                     logging.warning(
                         "Gemini still FinishReason.MAX_TOKENS after retry at %d tokens",
-                        _MAX_TOKENS_RETRY,
+                        retry_budget,
                     )
                     return None
                 parsed = _parse_schema_response(response, response_schema)
+            elif parsed is None:
+                logging.warning(
+                    "Gemini structured output incomplete (finish=%s) and max_tokens=%d is "
+                    "already at the retry ceiling %d — returning None without retry.",
+                    _finish_reason_name(response), max_tokens, _MAX_TOKENS_RETRY_CEILING,
+                )
             return parsed
 
         return response.text
